@@ -9,11 +9,11 @@ path_base="$(readlink -e "${BASH_SOURCE[0]}" |xargs dirname)"
 sdate="$(date +%s)"
 
 path_conf="/etc/server"
-path_xtra_conf="${path_base}/xtra/conf"
+path_install_conf="${path_base}/conf"
 
 file_conf_server="${path_base}/conf-server.install"
-file_xtra_server="${path_xtra_conf}/server.conf"
-file_xtra_env="${path_xtra_conf}/env.conf"
+file_install_server="${path_install_conf}/server.conf"
+file_install_env="${path_install_conf}/env.conf"
 
 S_GLOBAL_CONF="${path_conf}/server.conf"
 
@@ -28,7 +28,7 @@ read answer
 
 echo -e "${blueb}----------  required files${cclear}"
 
-for file in "$file_conf_server" "$file_xtra_env" "$file_xtra_server"; do
+for file in "$file_conf_server" "$file_install_env" "$file_install_server"; do
 	! [ -f "$file" ] && echo -e "${redb}error - unable to find file: '$file'${cclear}" && exit 1
 done
 
@@ -53,7 +53,7 @@ echo -e "${blueb}----------  server.conf${cclear}"
 
 file="$path_conf/server.conf"
 [ -e "${file}" ] && cp -a "${file}" "${file}.keep${sdate}"
-! [ -f "$file" ] && cp -a "$file_xtra_server" "$file"
+! [ -f "$file" ] && cp -a "$file_install_server" "$file"
 . "$file"
 
 
@@ -61,7 +61,7 @@ echo -e "${blueb}----------  env.conf${cclear}"
 
 file="$path_conf/env.conf"
 [ -e "${file}" ] && cp -a "${file}" "${file}.keep${sdate}"
-! [ -f "$file" ] && cp -a "$file_xtra_env" "$file"
+! [ -f "$file" ] && cp -a "$file_install_env" "$file"
 . "$file"
 
 
