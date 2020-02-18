@@ -1,0 +1,90 @@
+#!/bin/bash
+#
+# write by Aguy
+
+_PART=conf-init
+echo -e "${blueb}==========================================  $_PART${cclear}"
+
+path_base="$(readlink -e "${BASH_SOURCE[0]}" |xargs dirname)"
+sdate="$(date +%s)"
+
+path_conf="/etc/server"
+path_xtra_conf="${path_base}/xtra/conf"
+
+file_conf_server="${path_base}/conf-server.install"
+file_xtra_server="${path_xtra_conf}/server.conf"
+file_xtra_env="${path_xtra_conf}/env.conf"
+
+S_GLOBAL_CONF="${path_conf}/server.conf"
+
+####################################  MAIN
+
+echo -e "${blueb}----------  initialisation${cclear}"
+
+echo -n "unable to find initial configuration, Do you want to do it? (y)/n: "
+read answer
+[ "$answer" = "n" ] && exit
+
+
+echo -e "${blueb}----------  required files${cclear}"
+
+for file in "$file_conf_server" "$file_xtra_env" "$file_xtra_server"; do
+	! [ -f "$file" ] && echo -e "${redb}error - unable to find file: '$file'${cclear}" && exit 1
+done
+
+
+echo -e "${blueb}----------  log path${cclear}"
+
+[ -d "$_PATH_LOG" ] && mkdir -p "$_PATH_LOG"
+
+
+echo -e "${blueb}----------  ssl paths${cclear}"
+
+for path in "$path_conf/ssl/private" "$path_conf/ssl/certs"; do
+	! [ -d "$path" ] && mkdir -p "$path"
+done
+find "$path_conf" -type d -exec chmod 750 -R "{}" \;
+find "$path_conf" -type f -exec chmod 640 -R "{}" \;
+find "$path_conf/ssl/private" -type d -exec chmod 700 -R "{}" \;
+find "$path_conf/ssl/private" -type f -exec chmod 600 -R "{}" \;
+
+
+echo -e "${blueb}----------  server.conf${cclear}"
+
+file="$path_conf/server.conf"
+[ -e "${file}" ] && cp -a "${file}" "${file}.keep${sdate}"
+! [ -f "$file" ] && cp -a "$file_xtra_server" "$file"
+. "$file"
+
+
+echo -e "${blueb}----------  env.conf${cclear}"
+
+file="$path_conf/env.conf"
+[ -e "${file}" ] && cp -a "${file}" "${file}.keep${sdate}"
+! [ -f "$file" ] && cp -a "$file_xtra_env" "$file"
+. "$file"
+
+
+echo -e "${blueb}----------  install.conf${cclear}"
+
+file="$path_conf/install.conf"
+! [ -f "$file" ] && touch "$file"
+. "$file"
+
+
+echo -e "${blueb}----------  fd open${cclear}"
+
+_redirect
+
+
+echo -e "${blueb}----------  server settings${cclear}"
+
+file="$(dirname $0)/conf-server.install"
+if ! . "$file"; then
+	echo -e "${redb}error - unable to find file '$file' from ${BASH_SOURCE[0]}${cclear}"
+	exit 1
+fi
+
+
+_echoT "----------  end"
+_eval _partadd "$_PART" "$S_FILE_INSTALL_DONE"

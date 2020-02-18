@@ -1,0 +1,34 @@
+#!/bin/bash
+#
+# write by Aguy
+
+
+_echoT "\n==========================================  $S_RELEASE $_PART"
+
+
+####################################  MAIN
+
+_echoT "----------  mdadm remove"
+
+# remove mdadm
+_eval "apt-get purge -y mdadm"
+
+
+_echoT "----------  sysvinit install"
+
+_eval "apt-get install -y sysvinit-core sysvinit-utils"
+# Must boot with SystemV to release Systemd
+
+
+_echoT "----------  end"
+
+_eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"
+
+_reenter " & relaunch '${0}'"
+
+
+_echoT "----------  reboot"
+
+_echoI "wait until the system will restart & relaunch installation !"
+
+_eval "reboot"

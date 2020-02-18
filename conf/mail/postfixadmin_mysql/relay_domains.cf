@@ -1,0 +1,5 @@
+user = USER
+password = PASSWORD
+hosts = HOSTS
+dbname = DBNAME
+query = SELECT domain FROM domain WHERE domain='%s' and backupmx = true

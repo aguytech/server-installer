@@ -1,0 +1,284 @@
+#!/bin/bash
+#
+# write by Aguy
+
+
+_echoT "\n==========================================  $S_RELEASE $_PART"
+
+FILEBASHALIASES=${S_PATH_SCRIPT_CONF}/.bash_aliases
+FILEBASHFUNCTIONS=${S_PATH_SCRIPT_CONF}/.bash_functions
+
+_echoT "------------------ file required"
+FILES="$FILEBASHALIASES $FILEBASHFUNCTIONS"
+for FILE in $FILES; do ! [ -f "$FILE" ] && _exitE "Unable to find file: '$FILE'"; done
+
+_echoT "------------------ fileconf source"
+[ -f $S_FILE_INSTALL_CONF ] && . $S_FILE_INSTALL_CONF
+
+
+####################################  MAIN
+
+colorroot="\e[1;91m"
+case "$S_SERVER_TYPE" in
+	home)	color="\e[1;34m" ;;
+	ovh)	color="\e[1;32m" ;;
+	vz)	color="\e[1;33m" ;;
+	lxd)	color="\e[1;33m" ;;
+	kvm)	color="\e[1;38;5;172m" ;;
+	*)	color="\e[1;34m"; colorroot=$color ;;
+esac
+
+
+_echoT "----------  root password change"
+
+_askyn "Would you change the default root password"
+if [ "$_ANSWER" == y ]
+then
+	_ask "Please enter a root password"
+	passwd root <<EOF
+$_ANSWER
+$_ANSWER
+EOF
+fi
+
+
+_echoT "----------  data"
+
+[ -z ${_MYORGA+x} ] && anstmp="$S_DOMAIN_NAME" && _askno "Please enter a organization name ($anstmp)" && _MYORGA=${_ANSWER:-$anstmp} && _confset _MYORGA "$_MYORGA"
+
+[ -z ${_MYDOMAIN+x} ] && anstmp="$S_DOMAIN_FQDN" && _askno "Please enter a domain name ($anstmp)" && _MYDOMAIN="${_ANSWER:-$anstmp}" && _confset _MYDOMAIN "$_MYDOMAIN"
+
+[ -z ${_MYEMAIL+x} ] && anstmp="$S_DOMAIN_EMAIL_ADMIN" && _askno "Please enter an administration email adress for domain ($anstmp)" && _MYEMAIL=${_ANSWER:-$anstmp} && _confset _MYEMAIL "$_MYEMAIL"
+
+
+# home
+[ "$S_SERVER_TYPE" == home ] && _eval "chown root.1000 /home; chmod g+rw /home"
+
+
+_echoT "----------  timezone"
+
+[ -e /etc/localtime ] && rm /etc/localtime
+ln -sv /usr/share/zoneinfo/posix/Europe/Paris /etc/localtime
+
+
+_echoT "----------  .bashrc"
+
+FILE=~/.bashrc
+[[ ! -f "$FILE.$DDATE" && -f "$FILE" ]] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+
+cat > ~/.bashrc << EOF
+# PS1
+[ "\$PS1" ] && PS1="\${debian_chroot:+(\$debian_chroot)}\[$colorroot\]\u\[\e[1;37m\]@\[$color\]\h\[\e[1;37m\]:\w\[$color\]\$\[\e[0;0m\]"
+
+# Source global definitions
+[ -f /etc/bashrc ] && . /etc/bashrc
+
+# source global variables
+[ -f /etc/server/env.conf ] && . /etc/server/env.conf
+
+# aliases
+[ -f ~/.bash_aliases ] && . ~/.bash_aliases
+
+# functions
+[ -f ~/.bash_functions ] && . ~/.bash_functions
+
+# enable bash completion in interactive shells
+if ! shopt -oq posix; then
+  if [ -f /usr/share/bash-completion/bash_completion ]; then
+    . /usr/share/bash-completion/bash_completion
+  elif [ -f /etc/bash_completion ]; then
+    . /etc/bash_completion
+  fi
+fi
+EOF
+
+
+_echoT "----------  .bash_aliases"
+
+FILE=~/.bash_aliases
+[[ ! -f "$FILE.$DDATE" && -f "$FILE" ]] && _eval cp -a "$FILE" "$FILE.$DDATE"
+_eval "[ -f "$FILE" ] && rm $FILE"
+_eval "ln -sv $FILEBASHALIASES $FILE"
+
+
+_echoT "----------  selinux"
+
+FILE=/etc/selinux/config
+str='disabled'
+[ -f "$FILE" ] && sed -i "s/^\(SELINUX=\).*/\1$str/" /etc/selinux/config
+
+
+_echoT "----------  grub"
+
+FILE=/etc/default/grub
+if [ -f "$FILE" ]; then
+	# grub timeout
+	str=0; sed -i "s/^\(GRUB_TIMEOUT=\).*/\1$str/" "$FILE"
+
+	update-grub
+fi
+
+
+_echoT "----------  repository"
+
+# epel http://dl.fedoraproject.org/pub/epel/6/x86_64/repoview/
+rpm -Uvh http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm
+
+# rpmforge http://wiki.centos.org/AdditionalResources/Repositories/RPMForge
+cd /tmp && wget http://pkgs.repoforge.org/rpmforge-release/rpmforge-release-0.5.3-1.el6.rf.x86_64.rpm
+rpm --import http://apt.sw.be/RPM-GPG-KEY.dag.txt
+rpm -i rpmforge-release-0.5.3-1.el6.rf.*.rpm
+
+# centalt
+#cd /tmp && wget http://centos.alt.ru/repository/centos/6/x86_64/centalt-release-6-1.noarch.rpm
+#rpm -Uvh centalt-release*rpm
+
+# add priorities http://wiki.centos.org/PackageManagement/Yum/Priorities
+#add priorities 'priority='
+#1-2 /etc/yum.repos.d/CentOS-Base.repo
+#10-19 /etc/yum.repos.d/epel.repo
+#20-29 /etc/yum.repos.d/rpmforge.repo
+#30-39 /etc/yum.repos.d/centalt.repo
+
+# disable repos
+sed -i "s/^\(enabled \?= \?\).*/\10/" /etc/yum.repos.d/rpmforge.repo
+sed -i "s/^\(enabled \?= \?\).*/\10/" /etc/yum.repos.d/centalt.repo
+
+
+_echoT "----------  upgrade"
+
+_eval upgrade
+
+
+_echoT "----------  install base"
+
+_eval "yum install -y man yum-utils nano wget bash-completion openssh-clients rsync mlocate jwhois acpid hdparm iotop dstat hdparm" # telnet yum-priorities p7zip p7zip-plugins
+
+
+_echoT "----------  install from rpmforge"
+
+yum install --enablerepo=rpmforge -y htop mtop
+
+#yum install yum-downloadonly
+#yum update httpd -y --downloadonly --downloaddir=/tmp
+
+#yumdownloader httpd
+
+
+if [[ "$S_SERVER_TYPE" == "ovh" ]]; then
+	_echoT "----------  install OVH"
+
+	_eval "yum install -y git"
+fi
+
+
+_echoT "----------  conf nano"
+
+# *.nanorc
+PATHFROM=${S_PATH_SCRIPT_XTRA}/nano
+PATHTO=/usr/share/nano
+FILENANO=/etc/nanorc
+! grep -q "## Personnal include" "$FILENANO" && echo -e "\n## Personnal include" >> $FILENANO
+for FILE in $(ls -1 "$PATHFROM"); do
+	! [ -f $PATHTO/$FILE ] && _eval "cp -a $PATHFROM/$FILE $PATHTO/"
+	! grep -q "$FILE" "$FILENANO" && echo -e "include \"$PATHTO/$FILE\"" >> $FILENANO
+done
+
+FILE=/etc/nanorc
+sed -i "s|^.*\(set constantshow\)$|\1|" "$FILE"
+sed -i "s|^.*\(set matchbrackets.*\)$|\1|" "$FILE"
+sed -i "s|^.*\(set softwrap.*\)$|\1|" "$FILE"
+sed -i "s|^.*\(set linenumbers.*\)$|\1|" "$FILE"
+sed -i "s|^.*\(set justifytrim.*\)$|\1|" "$FILE"
+sed -i "s|^.*\(set historylog.*\)$|\1|" "$FILE"
+srh='tabsize'; str='4'; sed -i "s|^.*\(set ${srh}\).*$|\1 ${str}|" "$FILE"
+sed -i "s|^\(set cut.*\)$|# \1|" "$FILE"
+sed -i "s|^\(set nowrap.*\)$|# \1|" "$FILE"
+sed -i "s|^\(set linenumbers.*\)$|# \1|" "$FILE"
+#sed -i "s|^.*\(set mouse\)$|\1|" "$FILE"
+
+
+_echoT "----------  logrotate conf"
+
+! [ -d $S_PATH_LOG_SERVER ] && mkdir $S_PATH_LOG_SERVER
+
+# logrotate
+echo -e "# Logrotate file for server functions logs
+#$S_PATH_LOG_INSTALL/*.log
+$S_PATH_LOG_SERVER/*.log
+{
+\tmissingok
+\tcompress
+\tdelaycompress
+\tnotifempty
+\tweekly
+\trotate 8
+}
+" > /etc/logrotate.d/server
+
+FILE=/etc/logrotate.d/exim4-base
+str='7'
+[ -f "$FILE" ] && sed -i "s/\(\t\+rotate\).*/\1 $str/" "$FILE"
+
+FILE=/etc/logrotate.d/munin-node
+str='7'
+[ -f "$FILE" ] && sed -i "s/\(\t\+rotate\).*/\1 $str/" "$FILE"
+
+FILE=/etc/logrotate.d/rsyslog
+str='5'
+[ -f "$FILE" ] && sed -i "s/\(\t\+rotate\) 4/\1 $str/" "$FILE"
+
+
+_echoT "----------  ntp"
+
+if [[ "$S_SERVER_TYPE" != "vz" ]]; then
+
+	_echoT "----------  install ntp"
+
+	_eval "yum install -y ntp"
+	_eval "chkconfig ntpd on"
+
+
+	_echoT "----------  conf ntp"
+
+	FILE=/etc/ntp.conf
+	# /etc/ntp.conf
+	[ ! -f "$FILE.$DDATE" ] && [ -f "$FILE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+	str='.fr.pool.ntp.org'; sed -i "s/^\(server .\).*/\1$str/" "$FILE"
+	_eval "service ntp start"
+fi
+
+
+######################  CERTIFICATE
+
+#_echoT "----------  certbot install"
+#_eval "apt install -y certbot"
+#_echoT "----------  generate certificates for mail. imap. smtp. "
+#_eval "certbot certonly --standalone --rsa-key-size 4096 -d mail.$_MYDOMAIN -d imap.$_MYDOMAIN -d smtp.$_MYDOMAIN"
+
+
+_echoT "----------  Openssl conf multi-domains"
+
+_eval "apt install -y openssl"
+
+FILE='/etc/ssl/openssl.cnf'
+! [ -f "$FILE.$DDATE" ] && [ -f "$FILE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+
+# FILE
+srh='countryName_default';            str='FR';       sed -i "s|^\(${srh}\s*= \).*$|\1${str}|" "$FILE"
+srh='stateOrProvinceName_default';    str='Britain';  sed -i "s|^\(${srh}\s*= \).*$|\1${str}|" "$FILE"
+srh="0\\.organizationName_default";   str="$_MYORGA";  sed -i "s|^\(${srh}\s*= \).*$|\1${str}|" "$FILE"
+srh="organizationalUnitName_default"; str="$_MYORGA";  sed -i "s|^#\?\(${srh}\s*=\).*$|\1 ${str}|" "$FILE"
+srh='localityName'; str="localityName_default\t\t= Nantes"; sed -i "s|^\(${srh}\s*= Locality Name.*\)$|\1\n${str}|" "$FILE"
+srh='commonName'; str="commonName_default\t\t= ${_MYDOMAIN}"; sed -i "s|^\(${srh}\s*= Common Name.*\)$|\1\n${str}|" "$FILE"
+srh='emailAddress'; str="emailAddress_default\t\t= ${_MYEMAIL}"; sed -i "s|^\(${srh}\s*= Email Address.*\)$|\1\n${str}|" "$FILE"
+
+
+_echoT "----------  clean"
+
+_eval "yum clean all"
+
+
+_echoT "----------  end"
+_evalq _var_unset "part" "*"
+_eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"

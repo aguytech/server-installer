@@ -1,0 +1,378 @@
+#!/bin/bash
+#
+# write by Aguy
+
+
+_echoT "\n==========================================  $S_RELEASE $_PART"
+
+phpconf=/etc/php5/apache2/php.ini
+pathconf=/etc/php5/mods-available
+pathmod=/usr/lib/php5/20131226
+pathprofile="$S_PATH_LOG/xdebug/profile"
+pathtrace="$S_PATH_LOG/xdebug/trace"
+
+phpPackages='libapache2-mod-php5 php5 php5-cli php5-common php5-curl php5-gd php5-geoip php5-imagick php5-mcrypt php5-memcache php5-memcached php5-mysql php5-mysqlnd php5-odbc php-pear php5-pgsql php5-sqlite php5-svn php5-tidy phpunit php5-xmlrpc php5-xcache'
+phpPackagesX='php5-xdebug'
+
+####################################  MAIN
+
+# menu
+_menu "Usage for php server PROduction or DEVelopement" pro dev
+phpusage=$_ANSWER
+
+_menu "Cache system to use" no xcache zendopcache
+phpcache=$_ANSWER
+_menu "Debugger to use" no xdebug zend_debugger
+phpdebug=$_ANSWER
+
+
+<<keep
+_echoT "----------  mount"
+
+# openvz
+PARTSUB=ct-php-mount
+if [[ "$S_SERVER_TYPE" == vz && ! "$(grep "$PARTSUB" ${S_FILE_INSTALL_DONE})" ]]; then
+	_echoI "To mount device(s) in this container execute from hosting server :"
+	_echoI "${whiteb}Exit from this container ${_CTIDTHIS} and from host in a terminal launch :"
+	_echoI "'${S_PATH_SCRIPT_INSTALL}/sub/${S_HOST_RELEASE}-${PARTSUB}.install ${_CTIDTHIS} $S_FILE_INSTALL_DONE'${cclear}"
+	_exit
+fi
+keep
+
+_echoT "----------  install"
+
+# php5-exactimage php5-sybase
+
+_evalq "apt-get install -y $phpPackages"
+_evalq "apt-get install -y $phpPackagesX"
+
+# for mysql driver problem
+# apt-get install php5-mysqlnd
+
+
+_echoT "----------  add phpinf.php"
+
+# Apache : add phpinfo
+echo '<?php phpinfo() ?>' > /var/www/html/phpinf.php
+
+
+_echoT "----------  global conf php.ini"
+
+! [ -e "$phpconf.$DDATE" ] && cp -a $phpconf $phpconf.$DDATE
+
+sch='max_execution_time';              str='20';                       sed -i "s|^.\?\($sch *=\).*$|\1 $str|" $phpconf
+sch='max_input_time';                  str='30';                       sed -i "s|^.\?\($sch *=\).*$|\1 $str|" $phpconf
+sch='memory_limit';                    str='128M';                     sed -i "s|^.\?\($sch *=\).*$|\1 $str|" $phpconf
+sch='post_max_size';                   str='8M';                       sed -i "s|^.\?\($sch *=\).*$|\1 $str|" $phpconf
+sch='file_uploads';                    str='On';                       sed -i "s|^.\?\($sch *=\).*$|\1 $str|" $phpconf
+sch='upload_max_filesize';             str='8M';                       sed -i "s|^.\?\($sch *=\).*$|\1 $str|" $phpconf
+sch='date\.timezone';                  str="'Europe/Paris'";           sed -i "s|^.\?\($sch *=\).*$|\1 $str|" $phpconf
+sch='error_log';                       str="$S_PATH_LOG/php/error.log";   sed -i "s|^.\?\($sch *=\).*$|\1 $str|" $phpconf
+sch='session.use_strict_mode';         str='1';                        sed -i "s|^.\?\($sch *=\).*$|\1 $str|" $phpconf
+
+
+if [ "$S_SERVER_TYPE" == vz ]; then
+		_echoT "----------  session path"
+
+		path=${S_VM_PATH_SHARE}/php/sessions
+		! [ -d $path ] && _evalq "mkdir -p $path"
+		sed -i "s|^;\?\(session\.save_path *= *\)\(\"/var/lib/.*\"\)$|;\1\2\n\1\"$path\"|" $phpconf
+
+
+		_echoT "----------  tmp path"
+
+		path=${S_VM_PATH_SHARE}/php/tmp
+		! [ -d $path ] && _evalq "mkdir -p $path"
+		sed -i "s|^;\? *\(upload_tmp_dir *= *\).*$|;\1\n\1$path|" $phpconf
+		sed -i "s|^;\? *\(sys_temp_dir *= *\).*$|;\1\n\1$path|" $phpconf
+
+
+		_echoT "----------  pear path"
+
+		path=${S_VM_PATH_SHARE}/php/pear
+		! [ -d $path ] && _evalq "mkdir -p $path"
+		sed -i "s|^\(; *http://php\.net/include-path\)$|\1\ninclude_path = .:/usr/share/php:/usr/share/pear:$path|" $phpconf
+
+
+		_echoT "----------  geoip path"
+
+		path=${S_VM_PATH_SHARE}/php/geoip
+		! [ -d $path ] && _evalq "mkdir -p $path"
+		file=$pathconf/geoip.ini
+		grep -qi geoip "$file" && echo -e "[geoip]\ngeoip.custom_directory = ${S_VM_PATH_SHARE}/php/geoip" >> $file
+
+
+		_echoT "----------  soap path"
+
+		path=${S_VM_PATH_SHARE}/php/soap
+		! [ -d $path ] && _evalq "mkdir -p $path"
+		sed -i "s|^;\? *\(soap\.wsdl_cache_dir *= *\).*$|;\1\n\1$path|" $phpconf
+
+
+		_evalq "find '${S_VM_PATH_SHARE}/php' -type d -exec chown root.www-data '{}' \\; -exec chmod g+rwx '{}' \\; -exec chmod o-rwx '{}' \\;"
+
+fi
+
+
+_echoT "----------  php usage"
+
+case $phpusage in
+	dev)
+		_echoT "----------  $_ANSWER conf php.ini for '$_ANSWER'"
+		sch='error_reporting';         str='E_ALL';        sed -i "s|^.\?\($sch *=\).*$|\1 $str|" $phpconf
+		sch='display_errors';          str='On';           sed -i "s|^.\?\($sch *=\).*$|\1 $str|" $phpconf
+		sch='display_startup_errors';  str='On';           sed -i "s|^.\?\($sch *=\).*$|\1 $str|" $phpconf
+		sch='log_errors';              str='On';           sed -i "s|^.\?\($sch *=\).*$|\1 $str|" $phpconf
+		sch='log_errors_max_len';      str='1024';         sed -i "s|^.\?\($sch *=\).*$|\1 $str|" $phpconf
+		sch='report_zend_debug';       str='On';           sed -i "s|^.\?\($sch *=\).*$|\1 $str|" $phpconf
+		sch='track_errors';            str='On';           sed -i "s|^.\?\($sch *=\).*$|\1 $str|" $phpconf
+		sch='html_errors';             str='On';           sed -i "s|^.\?\($sch *=\).*$|\1 $str|" $phpconf
+		sch='session\.gc_maxlifetime'; str='14400';        sed -i "s|^.\?\($sch *=\).*$|\1 $str|" $phpconf
+	;;
+	pro)
+		_echoT "----------  $_ANSWER conf php.ini for '$_ANSWER'"
+#		sch='error_reporting';         str="E_ALL \& \~E_DEPRECATED \& \~E_STRICT";        sed -i "s|^.\?\($sch *=\).*$|\1 $str|" $phpconf
+		sch='display_errors';          str='Off';          sed -i "s|^.\?\($sch *=\).*$|\1 $str|" $phpconf
+		sch='display_startup_errors';  str='Off';          sed -i "s|^.\?\($sch *=\).*$|\1 $str|" $phpconf
+		sch='log_errors';              str='On';           sed -i "s|^.\?\($sch *=\).*$|\1 $str|" $phpconf
+		sch='log_errors_max_len';      str='1024';         sed -i "s|^.\?\($sch *=\).*$|\1 $str|" $phpconf
+		sch='report_zend_debug';       str='Off';          sed -i "s|^.\?\($sch *=\).*$|\1 $str|" $phpconf
+		sch='track_errors';            str='Off';          sed -i "s|^.\?\($sch *=\).*$|\1 $str|" $phpconf
+		sch='html_errors';             str='On';           sed -i "s|^.\?\($sch *=\).*$|\1 $str|" $phpconf
+		sch='session\.gc_maxlifetime'; str='1800';         sed -i "s|^.\?\($sch *=\).*$|\1 $str|" $phpconf
+	;;
+esac
+
+#grep log $phpconf
+#grep error $phpconf
+
+
+_echoT "----------  php log"
+
+PATHLOGPHP="$S_PATH_LOG/php"
+! [ -d "$PATHLOGPHP" ] && mkdir "$PATHLOGPHP"
+chown www-data.www-data -R "$PATHLOGPHP"
+chmod g-rwx"$PATHLOGPHP"
+chmod o-rwx "$PATHLOGPHP"
+
+
+_echoT "----------  logrotate conf"
+
+echo "# Logrotate file for php log errors
+$PATHLOGPHP/*.log {
+    missingok
+    compress
+    delaycompress
+    notifempty
+    daily
+    rotate 14
+    create 0640 www-data www-data
+}" > /etc/logrotate.d/php
+
+chown root.root /etc/logrotate.d/php
+chmod 640 /etc/logrotate.d/php
+
+
+_echoT "----------  apache restart"
+
+_evalq "service apache2 restart"
+
+
+_echoT "----------  xcache conf"
+
+path=/var/xcache
+! [ -d $path ] && _evalq mkdir -p "$path"
+_evalq "find /var/xcache -type d -exec chown root.www-data '{} \\; -exec chmod g+rwx '{}' \\; -exec chmod o-rwx '{}' \\;"
+
+! [ -f "$pathconf/xcache.ini.$DDATE" ] && cp -a $pathconf/xcache.ini $pathconf/xcache.ini.$DDATE
+
+sed -i "s|^\(extension *= *php_xcache.dll\)$|; \1|" $pathconf/xcache.ini
+str="/var/xcache/nmap"; sed -i "s|^;\? *\(xcache\.mmap_path *= *\).*$|\1\"$str\"|" $pathconf/xcache.ini
+str="/var/xcache/core"; sed -i "s|^;\? *\(xcache\.coredump_directory *= *\).*$|\1\"$str\"|" $pathconf/xcache.ini
+str="On"; sed -i "s|^;\? *\(xcache\.readonly_protection *= *\).*$|\1$str|" $pathconf/xcache.ini
+
+
+_echoT "----------  xdebug conf"
+
+path=$pathprofile
+! [ -d $path ] && _evalq "mkdir -p $path"
+path=$pathtrace
+! [ -d $path ] && _evalq "mkdir -p $path"
+
+_evalq "find '$S_PATH_LOG/xdebug' -type d -exec chown root.www-data '{}' \\; -exec chmod g+rwx '{}' \\; -exec chmod o-rwx '{}' \\;"
+
+! [ -f "$pathconf/xdebug.ini.$DDATE" ] && cp -a $pathconf/xdebug.ini $pathconf/xdebug.ini.$DDATE
+
+cat > $pathconf/xdebug.ini << EOF
+; Enable xdebug extension module
+zend_extension=$pathmod/xdebug.so
+
+;xdebug.collect_includes          = 1 ;1
+;xdebug.max_nesting_level         = 100 ;100
+xdebug.scream                     = 1 ;0
+
+;xdebug.var_display_max_children  = 128 ;128
+;xdebug.var_display_max_data      = 512 ;512
+;xdebug.var_display_max_depth     = 3 ;3
+xdebug.cli_color                  = 2 ;0
+
+xdebug.collect_params             = 1 ;0
+xdebug.collect_return             = 1 ;0
+;xdebug.collect_vars              = 0 ;0
+;xdebug.collect_includes          = 1 ;1
+;xdebug.collect_assignments       = 0 ;0
+
+xdebug.dump_once                  = 1 ;0
+;xdebug.dump_globals              = 1 ;1
+xdebug.dump.SERVER                = REMOTE_ADDR,REQUEST_METHOD,REQUEST_URI
+;xdebug.dump_undefined            = 0 ;0
+
+;xdebug.show_exception_trace      = 0 ;0
+;xdebug.show_local_vars           = 0 ;0
+xdebug.show_mem_delta             = 1 ;0
+
+xdebug.profiler_enable            = 0 ;1
+;xdebug.profiler_enable_trigger   = 0; 0
+xdebug.profiler_output_dir        = $pathprofile
+xdebug.profiler_output_name       = cachegrind.out.%t
+;xdebug.profiler_append           = 0 ;0
+
+xdebug.auto_trace                 = 0 ;1
+xdebug.trace_format               = 1 ;0
+;xdebug.trace_options             = 0 ;0
+xdebug.trace_output_dir           = $pathtrace
+xdebug.trace_output_name          = trace.%t
+;xdebug.trace_enable_trigger      = 0 ;0
+
+;xdebug.coverage_enable           = 1 ;1
+
+xdebug.remote_enable              = 1
+xdebug.remote_host                = ${S_IPS_DEV%% *} ;localhost
+xdebug.remote_port                = 9000 ;9000
+xdebug.remote_mode                = 'req' ;req
+;xdebug.remote_connect_back       = 0 ;0
+;xdebug.remote_autostart          = 0 ;0
+;xdebug.remote_cookie_expire_time = 3600 ;3600
+;xdebug.extended_info             = 1 ;1
+
+xdebug.remote_handler             = dbgp
+xdebug.idekey                     = ECLIPSE_DBGPEOF
+EOF
+
+! [ -f "$pathconf/xdebug.ini.$DDATE" ] && cp -a $pathconf/xdebug.ini $pathconf/xdebug.ini.$DDATE
+
+
+_echoT "----------  Xdebug Xcache enable"
+
+#sed -i 's|^.*\(zend_extension.*\)|\1|' $pathconf/xdebug.ini
+#sed -i 's|^.*\(extension *= *xcache\.so\)$|\1|' $pathconf/xcache.ini
+php5dismod opcache
+php5enmod xdebug
+php5enmod xcache
+
+
+_echoT "----------  apache restart"
+
+_evalq "service apache2 restart"
+
+
+_echoT "----------  Xdebug test"
+
+[ "$S_SERVER_TYPE" == vz ] && iptest=${S_NODE_IPV4}:${S_VM_PORT_HTTP_PRE}$(awk '{print $1}' < /proc/vz/veinfo) \
+|| iptest=$(ifconfig $S_ETH | awk '/inet addr/{print substr($2,6)}')
+_askyn "Test this address http://$iptest/phpinf.php\nTo verify Xdebug & Xcache configuration"
+[ $_ANSWER != y ] && _exit 1
+
+
+_echoT "----------  ZendDebugger install"
+
+phpver=$(php -v |xargs |sed "s/^PHP \([0-9]\.[0-9]\).*/\1/")
+path=/usr/lib/php5/20131226
+
+_ANSWER=$path
+while ! [ -d $_ANSWER ]; do
+	_ask "The path '$_ANSWER' doesn't exist,\nplease look & give the existing one"
+done
+path=$_ANSWER
+
+file=${S_PATH_SCRIPT_XTRA}/php/ZendDebugger-${phpver}.so.tgz
+if ! [ -f $file ]
+then
+	while ! [ -f $path/ZendDebugger.so ]; do
+		_echoI "Unable to find '$file'"
+		_echoI "Please get ZendDebugger in http://www.zend.com/products/studio/downloads"
+		_echoI "and put the correct version of file 'ZendDebugger.so' in path '/usr/lib/php5/20131226' in this container"
+		_askyn "Confirm"
+	done
+else
+	_evalq tar xzf "$file" -C "$path"
+fi
+
+
+_echoT "----------  ZendDebugger conf"
+
+echo "; Enable ZendDebugger extension module
+zend_extension=$pathmod/ZendDebugger.so
+[zend_debugger]
+zend_debugger.allow_hosts=${_IPS_AUTH// /,}
+zend_debugger.allow_tunnel=${_IPS_AUTH// /,}
+zend_debugger.expose_remotely=always
+zend_debugger.httpd_uid=$(id -u www-data)" > $pathconf/zend_debugger.ini
+
+#cd /etc/php5/apache2/conf.d; ln -sv ../../mods-available/zend_debugger.ini 20-zend_debugger.ini
+
+! [ -f $pathconf/zend_debugger.ini.$DDATE ] && cp -a $pathconf/zend_debugger.ini $pathconf/zend_debugger.ini.$DDATE
+
+
+_echoT "----------  ZendDebugger enable"
+
+#sed -i 's|^.*\(zend_extension.*\)|\1|' $pathconf/zend_debugger.ini
+#sed -i 's|^.*\(zend_extension.*\)|;\1|' $pathconf/xdebug.ini
+#sed -i 's|^.*\(extension *= *.*xcache.so\)|;\1|' $pathconf/xcache.ini
+php5dismod xdebug
+php5dismod xcache
+php5enmod zend_debugger
+php5enmod opcache
+
+
+_echoT "----------  apache restart"
+
+_evalq "service apache2 restart"
+
+
+_echoT "----------  ZendDebugger test"
+
+[ "$S_SERVER_TYPE" == vz ] && iptest=${S_NODE_IPV4}:${S_VM_PORT_HTTP_PRE}$(awk '{print $1}' < /proc/vz/veinfo) \
+|| iptest=$(ifconfig $S_ETH | awk '/inet addr/{print substr($2,6)}')
+_askyn "Test this address http://$iptest/phpinf.php\nTo verify Zend Debugger & Zend Opcache configuration"
+[ $_ANSWER != y ] && _exit 1
+
+
+_echoT "----------  debugging && cache"
+
+php5dismod zend_debugger
+php5dismod xdebug
+php5dismod opcache
+php5dismod xcache
+
+[ "$phpcache" == "xcache" ] && php5enmod xcache
+[ "$phpcache" == "zendopcache" ] && php5enmod opcache
+
+[ $phpdebug == "xdebug" ] && php5enmod xdebug
+[ $phpdebug == "zend_debugger" ] && php5enmod zend_debugger
+
+if [ "$phpusage" == "pro" ]; then
+	_echoT "----------  move phpinf.php to phpinf.php.$DDATE"
+
+	mv /var/www/html/phpinf.php /var/www/html/phpinf.php.$DDATE
+fi
+
+_echoT "----------  apache restart"
+
+_evalq "service apache2 restart"
+
+
+_echoT "----------  end"
+_evalq "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"
+
+

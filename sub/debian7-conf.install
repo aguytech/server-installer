@@ -1,0 +1,23 @@
+#!/bin/bash
+#
+# write by Aguy
+
+
+####################################  global configuration
+
+! type _menu &>/dev/null && ! [ -f $S_GLOBAL_FUNCTIONS ] && echo -e "\e[1;31mUnable to load file '/usr/local/bs/inc-functions'${cclear} from ${BASH_SOURCE[0]}\e[0;0m" && exit 1
+. $S_GLOBAL_FUNCTIONS
+	
+
+_echoT "\n==========================================  $S_RELEASE $_PART"
+
+
+_echoT "----------  conf"
+
+_askyn "Please edit manually the file '/etc/server/server.conf'\nto adapt global parameters for server configuration & confirm to continue"
+[ $_ANSWER == n ] && _exit 1
+
+_echoT "----------  end"
+_eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"
+
+

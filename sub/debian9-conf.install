@@ -1,0 +1,39 @@
+#!/bin/bash
+#
+# write by Aguy
+
+
+####################################  MAIN
+
+
+_echoT "\n==========================================  $S_RELEASE $_PART"
+
+
+if [ "$S_SERVER_TYPE" != "lxd" ]; then
+
+	_echoT "----------  locales"
+
+	_eval "apt install -y locales"
+
+	cat /etc/default/locale
+
+	# select 146
+	# follow 1
+	_eval "locale-gen --purge fr_FR.UTF-8 en_GB.ISO-8859-1 en_GB.UTF-8 en_GB.ISO-8859-15 en_US.UTF-8"
+	_eval "dpkg-reconfigure locales"
+	_eval "locale -a"
+
+	sed -i "s/en_GB/en_US/" /etc/default/locale
+	! grep -q LC_ALL /etc/default/locale && echo "LC_ALL=en_US.UTF-8" >> /etc/default/locale
+	#! grep -q LC_ALL /etc/environment && echo "LC_ALL=en_US.UTF-8" >> /etc/environment
+fi
+
+
+_echoT "----------  conf"
+
+_askyn "Please edit manually the file '$S_GLOBAL_CONF'\nto adapt global parameters for server configuration & confirm to continue"
+[ "$_ANSWER" == n ] && _exit 1
+
+
+_echoT "----------  end"
+_eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"

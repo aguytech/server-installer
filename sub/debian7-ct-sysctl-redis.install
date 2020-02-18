@@ -1,0 +1,31 @@
+#!/bin/bash
+#
+# write by Aguy
+
+
+####################################  MAIN
+
+! type _menu &>/dev/null && ! [ -f $S_GLOBAL_FUNCTIONS ] && echo -e "\e[1;31mUnable to load file '/usr/local/bs/inc-functions'${cclear} from ${BASH_SOURCE[0]}\e[0;0m" && exit 1
+. $S_GLOBAL_FUNCTIONS
+
+ctid=$1
+ctip=${_VM_IP_BASE}.$ctid
+_PART="ct-sysctl-redis.install"
+S_FILE_INSTALL_DONE="$S_PATH_LOG_INSTALL/install.done"
+
+_echoT "\n==========================================  $S_RELEASE $_PART"
+
+
+_echoT "----------  add vm.overcommit_memory = 1 to sysctl"
+
+file=/etc/sysctl.conf
+! grep -q 'vm.overcommit_memory' "$file" && echo "
+# patch for redis
+vm.overcommit_memory = 1" >> $file
+
+_eval "sysctl vm.overcommit_memory=1"
+
+
+_echoT "----------  end"
+_eval "ssh root@${ctip} '! grep -q ^${_PART}$ ${S_FILE_INSTALL_DONE} && echo $_PART >> ${S_FILE_INSTALL_DONE}'"
+

@@ -1,0 +1,5 @@
+user = USER
+password = PASSWORD
+hosts = HOSTS
+dbname = DBNAME
+query = SELECT domain FROM domains WHERE domain='%s';

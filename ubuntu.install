@@ -1,0 +1,164 @@
+#!/bin/bash
+#
+# write by Aguy
+
+<<MANUALY
+# HOME
+server=node2
+
+cmds="apt update
+apt dist-upgrade
+apt install -y rsync zfsutils-linux
+ln -sv /usr/local/bs/install/xtra/conf/.bash_aliases /root/.bash_aliases"
+
+ssh root@${server} bash -i <<<$cmds
+rsync /usr/local/bs/ root@${server}:/usr/local/bs/ -e 'ssh -p 22' --exclude=/.git --delete -av
+
+# HOST
+ssh root@${server}
+blkid
+fdisk /dev/sda # m F n w | extend with 50G / 50G / available
+blkid
+zpool create zroot /dev/sda7
+zpool list
+zfs create -o mountpoint=/save -o compression=lz4 zroot/save
+zfs list
+
+/usr/local/bs/install/ubuntu.install
+MANUALY
+
+################################ global functions
+#S_TRACE=debug
+
+if [[ -z "$S_GLOBAL_FUNCTIONS" || -f $S_GLOBAL_FUNCTIONS ]]; then
+	file="/usr/local/bs/inc-functions"
+	if ! . "$file"; then echo -e "\e[1;31merror - unable to find file '$file' from ${BASH_SOURCE[0]}\e[0;0m" && exit 1; fi
+fi
+. $S_GLOBAL_FUNCTIONS
+
+################################  mandatory parts
+
+# init
+_PART="init"
+! _parthave "$_PART" "$S_FILE_INSTALL_DONE" && _source "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
+
+
+# openvz
+part_sub=host-root
+if [ "$S_SERVER_TYPE" = "vz" ] && ! _parthave "$part_sub" "${S_FILE_INSTALL_DONE}"; then
+	_echoi "to mount device(s) in this container\nexit from this container ${_CTIDTHIS} and from hosting server launch:"
+	_echoI "${_PATH_BASE_SUB}/${S_HOST_RELEASE}-${part_sub}.install ${_CTIDTHIS} $S_PATH_LOG_INSTALL/${S_RELEASE}.done"
+	_exit
+fi
+
+# common + ssh
+parts="common ssh"
+for _PART in $parts; do
+	! _parthave "$_PART" "$S_FILE_INSTALL_DONE" && _source "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
+done
+
+
+################################  MENU
+
+while [ "$_PART" != "quit" ]; do
+
+	partsall="$(sed -n "s|^\t*\(\w\+\)) # .*$S_SERVER_TYPE.*$|\1|p" "$0" | xargs)"
+	partsrelease=" $(ls -1 "$_PATH_BASE_SUB"/*${S_RELEASE}* | sed -n "s|.*${S_RELEASE}-\(.*\)\.install|\1|p" | xargs) "
+	partsmade=" $(cat ${S_FILE_INSTALL_DONE} | xargs) "
+	parts2do=
+	for part in $partsall; do
+		[ "${partsmade/ $part /}" = "$partsmade" ] && [ "${partsrelease/ $part /}" != "$partsrelease" ] && parts2do+="$part "
+	done
+
+	#_echoD "partsall='$partsall'"
+	#_echoD "partsmade='$partsmade'"
+	#_echoD "parts2do='$parts2do'"
+
+	_echo "part already made: ${blueb}$partsmade${cclear}"
+	PS3="give your choice: "
+	select _PART in quit $parts2do; do
+		case "$_PART" in
+			quit)
+				break
+				;;
+			iptables) # ovh home
+				_source "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
+				;;
+			lxd) # ovh home
+				_source "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
+				;;
+			haproxy) # ovh home
+				_source "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
+				;;
+			*)
+				_echoE "Wrong option: '$_PART'"
+				;;
+		esac
+		break
+	done
+
+done
+
+_exit
+
+
+<<KEEP
+# wipe free disk space
+
+file=/tmp/wipe.$(date +%s)
+paths="$(df -l | grep ^/dev/ | sed 's|.* \([^ ]\+\)$|\1|' | sed '/save/d')"
+#paths='/ /var'
+echo '#!/bin/bash' > "$file"
+for path in $paths
+do
+	echo "# $path" >> "$file"
+	echo "(echo \"start $path - pid $! - \$(date +\"%T - %N\")\"; cd $path; dd if=/dev/zero of=free2zero; rm free2zero; echo \"end $path \$(date +\"%T - %N\")\"; exit) &" >> "$file"
+done
+chmod +x "$file"
+sh "$file"
+KEEP
+
+<<KEEP
+# rescue LVM
+
+path_save_vm=/dev/mapper/vg-save
+path_save="/mnt/save"
+path_backup="${path_save}/backup/rescue"
+#vols="/dev/sda1 /dev/mapper/vg-lvvar /dev/mapper/vg-lvvz /dev/mapper/vg-lvvzdump /dev/mapper/vg-lvlibvirt"
+vols=$(blkid | grep "^/dev/.*TYPE=\"ext4\".*" | sed "s|^\([^:]*\):.*$|\1|" | sed "/save/d")
+
+host="$HOSTNAME"
+ddate=$(date +"%Y%m%d")
+
+file="/etc/os-release"
+eval "$(grep '^VERSION_ID=' "$file")" # define VERSION_ID
+eval "$(grep '^ID=' "$file")" # define VERSION_ID
+release="${ID}${VERSION_ID}"
+
+# show
+blkid
+echo ${vols}
+
+# mount
+! [ -d "${path_save}" ] && mkdir -p "${path_save}"
+mount ${path_save_vm} "${path_save}"
+! [ -d $path_backup ] && mkdir -p $path_backup
+cd "${path_backup}"
+
+sudo dd --progress bs=446 count=1 if=/dev/sda of="${host}-${release}-${ddate}-mbr446.iso"
+sudo dd --progress bs=512 count=1 if=/dev/sda of="${host}-${release}-${ddate}-mbr.iso"
+
+for vol in ${vols}
+do
+	echo -e "************************  ${vol}"
+	vol_name=${vol#/dev/}; vol_name=${vol_name//\//_}
+	e2fsck -f $vol
+	dd --progress bs=4096 if=${vol} | gzip > ${host}-$release-${ddate}-${vol_name}.iso.gz
+done
+
+# umount
+cd
+umount /mnt/save
+
+reboot
+KEEP

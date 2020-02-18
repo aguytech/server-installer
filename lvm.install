@@ -1,0 +1,178 @@
+#!/bin/bash
+#
+# write by Aguy
+
+
+---------------------------------------------------------------------------
+commands()
+
+
+# physical
+pvdisplay
+pvchange		# changer les attributs d'un PV
+pvcreate		# création d'un PV
+pvdata			# afficher des informations de debug
+pvdisplay		# afficher des informations d'un PV
+pvmove			# migrer les données d'un PV en vue de sa suppression
+pvresize		# redimensionnement d'un PV (délicat)
+pvscan			# lister tous les PV existant sur tous les disques
+
+# group
+vgdisplay
+vgcfgbackup		# sauvegarder la VGDA
+vgcfgrestore	# restaurer la VGDA
+vgchange		# changer les attributs d'un VG
+vgck			# vérification de la VGDA
+vgcreate		# créer un VG
+vgdisplay		# voir les informations
+vgexport		# désactiver un VG pour pouvoir extraire les PV
+vgimport		# activer et déclarer un VG sur le système
+vgextend		# ajouter un ou plusieurs PV dans un VG
+vgmerge			# fusionner deux VG
+vgmknodes		# recréer /dev/nom_volume et le fichier spécial group
+vgreduce		# extraire un ou plusieurs PV d'un VG
+vgremove		# supprimer un VG
+vgrename		# renommer un VG
+
+# logical
+lvdisplay
+lvcreate		# création d'un VL lvchange, modification des attributs d'un VL
+lvdisplay		# voir les informations d'un VL
+lvextend		# augmenter la taille d'un VL
+lvreduce		# réduire la taille d'un VL
+lvremove		# supprimer un VL
+lvrename		# renommer un VL
+lvscan			# recherche de tous les VL existant
+
+
+---------------------------------------------------------------------------
+fdisk()
+
+fdisk -l
+
+<<ovh-vz
+/dev/sda1   *        4096     8194047     4094976   83  Linux
+/dev/sda2         8194048    16383999     4094976   82  Linux swap / Solaris
+/dev/sda3        16384000   602321500   292968750+  83  Linux
+/dev/sda4       602321501  3907029167  1652353833+  83  Linux
+ovh-vz
+
+fdisk /dev/sda
+
+# change in fdisk the partition's system for '8e'
+
+
+---------------------------------------------------------------------------
+reboot()
+
+reboot
+
+
+---------------------------------------------------------------------------
+pv()
+
+pvs
+pvcreate /dev/sda3 /dev/sda4
+pvdisplay
+
+
+---------------------------------------------------------------------------
+vg()
+
+# PE limitation : PE size * 65536 = max size of lv in vg
+vgs
+vgcreate -s 32M sys /dev/sda3
+vgcreate -s 32M ext /dev/sda4
+vgdisplay
+
+
+---------------------------------------------------------------------------
+lv()
+
+lvs
+
+# with PE
+lvcreate -l 6250 -n var sys
+lvcreate -l 3120 -n vzdump ext
+lvcreate -l 31200 -n save ext
+
+# with size
+#lvcreate -L 200G -n var sys
+#lvcreate -L 100G -n vzdump ext
+#lvcreate -L 1000G -n save ext
+
+lvdisplay 
+
+
+---------------------------------------------------------------------------
+Filesystem()
+
+mkfs -t ext4 /dev/sys/var
+mkfs -t ext4 /dev/ext/vzdump
+mkfs -t ext4 /dev/ext/save
+
+dumpe2fs -h /dev/sys/var
+tune2fs -l /dev/sys/var
+
+# tune2fs -m 2 /dev/sys/var
+
+---------------------------------------------------------------------------
+mount_fs()
+
+echo "# lvm
+/dev/sys/var    /var                    ext4    defaults,relatime       1       2
+/dev/ext/vzdump /var/lib/vz/dump        ext4    defaults,relatime       1       2
+/dev/ext/save   /save                   ext4    defaults,relatime       1       2
+" >> /etc/fstab
+
+path=/var/lib/vz/dump; ! [ -d $path ] && mkdir -p $path
+path=/save; ! [ -d $path ] && mkdir $path
+path=/mnt/tmp; ! [ -d $path ] && mkdir $path
+
+# /var
+if mount /dev/sys/var /mnt/tmp; then
+    cp -a /var/* /mnt/tmp
+    umount /mnt/tmp
+fi
+
+[ -d /mnt/tmp ] && rmdir /mnt/tmp
+mount -a
+
+
+---------------------------------------------------------------------------
+reboot()
+
+reboot
+
+
+---------------------------------------------------------------------------
+extends()
+
+pvdisplay
+lvdisplay
+df
+df -h /dev/mapper/vg-lvvz
+umount /vz
+e2fsck -f /dev/mapper/vg-lvvz
+lvextend -L 120G /dev/vg/lvvz
+e2fsck -f /dev/mapper/vg-lvvz
+resize2fs /dev/vg/lvvz
+mount /vz
+lvdisplay
+
+
+---------------------------------------------------------------------------
+reduce()
+
+lvdisplay
+df
+df -h /dev/mapper/vg-lvvz
+umount /vz
+e2fsck -f /dev/mapper/vg-lvvz
+resize2fs /dev/vg/lvvz 100G
+lvreduce -L 100G /dev/vg/lvvz
+e2fsck -f /dev/vg/lvvz
+mount /vz
+lvdisplay
+
+

@@ -1,0 +1,5 @@
+user = USER
+password = PASSWORD
+hosts = HOSTS
+dbname = DBNAME
+query = SELECT username AS 'owns' FROM mailbox WHERE username = '%s' AND domain = '%d' AND active = true UNION SELECT address AS 'owns' FROM alias WHERE address = '%s' AND domain = '%d' AND active = true

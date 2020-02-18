@@ -1,0 +1,5 @@
+user = USER
+password = PASSWORD
+hosts = HOSTS
+dbname = DBNAME
+query = SELECT goto FROM alias WHERE address='%s' AND active = true

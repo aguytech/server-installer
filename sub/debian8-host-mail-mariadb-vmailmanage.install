@@ -1,0 +1,60 @@
+#!/bin/bash
+#
+# write by Aguy
+
+for FILE in "$S_GLOBAL_CONF" "$S_GLOBAL_FUNCTIONS"; do [ ! -f "$FILE" ] && echo -e "\e[1;31merror - unable to find file '$FILE'\e[0;0m" && exit 1 || . "$S_GLOBAL_FUNCTIONS"; done
+
+PART="host-mail-mariadb-vmailmanage"
+CTID="$1"
+DATA="$2"
+FILEDONE="$3"
+
+CTIP=${_VM_IP_BASE}.$CTID
+DBHOST=$(cut -d'|' -f1 <<< $DATA)
+DBNAME=$(cut -d'|' -f2 <<< $DATA)
+DBUSER=$(cut -d'|' -f3 <<< $DATA)
+DBPWD=$(cut -d'|' -f4 <<< $DATA)
+
+! [[ "$DBHOST" && "$DBNAME" && "$DBUSER" && "$DBPWD" ]] && _exitE "Wrong options for '$DATA'"
+
+_echoT "\n==========================================  $S_RELEASE $PART"
+
+
+####################################  MAIN
+
+_echoT "----------  CTID test"
+
+if [ ! "$1" ] || ! vzlist "$CTID" 1>/dev/null 2>&1; then _exitE "wrong ctid '$1' or not exists"; fi
+
+
+####################################  MARIADB
+
+# asks
+_ask "Give password to connect to database for 'roothost'@'$DBHOST'"
+PWDROOTHOST=$_ANSWER
+while ! timeout 2 mysql -h$DBHOST -uroothost -p$PWDROOTHOST -e ""; do
+	_echoE "Unable to connect to database for '$DBHOST'@'$PWDROOTHOST'"
+	_ask "Give password to connect to database for 'roothost'@'$DBHOST'"
+	PWDROOTHOST=$_ANSWER
+done
+
+
+_echoT "----------  MariaDB create database, tables & user"
+
+_evalq "mysql -h'$DBHOST' -uroothost -p'$PWDROOTHOST' -e \"GRANT USAGE ON *.* TO '$DBUSER'@'${CTIP}' IDENTIFIED BY '$DBPWD'\""
+_evalq "mysql -h'$DBHOST' -uroothost -p'$PWDROOTHOST' -e \"GRANT ALL PRIVILEGES ON ${DBNAME}.* TO '$DBUSER'@'${CTIP}'\""
+_evalq "mysql -h'$DBHOST' -uroothost -p'$PWDROOTHOST' -e \"CREATE DATABASE IF NOT EXISTS $DBNAME CHARACTER SET 'utf8';\""
+
+
+_echoT "----------  MariaDB access"
+
+_echoi "Test the container have access to MariaDB with the following command (test from container $CTID)"
+_echoI "mysql -h$DBHOST -u$DBUSER -p$DBPWD"
+_askyn "Confirm"
+
+
+####################################  END
+
+_echoT "----------  end"
+
+_evalq "ssh root@${CTIP} '! grep -q ^${PART}$ ${FILEDONE} && echo $PART >> ${FILEDONE}'"

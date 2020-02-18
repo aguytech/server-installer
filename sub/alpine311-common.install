@@ -1,0 +1,355 @@
+#!/bin/bash
+#
+# write by Aguy
+
+<<TODO
+USE FALLBACK RELAY to 181
+relayhost = [admin1.hl.local]
+fallback_relay = [admin2.hl.local]
+TODO
+
+_echoT "\n==========================================  $S_RELEASE $_PART"
+
+path_xtra_bash_completion="${S_PATH_SCRIPT_CONF}/bash_completion"
+file_xtra_vim="${S_PATH_SCRIPT_CONF}/.vimrc"
+#file_xtra_postfix_master="${S_PATH_SCRIPT_CONF}/mail/master-satellite.cf"
+#file_xtra_postfix_main="${S_PATH_SCRIPT_CONF}/mail/main-satellite.cf"
+
+####################################  MAIN
+
+_echoT "----------  required files"
+
+_require "$file_xtra_vim" "$file_xtra_postfix_main" "$file_xtra_postfix_master"
+
+_echoT "----------  root password change"
+
+_askyn "Do you change the default root password"
+if [ "$_ANSWER" = y ]; then
+	_ask "Please enter a root password"
+	passwd root <<<"$_ANSWER
+$_ANSWER
+"
+fi
+
+_echoT "----------  data"
+
+[ -z ${_MYORGA+x} ] && _MYORGA="$S_DOMAIN_NAME" && _confset _MYORGA "$_MYORGA"
+[ -z ${_MYDOMAIN+x} ] && _MYDOMAIN="$S_DOMAIN_FQDN" && _confset _MYDOMAIN "$_MYDOMAIN"
+[ -z ${_MYEMAIL+x} ] && _MYEMAIL="$S_DOMAIN_EMAIL_ADMIN" && _confset _MYEMAIL "$_MYEMAIL"
+
+# home
+[ "$S_SERVER_TYPE" = home ] && _evalq chown root.1000 /home && _evalq chmod g+rwx /home
+
+_echoT "----------  timezone"
+
+_eval apk add tzdata
+_eval cp -a /usr/share/zoneinfo/Europe/Paris /etc/localtime
+echo "Europe/Paris" >  /etc/timezone
+_eval date
+_eval apk del --purge tzdata
+
+_echoT "----------  repository"
+
+str=" ovh home "
+if [ "${str/ "$S_SERVER_TYPE" /}" != "$str" ]; then
+
+	_echoT "----------  mariadb repos"
+
+	apt-key adv --recv-keys --keyserver hkp://keyserver.ubuntu.com:80 0xF1656F24C74CD1D8
+
+	#add-apt-repository -y 'deb [arch=amd64,arm64,ppc64el] http://mirror.mva-n.net/mariadb/repo/10.4/ubuntu bionic main'
+	file=/etc/apt/sources.list.d/mariadb.list
+	echo "# MariaDB 10.4
+# http://downloads.mariadb.org/mariadb/repositories/
+deb [arch=amd64,arm64,ppc64el] http://mirror.mva-n.net/mariadb/repo/10.4/ubuntu bionic main
+# deb-src [arch=amd64,arm64,ppc64el] http://mirror.mva-n.net/mariadb/repo/10.4/ubuntu bionic main
+" > "$file"
+
+	_echoT "----------  pgsql repos"
+
+	wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
+
+	file=/etc/apt/sources.list.d/pgdg.list
+	echo "# PostgreSQL
+deb http://apt.postgresql.org/pub/repos/apt/ ${S_RELEASE_NAME}-pgdg main" > "$file"
+
+fi
+
+_echoT "----------  upgrade"
+
+_eval "upgrade"
+
+
+_echoT "----------  install base"
+
+_eval "apt install -y apt-utils bsdmainutils cron curl htop iotop logrotate lsb-release man netcat openssh-server rsync telnet" # vim acpid apt-file apt-utils dstat hdparm iputils-tracepath jwhois mlocate mtop p7zip p7zip-plugins pciutils rcconf sysstat sysv-rc-conf wget
+
+_echoT "----------  bash completion"
+
+_evalq cp -a "$path_xtra_bash_completion"/* "/usr/share/bash-completion/"
+
+<<KEEP
+_echoT "----------  postfix install"
+
+_askno 'choose "No configuration for installation"'
+_eval "apt install -y postfix" # exim4
+
+_echoT "----------  postfix conf"
+
+# master conf
+file="/etc/postfix/master.cf"
+_keepcpts "$file"
+cp -a "$file_xtra_postfix_master" "$file"
+
+# main conf
+file="/etc/postfix/main.cf"
+_keepcpts "$file"
+cp -a "$file_xtra_postfix_main" "$file"
+
+sed -i "/^myhostname/ c myhostname = ${HOSTNAME}.ovh.net" "$file"
+sed -i "s|^\(mydestination.*\)$|#\1\nmydestination = localhost|" "$file"
+sed -i "/^relayhost/ c relayhost = [smtp.${S_DOMAIN_FQDN}]:25" "$file"
+
+_echoT "----------  postfix restart"
+
+_service restart postfix
+
+str=" ovh home "
+if [ "${str/ "$S_SERVER_TYPE" /}" != "$str" ]; then
+
+	_echoT "----------  install tools"
+
+	_eval "apt-get install -y git lnav multitail mariadb-client postgresql-client"
+
+fi
+KEEP
+
+_echoT "----------  conf vim"
+
+_eval update-alternatives --set editor /usr/bin/vim.basic
+
+file="$HOME/.vimrc"
+_keepmvts "$file"
+_eval ln -s "$file_xtra_vim" "$file"
+
+# colorscheme
+_eval cp ${S_PATH_SCRIPT_CONF}/vim/*.vim /usr/share/vim/vim*/colors/
+
+_echoT "------------------ nano"
+
+for str in conf install; do
+	cp -a /usr/share/nano/sh.nanorc /usr/share/nano/$str.nanorc
+	sed -i 's|^\(syntax \).*|\1"'$str'" "\.'$str'$"|' /usr/share/nano/$str.nanorc
+done
+
+file=/etc/nanorc
+_keepcpts "$file"
+
+sed -i 's|^.*\(set tabsize\).*|\1 4|' "$file"
+sed -i 's|^\(set cut.*\)$|# \1|' "$file"
+sed -i 's|^\(set linenumbers.*\)$|# \1|' "$file"
+sed -i '/^# *include/ s/^# //' "$file"
+
+# various
+opts="constantshow historylog matchbrackets multibuffer nohelp softwrap"
+# color
+opts+=" errorcolor functioncolor keycolor numbercolor selectedcolor statuscolor stripecolor titlecolor"
+# uncomment
+for opt in $opts; do
+	sed -i "s|^.*\(set $opt .*\)$|\1|" "$file"
+done
+
+_echoT "----------  cron conf"
+
+file="/etc/crontab"
+str="MAILTO=$S_DOMAIN_EMAIL_TECH"
+! grep -q '^MAILTO' "$file" && sed -i "/^PATH=.*/ a $str" "$file"
+
+_echoT "----------  rsyslog cron conf"
+
+file=/etc/rsyslog.d/cron.conf
+echo "#  CRON
+# rsyslog filter to separate cron log
+cron.* action(type=\"omfile\" dirCreateMode=\"0700\" FileCreateMode=\"0644\" File=\"$S_PATH_LOG/cron.log\")
+& stop" > "$file"
+
+<<KEEP
+_echoT "----------  rsyslog mail conf"
+
+file="/etc/rsyslog.conf"
+# remove mail logs for mail.log
+#sed -i 's|^\(mail\.\*.*\)$|#\1|' "$file"
+# remove mail logs for syslog
+! grep -q "mail\.\* *stop" "$file" && sed -i 's|^\(mail\.err.*\)$|\1\nmail.*              stop|' "$file"
+KEEP
+
+str=" ovh home "
+if [ "${str/ "$S_SERVER_TYPE" /}" != "$str" ]; then
+
+	_echoT "----------  rsyslog hosting conf"
+
+	file=/etc/rsyslog.conf
+	_keepcpts "$file"
+
+	# udp
+	if [ "$S_RSYSLOG_PTC" = udp ]; then
+		sed -i "s|^#\(\$ModLoad imudp\)$|\1|" "$file"
+		sed -i "s|^#\?\(\$UDPServerRun\).*$|\1 $S_RSYSLOG_PORT|" "$file"
+	fi
+
+	# tcp
+	if [ "$S_RSYSLOG_PTC" = tcp ]; then
+		sed -i "s|^#\(\$ModLoad imtcp\)$|\1|" "$file"
+		sed -i "s|^#\?\(\$InputTCPServerRun\).*$|\1 $S_RSYSLOG_PORT|" "$file"
+	fi
+fi
+
+PARTSUB="host-$_PART"
+str=" vz lxd kvm "
+if [ "${str/ "$S_SERVER_TYPE" /}" != "$str" ] && ! grep -q "$PARTSUB" "${S_FILE_INSTALL_DONE}"; then
+
+	_echoT "----------  $PARTSUB"
+
+	while ! grep -q "^$PARTSUB$" "${S_FILE_INSTALL_DONE}"; do
+		_echoi "from an other terminal in server host launch:"
+		_echoI "${S_PATH_SCRIPT_INSTALL}/sub/${S_HOST_RELEASE}-${PARTSUB}.install ${_CTIDTHIS} $S_FILE_INSTALL_DONE${cclear}"
+		_askyn "Confirm"
+	done
+fi
+
+str=" vz lxd kvm "
+if [ "${str/ "$S_SERVER_TYPE" /}" != "$str" ]; then
+
+	_echoT "----------  rsyslog conf auth"
+
+	file=/etc/rsyslog.d/vm-auth.conf
+	echo "##############################  AUTH
+# forward auth logs from vm to hosting server $S_HOST_IPV4
+#auth.* @$S_HOST_IPV4
+auth.* action(type=\"omfwd\" target=\"$S_HOST_IPV4\" port=\"$S_RSYSLOG_PORT\" protocol=\"$S_RSYSLOG_PTC\")" > "$file"
+fi
+
+_echoT "----------  rsyslog restart"
+
+_service restart rsyslog
+
+_echoT "----------  logrotate server conf"
+
+! [ -d $S_PATH_LOG_SERVER ] && mkdir $S_PATH_LOG_SERVER
+
+# logrotate
+echo "# Logrotate file for server functions logs
+#$S_PATH_LOG_INSTALL/*.log
+$S_PATH_LOG_SERVER/*.log
+$S_PATH_LOG_SERVER/*.err
+$S_PATH_LOG_SERVER/*.debug
+{
+    missingok
+    compress
+    delaycompress
+    notifempty
+    weekly
+    rotate 8
+}
+" > /etc/logrotate.d/server
+
+file=/etc/logrotate.d/rsyslog
+str='5'
+[ -f "$file" ] && sed -i "s/\(\t\+rotate\) 4/\1 $str/" "$file"
+
+str=" ovh home "
+if [ "${str/ "$S_SERVER_TYPE" /}" != "$str" ]; then
+
+	_echoT "----------  logrotate rsyslog conf"
+
+	file=/etc/logrotate.d/rsyslog
+	sed -i "\|$S_PATH_LOG/auth.log|d" "$file"
+	sed -i "1i$S_PATH_LOG/auth.log" "$file"
+
+	sed -i "\|$S_PATH_LOG/cron.log|d" "$file"
+	sed -i "1i$S_PATH_LOG/cron.log" "$file"
+
+
+	_echoT "----------  bind conf -IPV6"
+
+	file=/etc/default/bind9
+	sch="OPTIONS="; str="\"-u bind -4\""; sed -i "s|^\($sch\).*|\1$str|" "$file"
+
+	_service restart bind9
+fi
+
+if [ "$S_SERVER_TYPE" != "vz" ]; then
+
+	_echoT "----------  install ntp"
+
+	_eval "apt-get install -y ntp"
+
+
+	_echoT "----------  conf ntp"
+
+	# /etc/ntp.conf
+	file=/etc/ntp.conf
+	_keepcpts "$file"
+
+	str='.fr.pool.ntp.org'; sed -i "s/^\(server .\).*/\1$str/" "$file"
+	_eval "systemctl start ntp"
+fi
+
+######################  CERTIFICATE
+
+#_echoT "----------  certbot install"
+#_eval "apt install -y certbot"
+#_echoT "----------  generate certificates for mail. imap. smtp. "
+#_eval "certbot certonly --standalone --rsa-key-size 4096 -d mail.$_MYDOMAIN -d imap.$_MYDOMAIN -d smtp.$_MYDOMAIN"
+
+_echoT "----------  openssl conf multi-domains"
+
+_eval "apt install -y openssl"
+
+file='/etc/ssl/openssl.cnf'
+_keepcpts "$file"
+
+sed -i "/countryName_default/ s|=.*|= FR|" "$file"
+sed -i "/stateOrProvinceName_default/ s|=.*|= Britain|" "$file"
+sed -i "/0\.organizationName_default/ s|=.*|= $_MYORGA|" "$file"
+sed -i "/#\?organizationalUnitName_default/ {s|^#||;s|=.*|= $_MYORGA|}" "$file"
+sed -i "/localityName\s*= Locality Name/ a localityName_default\t\t= Nantes" "$file"
+sed -i "/commonName\s*= Common Name/ a commonName_default\t\t= ${_MYDOMAIN}" "$file"
+sed -i "/emailAddress\s*= Email Address/ a emailAddress_default\t\t= ${_MYEMAIL}" "$file"
+
+_echoT "----------  clean"
+
+_evalq "apt-get -y autoremove; apt-get clean; apt-get autoclean"
+
+
+_echoT "----------  end"
+_eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"
+
+<<KEEP
+_echoT "----------  pam remove log"
+
+! grep -q 'pam_succeed_if.so' /etc/pam.d/common-session-noninteractive && sed -i "s/^\(session[[:blank:]]required[[:blank:]]*pam_unix\.so.*\)$/session\t\t\t[success=1 default=ignore] pam_succeed_if.so service in cron quiet use_uid\n\1/" /etc/pam.d/common-session-noninteractive
+
+_service restart cron
+
+
+	_echoT "----------  mtop install"
+
+	_eval "apt-get install -y libncurses5-dev make gcc libmariadbclient-dev"
+	_eval "perl -MCPAN -e 'install Curses'"
+	_eval "perl -MCPAN -e 'install Getopt::Long'"
+	_eval "perl -MCPAN -e 'install Net::Domain'"
+	_eval "perl -MCPAN -e 'install DBI'"
+	_eval "perl -MCPAN -e 'install DBD::mysql'"
+
+	version='0.6.6'
+	_askno "Give the version of mtop to download from 'http://downloads.sourceforge.net/project/mtop/mtop' ($version) "
+	version=${_ANSWER:-$version}
+	cd /tmp
+	wget -q "http://downloads.sourceforge.net/project/mtop/mtop/v$version/mtop-$version.tar.gz"
+	tar xzf "mtop-$version.tar.gz"
+	cd "mtop-$version"
+	_eval "perl Makefile.PL"
+	_eval "make"
+	_eval "make install"
+KEEP

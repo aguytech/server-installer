@@ -1,0 +1,57 @@
+# -*- sh -*-
+#
+# Bash completion function for the 'haconf' command.
+#
+
+_haconf()
+{
+   local cur prev
+
+   PATHCONF_ENABLED="/etc/haproxy/conf-enabled"
+    PATHCONF_AVAILABLE="/etc/haproxy/conf-available"
+
+    __disabled() {
+        local FILES CONFS CONF
+        CONFS="$(find $PATHCONF_AVAILABLE/ -type f|sort|sed "s|$PATHCONF_AVAILABLE/\(.*\).cfg|\1|"|xargs)"
+        for CONF in $CONFS; do
+            [ -f "$PATHCONF_AVAILABLE/${CONF}.cfg" ] && ! [ -h "$PATHCONF_ENABLED/${CONF}.cfg" ] && FILES="$FILES $CONF"
+        done
+        echo $FILES
+    }
+
+    __enabled() {
+        local FILES CONFS CONF
+        CONFS="$(find $PATHCONF_ENABLED/ -type l|sort|sed "s|$PATHCONF_ENABLED/\(.*\).cfg|\1|"|xargs)"
+        for CONF in $CONFS; do
+            [ -h "$PATHCONF_ENABLED/${CONF}.cfg" ] && FILES="$FILES $CONF"
+        done
+        echo $FILES
+    }
+
+    COMPREPLY=()
+    cur=${COMP_WORDS[COMP_CWORD]}
+    prev=${COMP_WORDS[COMP_CWORD-1]}
+
+    # primary commans
+    opts='check clear enable disable list reload'
+
+    # level 1 for commands
+    if [ $COMP_CWORD -eq 1 ]; then
+        COMPREPLY=( $(compgen -W "${opts}" -- ${cur}) )
+        return 0
+    # level 2 for arguments
+    else
+        case $prev in
+            enable)
+                COMPREPLY=( $(compgen -W "$(__disabled)" -- "$cur" ) )
+                return 0
+                ;;
+            disable)
+                COMPREPLY=( $(compgen -W "$(__enabled)" -- "$cur" ) )
+                return 0
+                ;;
+        esac
+    fi
+
+}
+complete -F _haconf haconf

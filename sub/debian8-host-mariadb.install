@@ -1,0 +1,155 @@
+#!/bin/bash
+#
+# write by Aguy
+
+for FILE in "$S_GLOBAL_CONF" "$S_GLOBAL_FUNCTIONS"; do [ ! -f "$FILE" ] && echo -e "\e[1;31merror - unable to find file '$FILE'\e[0;0m" && exit 1 || . "$S_GLOBAL_FUNCTIONS"; done
+
+PART="host-mariadb"
+CTID=$1
+PATH_SHARE=$2
+FILEDONE=$3
+
+_echoT "\n==========================================  debian8 $PART"
+
+
+####################################  MAIN
+
+_echoT "----------  CTID test"
+
+if [ ! "$1" ] || ! vzlist "$CTID" 1>/dev/null 2>&1; then _exitE "wrong ctid '$1' or not exists"; fi
+
+
+FILE_RSYSLOG="${S_PATH_SCRIPT_CONF}/rsyslog/host-mariadb.conf"
+
+_echoT "----------  file required"
+
+FILES="$FILE_RSYSLOG"
+for FILE in $FILES; do ! [ -f "$FILE" ] && _exitE "Unable to find file: '$FILE'"; done
+
+
+####################################  RSYSLOG
+
+FILE=/etc/rsyslog.d/host-mariadb.conf
+
+_echoT "----------  conf save"
+
+# save old configuration
+[ -f "$FILE" ] && ! [ -f "$FILE.$DDATE" ] && cp -a "$FILE" "$FILE.$DDATE"
+
+
+_echoT "----------  rsyslog conf"
+
+_evalq cp -a "$FILE_RSYSLOG" "$FILE"
+_evalq "sed -i 's|S_HOSTING_PATH_LOG|$S_HOSTING_PATH_LOG|' $FILE"
+_evalq "chown 0:0 $FILE && chmod -x $FILE"
+
+
+_echoT "----------  rsyslog restart"
+
+_evalq "service rsyslog restart"
+
+
+####################################  LOGROTATE
+
+FILE=/etc/logrotate.d/host-mariadb
+
+_echoT "----------  conf save"
+
+# save old configuration
+[ -f "$FILE" ] && ! [ -f "$FILE.$DDATE" ] && cp -a "$FILE" "$FILE.$DDATE"
+
+
+_echoT "----------  logrotate conf add"
+
+# logrotate
+echo -e "$S_HOSTING_PATH_LOG/mysql/*.log {
+ 	daily
+	rotate 7
+	missingok
+	notifempty
+	create 640 root root
+	compress
+	delaycompress
+}
+" > $FILE
+
+
+####################################  OPENVZ TEMPLATE
+
+if [ "$S_HOSTING_TYPE" == "vz" ]; then
+
+	_echoT "----------  openvz template"
+
+	_evalq vzctl set "$CTID" --applyconfig basic-sgbd --save
+fi
+
+
+#############  bind share-mariadb
+
+SHARE="share-mariadb-default"
+HOSTSHARE="$S_HOSTING_PATH_SHARE/mariadb/default"
+! [ -d "$HOSTSHARE" ] && mkdir -p "$HOSTSHARE"
+if ! grep -q "SRC_GLOBAL=$HOSTSHARE" "${S_VZ_PATH_CT_CONF}/${CTID}.mount"; then
+
+	_echoT "----------  mount $SHARE"
+
+	# create path
+	! [ -d $HOSTSHARE ] && _evalq mkdir -p "$HOSTSHARE"
+
+		! [ -e "${S_VZ_PATH_CT_CONF}/${CTID}.mount" ] && echo '
+# mount device for '$CTID'
+' > ${S_VZ_PATH_CT_CONF}/${CTID}.mount
+
+		echo "# $SHARE
+SRC_GLOBAL=$HOSTSHARE
+DST_GLOBAL=$PATH_SHARE
+! [ -p \${VE_ROOT}\${DST_GLOBAL} ] && mkdir -p \${VE_ROOT}\${DST_GLOBAL}
+mount -n --bind \${SRC_GLOBAL} \${VE_ROOT}\${DST_GLOBAL}
+" >> ${S_VZ_PATH_CT_CONF}/${CTID}.mount
+
+	chmod +x ${S_VZ_PATH_CT_CONF}/${CTID}.mount
+
+fi
+
+
+#############  bind share-mariadb-CTID
+
+SHARE="share-mariadb-$CTID"
+HOSTSHARE="$S_HOSTING_PATH_SHARE/mariadb/$CTID"
+if ! grep -q "SRC_GLOBAL=$HOSTSHARE" "${S_VZ_PATH_CT_CONF}/${CTID}.mount"; then
+
+	_echoT "----------  mount $SHARE"
+
+	# create path
+	! [ -d $HOSTSHARE ] && _evalq mkdir -p "$HOSTSHARE"
+
+		! [ -e "${S_VZ_PATH_CT_CONF}/${CTID}.mount" ] && echo '
+# mount device for '$CTID'
+' > ${S_VZ_PATH_CT_CONF}/${CTID}.mount
+
+		echo "# $SHARE
+SRC=$HOSTSHARE
+DST=/var/lib/mysql
+! [ -p \${VE_ROOT}\${DST} ] && mkdir -p \${VE_ROOT}\${DST}
+mount -n --bind \${SRC} \${VE_ROOT}\${DST}
+" >> ${S_VZ_PATH_CT_CONF}/${CTID}.mount
+
+	chmod +x ${S_VZ_PATH_CT_CONF}/${CTID}.mount
+
+fi
+
+
+#############  RESTART
+
+_echoT "----------  $CTID restart"
+
+_askno "The container '$CTID' will be restarted, please after confirm, relaunch installation on container '$CTID'"
+
+_evalq vzctl restart $CTID
+
+
+####################################  END
+
+_evalq sleep 2
+_echoT "----------  end"
+_evalq "ssh root@${_VM_IP_BASE}.${CTID} '! grep -q ^${PART}$ ${FILEDONE} && echo $PART >> ${FILEDONE}'"

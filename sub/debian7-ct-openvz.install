@@ -1,0 +1,111 @@
+#!/bin/bash
+#
+# write by Aguy
+
+
+####################################  MAIN
+
+! type _menu &>/dev/null && ! [ -f $S_GLOBAL_FUNCTIONS ] && echo -e "\e[1;31mUnable to load file '/usr/local/bs/inc-functions'${cclear} from ${BASH_SOURCE[0]}\e[0;0m" && exit 1
+. $S_GLOBAL_FUNCTIONS
+
+ctid=$1
+_PART="ct-openvz"
+S_FILE_INSTALL_DONE="$S_PATH_LOG_INSTALL/install.done"
+
+_echoT "\n==========================================  $S_RELEASE $_PART"
+
+# test ctid
+if [[ "$1" && "$(vzlist $1 2>/dev/null)" ]]; then
+	ctidstoped=$(vzlist -SHo ctid |xargs)
+
+	####################################  stop ct
+	if [ "$ctidstoped" == "${ctidstoped/$ctid/}" ]; then
+		_echoT "----------  stop $ctid"
+		_eval "vz stop -y $ctid"
+	fi
+
+	####################################  share
+	path="share"
+	if [[ ! -f ${S_VZ_PATH_CT_CONF}/${ctid}.mount || ! $(grep "SRC=$S_HOSTING_PATH_SHARE" ${S_VZ_PATH_CT_CONF}/${ctid}.mount) ]]; then
+
+		_echoT "----------  mount $path"
+
+		# create path
+		! [ -d $S_HOSTING_PATH_SHARE ] && _eval "mkdir -p $S_HOSTING_PATH_SHARE"
+
+		! [ -e "${S_VZ_PATH_CT_CONF}/${ctid}.mount" ] && echo '#!/bin/bash
+# mount device for '$ctid'
+
+' > ${S_VZ_PATH_CT_CONF}/${ctid}.mount
+
+		echo "# $path
+. /etc/vz/vz.conf
+. \${VE_CONFFILE}
+SRC_GLOBAL=$S_HOSTING_PATH_SHARE
+DST_GLOBAL=$S_VM_PATH_SHARE
+! [ -p \${VE_ROOT}\${DST_GLOBAL} ] && mkdir -p \${VE_ROOT}\${DST_GLOBAL}
+mount -n --bind \${SRC_GLOBAL} \${VE_ROOT}\${DST_GLOBAL}
+" >> ${S_VZ_PATH_CT_CONF}/${ctid}.mount
+
+		chmod +x ${S_VZ_PATH_CT_CONF}/${ctid}.mount
+
+	fi
+
+	####################################  start ct
+	_echoT "----------  start $ctid"
+	_eval "vz start -y $ctid"
+
+
+	####################################  log
+	path="log"
+	if [[ ! -f ${S_VZ_PATH_CT_CONF}/${ctid}.mount || ! $(grep "SRC=${S_VZ_PATH_NODE}/$ctid/$path" ${S_VZ_PATH_CT_CONF}/${ctid}.mount) ]]; then
+		_echoT "----------  mount $path"
+
+		vzctl exec $ctid "cd /var/$path; tar cvzf ${S_VM_PATH_SHARE}/$path.tgz .; rm -fR /var/$path/*"
+		! [ -d $S_VZ_PATH_NODE/$ctid/$path ] && mkdir -p $S_VZ_PATH_NODE/$ctid/$path
+		cd $S_VZ_PATH_NODE/$ctid/$path
+		mv $S_VZ_PATH_NODE/share/$path.tgz ./
+		tar xzf $path.tgz
+		rm $path.tgz
+
+		####################################  ct
+		_echoT "----------  stop $ctid"
+		_eval "vz stop -y $ctid"
+
+		! [ -e "${S_VZ_PATH_CT_CONF}/${ctid}.mount" ] && echo '#!/bin/bash
+# mount device for '$ctid'
+
+' > ${S_VZ_PATH_CT_CONF}/${ctid}.mount
+
+		echo "# $path
+. /etc/vz/vz.conf
+. \${VE_CONFFILE}
+SRC=${S_VZ_PATH_NODE}/$ctid/$path
+DST=/var/$path
+! [ -p \${VE_ROOT}\${DST} ] && mkdir -p \${VE_ROOT}\${DST}
+mount -n --bind \${SRC} \${VE_ROOT}\${DST}
+" >> ${S_VZ_PATH_CT_CONF}/${ctid}.mount
+
+		chmod +x ${S_VZ_PATH_CT_CONF}/${ctid}.mount
+
+	fi
+
+
+	####################################  start ct
+	_echoT "----------  start $ctid"
+	_eval "vz start -y $ctid"
+
+	sleep 2
+	_echoI "Re-enter in container $ctid and relaunch installation script"
+	_eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"
+
+
+	_echoT "----------  end"
+	_eval "ssh root@${ctip} '! grep -q ^${_PART}$ ${S_FILE_INSTALL_DONE} && echo $_PART >> ${S_FILE_INSTALL_DONE}'"
+
+
+else
+	_echoE "Wrong ctid '$1'"
+fi
+
+

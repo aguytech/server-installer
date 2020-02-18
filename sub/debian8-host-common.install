@@ -1,0 +1,113 @@
+#!/bin/bash
+#
+# write by Aguy
+
+for FILE in "$S_GLOBAL_CONF" "$S_GLOBAL_FUNCTIONS"; do [ ! -f "$FILE" ] && echo -e "\e[1;31merror - unable to find file '$FILE'\e[0;0m" && exit 1 || . "$S_GLOBAL_FUNCTIONS"; done
+
+PART="host-common"
+CTID=$1
+FILEDONE=$2
+
+_echoT "\n==========================================  debian8 $PART"
+
+####################################  MAIN
+
+_echoT "----------  CTID test"
+
+if [ ! "$1" ] || ! vzlist "$CTID" 1>/dev/null 2>&1; then _exitE "wrong ctid '$1' or not exists"; fi
+
+
+FILE_RSYSLOG="${S_PATH_SCRIPT_CONF}/rsyslog/host-auth.conf"
+
+_echoT "----------  file required"
+
+FILES="$FILE_RSYSLOG"
+for FILE in $FILES; do ! [ -f "$FILE" ] && _exitE "Unable to find file: '$FILE'"; done
+
+
+####################################  RSYSLOG
+
+FILE=/etc/rsyslog.d/host-auth.conf
+
+_echoT "----------  conf save"
+
+# save old configuration
+[ -f "$FILE" ] && ! [ -f "$FILE.$DDATE" ] && cp -a "$FILE" "$FILE.$DDATE"
+
+
+_echoT "----------  rsyslog conf"
+
+_evalq cp -a "$FILE_RSYSLOG" "$FILE"
+_evalq "sed -i 's|S_HOSTING_PATH_LOG|$S_HOSTING_PATH_LOG|' $FILE"
+_evalq "chown 0:0 $FILE && chmod -x $FILE"
+
+
+_echoT "----------  rsyslog restart"
+
+_evalq "service rsyslog restart"
+
+
+####################################  LOGROTATE
+
+FILE=/etc/logrotate.d/host
+
+_echoT "----------  conf save"
+
+# save old configuration
+[ -f "$FILE" ] && ! [ -f "$FILE.$DDATE" ] && cp -a "$FILE" "$FILE.$DDATE"
+
+_echoT "----------  logrotate conf add"
+
+! [ -d $S_PATH_LOG_SERVER ] && mkdir $S_PATH_LOG_SERVER
+
+# logrotate
+echo -e "$S_HOSTING_PATH_LOG/*.err
+$S_HOSTING_PATH_LOG/*.error
+$S_HOSTING_PATH_LOG/*.warn
+$S_HOSTING_PATH_LOG/*.notice
+$S_HOSTING_PATH_LOG/*.info
+$S_HOSTING_PATH_LOG/*.log {
+    daily
+    missingok
+    rotate 14
+    compress
+    delaycompress
+    notifempty
+}" > $FILE
+
+
+####################################  FAILBAN
+
+FILELOCAL=/etc/fail2ban/jail.local
+
+# test host part change are already made
+if ! grep -q '\[ssh-vm\]' "$FILELOCAL"; then
+
+	_echoT "----------  fail2ban conf add"
+
+	echo "[ssh-vm]
+
+enabled  = true
+port     = ssh
+filter   = sshd
+logpath  = $S_HOSTING_PATH_LOG/auth.log
+maxretry = 3
+" >> $FILELOCAL
+
+	FILE="$S_HOSTING_PATH_LOG/auth.log"
+	! [ -f "$FILE" ] && touch $FILE
+
+
+	_echoT "----------  fail2ban restart"
+
+	_service restart fail2ban
+
+else
+	_echoT "----------  fail2ban already made"
+fi
+
+
+####################################  END
+
+_echoT "----------  end"
+_evalq "ssh root@${_VM_IP_BASE}.${CTID} '! grep -q ^${PART}$ ${FILEDONE} && echo $PART >> ${FILEDONE}'"

@@ -1,0 +1,98 @@
+#!/bin/bash
+#
+# write by Aguy
+
+
+####################################  global configuration
+
+! type _menu &>/dev/null && ! [ -f $S_GLOBAL_FUNCTIONS ] && echo -e "\e[1;31mUnable to load file '/usr/local/bs/inc-functions'${cclear} from ${BASH_SOURCE[0]}\e[0;0m" && exit 1
+. $S_GLOBAL_FUNCTIONS
+	
+
+_echoT "\n==========================================  $S_RELEASE $_PART"
+
+
+_echoT "----------  ssh-keygen"
+
+_askyn "Would you like to generate new keys for ssh"
+[ "$_ANSWER" == y ] && _eval "ssh-keygen -t rsa"
+
+
+_echoT "----------  configure ssh"
+
+_askno "Port for ssh is $S_SSH_PORT, please give an other or nothing to keep it"
+port=${_ANSWER:=$S_SSH_PORT}	
+sed -i "s|^\(S_SSH_PORT=\).*$|\1$port|" $S_GLOBAL_CONF
+
+# client
+file='/etc/ssh/ssh_config'
+[ ! -f "$file.$DDATE" ] && _evalq cp -p "$file" "$file.$DDATE"
+sed -i "s/^\( *GSSAPIAuthentication\).*/\1 no/" $file
+
+# server
+file='/etc/ssh/sshd_config'
+[ ! -f "$file.$DDATE" ] && _evalq cp -p "$file" "$file.$DDATE"
+
+str=$port; sed -i "s/^#\?\(Port \).*/\1$str/" $file
+str=no; sed -i "s/^#\(GSSAPIAuthentication \).*/\1$str/" $file
+! grep -q "^UseDNS no" "$file" && echo "UseDNS no" >> $file
+str=no; sed -i "s/^#\?\(PasswordAuthentication \).*/\1$str/" $file
+
+_eval "service ssh restart"
+
+
+str=" home ovh "; if [ "${str/ "$S_SERVER_TYPE" /}" != "$str" ]; then
+
+	_echoT "----------  ssh restore"
+
+	# use saved keys
+	file=${HOSTNAME}-ssh.tgz
+	if [ -f ${S_PATH_SCRIPT_XTRA}/$file ]; then
+		_askyn "Would you replace ssh keys with backuped ones in\n'${S_PATH_SCRIPT_XTRA}/$file'"
+		if [ "$_ANSWER" == y ]; then
+			_eval "cd $S_PATH_SCRIPT_XTRA"
+			_eval "tar xzf $file"
+			_eval "mv .ssh/id_rsa* ~/.ssh"
+			_eval "rm -fR .ssh"
+			_eval "cd"
+		fi
+	else
+		_echoT "Unable to find file: '${S_PATH_SCRIPT_XTRA}/$file'"
+		_askyn "If this installation are a reinstallation,\nPlease overwrite manually key files in ~/.ssh"
+	fi
+
+	if ! [ -f ~/.ssh/id_rsa ]
+	then
+		_echoT "----------  ssh-keygen"
+		! [ -f ~/.ssh/id_rsa ] && _eval "ssh-keygen -t rsa"
+		#ssh-copy-id <username>@<host>
+		# root
+		#sudo ssh-keygen -t rsa
+		#gksudo ssh-copy-id <username>@<host>
+		#exit
+	fi
+
+	_echoT "----------  ssh backup"
+
+	file=${S_PATH_SAVE_BACKUP}/${HOSTNAME}-ssh.tgz
+	cd
+	tar cvzf $file .ssh/
+	_echoT "a backup of path '.ssh' have been made in '$file'\nPlease keep it safe"
+
+fi
+
+
+_echoT "----------  end"
+_eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"
+
+
+<<keep
+# /etc/ssh/sshd_config
+'PermitRootLogin yes
+PubkeyAuthentication yes
+PasswordAuthentication no
+UsePAM yes
+Match User git
+    PasswordAuthentication yes'
+keep
+

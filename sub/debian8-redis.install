@@ -1,0 +1,116 @@
+#!/bin/bash
+#
+# write by Aguy
+
+
+_echoT "\n==========================================  $S_RELEASE $_PART"
+
+####################################  FUNCTION
+
+__replace_val() {
+	# put right host IP
+	sed -i "s|S_HOST_IPV4|$S_HOST_IPV4|g" "$1"
+	# put right rsyslog protocol
+	sed -i "s|S_RSYSLOG_PTC|$S_RSYSLOG_PTC|g" "$1"
+	# put right rsyslog port
+	sed -i "s|S_RSYSLOG_PORT|$S_RSYSLOG_PORT|g" "$1"
+	# put the right server log path
+	sed -i "s|S_PATH_LOG|$S_PATH_LOG|g" "$1"
+}
+
+
+####################################  MAIN
+
+_echoT "----------  data"
+
+[ -z "${_backlog+x}" ] && anstmp="1024" && _askno "Give a value for 'tcp-backlog', if change adjust sysctl parameters... ($anstmp)" && _backlog=${_ANSWER:-$anstmp} && _confset _backlog "$_backlog"
+
+[ -z "${_maxclients+x}" ] && anstmp="$(( $_backlog - 32 ))" && _askno "Give a max client value (tcp-backlog - 32) for 'maxclients' ($anstmp)" && _maxclients=${_ANSWER:-$anstmp} && _confset _maxclients "$_maxclients"
+
+[ -z "${_keepalive+x}" ] && anstmp="60" && _askno "Give time to keep alive (sends acks) 'tcp-keepalive' ($anstmp)s" && _keepalive=${_ANSWER:-$anstmp} && _confset _keepalive "$_keepalive"
+
+[ -z "${_timeout+x}" ] && anstmp="0" && _askno "Give time to idle connection 'timeout' ($anstmp)s" && _timeout=${_ANSWER:-$anstmp} && _confset _timeout "$_timeout"
+
+[ -z "${_databases+x}" ] && anstmp="16" && _askno "Give a number of max 'databases' ($anstmp)" && _databases=${_ANSWER:-$anstmp} && _confset _databases "$_databases"
+
+[ -z "${_loglevel+x}" ] && anstmp="notice" && _askno "Give the log level 'loglevel' ($anstmp)" && _loglevel=${_ANSWER:-$anstmp} && _confset _loglevel "$_loglevel"
+
+
+_echoT "----------  install"
+
+_eval "apt-get install -y redis-server"
+
+
+_echoT "----------  conf"
+
+FILE=/etc/redis/redis.conf
+SCH='port'; STR="$S_CACHE_PORT"; sed -i "s|^\($SCH\).*$|\1 $STR|" "$FILE"
+SCH='bind'; STR="127.0.0.1 $_IPTHIS"; sed -i "s|^\($SCH\).*$|\1 $STR|" "$FILE"
+SCH='maxclients'; STR="$_maxclients"; sed -i "s|^#\? \?\($SCH\).*$|\1 $STR|" "$FILE"
+SCH='tcp-backlog'; STR="$_backlog"; sed -i "s|^\($SCH\).*$|\1 $STR|" "$FILE"
+SCH='tcp-keepalive'; STR="$_keepalive"; sed -i "s|^\($SCH\).*$|\1 $STR|" "$FILE"
+SCH='timeout'; STR="$_timeout"; sed -i "s|^\($SCH\).*$|\1 $STR|" "$FILE"
+SCH='databases'; STR="$_databases"; sed -i "s|^\($SCH\).*$|\1 $STR|" "$FILE"
+
+# rsyslog
+sed -i 's|^\(logfile.*\)$|# \1|' "$FILE"
+SCH='loglevel'; STR="$_loglevel"; sed -i "s|^#\? \?\($SCH\).*$|\1 $STR|" "$FILE"
+SCH='syslog-enabled'; STR="yes"; sed -i "s|^#\? \?\($SCH\).*$|\1 $STR|" "$FILE"
+SCH='syslog-ident'; STR="redis"; sed -i "s|^#\? \?\($SCH\).*$|\1 $STR|" "$FILE"
+SCH='syslog-facility'; STR="local7"; sed -i "s|^#\? \?\($SCH\).*$|\1 $STR|" "$FILE"
+
+#PATHTMP=${S_VM_PATH_SHARE}/redis; ! [ -d $PATHTMP ] && mkdir -p $PATHTMP
+#SCH='dir'; STR="$PATHTMP"; sed -i "s|^\($SCH\).*$|\1 $STR|" "$FILE"
+
+
+PARTSUB="host-$_PART"
+STR=" vz lxd "
+if [ "${STR/ "$S_SERVER_TYPE" /}" != "$STR" ] && ! grep -q "$PARTSUB" "${S_FILE_INSTALL_DONE}"; then
+
+	_echoT "----------  $PARTSUB"
+
+	while ! grep -q "^$PARTSUB$" "${S_FILE_INSTALL_DONE}"; do
+		_echoi "from an other terminal in server host launch:"
+		_echoI "${S_PATH_SCRIPT_INSTALL}/sub/${S_HOST_RELEASE}-${PARTSUB}.install ${_CTIDTHIS} $S_FILE_INSTALL_DONE${cclear}"
+		_askyn "Confirm"
+	done
+fi
+
+
+STR=" vz lxd "
+if [ "${STR/ "$S_SERVER_TYPE" /}" != "$STR" ]; then
+
+	_echoT "----------  rsyslog conf"
+
+	FILECONF="/etc/rsyslog.d/vm-redis.conf"
+	FILE=${S_PATH_SCRIPT_CONF}/rsyslog/vm-redis.conf
+	[ ! -f "$FILE" ] && _exitE "Unable to find file: '$FILE'"
+
+	_evalq cp -a "$FILE" "$FILECONF"
+	__replace_val "$FILECONF"
+
+
+	_echoT "----------  rsyslog conf"
+
+	systemctl restart rsyslog.service
+fi
+
+
+_echoT "----------  restart"
+
+_service restart redis-server
+
+
+####################################  USAGE
+
+_echoT "----------  conf S_USAGE cache"
+_confset "S_USAGE" "cache" "$S_GLOBAL_CONF"
+
+_echoT "----------  conf S_PARTS $_PART"
+_confmulti_add "S_PARTS" "$_PART" "$S_GLOBAL_CONF"
+
+
+####################################  END
+
+_echoT "----------  end"
+_eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"

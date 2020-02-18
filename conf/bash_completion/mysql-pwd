@@ -1,0 +1,36 @@
+# -*- sh -*-
+#
+# Bash completion function for the 'mysql-pwd' command.
+
+_mysql-pwd() {
+   local cur
+
+	COMPREPLY=()
+	cur=${COMP_WORDS[COMP_CWORD]}
+
+	# short format options
+	optsshort='-d -f -h -p -u -p'
+	# long format options
+	optslong='--debug --force --host --pwd --user'
+	# commands
+	actions='reset reset-all reset-base update update-all update-base update-up'
+
+	# length 1 & start with -
+	if  [ "${#cur}" -eq 1 ] && [ "${cur:0:1}" == "-" ]; then
+		COMPREPLY=( $(compgen -W "${optsshort}" -- ${cur}) )
+		return 0
+
+	# length 2 & start with --
+	elif [ "${cur:0:2}" == "--" ]; then
+		COMPREPLY=( $(compgen -W "${optslong}" -- ${cur}) )
+		return 0
+
+	# others for commands
+	else
+		COMPREPLY=( $(compgen -W "${actions}" -- ${cur}) )
+		return 0
+
+	fi
+
+}
+complete -F _mysql-pwd mysql-pwd

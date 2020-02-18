@@ -1,0 +1,6 @@
+# Used for quota
+user = USER
+password = PASSWORD
+hosts = HOSTS
+dbname = DBNAME
+query = SELECT quota FROM mailbox WHERE username='%s'

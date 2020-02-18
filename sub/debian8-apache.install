@@ -1,0 +1,345 @@
+#!/bin/bash
+#
+# write by Aguy
+
+
+_echoT "\n==========================================  $S_RELEASE $_PART"
+
+_echoT "----------  apache install"
+
+_eval "apt-get install -y libapache2-mod-auth-plain libapache2-mod-evasive apache2-doc" # libapache2-mod-geoip libapache2-mod-perl2 libapache2-mod-chroot libapache2-svn postgresql-client
+
+
+_echoT "----------  apache lynx-cur (provide www-browser for apachectl)"
+
+_eval "apt-get install -y lynx-cur" # libapache2-mod-geoip libapache2-mod-perl2 libapache2-mod-chroot libapache2-svn postgresql-client
+
+
+_echoT "----------  apache extra"
+
+_eval "apt-get install -y git"
+
+
+_echoT "----------  enable modules"
+# a2dismod
+_eval "a2enmod evasive deflate info unique_id cgid userdir vhost_alias rewrite info status" # geoip perl dav_svn dav
+
+_eval "service apache2 restart"
+
+
+_echoT "----------  dirmngr install"
+
+_eval "apt-get install -y dirmngr"
+
+
+_echoT "----------  mariadb repos"
+
+#apt-key adv --recv-keys --keyserver keyserver.ubuntu.com 0xcbcb082a1bb943db
+FILE=${S_PATH_SCRIPT_XTRA}/mariadb-10.3-${S_RELEASE}.key
+! [ -f "$FILE" ] && _exitE "Unable to find file: '$FILE'"
+_eval "apt-key add $FILE"
+
+FILE=/etc/apt/sources.list.d/mariadb.list
+[ ! -f "$FILE.$DDATE" ] && [ -f "$FILE" ] && _eval cp -a "$FILE" "$FILE.$DDATE"
+echo "# MariaDB 10.3 repository list - created 2018-02-01 14:48 UTC
+# http://downloads.mariadb.org/mariadb/repositories/
+deb [arch=amd64,i386] http://mariadb.mirrors.ovh.net/MariaDB/repo/10.3/debian $S_RELEASE_NAME main
+deb-src http://mariadb.mirrors.ovh.net/MariaDB/repo/10.3/debian $S_RELEASE_NAME main" > "$FILE"
+
+_echoT "----------  pgsql repos"
+
+#wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
+FILE=${S_PATH_SCRIPT_XTRA}/postgresql-10.key
+! [ -f "$FILE" ] && _exitE "Unable to find file: '$FILE'"
+_eval "apt-key add $FILE"
+
+FILE=/etc/apt/sources.list.d/pgdg.list
+[ ! -f "$FILE.$DDATE" ] && [ -f "$FILE" ] && _eval cp -a "$FILE" "$FILE.$DDATE"
+echo "deb http://apt.postgresql.org/pub/repos/apt/ ${S_RELEASE_NAME}-pgdg main" > "$FILE"
+
+
+_echoT "----------  apt update"
+
+_eval "apt-get update"
+
+_echoT "----------  mariadb-client postgresql-client install"
+
+_eval "apt-get install -y mariadb-client postgresql-client"
+
+
+_echoT "----------  apache conf"
+
+FILE=/etc/apache2/apache2.conf
+[ ! -f "$FILE.$DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+# apache2 : ServerName
+str=localhost; ! grep -q "ServerName" "$FILE" && echo -e "\n# servername for default\nServerName $str" >> "$FILE"
+
+
+_echoT "----------  apache ssl conf"
+FILE=/etc/apache2/sites-available/default-ssl.conf
+[ ! -f "$FILE.$DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+# ssl : base directory
+str=/var/www/html; sed -i "s|^\([[:space:]]*DocumentRoot \)/var/www/html|\1$str|" "$FILE"
+
+
+_echoT "----------  apache security"
+
+FILE=/etc/apache2/conf-available/security.conf
+[ ! -f "$FILE.$DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+# security : DenyFromAll
+str="<Directory />\n   AllowOverride None\n   Order Deny,Allow\n   Deny from all\n</Directory>"; sed -i "s|^\(#<Directory />\)|$str\n\1|" "$FILE"
+# security : svn
+str="<DirectoryMatch \"/\.svn\">\n   Require all denied\n</DirectoryMatch>"; sed -i "s|^\(#<DirectoryMatch \"/\\\.svn\">\)|$str\n\1|" "$FILE"
+# security : ServerSignature Off
+str=Off; sed -i "s/^\(ServerSignature\).*$/\1 $str/" "$FILE"
+# security : TraceEnable Off
+str=Off; sed -i "s/^\(TraceEnable\).*$/\1 $str/" "$FILE"
+
+
+_echoT "----------  apache evasive"
+
+FILE=/etc/apache2/mods-available/evasive.conf
+[ ! -f "$FILE.$DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+str="3097"; sed -i "s|^\( *\)#\(DOSHashTableSize *\).*$|\1\2 $str|" "$FILE"
+str="4"; sed -i "s|^\( *\)#\(DOSPageCount *\).*$|\1\2 $str|" "$FILE"
+str="100"; sed -i "s|^\( *\)#\(DOSSiteCount *\).*$|\1\2 $str|" "$FILE"
+str="1"; sed -i "s|^\( *\)#\(DOSPageInterval *\).*$|\1\2 $str|" "$FILE"
+str="1"; sed -i "s|^\( *\)#\(DOSSiteInterval *\).*$|\1\2 $str|" "$FILE"
+str="10"; sed -i "s|^\( *\)#\(DOSBlockingPeriod *\).*$|\1\2 $str|" "$FILE"
+
+
+_echoT "----------  apache info & status"
+
+FILE=/etc/apache2/mods-available/info.conf
+[ ! -f "$FILE.$DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+# optimize require for info
+str="\1Require ip 127.0.0.1 ${_IPS_AUTH}"; sed -i "s/\(\t\+\)\(Require*\)/$str\n\1#\2/" "$FILE"
+
+FILE=/etc/apache2/mods-available/status.conf
+[ ! -f "$FILE.$DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+# optimize require for status
+str="\1Require ip 127.0.0.1 ${_IPS_AUTH}"; sed -i "s/\(\t\+\)\(Require*\)/$str\n\1#\2/" "$FILE"
+
+
+_echoT "----------  create localhost"
+
+! [ -d /var/www/localhost ] && mkdir -p /var/www/html  /var/www/localhost/error /var/www/localhost/icons
+[ -e /var/www/html/index.html ] && cp -a /var/www/html/index.html /var/www/html || echo "<html><body><h1>It works! Yeps</h1><p>This is the default web page for this server.</p><p>The web server software is running but no content has been added,yet.</p></body></html>" > /var/www/html/index.html
+[ -e /var/www/index.html ] && rm /var/www/index.html
+
+
+_echoT "----------  remove /var/www/html"
+
+[ -d /var/www/html ] && rm -fR /var/www/html
+
+
+_echoT "----------  rights on /var/www"
+
+_eval "chown -R www-data.www-data /var/www"
+
+
+_echoT "----------  default site"
+
+name=localhost
+
+FILE=/etc/apache2/sites-available/000-default.conf
+[ ! -f "$FILE.$DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+cat > $FILE << EOF
+# $name
+<VirtualHost *:80>
+    ServerName $name
+    ServerAdmin webmaster@$name
+
+    <Directory />
+        Options FollowSymLinks
+        AllowOverride None
+    </Directory>
+
+    DocumentRoot /var/www/$name/html
+    <Directory "/var/www/$name/html">
+        Options -Indexes -MultiViews +FollowSymLinks
+        AllowOverride None
+        Order allow,deny
+        Allow from all
+     </Directory>
+
+    # Possible values include: debug, info, notice, warn, error, crit, alert, emerg.
+    LogLevel warn
+    SetEnvIf Remote_Addr "::1" nolog
+    SetEnvIf Remote_Addr "127\.0\.0\.1" nolog
+    CustomLog \${APACHE_LOG_DIR}/access.log vhost_combined env=!nolog
+    ErrorLog \${APACHE_LOG_DIR}/error.log
+
+    Include conf-available/serve-cgi-bin.conf
+</VirtualHost>
+EOF
+
+#_echoT "----------  default ssl site"
+#FILE=/etc/apache2/sites-available/default-ssl
+
+
+_echoT "----------  server restart"
+
+_eval "service apache2 restart"
+
+
+_echoT "----------  ssl enable"
+
+_eval "a2enmod ssl"
+
+
+_echoT "----------  default-ssl conf"
+
+name=localhost
+pathcer="${S_VM_PATH_SHARE}/www/ssl/certs"
+pathkey="${S_VM_PATH_SHARE}/www/ssl/private"
+
+! [ -f ${pathkey}/${S_NODE_IPV4}.key ] && ! [ -f ${pathcer}/${S_NODE_IPV4}.crt ] && _eval "openssl req -x509 -nodes -days 3650 -newkey rsa:4096 -keyout ${pathkey}/${S_NODE_IPV4}.key -out ${pathcer}/${S_NODE_IPV4}.crt"
+
+FILE=/etc/apache2/sites-available/000-default-ssl.conf
+[ ! -f "$FILE.$DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+cat > $FILE << EOF
+<IfModule mod_ssl.c>
+    <VirtualHost _default_:443>
+        ServerName $name
+        ServerAdmin webmaster@localhost
+
+        SSLEngine on
+        SSLCertificateFile    ${pathcer}/${S_NODE_IPV4}.crt
+        SSLCertificateKeyFile ${pathkey}/${S_NODE_IPV4}.key
+
+        DocumentRoot /var/www/$name/html
+
+         <FilesMatch "\.(cgi|shtml|phtml|php)\$">
+            SSLOptions +StdEnvVars
+        </FilesMatch>
+        <Directory /usr/lib/cgi-bin>
+            SSLOptions +StdEnvVars
+        </Directory>
+
+        BrowserMatch "MSIE [2-6]" \
+            nokeepalive ssl-unclean-shutdown \
+            downgrade-1.0 force-response-1.0
+        # MSIE 7 and newer should be able to use keepalive
+        BrowserMatch "MSIE [17-9]" ssl-unclean-shutdown
+
+       # Available loglevels: trace8, ..., trace1, debug, info, notice, warn, error, crit, alert, emerg
+        LogLevel info ssl:warn
+        ErrorLog \${APACHE_LOG_DIR}/ssl-error.log
+        CustomLog \${APACHE_LOG_DIR}/ssl-access.log  vhost_combined env=!nolog
+    </VirtualHost>
+</IfModule>
+EOF
+
+
+_echoT "----------  ssl site enable"
+
+_eval "a2ensite 000-default-ssl.conf"
+
+
+_echoT "----------  server restart"
+
+_eval "service apache2 restart"
+
+
+PARTSUB=ct-apache-fail2ban
+if [ "$S_SERVER_TYPE" == vz ]; then
+	_echoT "----------  fail2ban add rules"
+
+	ctidthis="$(_get_ctid)"
+
+	while ! grep -q "^$PARTSUB$" "${S_FILE_INSTALL_DONE})"; do
+		_echoI "To add global apache rules to hosting server, please :"
+		_echoI "${whiteb}From an other terminal in server host launch"
+		_echoI "'${S_PATH_SCRIPT_INSTALL}/sub/${S_HOST_RELEASE}-${PARTSUB}.install ${ctidthis} $S_FILE_INSTALL_DONE'${cclear}"
+		_askyn "Confirm"
+	done
+fi
+
+PARTSUB=ct-apache-iptables
+if [ "$S_SERVER_TYPE" == vz ] && ! grep -q "^$PARTSUB$" "${S_FILE_INSTALL_DONE}"; then
+	_echoT "----------  ctid to iptables rules"
+
+	while ! grep -q "^$PARTSUB$" "${S_FILE_INSTALL_DONE}"; do
+		ctid=$(awk '{print $1}' < /proc/vz/veinfo)
+		_echoI "To forward incoming traffic to this container with ctid='$ctid', please :"
+		_echoI "${whiteb}From an other terminal in server host edit file '${S_PATH_CONF}/firewall.conf'"
+		_echoI "add a key to array '_PORTSIDVZ' for Ip forwading"
+		_askyn "Confirm"
+		[ "$_ANSWER" == y ] && ! grep -q "^${PARTSUB}$" "${S_FILE_INSTALL_DONE}" && echo $PARTSUB >> ${S_FILE_INSTALL_DONE}
+	done
+fi
+
+
+_echoT "----------  end"
+_eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"
+
+
+
+<<keep
+--------------------------------------------------------
+apache_virtualhost()
+
+name=${S_DOMAIN_FQDN}
+
+if ! [ -d /var/www/$name ]; then mkdir -p /var/www/$name/html  /var/www/$name/error /var/www/$name/icons /var/www/$name/cgi-bin; fi
+echo "<html><body><h1>It works! Yeps</h1><p>Welcome to $name</p></body></html>" > /var/www/$name/html/index.html
+
+FILE=/etc/apache2/sites-available/$name
+cat > $FILE << EOF
+# $name
+<VirtualHost *:80>
+    ServerName $name
+    ServerAdmin webmaster@$name
+
+    <Directory />
+        Options FollowSymLinks
+        AllowOverride None
+    </Directory>
+
+    DocumentRoot /var/www/$name/html
+    <Directory "/var/www/$name/html">
+        Options -Indexes -MultiViews +FollowSymLinks
+        AllowOverride None
+        Order allow,deny
+        Allow from all
+     </Directory>
+
+    # Possible values include: debug, info, notice, warn, error, crit, alert, emerg.
+    LogLevel warn
+    SetEnvIf Remote_Addr "::1" nolog
+    SetEnvIf Remote_Addr "127\.0\.0\.1" nolog
+    CustomLog \${APACHE_LOG_DIR}/$name_access.log vhost_combined env=!nolog
+    ErrorLog \${APACHE_LOG_DIR}/$name_error.log
+
+    Include conf-available/serve-cgi-bin.conf
+</VirtualHost>
+
+# tuleap.$name
+<VirtualHost *:80>
+    ServerName tuleap.$name
+    ServerAdmin webmaster@tuleap.$name
+
+    DocumentRoot /var/www/$name/tuleap
+    <Directory "/var/www/$name/tuleap">
+        Options -Indexes -MultiViews +FollowSymLinks
+        AllowOverride None
+        Order allow,deny
+        Allow from all
+     </Directory>
+
+    # Possible values include: debug, info, notice, warn, error, crit, alert, emerg.
+    LogLevel warn
+    SetEnvIf Remote_Addr "::1" nolog
+    SetEnvIf Remote_Addr "127\.0\.0\.1" nolog
+    CustomLog \${APACHE_LOG_DIR}/tuleap.$name_access.log vhost_combined env=!nolog
+    ErrorLog \${APACHE_LOG_DIR}/tuleap.$name_error.log
+
+    Include conf-available/serve-cgi-bin.conf
+</VirtualHost>
+EOF
+
+a2ensite $name
+a2r
+keep
+

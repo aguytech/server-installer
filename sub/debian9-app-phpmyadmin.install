@@ -1,0 +1,344 @@
+#!/bin/bash
+#
+# write by Aguy
+
+PARTNAME="${_PART#*-}"
+
+
+_echoT "\n==========================================  $S_RELEASE $_PART"
+
+_echoT "------------------ file required"
+FILE_XTRA_SUB=${S_PATH_SCRIPT_CONF}/apache2/sub-site.conf
+FILE_XTRA_SUB_SSL=${S_PATH_SCRIPT_CONF}/apache2/sub-site-ssl.conf
+
+FILES="$FILE_XTRA_SUB $FILE_XTRA_SUB_SSL"
+for FILE in $FILES; do ! [ -f "$FILE" ] && _exitE "Unable to find file: '$FILE'"; done
+
+
+####################################  FUNCTION
+
+
+####################################  CONTAINER
+
+if [ "$S_SERVER_TYPE" == vz ]; then
+	_echoT "----------  ctid"
+
+	[ "${S_SERVICE_IPS['admin']/$_IPTHIS/}" == "${S_SERVICE_IPS['admin']}" ] && _askyn "This container is not the default one for Administration: '${S_SERVICE_IPS['admin']}'\nConfirm or type 'n' to exit"
+	[ "$_ANSWER" == "n" ] && _exitE "Bye"
+fi
+
+
+####################################  MAIN
+
+_echoT "------------------ fileconf source"
+[ -f "$S_FILE_INSTALL_CONF" ] && . "$S_FILE_INSTALL_CONF"
+
+
+_echoT "----------  data"
+
+[ -z ${_VERSION+x} ] && anstmp="4.8.3" && _askno "Give a version you want to install ($anstmp)" && _VERSION=${_ANSWER:-$anstmp} && _confset _VERSION "$_VERSION"
+
+[ -z ${_MYDOMAIN+x} ] && anstmp="$S_DOMAIN_FQDN" && _askno "Please enter a domain name ($anstmp)" && _MYDOMAIN="${_ANSWER:-$anstmp}" && _confset _MYDOMAIN "$_MYDOMAIN"
+
+[ -z ${_SUBDOMAIN+x} ] && anstmp="pma" && _askno "Give a name for subdomain access ($anstmp)" && _SUBDOMAIN=${_ANSWER:-$anstmp} && _confset _SUBDOMAIN "$_SUBDOMAIN"
+
+[ -z ${_PATH_WWW+x} ] && anstmp="/var/www" && _askno "Give a path for www ($anstmp)" && _PATH_WWW=${_ANSWER:-$anstmp} && _confset _PATH_WWW "$_PATH_WWW"
+
+[ -z ${_PATH_INSTALL+x} ] && anstmp="$_PATH_WWW/$_MYDOMAIN" && _askno "Give a path to install ($anstmp)" && _PATH_INSTALL=${_ANSWER:-$anstmp} && _confset _PATH_INSTALL "$_PATH_INSTALL"
+
+[ -z ${_PATH_SHARE+x} ] && anstmp="$S_VM_PATH_SHARE/php/$_SUBDOMAIN" && _askno "Give a shared path for '$_SUBDOMAIN' files ($anstmp)" && _PATH_SHARE=${_ANSWER:-$anstmp} && _confset _PATH_SHARE "$_PATH_SHARE"
+
+[ -z ${_DBHOSTS+x} ] && anstmp="${S_SERVICE_IPS['sgbd']}" && _askno "Give address of ALL database servers to administrate ($anstmp)" && _DBHOSTS=${_ANSWER:-$anstmp} && _confset _DBHOSTS "$_DBHOSTS"
+
+[ -z ${_DBNAME+x} ] && anstmp="${PARTNAME}" && _askno "Give a name for database ($anstmp)" && _DBNAME=${_ANSWER:-$anstmp} && _confset _DBNAME "$_DBNAME"
+
+[ -z ${_DBUSER+x} ] && anstmp="$_SUBDOMAIN" && _askno "Give a name for database user ($anstmp)" && _DBUSER=${_ANSWER:-$anstmp} && _confset _DBUSER "$_DBUSER"
+
+[ -z ${_DBPWD+x} ] && anstmp="$(_pwd)" && _askno "Give a password for database user '$_DBUSER' ($anstmp)" && _DBPWD=${_ANSWER:-$anstmp} && _confset _DBPWD "$_DBPWD"
+
+
+####################################  PARTSUB
+PARTSUB="host-$_PART"
+STR=" vz lxd "
+if [ "${STR/ "$S_SERVER_TYPE" /}" != "$STR" ] && ! grep -q "$PARTSUB" "${S_FILE_INSTALL_DONE}"; then
+    _echoT "----------  $PARTSUB"
+
+    while ! grep -q "^${PARTSUB}$" "${S_FILE_INSTALL_DONE}"; do
+        _echoi "${whiteb}From an other terminal in the HOST, launch:"
+        _echoI "${S_PATH_SCRIPT_INSTALL}/sub/${S_HOST_RELEASE}-${PARTSUB}.install ${_CTIDTHIS} '${_PATH_SHARE}' '${S_FILE_INSTALL_DONE}'${cclear}"
+        _askyn "Confirm the end of this subprocess to continue"
+    done
+fi
+
+
+####################################  DATA
+
+_DBHOSTONE=$(echo $_DBHOSTS|tr ' ' "\n"|sort|sed -n 1p)
+
+declare -A PWDROOTADMINS
+for _DBHOST in $_DBHOSTS; do
+	_ask "Give password for user 'rootadmin'@'$_DBHOST'"
+	PWDTMP="$_ANSWER"
+	while ! timeout 2 mysql -h$_DBHOST -urootadmin -p$PWDTMP -e "" 2>/dev/null; do
+		_echoE "Unable to connect to database: 'rootadmin'@'$_DBHOST' pass=$PWDTMP"
+		_ask "Give password for user 'rootadmin'@'$_DBHOST'"
+		PWDTMP=$_ANSWER
+	done
+	PWDROOTADMINS[$_DBHOST]="$PWDTMP"
+done
+
+
+PATHTO="${PARTNAME}-${_VERSION}"
+FILE="phpMyAdmin-${_VERSION}-all-languages.tar.gz"
+
+PATH_ADMIN="$_PATH_INSTALL/admin"
+
+
+_echoT "----------  path create"
+
+for PATHTMP in "$_PATH_WWW" "$_PATH_INSTALL" "$_PATH_SHARE" "$PATH_ADMIN"; do
+    ! [ -d "$PATHTMP" ] && _evalq mkdir -p "$PATHTMP"
+    _evalq chown www-data:www-data "$PATHTMP"
+    _evalq chmod 755 "$PATHTMP"
+done
+
+
+####################################  INSTALL
+
+_echoT "----------  download"
+
+_eval cd "$_PATH_INSTALL"
+
+if ! [ -f "$FILE" ]; then
+
+	URLDOWN="https://files.phpmyadmin.net/phpMyAdmin/${_VERSION}/${FILE}"
+	# asks
+	while ! _evalq wget -q "$URLDOWN"; do
+		_echoE "${redb}Unable to download software with URL:\n$URLDOWN"
+		_ask "Please give a URL to download"
+		URLDOWN=$_ANSWER
+	done
+
+fi
+
+
+_echoT "----------  install"
+
+[ -h "$_SUBDOMAIN" ] && _evalq rm "$_SUBDOMAIN"
+[ -d "$PATHTO" ] && ! [ -d "$PATHTO.$DDATE" ] && _evalq mv "$PATHTO" "$PATHTO.$DDATE"
+[ -d "$PATHTO" ] && _evalq rm -fR "$PATHTO"
+_evalq tar xzf "$FILE"
+_evalq mv "${FILE%.tar.gz}" "$PATHTO"
+_evalq ln -sv "$PATHTO" "$_SUBDOMAIN"
+_evalq rm "$FILE"
+
+
+_echoT "----------  path admin"
+
+# admin path
+PATH_ADMIN="$_PATH_INSTALL/admin"
+! [ -d "$PATH_ADMIN" ] && _evalq mkdir "$PATH_ADMIN"
+
+
+_echoT "----------  rights www-data"
+
+_eval chown www-data:www-data -R "$_PATH_INSTALL/$PATHTO" "$_PATH_INSTALL/$_SUBDOMAIN" "$_PATH_SHARE" "$PATH_ADMIN"
+
+
+for _DBHOST in $_DBHOSTS; do
+	PWD=${PWDROOTADMINS[$_DBHOST]}
+
+	_echoT "----------  $_DBHOST create db & user"
+
+	_eval "mysql -h'$_DBHOST' -urootadmin -p'$PWD' -e \"CREATE DATABASE IF NOT EXISTS $_DBNAME DEFAULT CHARACTER SET utf8;\""
+	for IP in ${S_SERVICE_IPS['admin']}; do
+		_eval "mysql -h'$_DBHOST' -urootadmin -p'$PWD' -e \"GRANT USAGE ON *.* TO '$_DBUSER'@'${IP}' IDENTIFIED BY '$_DBPWD'\""
+		_eval "mysql -h'$_DBHOST' -urootadmin -p'$PWD' -e \"GRANT ALL PRIVILEGES ON $_DBNAME.* TO '$_DBUSER'@'${IP}'\""
+	done
+	_eval "mysql -h'$_DBHOST' -urootadmin -p'$PWD' -e \"FLUSH PRIVILEGES\""
+
+
+	_echoT "----------  $_DBHOST create tables"
+
+	_eval "mysql -h$_DBHOST -urootadmin -p$PWD < $PATHTO/sql/create_tables.sql"
+
+done
+
+####################################  APACHE
+
+PATH_APACHE="/etc/apache2/sites-available"
+FILES="$FILE_XTRA_SUB $PATH_APACHE/${_MYDOMAIN}.conf
+$FILE_XTRA_SUB_SSL $PATH_APACHE/${_MYDOMAIN}-ssl.conf"
+
+# SUBDOMAINS="$_SUBDOMAIN"
+SUBDOMAINS="admin $_SUBDOMAIN"
+
+SUBDOMAIN=$_SUBDOMAIN
+for _SUBDOMAIN in $SUBDOMAINS; do
+    while read FILEFROM FILETO; do
+        ! [ -f "$FILETO" ] && _evalq touch "$FILETO"
+
+        _echoT "----------  apache ${_SUBDOMAIN} $FILETO"
+
+        if ! grep -q "ServerName ${_SUBDOMAIN}.${_MYDOMAIN}" "$FILETO"; then
+            _evalq "cat '$FILEFROM' >> '$FILETO'"
+            _evalq _var_replace_www "$FILETO"
+        fi
+
+    done < <(echo "$FILES")
+done
+_SUBDOMAIN=$SUBDOMAIN
+
+
+_echoT "----------  phpinfo & monitor"
+
+for PATHTMP in "/var/www/html" "$_PATH_INSTALL" "$PATH_ADMIN"; do
+    _evalq "echo '<?php phpinfo(); ?>' > '$PATHTMP/phpinf.php.keep'"
+    _evalq "echo 'admin' > '$PATHTMP/ping-monitor.html'"
+    _evalq "echo '<?php echo \"admin\"; ?>' > '$PATHTMP/ping-monitor.php'"
+
+    _evalq chown www-data:www-data -R "$PATHTMP"
+done
+
+
+_echoT "----------  apache enable sites"
+
+_evalq a2ensite "${_MYDOMAIN}.conf"
+
+
+_echoT "----------  apache reload"
+
+_evalq systemctl reload apache2
+
+
+_echoT "----------  phpmyadmin conf access"
+
+FILE="$PATHTO/config.inc.php"
+
+[ -f "$FILE" ] && mv "$FILE" "${FILE}.$DDATE"
+_evalq cp "$PATHTO/config.sample.inc.php" "$FILE"
+
+# host
+sed -i "s|^\(\$cfg\['Servers'\]\[\$i\]\['host'\] = \).*$|\1'$_DBHOSTONE';|" "$FILE"
+# control
+SCH="controlhost"; sed -i "s|^/* \?\(\$cfg\['Servers'\]\[\$i\]\['$SCH'\] = \).*$|\1'$_DBHOSTONE';|" "$FILE"
+SCH="controlport"; sed -i "s|^/* \?\(\$cfg\['Servers'\]\[\$i\]\['$SCH'\] = \).*$|\1'$S_MARIA_PORT';|" "$FILE"
+SCH="controluser"; sed -i "s|^/* \?\(\$cfg\['Servers'\]\[\$i\]\['$SCH'\] = \).*$|\1'$_DBUSER';|" "$FILE"
+SCH="controlpass"; sed -i "s|^/* \?\(\$cfg\['Servers'\]\[\$i\]\['$SCH'\] = \).*$|\1'$_DBPWD';|" "$FILE"
+
+
+_echoT "----------  phpmyadmin conf global"
+
+# prevents ssl error
+STR="\n/* Prevents ssl error */\n\$cfg['PmaAbsoluteUri'] = 'https://${SUBDOMAIN}.${_MYDOMAIN}';"
+! grep -q "\$cfg\['PmaAbsoluteUri'\]" "$FILE" && sed -i "s|^\(\$cfg\['blowfish_secret'\].*\)$|\1\n$STR|" "$FILE"
+
+# session timing
+STR="\n/* Configuration */\n\$cfg['LoginCookieValidity'] = 60*60*4;"
+sed -i "s|^\(\$cfg\['blowfish_secret'\] = .*\)$|\1\n$STR|" "$FILE"
+
+SCH="blowfish_secret";  STR="'$(_pwd32)';"; sed -i "s|^/* \?\(\$cfg\['$SCH'\] = \).*$|\1$STR|" "$FILE"
+SCH="ShowAll";		  STR="true;";		sed -i "s|^/* \?\(\$cfg\['$SCH'\] = \).*$|\1$STR|" "$FILE"
+SCH="RowActionType";	STR="'icons';";	 sed -i "s|^/* \?\(\$cfg\['$SCH'\] = \).*$|\1$STR|" "$FILE"
+SCH="MaxRows";		  STR="100;";		 sed -i "s|^/* \?\(\$cfg\['$SCH'\] = \).*$|\1$STR|" "$FILE"
+SCH="DefaultLang";	  STR="'en';";		sed -i "s|^/* \?\(\$cfg\['$SCH'\] = \).*$|\1$STR|" "$FILE"
+SCH="QueryHistoryDB";   STR="true;";		sed -i "s|^/* \?\(\$cfg\['$SCH'\] = \).*$|\1$STR|" "$FILE"
+SCH="QueryHistoryMax";  STR="100;";		 sed -i "s|^/* \?\(\$cfg\['$SCH'\] = \).*$|\1$STR|" "$FILE"
+SCH="SendErrorReports"; STR="'ask';";	   sed -i "s|^/* \?\(\$cfg\['$SCH'\] = \).*$|\1$STR|" "$FILE"
+
+# \$cfg['MaxTableList'] = 100;
+
+
+_echoT "----------  phpmyadmin shared path"
+
+# dir
+PATHUP="${_PATH_SHARE}/up"
+PATHSAVE="${_PATH_SHARE}/save"
+! [ -d $PATHUP ] && mkdir -p $PATHUP
+! [ -d $PATHSAVE ] && mkdir -p $PATHSAVE
+
+find "$_PATH_SHARE" -type d -exec chown root.www-data {} \; -exec chmod g+rw {} \; -exec chmod o-rwx {} \;
+
+SCH="UploadDir";	STR="'$PATHUP';";	   sed -i "s|^/* \?\(\$cfg\['$SCH'\] = \).*$|\1$STR|" "$FILE"
+SCH="SaveDir";	  STR="'$PATHSAVE';";	 sed -i "s|^/* \?\(\$cfg\['$SCH'\] = \).*$|\1$STR|" "$FILE"
+
+
+_echoT "----------  phpmyadmin conf pma"
+
+# pma
+sed -i "s|^// \(\$cfg\['Servers'\]\[\$i\]\['pmadb'\].*\)$|\1|" "$FILE"
+sed -i "s|^// \(\$cfg\['Servers'\]\[\$i\]\['bookmarktable'\].*\)$|\1|" "$FILE"
+sed -i "s|^// \(\$cfg\['Servers'\]\[\$i\]\['relation'\].*\)$|\1|" "$FILE"
+sed -i "s|^// \(\$cfg\['Servers'\]\[\$i\]\['table_info'\].*\)$|\1|" "$FILE"
+sed -i "s|^// \(\$cfg\['Servers'\]\[\$i\]\['table_coords'\].*\)$|\1|" "$FILE"
+sed -i "s|^// \(\$cfg\['Servers'\]\[\$i\]\['pdf_pages'\].*\)$|\1|" "$FILE"
+sed -i "s|^// \(\$cfg\['Servers'\]\[\$i\]\['column_info'\].*\)$|\1|" "$FILE"
+sed -i "s|^// \(\$cfg\['Servers'\]\[\$i\]\['history'\].*\)$|\1|" "$FILE"
+sed -i "s|^// \(\$cfg\['Servers'\]\[\$i\]\['table_uiprefs'\].*\)$|\1|" "$FILE"
+sed -i "s|^// \(\$cfg\['Servers'\]\[\$i\]\['tracking'\].*\)$|\1|" "$FILE"
+sed -i "s|^// \(\$cfg\['Servers'\]\[\$i\]\['userconfig'\].*\)$|\1|" "$FILE"
+sed -i "s|^// \(\$cfg\['Servers'\]\[\$i\]\['recent'\].*\)$|\1|" "$FILE"
+sed -i "s|^// \(\$cfg\['Servers'\]\[\$i\]\['favorite'\].*\)$|\1|" "$FILE"
+sed -i "s|^// \(\$cfg\['Servers'\]\[\$i\]\['users'\].*\)$|\1|" "$FILE"
+sed -i "s|^// \(\$cfg\['Servers'\]\[\$i\]\['usergroups'\].*\)$|\1|" "$FILE"
+sed -i "s|^// \(\$cfg\['Servers'\]\[\$i\]\['navigationhiding'\].*\)$|\1|" "$FILE"
+sed -i "s|^// \(\$cfg\['Servers'\]\[\$i\]\['savedsearches'\].*\)$|\1|" "$FILE"
+sed -i "s|^// \(\$cfg\['Servers'\]\[\$i\]\['central_columns'\].*\)$|\1|" "$FILE"
+sed -i "s|^// \(\$cfg\['Servers'\]\[\$i\]\['designer_settings'\].*\)$|\1|" "$FILE"
+sed -i "s|^// \(\$cfg\['Servers'\]\[\$i\]\['export_templates'\].*\)$|\1|" "$FILE"
+#sed -i "s|^// \(\$cfg\['Servers'\]\[\$i\]\['auth_swekey_config'\].*\)$|\1|" "$FILE"
+
+# other database servers
+FILEBASE=/tmp/pma-base
+FILEINS=/tmp/pma-ins
+> "$FILEINS"
+sed -n '/^\$i++/,/pma__export_templates/p' "$FILE" > "$FILEBASE"
+for _DBHOST in ${_DBHOSTS/$_DBHOSTONE/}; do
+	#PWD=${PWDROOTADMINS[$_DBHOST]}
+	FILETMP=/tmp/pma-$_DBHOST
+	_evalq cp -a "$FILEBASE" "$FILETMP"
+
+	_echoT "----------  $_DBHOST conf add"
+
+	sed -i '1i\'"\n/**\n* $_DBHOST\n */" "$FILETMP"
+	sed -i "s|$_DBHOSTONE|$_DBHOST|" "$FILETMP"
+
+	SCH="controlhost"; sed -i "s|^/* \?\(\$cfg\['Servers'\]\[\$i\]\['$SCH'\] = \).*$|\1'$_DBHOST';|" "$FILETMP"
+	#SCH="controlpass"; sed -i "s|^/* \?\(\$cfg\['Servers'\]\[\$i\]\['$SCH'\] = \).*$|\1'$PWD';|" "$FILETMP"
+
+	cat "$FILETMP" >> "$FILEINS"
+	_evalq rm "$FILETMP"
+done
+# add to configuration file
+sed -i -e "/pma__export_templates/r $FILEINS" "$FILE"
+_evalq rm "$FILEBASE" "$FILEINS"
+
+
+_echoT "----------  rights www-data:www-data"
+
+_eval chown www-data:www-data -R "$_PATH_INSTALL/$PATHTO"
+
+
+_echoT "----------  $_SUBDOMAIN test"
+
+_askno "Test this address\nhttps://${_SUBDOMAIN}.${_MYDOMAIN}\nConfirm"
+
+
+_echoT "----------  password"
+
+_echoA "Don't forget to keep password"
+for _DBHOST in $_DBHOSTS; do _echoa "- $_DBUSER @ $_DBHOST - $_DBPWD"; done
+
+
+_echoT "----------  end"
+
+_evalq _var_unset "part" "*"
+_eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"
+
+
+<<KEEP
+
+# config.inc.php
+# $cfg['LoginCookieValidity'] = 60*60*10;
+
+KEEP

@@ -1,0 +1,203 @@
+#!/bin/bash
+#
+# write by Aguy
+
+
+####################################  global configuration
+
+! type _menu &>/dev/null && ! [ -f $S_GLOBAL_FUNCTIONS ] && echo -e "\e[1;31mUnable to load file '/usr/local/bs/inc-functions'${cclear} from ${BASH_SOURCE[0]}\e[0;0m" && exit 1
+. $S_GLOBAL_FUNCTIONS
+
+
+_echoT "\n==========================================  $S_RELEASE $_PART"
+
+
+_echoT "----------  tuleap repository"
+
+cat > /etc/yum.repos.d/Tuleap.repo << EOF
+[Tuleap]
+name=Tuleap
+baseurl=http://ci.tuleap.net/yum/tuleap/rhel/6/dev/\$basearch
+enabled=1
+gpgcheck=0
+EOF
+
+
+_echoT "----------  rpmforge repository"
+
+# rpmforge.repo
+#nano /etc/yum.repos.d/rpmforge.repo # in [rpmforge-extras] 'includepkgs = git* perl-Git*'
+file=/etc/yum.repos.d/rpmforge.repo
+
+sed -i "s/^\(enabled \?= \?\).*/\10/" $file
+
+if ! grep -q "includepkgs = git" "$file"; then
+        begin='\[rpmforge-extras\]'
+        end='\[[a-z-]\+\]'
+        str='\nincludepkgs = git\* perl-Git\*'; sed -i "/$begin/,/$end/{s/^\(gpgcheck.*\)$/\1$str/}" $file
+fi
+
+# CentOS-Base.repo
+#nano /etc/yum.repos.d/CentOS-Base.repo
+#add 'exclude=perl-IO-Compress perl-Compress-Raw-Zlib'
+
+
+_echoT "----------  install packages"
+
+#yum install --enablerepo=rpmforge* perl-IO-Compress
+yum install -y --enablerepo=rpmforge-extras tuleap-all
+
+
+_echoT "----------  setup"
+
+/usr/share/tuleap-install/setup.sh
+
+
+_echoT "----------  conf"
+
+
+sys_default_domain="tuleap.${S_DOMAIN_FQDN}:8130"
+sys_https_host="tuleap.${S_DOMAIN_FQDN}:9130"
+sys_email_admin='"Tuleap admin" <admin-tuleap@'${S_DOMAIN_FQDN}'>'
+sys_email_contact='"Tuleap" <tuleap@'${S_DOMAIN_FQDN}'>'
+sys_noreply='"Tuleap noreply" <noreply@'${S_DOMAIN_FQDN}'>'
+
+# data
+_askno "Please give an URL for http ($sys_default_domain)"
+sys_default_domain=${_ANSWER:-$sys_default_domain}
+_askno "Please give an URL for https ($sys_https_host)"
+sys_https_host=${_ANSWER:-$sys_https_host}
+_askno "Please give an email for admin ($sys_email_admin)"
+sys_email_admin=${_ANSWER:-$sys_email_admin}
+_askno "Please give an email for contact ($sys_email_contact)"
+sys_email_contact=${_ANSWER:-$sys_email_contact}
+_askno "Please give an email for 'noreply' ($sys_noreply)"
+sys_noreply=${_ANSWER:-$sys_noreply}
+
+file=/etc/tuleap/conf/local.inc
+[ ! -f "$FILE.$DDATE" ] && cp -a $file $file.$DDATE
+
+str="\"$sys_default_domain\";"; sed -i "s|^\(\$sys_default_domain = \).*$|\1$str|" $file
+str="\"$sys_https_host\";"; sed -i "s|^\(\$sys_https_host = \).*$|\1$str|" $file
+#str='"tuleap.'${S_DOMAIN_FQDN}'";'; sed -i "s|^\(\$sys_cookie_domain = \).*$|\1$str|" $file
+#str='"list.'${S_DOMAIN_FQDN}'";'; sed -i "s|^\(\$sys_lists_host = \).*$|\1$str|" $file
+#str='"tuleap.'${S_DOMAIN_FQDN}'";'; sed -i "s|^\(\$sys_fullname = \).*$|\1$str|" $file
+str="'${sys_email_admin//\"/\\\"}';"; sed -i "s|^\(\$sys_email_admin = \).*$|\1$str|" $file
+str="'${sys_email_contact//\"/\\\"}';"; sed -i "s|^\(\$sys_email_contact = \).*$|\1$str|" $file
+str="'${sys_noreply//\"/\\\"}';"; sed -i "s|^\(\$sys_noreply = \).*$|\1$str|" $file
+
+str=1; sed -i "s|^\(\$sys_force_ssl *= *\).*$|\1$str;|" $file
+
+
+_echoT "----------  modify upgrade"
+
+
+file=/usr/local/bs/upgrade
+echo 'whiteb="\e[1;1m"; redb="\e[1;31m"; greenb="\e[1;32m"; blueb="\e[1;34m"; magentab="\e[1;35m";cclear="\e[0;m"
+
+echo -e "${whiteb}stop tuleap & http${cclear}"
+service tuleap stop
+service httpd stop
+
+echo -e "${whiteb}upgrade packages${cclear}"
+# yum update tuleap\*
+yum update
+
+echo -e "${whiteb}apply upgrade for tuleap${cclear}"
+/usr/lib/forgeupgrade/bin/forgeupgrade --config=/etc/tuleap/forgeupgrade/config.ini update
+
+echo -e "${whiteb}clean all${cclear}"
+yum -y clean all
+
+echo -e "${whiteb}stop tuleap & http${cclear}"
+service httpd start
+service tuleap start' > $file
+
+cp -a $file $file.tuleap
+
+
+_echoT "----------  upgrade"
+
+upgrade
+
+
+_echoT "----------  ftp acces"
+
+sed -i "s/^\(anonymous_enable=\).*/\1NO/" /etc/vsftpd/vsftpd.conf
+sed -i "s/^#\(xferlog_file=\).*/\1\/var\/log\/xferlog/" /etc/vsftpd/vsftpd.conf
+
+
+_echoT "----------  informations"
+
+cat /root/todo_tuleap.txt
+
+
+_echoT "----------  ! Personnal informations !"
+
+cat ~/.tuleap_passwd
+
+
+_echoT "----------  end"
+_eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"
+
+
+<<keep
+---------------------------------------------------------------------------
+http()
+
+# /etc/httpd/conf/httpd.conf
+#move tuleap conf from /etc/httpd/conf/httpd.conf to '/etc/httpd/conf.d/tuleap.conf'
+#echo 'Include conf.d/tuleap.conf
+#Include conf.d/virtualhost.conf' >> /etc/httpd/conf/httpd.conf
+
+service httpd stop
+
+#sed -i "s/^.\?\(\(ServerName\) www\.example\.com:80.*\)/#\1\n\2 www.${S_DOMAIN_FQDN}:80/" /etc/httpd/conf/httpd.conf
+
+echo "<?php phpinfo(); ?>" > /usr/share/tuleap/src/www/phpinf.php
+
+if ! [ -d "$S_PATH_LOG/php" ]; then mkdir "$S_PATH_LOG/php"; fi
+chown apache.apache "$S_PATH_LOG/php"
+chmod o-rwx "$S_PATH_LOG/php"
+
+# php.ini
+sed -i 's/^.\?\(error_log\) = php_errors\.log/\1 = \/var\/log\/php\/error/' /etc/php.ini
+
+# logrotate
+echo "# Logrotate file for php log_errors
+$S_PATH_LOG/php/error {
+    missingok
+    compress
+    delaycompress
+    notifempty
+    weekly
+    rotate 5
+    create 0640 apache apache
+}" > /etc/logrotate.d/php
+chown root.root /etc/logrotate.d/php
+chmod 640 /etc/logrotate.d/php
+
+chown 498.497 -R /var/www
+
+service httpd start
+
+
+---------------------------------------------------------------------------
+mysql()
+
+mysqladmin -u root -p'' password 'newpassword'
+
+source install/centos6-mysql.install
+
+
+---------------------------------------------------------------------------
+phpmyadmin()
+
+
+yum install php-mcrypt php-imap
+service httpd restart
+
+source install/centos6-phpmyadmin.install
+
+keep
+

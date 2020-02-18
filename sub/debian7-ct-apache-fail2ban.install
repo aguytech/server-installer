@@ -1,0 +1,150 @@
+#!/bin/bash
+#
+# write by Aguy
+
+
+####################################  global configuration
+
+! type _menu &>/dev/null && ! [ -f $S_GLOBAL_FUNCTIONS ] && echo -e "\e[1;31mUnable to load file '/usr/local/bs/inc-functions'${cclear} from ${BASH_SOURCE[0]}\e[0;0m" && exit 1
+. $S_GLOBAL_FUNCTIONS
+
+
+file=/etc/fail2ban/jail.local
+ctid=$1
+_PART="ct-apache-fail2ban"
+S_FILE_INSTALL_DONE="$S_PATH_LOG_INSTALL/install.done"
+
+_echoT "\n==========================================  $S_RELEASE $_PART"
+
+
+# test host change are already made
+if grep -q 'apache-noscript' "$file"; then
+	_echoT "----------  part already made"
+	_eval "ssh root@${_VM_IP_BASE}.${ctid} '! grep -q ^${_PART}$ ${S_FILE_INSTALL_DONE} && echo $_PART >> ${S_FILE_INSTALL_DONE}'"
+	_echoT "----------  end"
+	_exit 0
+fi
+
+# test ctid
+if ! [[ "$1" && "$(vzlist $1 2>/dev/null)" ]]; then
+
+	_echoT "----------  fail2ban enable apache"
+	begin='\[apache\]'
+	end='\[[a-z-]\+\]'
+	str='true'; sed -i "/$begin/,/$end/{s|\(enabled  = \).*|\1$str|}" $file
+	str='3'; sed -i "/$begin/,/$end/{s|\(maxretry = \).*|\1$str|}" $file
+	str="$S_VZ_PATH_NODE/*/log/apache2/*error.log"; sed -i "/$begin/,/$end/{s|\(logpath  = \).*|\1$str|}" $file
+
+	_echoT "----------  fail2ban enable apache-noscript"
+	begin='\[apache-noscript\]'
+	end='\[[a-z-]\+\]'
+	str='true'; sed -i "/$begin/,/$end/{s|\(enabled  = \).*|\1$str|}" $file
+	str='3'; sed -i "/$begin/,/$end/{s|\(maxretry = \).*|\1$str|}" $file
+	str="$S_VZ_PATH_NODE/*/log/apache2/*error.log"; sed -i "/$begin/,/$end/{s|\(logpath  = \).*|\1$str|}" $file
+
+	_echoT "----------  fail2ban enable apache-overflows"
+	begin='\[apache-overflows\]'
+	end='\[[a-z-]\+\]'
+	str='true'; sed -i "/$begin/,/$end/{s|\(enabled  = \).*|\1$str|}" $file
+	str='3'; sed -i "/$begin/,/$end/{s|\(maxretry = \).*|\1$str|}" $file
+	str="$S_VZ_PATH_NODE/*/log/apache2/*error.log"; sed -i "/$begin/,/$end/{s|\(logpath  = \).*|\1$str|}" $file
+
+	if ! grep -q "\[apache-badbots\]" "$file"; then
+		_echoT "----------  fail2ban enable apache-badbots"
+		pattern='\[apache-noscript\]'
+		str="\[apache-badbots\]\n\nenabled  = true\nport     = http,https\nfilter   = apache-badbots\nlogpath  = $S_VZ_PATH_NODE/*/log/apache2/*error.log\nmaxretry = 3\n"
+		sed -i "/$pattern/ i $str" $file
+	fi
+
+	if ! grep -q "\[apache-nohome\]" "$file"; then
+		_echoT "----------  fail2ban enable apache-nohome"
+		pattern='\[apache-noscript\]'
+		str="\[apache-nohome\]\n\nenabled  = true\nport     = http,https\nfilter   = apache-nohome\nlogpath  = $S_VZ_PATH_NODE/*/log/apache2/*error.log\nmaxretry = 3\n"
+		sed -i "/$pattern/ i $str" $file
+	fi
+
+	if ! grep -q "\[apache-ddos\]" "$file"; then
+		_echoT "----------  fail2ban enable apache-ddos"
+
+		echo "# Fail2Ban configuration file
+#
+# Author: http://www.go2linux.org
+#
+[Definition]
+
+# Option: failregex
+# Note: This regex will match any GET entry in your logs, so basically all valid and not valid entries are a match.
+# You should set up in the jail.conf file, the maxretry and findtime carefully in order to avoid false positives.
+
+failregex = ^<HOST> -.*\"(GET|POST).*
+            ^<HOST> -.*\"HEAD / .*
+
+# Option: ignoreregex
+# Notes.: regex to ignore. If this regex matches, the line is ignored.
+# Values: TEXT
+#
+ignoreregex =
+" > /etc/fail2ban/filter.d/apache-ddos.conf
+
+		pattern='\[apache-noscript\]'
+		str="\[apache-ddos\]\n\nenabled  = true\nport     = http,https\nfilter   = apache-ddos\nlogpath  = $S_VZ_PATH_NODE/*/log/apache2/*access.log\nfindtime = 300\nbantime  = 1200\nmaxretry = 300\n"
+		sed -i "/$pattern/ i $str" $file
+	fi
+
+
+	_echoT "----------  firewall restart"
+
+	service firewall restart
+
+
+	_echoT "----------  end"
+	_eval "ssh root@${ctip} '! grep -q ^${_PART}$ ${S_FILE_INSTALL_DONE} && echo $_PART >> ${S_FILE_INSTALL_DONE}'"
+
+else
+	_echoE "Wrong ctid '$1'"
+fi
+
+<<keep
+-------------------------------------------------------
+apache_ddos()
+
+echo "# Fail2Ban configuration file
+#
+# Author: http://www.go2linux.org
+#
+
+[Definition]
+# Option: failregex
+# Note: This regex will match any GET entry in your logs, so basically all valid and not valid entries are a match.
+# You should set up in the jail.conf file, the maxretry and findtime carefully in order to avoid false positives.
+failregex = ^<HOST>.*\"GET
+# Option: ignoreregex
+# Notes.: regex to ignore. If this regex matches, the line is ignored.
+# Values: TEXT
+#
+ignoreregex =
+" > /etc/fail2ban/filter.d/apache-ddos.conf
+
+# add in $file
+"# Protect against DOS attack
+# 360 requests in 2 min > Ban for 10 minutes
+
+echo "[apache-ddos]
+
+enabled = true
+port = http,https
+filter = apache-ddos
+logpath = $S_PATH_LOG/apache2/YOUR_WEB_SERVER_ACCESS_LOG
+# maxretry is how many GETs we can have in the findtime period before getting narky
+maxretry = 300
+# findtime is the time period in seconds in which we're counting "retries" (300 seconds = 5 mins)
+findtime = 300
+# bantime is how long we should drop incoming GET requests for a given IP for, in this case it's 5 minutes
+bantime = 300
+action = iptables[name=HTTP, port=http, protocol=tcp]
+" >> $file
+
+service fail2ban restart
+
+keep
+

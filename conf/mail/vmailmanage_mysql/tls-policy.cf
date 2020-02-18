@@ -1,0 +1,5 @@
+user = USER
+password = PASSWORD
+hosts = HOSTS
+dbname = DBNAME
+query = SELECT policy, params FROM tlspolicies WHERE domain = '%s';

@@ -1,0 +1,115 @@
+#!/bin/bash
+#
+# write by Aguy
+
+for FILE in "$S_GLOBAL_CONF" "$S_GLOBAL_FUNCTIONS"; do [ ! -f "$FILE" ] && echo -e "\e[1;31merror - unable to find file '$FILE'\e[0;0m" && exit 1 || . "$S_GLOBAL_FUNCTIONS"; done
+
+PART="host-redis"
+CTID=$1
+FILEDONE=$2
+
+_echoT "\n==========================================  debian8 $PART"
+
+
+####################################  MAIN
+
+_echoT "----------  CTID test"
+
+if [ ! "$1" ] || ! vzlist "$CTID" 1>/dev/null 2>&1; then _exitE "wrong ctid '$1' or not exists"; fi
+
+
+FILE_RSYSLOG="${S_PATH_SCRIPT_CONF}/rsyslog/host-redis.conf"
+
+_echoT "----------  file required"
+
+FILES="$FILE_RSYSLOG"
+for FILE in $FILES; do ! [ -f "$FILE" ] && _exitE "Unable to find file: '$FILE'"; done
+
+
+####################################  REDIS
+
+_echoT "----------  redis-tools install"
+
+apt-get install -y redis-tools
+
+
+#_echoT "----------  conf VZ"
+
+#vzctl set $CTID --numflock 1536:2048 --save
+
+
+####################################  SYSCTL
+
+FILE=/etc/sysctl.conf
+
+# test host part change are already made
+if ! grep -q "vm.overcommit_memory = 1" "$FILE"; then
+
+	_echoT "----------  sysctl conf"
+
+	echo "
+	# patch for redis
+	vm.overcommit_memory = 1" >> "$FILE"
+
+
+	_echoT "----------  sysctl cmd"
+
+	_evalq "sysctl vm.overcommit_memory=1"
+
+else
+	_echoT "----------  sysctl already made"
+fi
+
+
+####################################  RSYSLOG
+
+FILE=/etc/rsyslog.d/host-redis.conf
+
+# save old configuration
+[ -f "$FILE" ] && ! [ -f "$FILE.$DDATE" ] && cp -a "$FILE" "$FILE.$DDATE"
+
+
+_echoT "----------  rsyslog conf"
+
+_evalq cp -a "$FILE_RSYSLOG" "$FILE"
+_evalq "sed -i 's|S_HOSTING_PATH_LOG|$S_HOSTING_PATH_LOG|' $FILE"
+_evalq "chown 0:0 $FILE && chmod -x $FILE"
+
+
+_echoT "----------  rsyslog restart"
+
+_evalq "service rsyslog restart"
+
+
+####################################  LOGROTATE
+
+FILE=/etc/logrotate.d/host-redis
+
+# save old configuration
+[ -f "$FILE" ] && ! [ -f "$FILE.$DDATE" ] && cp -a "$FILE" "$FILE.$DDATE"
+
+
+_echoT "----------  logrotate conf add"
+
+# logrotate
+echo -e "$S_HOSTING_PATH_LOG/redis/redis-server.log {
+    daily
+    missingok
+    rotate 14
+    compress
+    delaycompress
+    notifempty
+    create 640 root adm
+}
+" > $FILE
+
+
+_echoT "----------  redis acces test"
+
+_evalq "timeout 3 redis-cli -h ${_VM_IP_BASE}.${CTID} ping 2>/dev/null"
+
+
+####################################  END
+
+_echoT "----------  end"
+_evalq "ssh root@${_VM_IP_BASE}.${CTID} '! grep -q ^${PART}$ ${FILEDONE} && echo $PART >> ${FILEDONE}'"

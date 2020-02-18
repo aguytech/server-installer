@@ -1,0 +1,287 @@
+#!/bin/bash
+#
+# write by Aguy
+
+<<KEEP
+https://www.digitalocean.com/community/tutorials/how-to-secure-haproxy-with-let-s-encrypt-on-ubuntu-14-04
+KEEP
+
+_echoT "\n==========================================  $S_RELEASE $_PART"
+
+file_xtra_haproxy="${S_PATH_SCRIPT_CONF}/rsyslog/49-haproxy.conf"
+file_xtra_haconf="${S_PATH_SCRIPT_CONF}/bash_completion/haconf"
+
+####################################  FUNCTION
+
+####################################  MAIN
+
+_echoT "---------- file required"
+_require "$file_xtra_haproxy" "$file_xtra_haconf"
+
+
+_echoT "------------------ install conf source"
+[ -f "$S_FILE_INSTALL_CONF" ] && . "$S_FILE_INSTALL_CONF"
+
+
+_echoT "----------  data"
+
+[ -z ${_DOMAIN_NAME+x} ] && anstmp="$S_DOMAIN_NAME" && _askno "Enter a domain name without fqdn ($anstmp)" && _DOMAIN_NAME="${_ANSWER:-$anstmp}" && _confset _DOMAIN_NAME "$_DOMAIN_NAME"
+
+[ -z ${_DOMAIN_FQDN+x} ] && anstmp="$S_DOMAIN_FQDN" && _askno "Enter a fqdn domain name ($anstmp)" && _DOMAIN_FQDN="${_ANSWER:-$anstmp}" && _confset _DOMAIN_FQDN "$_DOMAIN_FQDN"
+
+[ -z ${_DOMAIN2_NAME+x} ] && anstmp="" && _askno "Enter a second domain name without fqdn ($anstmp)" && _DOMAIN2_NAME="${_ANSWER:-$anstmp}" && _confset _DOMAIN2_NAME "$_DOMAIN2_NAME"
+
+[ -z ${_DOMAIN2_FQDN+x} ] && anstmp="" && _askno "Enter a second fqdn domain name ($anstmp)" && _DOMAIN2_FQDN="${_ANSWER:-$anstmp}" && _confset _DOMAIN2_FQDN "$_DOMAIN2_FQDN"
+
+[ -z ${_ACCESS_USER+x} ] && anstmp="admin" && _askno "Enter a name for stats access ($anstmp)" && _ACCESS_USER="${_ANSWER:-$anstmp}" && _confset _ACCESS_USER "$_ACCESS_USER"
+
+[ -z ${_ACCESS_PWD+x} ] && anstmp="$(_pwd)" && _askno "Enter a domain name ($anstmp)" && _ACCESS_PWD="${_ANSWER:-$anstmp}" && _confset _ACCESS_PWD "$_ACCESS_PWD"
+
+[ -z ${_ACCESS_URI+x} ] && anstmp="/haproxy-stats" && _askno "Enter a domain name ($anstmp)" && _ACCESS_URI="${_ANSWER:-$anstmp}" && _confset _ACCESS_URI "$_ACCESS_URI"
+
+
+# !! WAIT DEBIAN9 STRETCH BACKPORT TO INSTALL CERTBOT > 0.20 for wildcard !!
+# !! & HAPROXY > 1.8 for certbot auto-update !!
+
+#https://www.haproxy.com/blog/lets-encrypt-acme2-for-haproxy/
+
+
+[ -z ${_CERTBOT+x} ] && anstmp="y" && _askno "Do you wante to install Cerbot? ($anstmp)" && _CERTBOT="${_ANSWER:-$anstmp}" && _CERTBOT="${_CERTBOT/n/}" && _confset _CERTBOT "$_CERTBOT"
+
+
+####################################  HAPROXY
+
+_echoT "----------  install"
+
+_eval add-apt-repository -y ppa:certbot/certbot
+_evalq apt update
+
+_eval apt install -y haproxy haproxy-log-analysis hatop vim-haproxy certbot
+
+
+####################################  CERTBOT
+
+_echoT "----------  certbot request"
+
+_askno "From an other terminal, install certbot for your ALL domains with:\ncertbot certonly --standalone\nConfirm"
+
+
+_echoT "----------  certbot conf"
+
+path_letsencrypt="/etc/letsencrypt/live"
+domains="$(ls $path_letsencrypt|xargs)"
+for domain in $domains; do _evalq "cat '$path_letsencrypt/${domain}/fullchain.pem' '$path_letsencrypt/${domain}/privkey.pem' > '$S_PATH_CONF_SSL/private/letsencrypt-${domain}.pem'"; done
+
+
+_echoT "----------  conf keep old"
+
+file=/etc/haproxy/haproxy.cfg
+[ -f "$file" ] && [ ! -f $file.$DDATE ] && _evalq cp -a "$file" "$file.$DDATE"
+paths="/etc/haproxy/conf-available /etc/haproxy/conf-enabled"
+for path in $paths; do [ -f "$path" ] && [ ! -f $path.$DDATE ] && _evalq mv "$path" "$path.$DDATE"; done
+
+
+_echoT "----------  conf install"
+
+path=${S_PATH_SCRIPT_CONF}/haproxy
+_evalq cp -a $path/* /etc/haproxy
+
+files="$(find /etc/haproxy -type f -name *.cfg|xargs)"
+
+_var_replace "$files"
+
+sed -i "s|S_PATH_CONF_SSL|$S_PATH_CONF_SSL|g" $files
+sed -i "s|_DOMAIN_FQDN|$_DOMAIN_FQDN|g" $files
+sed -i "s|_DOMAIN_NAME|$_DOMAIN_NAME|g" $files
+sed -i "s|_DOMAIN2_FQDN|$_DOMAIN2_FQDN|g" $files
+sed -i "s|_DOMAIN2_NAME|$_DOMAIN2_NAME|g" $files
+sed -i "s|_ACCESS_USER|$_ACCESS_USER|g" $files
+sed -i "s|_ACCESS_PWD|$_ACCESS_PWD|g" $files
+sed -i "s|_ACCESS_URI|$_ACCESS_URI|g" $files
+
+
+_echoT "----------  ssl copying"
+
+path=${S_PATH_SCRIPT_CONF}/ssl
+[ -f "$S_PATH_CONF_SSL" ] && [ ! -f $S_PATH_CONF_SSL.$DDATE ] && _evalq mv "$S_PATH_CONF_SSL" "$S_PATH_CONF_SSL.$DDATE"
+_evalq cp -a $path/* "$S_PATH_CONF_SSL"
+
+
+_echoT "----------  ssl conf"
+
+_askno "Please adjust files in folder '$S_PATH_CONF_SSL' your needed certicates & confirm"
+
+_evalq "find '$S_PATH_CONF_SSL' -type d -exec chmod 750 -R '{}' \\;"
+_evalq "find '$S_PATH_CONF_SSL' -type f -exec chmod 640 -R '{}' \\;"
+_evalq "find '$S_PATH_CONF_SSL/private' -type d -exec chmod 700 -R '{}' \\;"
+_evalq "find '$S_PATH_CONF_SSL/private' -type f -exec chmod 600 -R '{}' \\;"
+
+
+####################################  CONF EXTEND
+
+_echoT "----------  conf-ext create path"
+
+# add paths
+for PATHTMP in /etc/haproxy/conf-enabled /etc/haproxy/conf-available; do
+    ! [ -d "$PATHTMP" ] && mkdir "$PATHTMP"
+done
+
+
+_echoT "----------  conf-ext patch"
+
+# add options in /etc/init.d/haproxy
+sed -i 's|^EXTRAOPTS.*|EXTRAOPTS=$\(for file in $\(find /etc/haproxy/conf-enabled -type l\|sort -n\); do CONFIGS=" $CONFIGS -f $file"; done; echo $CONFIGS\)|' /etc/init.d/haproxy
+
+
+_echoT "----------  path rights"
+
+_evalq chmod o-rwx -R /etc/haproxy
+
+
+_echoT "----------  daemon restart"
+
+_service restart haproxy
+
+
+_echoT "----------  haconf bash_completion"
+
+file="/etc/bash_completion.d/haconf"
+[ -f "$file" ] && [ ! -f "$file.$DDATE" ] && _evalq cp -a "$file" "$file.$DDATE"
+
+_evalq cp -a "$file_xtra_haconf" "$file"
+
+_evalq chown 0:0 "$file"
+
+
+####################################  RSYSLOG
+
+_echoT "----------  rsyslog conf add"
+
+file="/etc/rsyslog.d/49-haproxy.conf"
+[ -f "$file" ] && [ ! -f "$file.$DDATE" ] && _evalq cp -a "$file" "$file.$DDATE"
+
+_evalq cp -a "$file_xtra_haproxy" "$file"
+_evalq "sed -i 's|S_PATH_LOG|$S_PATH_LOG|' $file"
+
+_var_replace "$file"
+
+_evalq "chown 0:0 $file && chmod -x $file"
+
+
+_echoT "----------  rsyslog restart"
+
+_service restart rsyslog
+
+
+####################################  LOGROTATE
+
+_echoT "----------  logrotate conf add"
+
+file=/etc/logrotate.d/haproxy
+STR="4"; sed -i "s|^\( *rotate\).*|\1 $STR|" "$file"
+
+! grep -q 'haproxy-status.log' "$file" && echo "
+/var/log/haproxy-status.log {
+    weekly
+    rotate 4
+    missingok
+    notifempty
+    compress
+    delaycompress
+    postrotate
+        invoke-rc.d rsyslog rotate >/dev/null 2>&1 || true
+    endscript
+}" >> "$file"
+
+
+_echoT "----------  STATS access"
+
+_echo "------------------------------------------"
+_echo "Test this URL to access to HAPROXY statistics"
+_echoi "${S_NODE_IPV4}:${S_HAPROXY_STATS_PORT}${_ACCESS_URI}"
+_echo "------------------------------------------"
+_askno "after it, valid to continue"
+
+
+_echoT "----------  end"
+
+_evalq _var_unset "part" "*"
+_evalq "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"
+
+<<KEEP
+
+files="$(find /usr/local/bs/install/xtra/conf/haproxy -type f -name *.cfg|xargs)"
+sed -i "s|/etc/server/ssl|S_PATH_CONF_SSL|g" $files
+sed -i "s|ambau.ovh|_DOMAIN_FQDN|g" $files
+sed -i "s|ambau|_DOMAIN_NAME|g" $files
+sed -i "s|otokoz.ovh|_DOMAIN2_FQDN|g" $files
+sed -i "s|otokoz|_DOMAIN2_NAME|g" $files
+sed -i "s|aguy|_ACCESS_USER|g" $files
+sed -i "s|3667gaz|_ACCESS_PWD|g" $files
+sed -i "s|/haproxy-stats|_ACCESS_URI|g" $files
+sed -i "s|:514|S_RSYSLOG_PORT|g" $files
+
+KEEP
+
+exit
+
+domains_17112018_fr="17112018.fr,ada.17112018.fr,admin.17112018.fr,blog.17112018.fr,carte.17112018.fr,chat.17112018.fr,chiffres.17112018.fr,cloud.17112018.fr,cms.17112018.fr,code.17112018.fr,compta.17112018.fr,datadoghq.17112018.fr,democratie.17112018.fr,dev.17112018.fr,diaspora.17112018.fr,discord.17112018.fr,discourse.17112018.fr,down.17112018.fr,elastik.17112018.fr,fil.17112018.fr,filerun.17112018.fr,files.17112018.fr,forum.17112018.fr,gestion.17112018.fr,git.17112018.fr,gitea.17112018.fr,gitlab.17112018.fr,goaccess.17112018.fr,grav.17112018.fr,graylog.17112018.fr,info.17112018.fr,kibana.17112018.fr,lcr.17112018.fr,liens.17112018.fr,links.17112018.fr,log.17112018.fr,manage.17112018.fr,matomo.17112018.fr,metrics.17112018.fr,monitor.17112018.fr,nextcloud.17112018.fr,pfa.17112018.fr,piwik.17112018.fr,plumxml.17112018.fr,pma.17112018.fr,roundcube.17112018.fr,shaarli.17112018.fr,snippet.17112018.fr,social.17112018.fr,st.17112018.fr,statistiques.17112018.fr,stats.17112018.fr,test.17112018.fr,tiddly.17112018.fr,tuleap.17112018.fr,vma.17112018.fr,vmail.17112018.fr,webmail.17112018.fr,wiki.17112018.fr,www.17112018.fr,zabbix.17112018.fr"
+
+domains_17112018_ovh="17112018.ovh,ada.17112018.ovh,admin.17112018.ovh,blog.17112018.ovh,carte.17112018.ovh,chat.17112018.ovh,chiffres.17112018.ovh,cloud.17112018.ovh,cms.17112018.ovh,code.17112018.ovh,compta.17112018.ovh,datadoghq.17112018.ovh,democratie.17112018.ovh,dev.17112018.ovh,diaspora.17112018.ovh,discord.17112018.ovh,discourse.17112018.ovh,down.17112018.ovh,elastik.17112018.ovh,fil.17112018.ovh,filerun.17112018.ovh,files.17112018.ovh,forum.17112018.ovh,gestion.17112018.ovh,git.17112018.ovh,gitea.17112018.ovh,gitlab.17112018.ovh,goaccess.17112018.ovh,grav.17112018.ovh,graylog.17112018.ovh,info.17112018.ovh,kibana.17112018.ovh,lcr.17112018.ovh,liens.17112018.ovh,links.17112018.ovh,log.17112018.ovh,manage.17112018.ovh,matomo.17112018.ovh,metrics.17112018.ovh,monitor.17112018.ovh,nextcloud.17112018.ovh,pfa.17112018.ovh,piwik.17112018.ovh,plumxml.17112018.ovh,pma.17112018.ovh,roundcube.17112018.ovh,shaarli.17112018.ovh,snippet.17112018.ovh,social.17112018.ovh,st.17112018.ovh,statistiques.17112018.ovh,stats.17112018.ovh,test.17112018.ovh,tiddly.17112018.ovh,tuleap.17112018.ovh,vma.17112018.ovh,vmail.17112018.ovh,webmail.17112018.ovh,wiki.17112018.ovh,www.17112018.ovh,zabbix.17112018.ovh"
+
+domains_ambau_ovh="ambau.ovh,ada.ambau.ovh,admin.ambau.ovh,blog.ambau.ovh,carte.ambau.ovh,chat.ambau.ovh,chiffres.ambau.ovh,cloud.ambau.ovh,cms.ambau.ovh,code.ambau.ovh,compta.ambau.ovh,datadoghq.ambau.ovh,democratie.ambau.ovh,dev.ambau.ovh,diaspora.ambau.ovh,discord.ambau.ovh,discourse.ambau.ovh,down.ambau.ovh,elastik.ambau.ovh,fil.ambau.ovh,filerun.ambau.ovh,files.ambau.ovh,forum.ambau.ovh,gestion.ambau.ovh,git.ambau.ovh,gitea.ambau.ovh,gitlab.ambau.ovh,goaccess.ambau.ovh,grav.ambau.ovh,graylog.ambau.ovh,info.ambau.ovh,kibana.ambau.ovh,lcr.ambau.ovh,liens.ambau.ovh,links.ambau.ovh,log.ambau.ovh,manage.ambau.ovh,matomo.ambau.ovh,metrics.ambau.ovh,monitor.ambau.ovh,nextcloud.ambau.ovh,pfa.ambau.ovh,piwik.ambau.ovh,plumxml.ambau.ovh,pma.ambau.ovh,roundcube.ambau.ovh,shaarli.ambau.ovh,snippet.ambau.ovh,social.ambau.ovh,st.ambau.ovh,statistiques.ambau.ovh,stats.ambau.ovh,test.ambau.ovh,tiddly.ambau.ovh,tuleap.ambau.ovh,vma.ambau.ovh,vmail.ambau.ovh,webmail.ambau.ovh,wiki.ambau.ovh,www.ambau.ovh,zabbix.ambau.ovh"
+
+domains_ggj_fr="ggj.fr,ada.ggj.fr,admin.ggj.fr,blog.ggj.fr,carte.ggj.fr,chat.ggj.fr,chiffres.ggj.fr,cloud.ggj.fr,cms.ggj.fr,code.ggj.fr,compta.ggj.fr,datadoghq.ggj.fr,democratie.ggj.fr,dev.ggj.fr,diaspora.ggj.fr,discord.ggj.fr,discourse.ggj.fr,down.ggj.fr,elastik.ggj.fr,fil.ggj.fr,filerun.ggj.fr,files.ggj.fr,forum.ggj.fr,gestion.ggj.fr,git.ggj.fr,gitea.ggj.fr,gitlab.ggj.fr,goaccess.ggj.fr,grav.ggj.fr,graylog.ggj.fr,info.ggj.fr,kibana.ggj.fr,lcr.ggj.fr,liens.ggj.fr,links.ggj.fr,log.ggj.fr,manage.ggj.fr,matomo.ggj.fr,metrics.ggj.fr,monitor.ggj.fr,nextcloud.ggj.fr,pfa.ggj.fr,piwik.ggj.fr,plumxml.ggj.fr,pma.ggj.fr,roundcube.ggj.fr,shaarli.ggj.fr,snippet.ggj.fr,social.ggj.fr,st.ggj.fr,statistiques.ggj.fr,stats.ggj.fr,test.ggj.fr,tiddly.ggj.fr,tuleap.ggj.fr,vma.ggj.fr,vmail.ggj.fr,webmail.ggj.fr,wiki.ggj.fr,www.ggj.fr,zabbix.ggj.fr"
+
+domains_ggj_ovh="ggj.ovh,ada.ggj.ovh,admin.ggj.ovh,blog.ggj.ovh,carte.ggj.ovh,chat.ggj.ovh,chiffres.ggj.ovh,cloud.ggj.ovh,cms.ggj.ovh,code.ggj.ovh,compta.ggj.ovh,datadoghq.ggj.ovh,democratie.ggj.ovh,dev.ggj.ovh,diaspora.ggj.ovh,discord.ggj.ovh,discourse.ggj.ovh,down.ggj.ovh,elastik.ggj.ovh,fil.ggj.ovh,filerun.ggj.ovh,files.ggj.ovh,forum.ggj.ovh,gestion.ggj.ovh,git.ggj.ovh,gitea.ggj.ovh,gitlab.ggj.ovh,goaccess.ggj.ovh,grav.ggj.ovh,graylog.ggj.ovh,info.ggj.ovh,kibana.ggj.ovh,lcr.ggj.ovh,liens.ggj.ovh,links.ggj.ovh,log.ggj.ovh,manage.ggj.ovh,matomo.ggj.ovh,metrics.ggj.ovh,monitor.ggj.ovh,nextcloud.ggj.ovh,pfa.ggj.ovh,piwik.ggj.ovh,plumxml.ggj.ovh,pma.ggj.ovh,roundcube.ggj.ovh,shaarli.ggj.ovh,snippet.ggj.ovh,social.ggj.ovh,st.ggj.ovh,statistiques.ggj.ovh,stats.ggj.ovh,test.ggj.ovh,tiddly.ggj.ovh,tuleap.ggj.ovh,vma.ggj.ovh,vmail.ggj.ovh,webmail.ggj.ovh,wiki.ggj.ovh,www.ggj.ovh,zabbix.ggj.ovh"
+
+domains_lecanardrefractaire_ovh="lecanardrefractaire.ovh,ada.lecanardrefractaire.ovh,admin.lecanardrefractaire.ovh,blog.lecanardrefractaire.ovh,carte.lecanardrefractaire.ovh,chat.lecanardrefractaire.ovh,chiffres.lecanardrefractaire.ovh,cloud.lecanardrefractaire.ovh,cms.lecanardrefractaire.ovh,code.lecanardrefractaire.ovh,compta.lecanardrefractaire.ovh,datadoghq.lecanardrefractaire.ovh,democratie.lecanardrefractaire.ovh,dev.lecanardrefractaire.ovh,diaspora.lecanardrefractaire.ovh,discord.lecanardrefractaire.ovh,discourse.lecanardrefractaire.ovh,down.lecanardrefractaire.ovh,elastik.lecanardrefractaire.ovh,fil.lecanardrefractaire.ovh,filerun.lecanardrefractaire.ovh,files.lecanardrefractaire.ovh,forum.lecanardrefractaire.ovh,gestion.lecanardrefractaire.ovh,git.lecanardrefractaire.ovh,gitea.lecanardrefractaire.ovh,gitlab.lecanardrefractaire.ovh,goaccess.lecanardrefractaire.ovh,grav.lecanardrefractaire.ovh,graylog.lecanardrefractaire.ovh,info.lecanardrefractaire.ovh,kibana.lecanardrefractaire.ovh,lcr.lecanardrefractaire.ovh,liens.lecanardrefractaire.ovh,links.lecanardrefractaire.ovh,log.lecanardrefractaire.ovh,manage.lecanardrefractaire.ovh,matomo.lecanardrefractaire.ovh,metrics.lecanardrefractaire.ovh,monitor.lecanardrefractaire.ovh,nextcloud.lecanardrefractaire.ovh,pfa.lecanardrefractaire.ovh,piwik.lecanardrefractaire.ovh,plumxml.lecanardrefractaire.ovh,pma.lecanardrefractaire.ovh,roundcube.lecanardrefractaire.ovh,shaarli.lecanardrefractaire.ovh,snippet.lecanardrefractaire.ovh,social.lecanardrefractaire.ovh,st.lecanardrefractaire.ovh,statistiques.lecanardrefractaire.ovh,stats.lecanardrefractaire.ovh,test.lecanardrefractaire.ovh,tiddly.lecanardrefractaire.ovh,tuleap.lecanardrefractaire.ovh,vma.lecanardrefractaire.ovh,vmail.lecanardrefractaire.ovh,webmail.lecanardrefractaire.ovh,wiki.lecanardrefractaire.ovh,www.lecanardrefractaire.ovh,zabbix.lecanardrefractaire.ovh"
+
+domains_otokoz_ovh="otokoz.ovh,ada.otokoz.ovh,admin.otokoz.ovh,blog.otokoz.ovh,carte.otokoz.ovh,chat.otokoz.ovh,chiffres.otokoz.ovh,cloud.otokoz.ovh,cms.otokoz.ovh,code.otokoz.ovh,compta.otokoz.ovh,datadoghq.otokoz.ovh,democratie.otokoz.ovh,dev.otokoz.ovh,diaspora.otokoz.ovh,discord.otokoz.ovh,discourse.otokoz.ovh,down.otokoz.ovh,elastik.otokoz.ovh,fil.otokoz.ovh,filerun.otokoz.ovh,files.otokoz.ovh,forum.otokoz.ovh,gestion.otokoz.ovh,git.otokoz.ovh,gitea.otokoz.ovh,gitlab.otokoz.ovh,goaccess.otokoz.ovh,grav.otokoz.ovh,graylog.otokoz.ovh,info.otokoz.ovh,kibana.otokoz.ovh,lcr.otokoz.ovh,liens.otokoz.ovh,links.otokoz.ovh,log.otokoz.ovh,manage.otokoz.ovh,matomo.otokoz.ovh,metrics.otokoz.ovh,monitor.otokoz.ovh,nextcloud.otokoz.ovh,pfa.otokoz.ovh,piwik.otokoz.ovh,plumxml.otokoz.ovh,pma.otokoz.ovh,roundcube.otokoz.ovh,shaarli.otokoz.ovh,snippet.otokoz.ovh,social.otokoz.ovh,st.otokoz.ovh,statistiques.otokoz.ovh,stats.otokoz.ovh,test.otokoz.ovh,tiddly.otokoz.ovh,tuleap.otokoz.ovh,vma.otokoz.ovh,vmail.otokoz.ovh,webmail.otokoz.ovh,wiki.otokoz.ovh,www.otokoz.ovh,zabbix.otokoz.ovh"
+
+domains="17112018.fr 17112018.ovh ambau.ovh ggj.fr ggj.ovh lecanardrefractaire.ovh otokoz.ovh";
+
+# Clean one domain
+domain="17112018.fr"
+files="/etc/letsencrypt/archive/${domain} /etc/letsencrypt/csr/${domain} /etc/letsencrypt/keys/${domain} /etc/letsencrypt/live/${domain} /etc/letsencrypt/renewal/${domain}"
+
+# Clean all domains
+files="/etc/letsencrypt/archive/* /etc/letsencrypt/csr/* /etc/letsencrypt/keys/* /etc/letsencrypt/live/* /etc/letsencrypt/renewal/*"
+
+for file in $files; do [ -e "$file" ] && rm -fR "$file"; done
+
+ctids_web="$(vzlist -h "*-php*" -Ho ctid|xargs) $(vzlist -h "*-apache*" -Ho ctid|xargs)"
+netstat -lnt | grep ':80'
+
+# stop port 80
+_service stop haproxy
+vz-launch -y 'systemctl stop apache2.service' $ctids_web
+#vz-launch -y 'duniter stop' 189
+
+netstat -lnt | grep ':80'
+
+# create new domain
+for domain in $domains; do
+    subdomains=domains_${domain//./_}
+    echo "-- ${domain} --"
+    certbot certonly --standalone -d ${!subdomains}
+    cat /etc/letsencrypt/live/${domain}/fullchain.pem /etc/letsencrypt/live/${domain}/privkey.pem > /etc/server/ssl/private/letsencrypt-${domain}.pem
+done
+
+# renew domains
+file="/etc/server/ssl/private/letsencrypt.pem.lst"
+domains=$(ls /etc/letsencrypt/renewal/|sed 's|\.conf||g')
+certbot renew
+[ -f "$file" ] && mv "$file" "$file.keep$(date +%s)"
+for domain in ${domain}s; do
+    file_pem="/etc/server/ssl/private/letsencrypt-${domain}.pem"
+    cat /etc/letsencrypt/live/${domain}/fullchain.pem /etc/letsencrypt/live/${domain}/privkey.pem > "$file_pem"
+    echo "${file_pem}" >> "${file}"
+done
+
+# start port 80
+vz-launch -y 'systemctl start apache2' $ctids_web
+#vz-launch -y 'duniter webstart --webmhost 10.0.0.189' 189
+service haproxy start
+
+netstat -lnt | grep ':80'

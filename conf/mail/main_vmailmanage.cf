@@ -1,0 +1,18 @@
+
+
+##################################### ADD VMAILMANAGE
+
+## MySQL queries - vmailmanage
+##
+
+virtual_mailbox_domains = mysql:/etc/postfix/mysql/domains.cf
+virtual_alias_maps = mysql:/etc/postfix/mysql/aliases.cf
+virtual_mailbox_maps = mysql:/etc/postfix/mysql/accounts.cf
+
+# Conditions in which Postfix accepts e-mails as recipient (additional to relay conditions)
+# check_recipient_access checks if an account is "sendonly"
+# deprecated : use smtpd_relay_restrictions
+#smtpd_recipient_restrictions = check_recipient_access mysql:/etc/postfix/mysql/recipient-access.cf
+
+# do not list domains in virtual_mailbox_domains & relay_domains
+#relay_domains = $mydestination, mysql:/etc/postfix/mysql/domains.cf

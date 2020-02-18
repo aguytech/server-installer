@@ -1,0 +1,59 @@
+#!/bin/bash
+#
+# write by Aguy
+
+
+####################################  global configuration
+
+! type _menu &>/dev/null && ! [ -f $S_GLOBAL_FUNCTIONS ] && echo -e "\e[1;31mUnable to load file '/usr/local/bs/inc-functions'${cclear} from ${BASH_SOURCE[0]}\e[0;0m" && exit 1
+. $S_GLOBAL_FUNCTIONS
+
+
+_echoT "\n==========================================  $S_RELEASE $_PART"
+
+
+_echoT "----------  add backports repository"
+
+! grep -q ${S_RELEASE_NAME}-backports /etc/apt/sources.list && echo "
+# debian backports
+deb http://debian.mirrors.ovh.net/debian ${S_RELEASE_NAME}-backports main" >> /etc/apt/sources.list
+
+apt-get update
+
+
+_echoT "----------  install"
+
+apt-get install -y -t ${S_RELEASE_NAME}-backports fusionforge fusionforge-db-remote fusionforge-lists fusionforge-mta-postfix fusionforge-plugin-authhttpd fusionforge-plugin-extsubproj fusionforge-plugin-globalsearch fusionforge-plugin-headermenu fusionforge-plugin-hudson fusionforge-plugin-mediawiki fusionforge-plugin-message fusionforge-plugin-projectlabels fusionforge-plugin-projects-hierarchy fusionforge-plugin-taskboard fusionforge-plugin-webanalytics fusionforge-web-vhosts postfix postfix-pgsql
+
+
+
+_echo "----------  commands"
+_echo "forge_get_config\nforge_make_admin\nforge_run_job\nforge_run_plugin_job\nforge_set_password"
+
+_echo "----------  forge_get_config"
+_echo "Use command for list variables        : forge_get_config list-all-variables"
+_echo "Use command for list variables values : forge_get_config list-all-variables-values"
+
+_echoT "----------  configuration"
+_echoT "Please look this URL : https://fusionforge.org/plugins/mediawiki/wiki/fusionforge/index.php/Configuration"
+_echoT "Please look at '/etc/fusionforge' for configuration files"
+
+
+# mailman
+$ newlist mailman
+service mailman restart
+
+
+# admin
+str=
+_echo
+_echoI -n "Do you want to run post-intallation script ? (y/n)"
+read str >&4
+[ "$str" == "y" ] && /usr/share/fusionforge/bin/post-install.sh
+
+
+_echoT "----------  end"
+_eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"
+
+
+

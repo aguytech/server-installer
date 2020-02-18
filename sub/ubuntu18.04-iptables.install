@@ -1,0 +1,211 @@
+#!/bin/bash
+#
+# write by Aguy
+
+<<commands
+# iptables-save / iptables-restore
+
+iptables -L
+iptables -S -t nat
+
+iptables -nvL
+iptables -nvL -t nat
+iptables -nvL -t mangle
+
+iptables -nvL --line-number; iptables -nvL -t nat --line-number
+commands
+
+
+_echoT "\n==========================================  $S_RELEASE $_PART"
+
+file_script="/usr/local/bin/firewall"
+file_xtra_script="${S_PATH_SCRIPT_XTRA}/firewall"
+file_xtra_conf="${S_PATH_SCRIPT_CONF}/firewall.conf"
+file_xtra_log="${S_PATH_SCRIPT_CONF}/rsyslog/iptables.conf"
+
+_echoT "------------------ file required"
+
+_require "$file_xtra_script" "$file_xtra_conf" "$file_xtra_log"
+
+
+####################################  MAIN
+
+_echoT "----------  firewall conf"
+
+file="${S_PATH_CONF}/${file_xtra_conf##*/}"
+_eval cp "$file_xtra_conf" "$file"
+
+
+_echoT "----------  firewall bin"
+
+file="/usr/local/bin/${file_xtra_script##*/}"
+_eval cp "$file_xtra_script" "$file"
+_eval chmod +x "$file"
+
+
+_echoT "----------  systemd add service"
+
+echo '#!/bin/bash
+for tty in /dev/tty{1..6}
+do
+    /usr/bin/setleds -D +num < "$tty";
+done' | sudo tee "$file_script"
+sudo chmod +x "$file_script"
+
+file_service="/etc/systemd/system/numlock.service"
+echo "[Unit]
+Description=numlock
+
+[Service]
+ExecStart=${file_script}
+StandardInput=tty
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target" | sudo tee "${file_service}"
+
+echo "[Unit]
+Description=Firewall over iptables
+After=network.target remote-fs.target nss-lookup.target
+ConditionPathIsDirectory=/etc/apache2-%i
+
+[Service]
+Type=forking
+Environment=APACHE_CONFDIR=/etc/apache2-%i APACHE_STARTED_BY_SYSTEMD=true
+ExecStart=${file_script} start
+ExecStop=/usr/sbin/apachectl stop
+ExecReload=/usr/sbin/apachectl graceful
+PrivateTmp=true
+Restart=on-abort
+
+[Install]
+WantedBy=multi-user.target" | sudo tee "${file_service}"
+
+
+sudo systemctl enable numlock.service
+
+
+
+_eval "cp $file_xtra_script /etc/init.d/"
+_eval "chmod +x /etc/init.d/firewall"
+_eval "update-rc.d firewall defaults"
+
+
+_echoT "----------  firewall conf"
+
+_eval "cp $file_xtra_conf ${S_PATH_CONF}/"
+
+
+_echoT "----------  network forward"
+
+# allow forwading
+file=/proc/sys/net/ipv4/ip_forward
+grep -q 1 $file || echo 1 > "$file"
+
+
+_echoT "----------  rsyslog conf"
+
+_evalq "cp -a $file_xtra_log /etc/rsyslog.d/"
+
+
+_echoT "----------  rsyslog restart"
+
+_evalq "service rsyslog restart"
+
+
+_echoT "----------  logrotate conf"
+
+echo -e "# Logrotate file for iptables logs
+$S_PATH_LOG/iptables/*.log {
+\tmissingok
+\tcompress
+\tdelaycompress
+\tnotifempty
+\tweekly
+\trotate 5
+}
+" > /etc/logrotate.d/iptables
+
+
+_echoT "----------  firewall test"
+
+_eval "service firewall stop"
+_askyn "Verify iptables rules with 'iptl' & 'iptln'"
+[ $_ANSWER == n ] && _exit 1
+
+_eval "service firewall start"
+_askyn "Verify iptables rules with 'iptl' & 'iptln'"
+[ $_ANSWER == n ] && _exit 1
+
+
+_echoT "----------  end"
+
+_eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"
+
+
+<<keep
+-------------------------------------------------------
+logging()
+
+# to logging
+iptables -N LOGGING
+iptables -A LOGGING -m limit --limit 240/min -j LOG --log-prefix "iptables-tmp-"
+#iptables -A INPUT -i eth0 -p icmp -j DROP # drop ping before
+iptables -A INPUT -p tcp -j LOGGING # catch all TCP INPUT for all interfaces after all previous rules
+iptables -A FORWARD -j LOGGING # catch all FORWARD (tcp,udp,icmp) for all interfaces after all previous rules
+iptables -A OUTPUT -p tcp -j LOGGING # catch all TCP OUTPUT for all interfaces after all previous rules
+
+
+sed "s|.*SRC=\([0-9\.]*\).*|\1|" "$S_PATH_LOG/iptables/general.log" | sort | uniq -c # count number of occurences
+
+
+-------------------------------------------------------
+iptables_persistent()
+
+#apt-get install iptables-persistent
+
+#service iptables save
+
+#iptables-save > /etc/iptables/rules.v4 # ip6tables-save > /etc/iptables/rules.v6
+#iptables-restore < /etc/iptables/rules.v4
+
+
+-------------------------------------------------------
+test()
+
+service firewall stop
+
+service firewall start
+
+service firewall restart
+
+iptables -nvL --line-number; iptables -nvL -t nat --line-number
+
+iptables -nvL FORWARD --line-number
+
+
+-------------------------------------------------------
+w00tw00t()
+
+# création de notre chaîne w00t :
+#iptables -N w00t
+# redirige les paquets TCP sur notre chaîne :
+#iptables -A INPUT -p tcp -j w00t
+# recherche du premier SYN et création de la liste :
+#iptables -A w00t -m recent -p tcp --syn --dport 80 --set
+# recherche du paquet SYN,ACK et mise à jour la liste :
+#iptables -A w00t -m recent -p tcp --tcp-flags PSH,SYN,ACK SYN,ACK --sport 80 --update
+# recherche du paquet ACK et mise à jour la liste
+#iptables -A w00t -m recent -p tcp --tcp-flags PSH,SYN,ACK ACK --dport 80 --update
+# recherche de la signature de DFind dans le prenier PSH+ACK. Si elle est présente, on DROP. On supprime la liste pour ne pas filtrer les paquets suivants
+#iptables -A w00t -m recent -p tcp --tcp-flags PSH,ACK PSH,ACK --dport 80 --remove -m string --to 50 --algo bm --string "GET /w00tw00t.at.ISC.SANS." -j DROP
+#EchoIO "Drop chaine contenant 'GET /w00tw00t.at.ISC.SANS.' :80"
+
+#iptables -A INPUT -p tcp --dport 80 -m string --to 50 --algo bm --string 'GET /w00tw00t.at.ISC.SANS.' -j DROP
+#EchoIO "Drop chaine contenant 'GET /w00tw00t.at.ISC.SANS.' :80"
+
+# w00tw00t
+#iptables -I INPUT -d $IpThis -p tcp --dport 80 -m string --to 70 --algo bm --string 'GET /w00tw00t.at.ISC.SANS.' -j DROP
+#EchoIO "Stop w00tw00t"
+
+keep
