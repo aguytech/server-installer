@@ -22,8 +22,8 @@ fi
 ####################################  REQUIRED
 
 _echoT "------------------ file required"
-_POSTFIXMASTER=${S_PATH_SCRIPT_CONF}/mail/master.cf
-_POSTFIXMAIN=${S_PATH_SCRIPT_CONF}/mail/main_add.cf
+_POSTFIXMASTER=${S_PATH_INSTALL_CONF}/mail/master.cf
+_POSTFIXMAIN=${S_PATH_INSTALL_CONF}/mail/main_add.cf
 
 FILES="$_POSTFIXMASTER $_POSTFIXMAIN"
 for FILE in $FILES; do ! [ -f "$FILE" ] && _exitE "Unable to find file: '$FILE'"; done
@@ -106,7 +106,7 @@ if [ "${STR/ "$S_SERVER_TYPE" /}" != "$STR" ] && ! grep -q "$PARTSUB" "${S_FILE_
 
 	while ! grep -q "^$PARTSUB$" "${S_FILE_INSTALL_DONE}"; do
 		_echoi "from an other terminal in server host launch:"
-		_echoI "${S_PATH_SCRIPT_INSTALL}/sub/${S_HOST_RELEASE}-${PARTSUB}.install ${ctidthis} ${_PATH_MAIL} $S_FILE_INSTALL_DONE${cclear}"
+		_echoI "${S_PATH_INSTALL}/sub/${S_HOST_RELEASE}-${PARTSUB}.install ${ctidthis} ${_PATH_MAIL} $S_FILE_INSTALL_DONE${cclear}"
 		_askyn "Confirm"
 	done
 fi

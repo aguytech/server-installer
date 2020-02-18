@@ -8,11 +8,11 @@ _echoT "\n==========================================  $_RELEASE $_PART"
 PHPFPM_SERVICE=php-fpm
 
 _echoT "------------------ file required"
-FILE_XDEBUG="${S_PATH_SCRIPT_CONF}/php/xdebug.ini"
-FILE_ZENDDEBUG="${S_PATH_SCRIPT_CONF}/php/zend_debugger.ini"
-FILE_FPM_APACHE="${S_PATH_SCRIPT_CONF}/php/$PHPFPM_SERVICE.conf"
+FILE_XDEBUG="${S_PATH_INSTALL_CONF}/php/xdebug.ini"
+FILE_ZENDDEBUG="${S_PATH_INSTALL_CONF}/php/zend_debugger.ini"
+FILE_FPM_APACHE="${S_PATH_INSTALL_CONF}/php/$PHPFPM_SERVICE.conf"
 FILE_APACHE_CONF="$S_PATH_CONF/debian9-apache.conf"
-FILE_NC=${S_PATH_SCRIPT_CONF}/rsyslog/vm-php-fpm.conf
+FILE_NC=${S_PATH_INSTALL_CONF}/rsyslog/vm-php-fpm.conf
 
 FILES="$FILE_XDEBUG $FILE_ZENDDEBUG $FILE_ZENDDEBUG $FILE_FPM_APACHE $FILE_APACHE_CONF $FILE_NC"
 for FILE in $FILES; do [ ! -f "$FILE" ] && _exitE "Unable to find file: '$FILE'"; done
@@ -117,7 +117,7 @@ if [ "${STR/ "$S_SERVER_TYPE" /}" != "$STR" ] && ! grep -q "$PARTSUB" "${S_FILE_
 
 	while ! grep -q "^$PARTSUB$" "${S_FILE_INSTALL_DONE}"; do
 		_echoi "from an other terminal in server host launch:"
-		_echoI "${S_PATH_SCRIPT_INSTALL}/sub/${S_HOST_RELEASE}-${PARTSUB}.install ${_CTIDTHIS} ${_PATH_PHP} ${_PHPMODE} ${PHPFPM_SERVICE} $S_FILE_INSTALL_DONE${cclear}"
+		_echoI "${S_PATH_INSTALL}/sub/${S_HOST_RELEASE}-${PARTSUB}.install ${_CTIDTHIS} ${_PATH_PHP} ${_PHPMODE} ${PHPFPM_SERVICE} $S_FILE_INSTALL_DONE${cclear}"
 		_askyn "Confirm"
 	done
 fi
@@ -454,7 +454,7 @@ _eval apt-get install -y "libssl${_LIBSSL}" libssl-dev
 
 _echoT "----------  zenddebugger install"
 
-FILE="${S_PATH_SCRIPT_XTRA}/php/ZendDebugger-${PHPVER}.so.tgz"
+FILE="${S_PATH_INSTALL_XTRA}/php/ZendDebugger-${PHPVER}.so.tgz"
 [ -f "$FILE" ] && _evalq tar xzf "$FILE" -C "$_PATHMOD"
 
 while [ ! -f "$_PATHMOD/ZendDebugger.so" ]; do

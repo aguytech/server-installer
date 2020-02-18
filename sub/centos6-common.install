@@ -175,7 +175,7 @@ fi
 _echoT "----------  conf nano"
 
 # *.nanorc
-PATHFROM=${S_PATH_SCRIPT_XTRA}/nano
+PATHFROM=${S_PATH_INSTALL_XTRA}/nano
 PATHTO=/usr/share/nano
 FILENANO=/etc/nanorc
 ! grep -q "## Personnal include" "$FILENANO" && echo -e "\n## Personnal include" >> $FILENANO

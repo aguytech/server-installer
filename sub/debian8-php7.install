@@ -40,7 +40,7 @@ PARTSUB=ct-php-mount
 if [[ "$S_SERVER_TYPE" == vz && ! "$(grep "$PARTSUB" ${S_FILE_INSTALL_DONE})" ]]; then
 	_echoI "To mount device(s) in this container execute from hosting server :"
 	_echoI "${whiteb}Exit from this container ${_CTIDTHIS} and from host in a terminal launch :"
-	_echoI "'${S_PATH_SCRIPT_INSTALL}/sub/${S_HOST_RELEASE}-${PARTSUB}.install ${_CTIDTHIS} $S_FILE_INSTALL_DONE'${cclear}"
+	_echoI "'${S_PATH_INSTALL}/sub/${S_HOST_RELEASE}-${PARTSUB}.install ${_CTIDTHIS} $S_FILE_INSTALL_DONE'${cclear}"
 	_exit
 fi
 keep

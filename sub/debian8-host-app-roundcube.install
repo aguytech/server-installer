@@ -27,7 +27,7 @@ _echoT "----------  CTID test"
 if [ ! "$1" ] || ! vzlist "$CTID" 1>/dev/null 2>&1; then _exitE "wrong ctid '$1' or not exists"; fi
 
 
-FILE_RSYSLOG="${S_PATH_SCRIPT_CONF}/rsyslog/host-roundcube.conf"
+FILE_RSYSLOG="${S_PATH_INSTALL_CONF}/rsyslog/host-roundcube.conf"
 
 _echoT "----------  file required"
 

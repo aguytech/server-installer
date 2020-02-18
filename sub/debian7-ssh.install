@@ -47,17 +47,17 @@ str=" home ovh "; if [ "${str/ "$S_SERVER_TYPE" /}" != "$str" ]; then
 
 	# use saved keys
 	file=${HOSTNAME}-ssh.tgz
-	if [ -f ${S_PATH_SCRIPT_XTRA}/$file ]; then
-		_askyn "Would you replace ssh keys with backuped ones in\n'${S_PATH_SCRIPT_XTRA}/$file'"
+	if [ -f ${S_PATH_INSTALL_XTRA}/$file ]; then
+		_askyn "Would you replace ssh keys with backuped ones in\n'${S_PATH_INSTALL_XTRA}/$file'"
 		if [ "$_ANSWER" == y ]; then
-			_eval "cd $S_PATH_SCRIPT_XTRA"
+			_eval "cd $S_PATH_INSTALL_XTRA"
 			_eval "tar xzf $file"
 			_eval "mv .ssh/id_rsa* ~/.ssh"
 			_eval "rm -fR .ssh"
 			_eval "cd"
 		fi
 	else
-		_echoT "Unable to find file: '${S_PATH_SCRIPT_XTRA}/$file'"
+		_echoT "Unable to find file: '${S_PATH_INSTALL_XTRA}/$file'"
 		_askyn "If this installation are a reinstallation,\nPlease overwrite manually key files in ~/.ssh"
 	fi
 

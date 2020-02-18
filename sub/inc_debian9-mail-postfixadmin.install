@@ -38,7 +38,7 @@ if [ "${STR/ "$S_SERVER_TYPE" /}" != "$STR" ] && ! grep -q "$PARTSUB" "${_FILEMA
 	while ! grep -q "^${PARTSUB}$" "${_FILEMAILDONE}"; do
 		_echoi "To add database configuration for user: $_VMAIL_ACRO, please"
 		_echoi "${whiteb}From an other terminal in the HOST, launch:"
-		_echoI "${S_PATH_SCRIPT_INSTALL}/sub/${S_HOST_RELEASE}-${PARTSUB}.install ${_CTIDTHIS} '$_DBHOST|$_DBNAME|$_DBUSER|$_DBPWD' ${_POLICY} ${_FILEMAILDONE}${cclear}"
+		_echoI "${S_PATH_INSTALL}/sub/${S_HOST_RELEASE}-${PARTSUB}.install ${_CTIDTHIS} '$_DBHOST|$_DBNAME|$_DBUSER|$_DBPWD' ${_POLICY} ${_FILEMAILDONE}${cclear}"
 		_askyn "Confirm the end of this subprocess to continue"
 	done
 fi

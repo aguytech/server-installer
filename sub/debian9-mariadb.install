@@ -75,7 +75,7 @@ if [ "${str/ "$S_SERVER_TYPE" /}" != "$str" ] && ! grep -q "$PARTSUB" "${S_FILE_
 
 	while ! grep -q "^$PARTSUB$" "${S_FILE_INSTALL_DONE}"; do
 		_echoi "from an other terminal in server host launch:"
-		_echoI "${S_PATH_SCRIPT_INSTALL}/sub/${S_HOST_RELEASE}-${PARTSUB}.install ${ctidthis} ${PATH_SHARE} $S_FILE_INSTALL_DONE${cclear}"
+		_echoI "${S_PATH_INSTALL}/sub/${S_HOST_RELEASE}-${PARTSUB}.install ${ctidthis} ${PATH_SHARE} $S_FILE_INSTALL_DONE${cclear}"
 		_askyn "Confirm"
 	done
 fi
@@ -99,8 +99,8 @@ strpass+="root @ ::1 - $_PWDLOCAL\n"
 
 _echoT "------------------ file required"
 
-file_mariadbkey="${S_PATH_SCRIPT_XTRA}/mariadb-${_MARIADBVER}-${S_RELEASE}.key"
-file_perconakey="${S_PATH_SCRIPT_XTRA}/percona-${_PERCONAVER}.key"
+file_mariadbkey="${S_PATH_INSTALL_XTRA}/mariadb-${_MARIADBVER}-${S_RELEASE}.key"
+file_perconakey="${S_PATH_INSTALL_XTRA}/percona-${_PERCONAVER}.key"
 
 files="$file_mariadbkey $file_perconakey"
 for file in $files; do ! [ -f "$file" ] && _exitE "Unable to find file: '$file'"; done
@@ -387,7 +387,7 @@ if [ "${str/ "$S_SERVER_TYPE" /}" != "$str" ]; then
 	_echoT "----------  rsyslog conf mariadb"
 
 	FILECONF="/etc/rsyslog.d/vm-mariadb.conf"
-	file=${S_PATH_SCRIPT_CONF}/rsyslog/vm-mariadb.conf
+	file=${S_PATH_INSTALL_CONF}/rsyslog/vm-mariadb.conf
 	[ ! -f "$file" ] && _exitE "Unable to find file: '$file'"
 
 	_evalq cp -a "$file" "$FILECONF"

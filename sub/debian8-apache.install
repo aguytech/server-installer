@@ -35,7 +35,7 @@ _eval "apt-get install -y dirmngr"
 _echoT "----------  mariadb repos"
 
 #apt-key adv --recv-keys --keyserver keyserver.ubuntu.com 0xcbcb082a1bb943db
-FILE=${S_PATH_SCRIPT_XTRA}/mariadb-10.3-${S_RELEASE}.key
+FILE=${S_PATH_INSTALL_XTRA}/mariadb-10.3-${S_RELEASE}.key
 ! [ -f "$FILE" ] && _exitE "Unable to find file: '$FILE'"
 _eval "apt-key add $FILE"
 
@@ -49,7 +49,7 @@ deb-src http://mariadb.mirrors.ovh.net/MariaDB/repo/10.3/debian $S_RELEASE_NAME 
 _echoT "----------  pgsql repos"
 
 #wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
-FILE=${S_PATH_SCRIPT_XTRA}/postgresql-10.key
+FILE=${S_PATH_INSTALL_XTRA}/postgresql-10.key
 ! [ -f "$FILE" ] && _exitE "Unable to find file: '$FILE'"
 _eval "apt-key add $FILE"
 
@@ -251,7 +251,7 @@ if [ "$S_SERVER_TYPE" == vz ]; then
 	while ! grep -q "^$PARTSUB$" "${S_FILE_INSTALL_DONE})"; do
 		_echoI "To add global apache rules to hosting server, please :"
 		_echoI "${whiteb}From an other terminal in server host launch"
-		_echoI "'${S_PATH_SCRIPT_INSTALL}/sub/${S_HOST_RELEASE}-${PARTSUB}.install ${ctidthis} $S_FILE_INSTALL_DONE'${cclear}"
+		_echoI "'${S_PATH_INSTALL}/sub/${S_HOST_RELEASE}-${PARTSUB}.install ${ctidthis} $S_FILE_INSTALL_DONE'${cclear}"
 		_askyn "Confirm"
 	done
 fi

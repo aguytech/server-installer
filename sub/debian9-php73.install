@@ -10,11 +10,11 @@ php_version=7.3
 phpfpm_service="php${php_version}-fpm"
 
 _echoT "------------------ file required"
-file_xtra_xdebug="${S_PATH_SCRIPT_CONF}/php/xdebug.ini"
-file_xtra_zenddebug="${S_PATH_SCRIPT_CONF}/php/zend_debugger.ini"
-file_xtra_fpm_apache="${S_PATH_SCRIPT_CONF}/php/${phpfpm_service}.conf"
+file_xtra_xdebug="${S_PATH_INSTALL_CONF}/php/xdebug.ini"
+file_xtra_zenddebug="${S_PATH_INSTALL_CONF}/php/zend_debugger.ini"
+file_xtra_fpm_apache="${S_PATH_INSTALL_CONF}/php/${phpfpm_service}.conf"
 file_conf_apache="$S_PATH_CONF/debian9-apache.conf"
-file_xtra_nextcloud=${S_PATH_SCRIPT_CONF}/rsyslog/vm-php-fpm.conf
+file_xtra_nextcloud=${S_PATH_INSTALL_CONF}/rsyslog/vm-php-fpm.conf
 
 files="$file_xtra_xdebug $file_xtra_zenddebug $file_xtra_zenddebug $file_xtra_fpm_apache $file_conf_apache $file_xtra_nextcloud"
 for file in $files; do [ ! -f "$file" ] && _exitE "Unable to find file: '$file'"; done
@@ -476,7 +476,7 @@ _eval apt-get install -y "libssl${_LIBSSL}" libssl-dev
 
 _echoT "----------  zenddebugger install"
 
-file="${S_PATH_SCRIPT_XTRA}/php/ZendDebugger-${PHPVER}.so.tgz"
+file="${S_PATH_INSTALL_XTRA}/php/ZendDebugger-${PHPVER}.so.tgz"
 [ -f "$file" ] && _evalq tar xzf "$file" -C "$_PATHMOD"
 
 while [ ! -f "$_PATHMOD/ZendDebugger.so" ]; do

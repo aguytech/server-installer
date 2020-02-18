@@ -53,7 +53,7 @@ _evalq cp -a "${FILE}.proto" "$FILE"
 
 # main.cf
 _evalq "cat $_POSTFIXMAIN >> $FILE"
-_evalq "cat ${S_PATH_SCRIPT_CONF}/mail/main_${_VMAIL_NAME}.cf >> $FILE"
+_evalq "cat ${S_PATH_INSTALL_CONF}/mail/main_${_VMAIL_NAME}.cf >> $FILE"
 
 # mydomain
 SCH="$(sed '/^#\?mydomain/h;g;$!d' $FILE)"; STR="mydomain = $_MYDOMAIN"; sed -i "s|^\(${SCH}.*\)$|\1\n${STR}|" "$FILE"
@@ -117,7 +117,7 @@ PATHTMP="/etc/postfix/mysql"
 
 # copy files from 'good' vmailmanager
 [ "$(ls "$PATHTMP"/* 2>/dev/null)" ] && _evalq rm "$PATHTMP"/*
-_evalq cp -a "${S_PATH_SCRIPT_CONF}/mail/${_VMAIL_NAME}_mysql"/* "$PATHTMP"
+_evalq cp -a "${S_PATH_INSTALL_CONF}/mail/${_VMAIL_NAME}_mysql"/* "$PATHTMP"
 
 SCH="USER"; STR="$_DBUSER"; sed -i "s|$SCH|$STR|" "$PATHTMP"/*
 SCH="PASSWORD"; STR="$_DBPWD"; sed -i "s|$SCH|$STR|" "$PATHTMP"/*

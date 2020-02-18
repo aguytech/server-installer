@@ -46,9 +46,9 @@ sed -i 's|^#\?\(SKIP_ARPDETECT\).*|\1=yes|' /etc/vz/vz.conf
 
 _echoT "----------  openvz sample"
 
-[ ! -f "${S_PATH_SCRIPT_CONF}/vz/ve-basic.conf-sample.$DDATE" ] && mv "${S_PATH_SCRIPT_CONF}/vz/ve-basic.conf-sample" "${S_PATH_SCRIPT_CONF}/vz/ve-basic.conf-sample.$DDATE"
+[ ! -f "${S_PATH_INSTALL_CONF}/vz/ve-basic.conf-sample.$DDATE" ] && mv "${S_PATH_INSTALL_CONF}/vz/ve-basic.conf-sample" "${S_PATH_INSTALL_CONF}/vz/ve-basic.conf-sample.$DDATE"
 
-cp -a ${S_PATH_SCRIPT_CONF}/vz/* /etc/vz/conf/
+cp -a ${S_PATH_INSTALL_CONF}/vz/* /etc/vz/conf/
 
 
 <<KEEP

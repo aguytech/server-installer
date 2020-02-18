@@ -6,10 +6,10 @@
 _echoT "\n==========================================  $S_RELEASE $_PART"
 
 _echoT "------------------ file required"
-FILE_SITE="${S_PATH_SCRIPT_CONF}/apache2/000-default.conf"
-FILE_SITESSL="${S_PATH_SCRIPT_CONF}/apache2/000-default-ssl.conf"
-FILEKEY_MARIADB="${S_PATH_SCRIPT_XTRA}/mariadb-10.3-${S_RELEASE}.key"
-FILEKEY_POSTGRESQL="${S_PATH_SCRIPT_XTRA}/postgresql-10.key"
+FILE_SITE="${S_PATH_INSTALL_CONF}/apache2/000-default.conf"
+FILE_SITESSL="${S_PATH_INSTALL_CONF}/apache2/000-default-ssl.conf"
+FILEKEY_MARIADB="${S_PATH_INSTALL_XTRA}/mariadb-10.3-${S_RELEASE}.key"
+FILEKEY_POSTGRESQL="${S_PATH_INSTALL_XTRA}/postgresql-10.key"
 
 FILES="$FILE_SITE $FILE_SITESSL $FILEKEY_MARIADB $FILEKEY_POSTGRESQL"
 for FILE in $FILES; do ! [ -f "$FILE" ] && _exitE "Unable to find file: '$FILE'"; done
@@ -91,7 +91,7 @@ if [ "$S_SERVER_TYPE" == vz ]; then
 
 		while ! grep -q "^$PARTSUB$" "${S_FILE_INSTALL_DONE}"; do
 			_echoi "from an other terminal in server host launch:"
-			_echoI "${S_PATH_SCRIPT_INSTALL}/sub/${S_HOST_RELEASE}-${PARTSUB}.install ${_CTIDTHIS} ${_PATH_WWW_SHARE} $S_FILE_INSTALL_DONE${cclear}"
+			_echoI "${S_PATH_INSTALL}/sub/${S_HOST_RELEASE}-${PARTSUB}.install ${_CTIDTHIS} ${_PATH_WWW_SHARE} $S_FILE_INSTALL_DONE${cclear}"
 			_askyn "Confirm"
 		done
 	fi
@@ -330,7 +330,7 @@ if [ "${STR/ "$S_SERVER_TYPE" /}" != "$STR" ]; then
 	_echoT "----------  rsyslog conf apache"
 
 	FILECONF="/etc/rsyslog.d/vm-apache.conf"
-	FILE=${S_PATH_SCRIPT_CONF}/rsyslog/vm-apache.conf
+	FILE=${S_PATH_INSTALL_CONF}/rsyslog/vm-apache.conf
 	[ ! -f "$FILE" ] && _exitE "Unable to find file: '$FILE'"
 
 	_evalq cp -a "$FILE" "$FILECONF"

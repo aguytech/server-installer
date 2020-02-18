@@ -4,12 +4,12 @@
 
 _echoT "\n==========================================  $S_RELEASE $_PART"
 
-file_xtra_bash_aliases="${S_PATH_SCRIPT_CONF}/.bash_aliases"
-file_xtra_bash_functions="${S_PATH_SCRIPT_CONF}/.bash_functions"
+file_conf_bash_aliases="${S_PATH_SCRIPT_CONF}/.bash_aliases"
+file_conf_bash_functions="${S_PATH_SCRIPT_CONF}/.bash_functions"
 
 _echoT "------------------ file required"
 
-_require "$file_xtra_bash_aliases" "$file_xtra_bash_functions"
+_require "$file_conf_bash_aliases" "$file_conf_bash_functions"
 
 
 ####################################  MAIN
@@ -69,14 +69,14 @@ _echoT "----------  .bash_aliases"
 
 file=~/.bash_aliases
 _keepmvts "$file"
-_evalq ln -s "$file_xtra_bash_aliases" "$file"
+_evalq ln -s "$file_conf_bash_aliases" "$file"
 
 
 _echoT "----------  .bash_functions"
 
 file=~/.bash_functions
 _keepmvts "$file"
-_evalq ln -s "$file_xtra_bash_functions" "$file"
+_evalq ln -s "$file_conf_bash_functions" "$file"
 
 
 _echoT "----------  grub"

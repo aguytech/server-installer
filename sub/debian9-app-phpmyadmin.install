@@ -8,8 +8,8 @@ PARTNAME="${_PART#*-}"
 _echoT "\n==========================================  $S_RELEASE $_PART"
 
 _echoT "------------------ file required"
-FILE_XTRA_SUB=${S_PATH_SCRIPT_CONF}/apache2/sub-site.conf
-FILE_XTRA_SUB_SSL=${S_PATH_SCRIPT_CONF}/apache2/sub-site-ssl.conf
+FILE_XTRA_SUB=${S_PATH_INSTALL_CONF}/apache2/sub-site.conf
+FILE_XTRA_SUB_SSL=${S_PATH_INSTALL_CONF}/apache2/sub-site-ssl.conf
 
 FILES="$FILE_XTRA_SUB $FILE_XTRA_SUB_SSL"
 for FILE in $FILES; do ! [ -f "$FILE" ] && _exitE "Unable to find file: '$FILE'"; done
@@ -65,7 +65,7 @@ if [ "${STR/ "$S_SERVER_TYPE" /}" != "$STR" ] && ! grep -q "$PARTSUB" "${S_FILE_
 
     while ! grep -q "^${PARTSUB}$" "${S_FILE_INSTALL_DONE}"; do
         _echoi "${whiteb}From an other terminal in the HOST, launch:"
-        _echoI "${S_PATH_SCRIPT_INSTALL}/sub/${S_HOST_RELEASE}-${PARTSUB}.install ${_CTIDTHIS} '${_PATH_SHARE}' '${S_FILE_INSTALL_DONE}'${cclear}"
+        _echoI "${S_PATH_INSTALL}/sub/${S_HOST_RELEASE}-${PARTSUB}.install ${_CTIDTHIS} '${_PATH_SHARE}' '${S_FILE_INSTALL_DONE}'${cclear}"
         _askyn "Confirm the end of this subprocess to continue"
     done
 fi

@@ -111,7 +111,7 @@ echo "<?php
 
 _echoT "----------  Mariadb create database"
 
-_eval "mysql -h'$_DBHOST' -urootadmin -p'$_PWDROOTADMIN' < ${S_PATH_SCRIPT_CONF}/mail/vmailmanage.sql"
+_eval "mysql -h'$_DBHOST' -urootadmin -p'$_PWDROOTADMIN' < ${S_PATH_INSTALL_CONF}/mail/vmailmanage.sql"
 
 
 

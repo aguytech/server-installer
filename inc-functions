@@ -509,7 +509,7 @@ _redirect() {
 
 	# log path
 	if [ -z "$_PATH_LOG" ]; then
-		[ "${_PATH_BASE/$S_PATH_SCRIPT_INSTALL}" != "${_PATH_BASE}" ] && _PATH_LOG="$S_PATH_LOG_INSTALL" || _PATH_LOG="$S_PATH_LOG_SERVER"
+		[ "${_PATH_BASE/$S_PATH_INSTALL}" != "${_PATH_BASE}" ] && _PATH_LOG="$S_PATH_LOG_INSTALL" || _PATH_LOG="$S_PATH_LOG_SERVER"
 	fi
 	! [ -d "$_PATH_LOG" ] && mkdir -p "$_PATH_LOG"
 

@@ -71,7 +71,7 @@ if [ "${STR/ "$S_SERVER_TYPE" /}" != "$STR" ] && ! grep -q "$PARTSUB" "${S_FILE_
 
 	while ! grep -q "^$PARTSUB$" "${S_FILE_INSTALL_DONE}"; do
 		_echoi "from an other terminal in server host launch:"
-		_echoI "${S_PATH_SCRIPT_INSTALL}/sub/${S_HOST_RELEASE}-${PARTSUB}.install ${_CTIDTHIS} $S_FILE_INSTALL_DONE${cclear}"
+		_echoI "${S_PATH_INSTALL}/sub/${S_HOST_RELEASE}-${PARTSUB}.install ${_CTIDTHIS} $S_FILE_INSTALL_DONE${cclear}"
 		_askyn "Confirm"
 	done
 fi
@@ -83,7 +83,7 @@ if [ "${STR/ "$S_SERVER_TYPE" /}" != "$STR" ]; then
 	_echoT "----------  rsyslog conf"
 
 	FILECONF="/etc/rsyslog.d/vm-redis.conf"
-	FILE=${S_PATH_SCRIPT_CONF}/rsyslog/vm-redis.conf
+	FILE=${S_PATH_INSTALL_CONF}/rsyslog/vm-redis.conf
 	[ ! -f "$FILE" ] && _exitE "Unable to find file: '$FILE'"
 
 	_evalq cp -a "$FILE" "$FILECONF"

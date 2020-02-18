@@ -10,16 +10,16 @@ TODO
 
 _echoT "\n==========================================  $S_RELEASE $_PART"
 
-path_xtra_bash_completion="${S_PATH_SCRIPT_CONF}/bash_completion"
-file_xtra_vim="${S_PATH_SCRIPT_CONF}/.vimrc"
-#file_xtra_postfix_master="${S_PATH_SCRIPT_CONF}/mail/master-satellite.cf"
-#file_xtra_postfix_main="${S_PATH_SCRIPT_CONF}/mail/main-satellite.cf"
+path_install_bash_completion="${S_PATH_SCRIPT_CONF}/bash_completion"
+file_conf_vim="${S_PATH_SCRIPT_CONF}/.vimrc"
+#file_xtra_postfix_master="${S_PATH_INSTALL_CONF}/mail/master-satellite.cf"
+#file_xtra_postfix_main="${S_PATH_INSTALL_CONF}/mail/main-satellite.cf"
 
 ####################################  MAIN
 
 _echoT "----------  required files"
 
-_require "$file_xtra_vim" "$file_xtra_postfix_main" "$file_xtra_postfix_master"
+_require "$file_conf_vim" "$file_xtra_postfix_main" "$file_xtra_postfix_master"
 
 _echoT "----------  root password change"
 
@@ -86,7 +86,7 @@ _eval "apt install -y apt-utils bsdmainutils cron curl htop iotop logrotate lsb-
 
 _echoT "----------  bash completion"
 
-_evalq cp -a "$path_xtra_bash_completion"/* "/usr/share/bash-completion/"
+_evalq cp -a "$path_install_bash_completion"/* "/usr/share/bash-completion/"
 
 <<KEEP
 _echoT "----------  postfix install"
@@ -130,10 +130,10 @@ _eval update-alternatives --set editor /usr/bin/vim.basic
 
 file="$HOME/.vimrc"
 _keepmvts "$file"
-_eval ln -s "$file_xtra_vim" "$file"
+_eval ln -s "$file_conf_vim" "$file"
 
 # colorscheme
-_eval cp ${S_PATH_SCRIPT_CONF}/vim/*.vim /usr/share/vim/vim*/colors/
+_eval cp ${S_PATH_INSTALL_CONF}/vim/*.vim /usr/share/vim/vim*/colors/
 
 _echoT "------------------ nano"
 
@@ -212,7 +212,7 @@ if [ "${str/ "$S_SERVER_TYPE" /}" != "$str" ] && ! grep -q "$PARTSUB" "${S_FILE_
 
 	while ! grep -q "^$PARTSUB$" "${S_FILE_INSTALL_DONE}"; do
 		_echoi "from an other terminal in server host launch:"
-		_echoI "${S_PATH_SCRIPT_INSTALL}/sub/${S_HOST_RELEASE}-${PARTSUB}.install ${_CTIDTHIS} $S_FILE_INSTALL_DONE${cclear}"
+		_echoI "${S_PATH_INSTALL}/sub/${S_HOST_RELEASE}-${PARTSUB}.install ${_CTIDTHIS} $S_FILE_INSTALL_DONE${cclear}"
 		_askyn "Confirm"
 	done
 fi

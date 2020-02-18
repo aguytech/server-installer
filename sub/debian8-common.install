@@ -7,7 +7,7 @@ _echoT "\n==========================================  $S_RELEASE $_PART"
 
 FILE_BASH_ALIASES="${S_PATH_SCRIPT_CONF}/.bash_aliases"
 FILE_BASH_FUNCTIONS="${S_PATH_SCRIPT_CONF}/.bash_functions"
-PATH_BASH_COMPLETION="${S_PATH_SCRIPT_CONF}/bash_completion"
+PATH_BASH_COMPLETION="${S_PATH_INSTALL_CONF}/bash_completion"
 
 _echoT "------------------ file required"
 FILES="$FILE_BASH_ALIASES $FILE_BASH_FUNCTIONS"
@@ -173,7 +173,7 @@ if [ "${STR/ "$S_SERVER_TYPE" /}" != "$STR" ]; then
 
 	apt-key adv --recv-keys --keyserver keyserver.ubuntu.com 0xcbcb082a1bb943db
 	# search 0xCBCB082A1BB943DB in http://keyserver.ubuntu.com:11371/
-	#FILE=${S_PATH_SCRIPT_XTRA}/mariadb-10.3-${S_RELEASE}.key
+	#FILE=${S_PATH_INSTALL_XTRA}/mariadb-10.3-${S_RELEASE}.key
 	#! [ -f "$FILE" ] && _exitE "Unable to find file: '$FILE'"
 	#_evalq "apt-key add $FILE"
 
@@ -187,7 +187,7 @@ deb-src http://mariadb.mirrors.ovh.net/MariaDB/repo/10.3/debian $S_RELEASE_NAME 
 	_echoT "----------  pgsql repos"
 
 	wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
-	#FILE=${S_PATH_SCRIPT_XTRA}/postgresql-10.key
+	#FILE=${S_PATH_INSTALL_XTRA}/postgresql-10.key
 	#! [ -f "$FILE" ] && _exitE "Unable to find file: '$FILE'"
 	#_evalq "apt-key add $FILE"
 
@@ -255,7 +255,7 @@ fi
 _echoT "----------  conf nano"
 
 # *.nanorc
-PATHFROM=${S_PATH_SCRIPT_XTRA}/nano
+PATHFROM=${S_PATH_INSTALL_XTRA}/nano
 PATHTO=/usr/share/nano
 FILENANO=/etc/nanorc
 ! grep -q "## Personnal include" "$FILENANO" && echo -e "\n## Personnal include" >> $FILENANO
@@ -327,7 +327,7 @@ if [ "${STR/ "$S_SERVER_TYPE" /}" != "$STR" ] && ! grep -q "$PARTSUB" "${S_FILE_
 
 	while ! grep -q "^$PARTSUB$" "${S_FILE_INSTALL_DONE}"; do
 		_echoi "from an other terminal in server host launch:"
-		_echoI "${S_PATH_SCRIPT_INSTALL}/sub/${S_HOST_RELEASE}-${PARTSUB}.install ${_CTIDTHIS} $S_FILE_INSTALL_DONE${cclear}"
+		_echoI "${S_PATH_INSTALL}/sub/${S_HOST_RELEASE}-${PARTSUB}.install ${_CTIDTHIS} $S_FILE_INSTALL_DONE${cclear}"
 		_askyn "Confirm"
 	done
 fi

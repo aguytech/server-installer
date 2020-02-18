@@ -21,7 +21,7 @@ _echoT "\n==========================================  $S_RELEASE $_PART"
 
 _echoT "----------  firewall conf"
 
-file=${S_PATH_SCRIPT_CONF}/firewall.conf
+file=${S_PATH_INSTALL_CONF}/firewall.conf
 if ! [ -f $file ]
 then
 	_echoE "Unable to find '$file'\nplease corrects this problem"
@@ -33,7 +33,7 @@ fi
 
 _echoT "----------  firewall script"
 
-file=${S_PATH_SCRIPT_XTRA}/firewall
+file=${S_PATH_INSTALL_XTRA}/firewall
 if ! [ -f $file ]
 then
 	_echoE "Unable to find '$file'\nplease corrects this problem"

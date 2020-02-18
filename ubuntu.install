@@ -9,10 +9,11 @@ server=node2
 cmds="apt update
 apt dist-upgrade
 apt install -y rsync zfsutils-linux
-ln -sv /usr/local/bs/install/xtra/conf/.bash_aliases /root/.bash_aliases"
+ln -sv /usr/local/bs/conf/.bash_aliases /root/.bash_aliases"
 
 ssh root@${server} bash -i <<<$cmds
-rsync /usr/local/bs/ root@${server}:/usr/local/bs/ -e 'ssh -p 22' --exclude=/.git --delete -av
+rsync /home/shared/dev/bs/ root@${server}:/usr/local/bs/ -e 'ssh -p 22' --exclude=/.git --delete -av
+rsync /home/shared/dev/install/ root@${server}:/usr/local/bs/install/ -e 'ssh -p 22' --exclude=/.git --delete -av
 
 # HOST
 ssh root@${server}
@@ -70,12 +71,12 @@ while [ "$_PART" != "quit" ]; do
 		[ "${partsmade/ $part /}" = "$partsmade" ] && [ "${partsrelease/ $part /}" != "$partsrelease" ] && parts2do+="$part "
 	done
 
-	#_echoD "partsall='$partsall'"
-	#_echoD "partsmade='$partsmade'"
-	#_echoD "parts2do='$parts2do'"
+	_echoD "partsall='$partsall'"
+	_echoD "partsmade='$partsmade'"
+	_echoD "parts2do='$parts2do'"
 
-	_echo "part already made: ${blueb}$partsmade${cclear}"
-	PS3="give your choice: "
+	_echo "Part already made: ${blueb}$partsmade${cclear}"
+	PS3="Give your choice: "
 	select _PART in quit $parts2do; do
 		case "$_PART" in
 			quit)
@@ -100,7 +101,6 @@ while [ "$_PART" != "quit" ]; do
 done
 
 _exit
-
 
 <<KEEP
 # wipe free disk space
@@ -161,4 +161,20 @@ cd
 umount /mnt/save
 
 reboot
+KEEP
+
+<<KEEP
+# restore rescue
+
+path="/mnt/save"
+path_backup="${path}/backup/rescue"
+# mount
+! [ -d "${path}" ] && mkdir -p "${path}"
+mount /dev/mapper/vg-lvsave /mnt/save
+! [ -d "${path_backup}" ] && mkdir -p "${path_backup}"
+cd "${path_backup}"
+
+dd bs=512 count=1 if=ns398616-debian7-20160306-mbrpt.iso of=/dev/sda
+gzip -c ns398616-debian7-20160306-sda1.iso.gz | bs=4M status=progress of=/dev/sda1
+gzip -c ns398616-debian7-20160306-mapper_vg-lvvar.iso.gz | bs=4M status=progress of=/dev/mapper/vg-lvvar
 KEEP

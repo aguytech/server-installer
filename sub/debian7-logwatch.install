@@ -129,7 +129,7 @@ $iptables_host_min_count = 0
 
 _echoT "----------  http script"
 
-file=${S_PATH_SCRIPT_XTRA}/logwatch/http
+file=${S_PATH_INSTALL_XTRA}/logwatch/http
 [ -e $file ] && cp -a $file /etc/logwatch/scripts/services/ || _echoE "unable to find '$file' to put in '/etc/logwatch/scripts/services/'"
 
 <<keep
@@ -174,7 +174,7 @@ str="http-error"; sed -i "s|^\(Title = \).*|\1$str|" $file
 
 _echoT "----------  http-error script"
 
-file=${S_PATH_SCRIPT_XTRA}/logwatch/http-error
+file=${S_PATH_INSTALL_XTRA}/logwatch/http-error
 [ -e $file ] && cp -a $file /etc/logwatch/scripts/services/ || _echoE "unable to find '$file' to put in '/etc/logwatch/scripts/services/'"
 
 
@@ -193,7 +193,7 @@ str="php"; sed -i "s|^\(Title = \).*|\1$str|" $file
 
 _echoT "----------  php script"
 
-file=${S_PATH_SCRIPT_XTRA}/logwatch/php
+file=${S_PATH_INSTALL_XTRA}/logwatch/php
 [ -e $file ] && cp -a $file /etc/logwatch/scripts/services/ || _echoE "unable to find '$file' to put in '/etc/logwatch/scripts/services/'"
 
 

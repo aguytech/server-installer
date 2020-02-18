@@ -19,9 +19,9 @@ commands
 _echoT "\n==========================================  $S_RELEASE $_PART"
 
 file_script="/usr/local/bin/firewall"
-file_xtra_script="${S_PATH_SCRIPT_XTRA}/firewall"
-file_xtra_conf="${S_PATH_SCRIPT_CONF}/firewall.conf"
-file_xtra_log="${S_PATH_SCRIPT_CONF}/rsyslog/iptables.conf"
+file_xtra_script="${S_PATH_INSTALL_XTRA}/firewall"
+file_xtra_conf="${S_PATH_INSTALL_CONF}/firewall.conf"
+file_xtra_log="${S_PATH_INSTALL_CONF}/rsyslog/iptables.conf"
 
 _echoT "------------------ file required"
 
