@@ -14,6 +14,7 @@ _echoT "\n==========================================  $S_RELEASE $_PART"
 
 path_install_bash_completion="${S_PATH_SCRIPT_CONF}/bash_completion"
 file_conf_vim="${S_PATH_SCRIPT_CONF}/.vimrc"
+file_conf_tmux="${S_PATH_SCRIPT_CONF}/.tmux.conf"
 file_conf_postfix_master="${S_PATH_INSTALL_CONF}/mail/master-satellite.cf"
 file_conf_postfix_main="${S_PATH_INSTALL_CONF}/mail/main-satellite.cf"
 
@@ -21,7 +22,7 @@ file_conf_postfix_main="${S_PATH_INSTALL_CONF}/mail/main-satellite.cf"
 
 _echoT "----------  required files"
 
-_require "$file_conf_vim" "$file_conf_postfix_main" "$file_conf_postfix_master"
+_require "$file_conf_vim" "$file_conf_tmux" "$file_conf_postfix_main" "$file_conf_postfix_master"
 
 
 _echoT "----------  root password change"
@@ -130,6 +131,15 @@ if [ "${str/ "$S_SERVER_TYPE" /}" != "$str" ]; then
 
 fi
 KEEP
+
+_echoT "----------  conf tmux"
+
+file="$HOME/.tmux.conf"
+_keepmvts "$file"
+_eval ln -s "$file_conf_tmux" "$file"
+
+# colorscheme
+_eval cp ${S_PATH_INSTALL_CONF}/vim/*.vim /usr/share/vim/vim*/colors/
 
 _echoT "----------  conf vim"
 
