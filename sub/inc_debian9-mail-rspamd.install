@@ -224,7 +224,7 @@ if [ "${STR/ "$S_SERVER_TYPE" /}" != "$STR" ]; then
 
     FILECONF="/etc/rsyslog.d/vm-rspamd.conf"
     FILE=${S_PATH_INSTALL_CONF}/rsyslog/vm-rspamd.conf
-    [ ! -f "$FILE" ] && _exitE "Unable to find file: '$FILE'"
+    [ ! -f "$FILE" ] && _exite "Unable to find file: '$FILE'"
 
     _evalq cp -a "$FILE" "$FILECONF"
     _var_replace "$FILECONF"

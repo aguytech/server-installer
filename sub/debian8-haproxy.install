@@ -14,7 +14,7 @@ FILECONF_HACONF="${S_PATH_INSTALL_CONF}/bash_completion/haconf"
 
 _echoT "---------- file required"
 FILES="$FILECONF_HAPROXY $FILECONF_HACONF"
-for FILE in $FILES; do ! [ -f "$FILE" ] && _exitE "Unable to find file: '$FILE'"; done
+for FILE in $FILES; do ! [ -f "$FILE" ] && _exite "Unable to find file: '$FILE'"; done
 
 
 ####################################  FUNCTION

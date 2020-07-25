@@ -90,7 +90,7 @@ _echoT "----------  mariadb repos"
 #apt-key adv --recv-keys --keyserver keyserver.ubuntu.com 0xcbcb082a1bb943db
 # search 0xCBCB082A1BB943DB in http://keyserver.ubuntu.com:11371/
 FILE=${S_PATH_INSTALL_XTRA}/mariadb-10.3-${S_RELEASE}.key
-! [ -f "$FILE" ] && _exitE "Unable to find file: '$FILE'"
+! [ -f "$FILE" ] && _exite "Unable to find file: '$FILE'"
 _eval "apt-key add $FILE"
 
 FILE=/etc/apt/sources.list.d/mariadb.list
@@ -106,7 +106,7 @@ _echoT "----------  percona repos"
 #apt-key adv --keyserver keys.gnupg.net --recv-keys 8507EFA5
 # http://keys.gnupg.net/pks/lookup?op=get&search=0x9334A25F8507EFA5
 FILE=${S_PATH_INSTALL_XTRA}/percona-3.0.key
-! [ -f "$FILE" ] && _exitE "Unable to find file: '$FILE'"
+! [ -f "$FILE" ] && _exite "Unable to find file: '$FILE'"
 _eval "apt-key add $FILE"
 
 FILE=/etc/apt/sources.list.d/percona.list

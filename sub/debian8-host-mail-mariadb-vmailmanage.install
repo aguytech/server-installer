@@ -15,7 +15,7 @@ DBNAME=$(cut -d'|' -f2 <<< $DATA)
 DBUSER=$(cut -d'|' -f3 <<< $DATA)
 DBPWD=$(cut -d'|' -f4 <<< $DATA)
 
-! [[ "$DBHOST" && "$DBNAME" && "$DBUSER" && "$DBPWD" ]] && _exitE "Wrong options for '$DATA'"
+! [[ "$DBHOST" && "$DBNAME" && "$DBUSER" && "$DBPWD" ]] && _exite "Wrong options for '$DATA'"
 
 _echoT "\n==========================================  $S_RELEASE $PART"
 
@@ -24,7 +24,7 @@ _echoT "\n==========================================  $S_RELEASE $PART"
 
 _echoT "----------  CTID test"
 
-if [ ! "$1" ] || ! vzlist "$CTID" 1>/dev/null 2>&1; then _exitE "wrong ctid '$1' or not exists"; fi
+if [ ! "$1" ] || ! vzlist "$CTID" 1>/dev/null 2>&1; then _exite "wrong ctid '$1' or not exists"; fi
 
 
 ####################################  MARIADB

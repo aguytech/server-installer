@@ -10,7 +10,7 @@ FILEBASHFUNCTIONS=${S_PATH_SCRIPT_CONF}/.bash_functions
 
 _echoT "------------------ file required"
 FILES="$FILEBASHALIASES $FILEBASHFUNCTIONS"
-for FILE in $FILES; do ! [ -f "$FILE" ] && _exitE "Unable to find file: '$FILE'"; done
+for FILE in $FILES; do ! [ -f "$FILE" ] && _exite "Unable to find file: '$FILE'"; done
 
 _echoT "------------------ fileconf source"
 [ -f $S_FILE_INSTALL_CONF ] && . $S_FILE_INSTALL_CONF

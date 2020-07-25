@@ -23,7 +23,7 @@ dbname=$(cut -d'|' -f2 <<< $2)
 dbuser=$(cut -d'|' -f3 <<< $2)
 dbpwd=$(cut -d'|' -f4 <<< $2)
 
-! [[ "$dbhost" && "$dbname" && "$dbuser" && "$dbpwd" ]] && _exitE "Wrong options for '$2'"
+! [[ "$dbhost" && "$dbname" && "$dbuser" && "$dbpwd" ]] && _exite "Wrong options for '$2'"
 
 # asks
 _ask "Give password for remote connection to MariaDB for user 'roothost'"

@@ -187,7 +187,7 @@ if [ "${str/ "$S_SERVER_TYPE" /}" != "$str" ]; then
 
 	apt-key adv --recv-keys --keyserver keyserver.ubuntu.com 0xcbcb082a1bb943db
 	#FILE=${S_PATH_INSTALL_XTRA}/mariadb-10.3-${S_RELEASE}.key
-	#! [ -f "$FILE" ] && _exitE "Unable to find file: '$FILE'"
+	#! [ -f "$FILE" ] && _exite "Unable to find file: '$FILE'"
 	#_eval "apt-key add $FILE"
 
 	FILE=/etc/apt/sources.list.d/mariadb.list
@@ -201,7 +201,7 @@ deb-src http://mariadb.mirrors.ovh.net/MariaDB/repo/10.3/debian $S_RELEASE_NAME 
 
 	wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
 	#FILE=${S_PATH_INSTALL_XTRA}/postgresql-10.key
-	#! [ -f "$FILE" ] && _exitE "Unable to find file: '$FILE'"
+	#! [ -f "$FILE" ] && _exite "Unable to find file: '$FILE'"
 	#_eval "apt-key add $FILE"
 
 	FILE=/etc/apt/sources.list.d/pgdg.list

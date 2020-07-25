@@ -103,7 +103,7 @@ file_mariadbkey="${S_PATH_INSTALL_XTRA}/mariadb-${_MARIADBVER}-${S_RELEASE}.key"
 file_perconakey="${S_PATH_INSTALL_XTRA}/percona-${_PERCONAVER}.key"
 
 files="$file_mariadbkey $file_perconakey"
-for file in $files; do ! [ -f "$file" ] && _exitE "Unable to find file: '$file'"; done
+for file in $files; do ! [ -f "$file" ] && _exite "Unable to find file: '$file'"; done
 
 
 _echoT "----------  tools install"
@@ -388,7 +388,7 @@ if [ "${str/ "$S_SERVER_TYPE" /}" != "$str" ]; then
 
 	FILECONF="/etc/rsyslog.d/vm-mariadb.conf"
 	file=${S_PATH_INSTALL_CONF}/rsyslog/vm-mariadb.conf
-	[ ! -f "$file" ] && _exitE "Unable to find file: '$file'"
+	[ ! -f "$file" ] && _exite "Unable to find file: '$file'"
 
 	_evalq cp -a "$file" "$FILECONF"
 	_var_replace "$FILECONF"

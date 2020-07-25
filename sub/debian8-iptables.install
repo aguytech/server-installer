@@ -26,7 +26,7 @@ FILERSYSLOG=${S_PATH_INSTALL_CONF}/rsyslog/iptables.conf
 _echoT "------------------ file required"
 
 FILES="$FILE_SCRIPT $FILECONF $FILERSYSLOG"
-for FILE in $FILES; do ! [ -f "$FILE" ] && _exitE "Unable to find file: '$FILE'"; done
+for FILE in $FILES; do ! [ -f "$FILE" ] && _exite "Unable to find file: '$FILE'"; done
 
 
 ####################################  MAIN

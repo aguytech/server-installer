@@ -15,7 +15,7 @@ FILE_APACHE_CONF="$S_PATH_CONF/debian9-apache.conf"
 FILE_NC=${S_PATH_INSTALL_CONF}/rsyslog/vm-php-fpm.conf
 
 FILES="$FILE_XDEBUG $FILE_ZENDDEBUG $FILE_ZENDDEBUG $FILE_FPM_APACHE $FILE_APACHE_CONF $FILE_NC"
-for FILE in $FILES; do [ ! -f "$FILE" ] && _exitE "Unable to find file: '$FILE'"; done
+for FILE in $FILES; do [ ! -f "$FILE" ] && _exite "Unable to find file: '$FILE'"; done
 
 ####################################  CTID
 

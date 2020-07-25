@@ -15,7 +15,7 @@ _echoT "\n==========================================  debian8 $PART"
 
 _echoT "----------  CTID test"
 
-if [ ! "$1" ] || ! vzlist "$CTID" 1>/dev/null 2>&1; then _exitE "wrong ctid '$1' or not exists"; fi
+if [ ! "$1" ] || ! vzlist "$CTID" 1>/dev/null 2>&1; then _exite "wrong ctid '$1' or not exists"; fi
 
 
 #############  log ask

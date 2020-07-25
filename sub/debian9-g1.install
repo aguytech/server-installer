@@ -40,7 +40,7 @@ CPUCORES="1"
 _echoT "------------------ file required"
 
 FILES=""
-for FILE in $FILES; do ! [ -f "$FILE" ] && _exitE "Unable to find file: '$FILE'"; done
+for FILE in $FILES; do ! [ -f "$FILE" ] && _exite "Unable to find file: '$FILE'"; done
 
 
 ####################################  MAIN

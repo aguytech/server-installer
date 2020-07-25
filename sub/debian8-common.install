@@ -11,7 +11,7 @@ PATH_BASH_COMPLETION="${S_PATH_INSTALL_CONF}/bash_completion"
 
 _echoT "------------------ file required"
 FILES="$FILE_BASH_ALIASES $FILE_BASH_FUNCTIONS"
-for FILE in $FILES; do ! [ -e "$FILE" ] && _exitE "Unable to find file: '$FILE'"; done
+for FILE in $FILES; do ! [ -e "$FILE" ] && _exite "Unable to find file: '$FILE'"; done
 
 
 ####################################  MAIN
@@ -174,7 +174,7 @@ if [ "${STR/ "$S_SERVER_TYPE" /}" != "$STR" ]; then
 	apt-key adv --recv-keys --keyserver keyserver.ubuntu.com 0xcbcb082a1bb943db
 	# search 0xCBCB082A1BB943DB in http://keyserver.ubuntu.com:11371/
 	#FILE=${S_PATH_INSTALL_XTRA}/mariadb-10.3-${S_RELEASE}.key
-	#! [ -f "$FILE" ] && _exitE "Unable to find file: '$FILE'"
+	#! [ -f "$FILE" ] && _exite "Unable to find file: '$FILE'"
 	#_evalq "apt-key add $FILE"
 
 	FILE=/etc/apt/sources.list.d/mariadb.list
@@ -188,7 +188,7 @@ deb-src http://mariadb.mirrors.ovh.net/MariaDB/repo/10.3/debian $S_RELEASE_NAME 
 
 	wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
 	#FILE=${S_PATH_INSTALL_XTRA}/postgresql-10.key
-	#! [ -f "$FILE" ] && _exitE "Unable to find file: '$FILE'"
+	#! [ -f "$FILE" ] && _exite "Unable to find file: '$FILE'"
 	#_evalq "apt-key add $FILE"
 
 	FILE=/etc/apt/sources.list.d/pgdg.list

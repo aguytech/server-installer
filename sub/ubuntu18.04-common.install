@@ -77,6 +77,9 @@ deb [arch=amd64,arm64,ppc64el] http://mirror.mva-n.net/mariadb/repo/10.4/ubuntu 
 	echo "# PostgreSQL
 deb http://apt.postgresql.org/pub/repos/apt/ ${S_RELEASE_NAME}-pgdg main" > "$file"
 
+	_echoT "----------  yq repos"
+
+	add-apt-repository ppa:rmescandon/yq
 fi
 
 
@@ -87,7 +90,7 @@ _eval "upgrade"
 
 _echoT "----------  install base"
 
-_eval "apt install -y zfsutils-linux apt-utils bsdmainutils cron curl htop iotop logrotate lsb-release man netcat openssh-server rsync jq" # vim acpid apt-file apt-utils dstat hdparm iputils-tracepath jwhois mlocate mtop p7zip p7zip-plugins pciutils wget telnet
+_eval "apt install -y zfsutils-linux apt-utils bsdmainutils cron curl htop iotop logrotate lsb-release man netcat openssh-server rsync jq yq" # vim acpid apt-file apt-utils dstat hdparm iputils-tracepath jwhois mlocate mtop p7zip p7zip-plugins pciutils wget telnet
 
 
 _echoT "----------  bash completion"

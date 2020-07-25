@@ -16,7 +16,7 @@ _echoT "\n==========================================  $S_RELEASE $PART"
 
 _echoT "----------  CTID test"
 
-if [ ! "$1" ] || ! vzlist "$CTID" 1>/dev/null 2>&1; then _exitE "wrong ctid '$1' or not exists"; fi
+if [ ! "$1" ] || ! vzlist "$CTID" 1>/dev/null 2>&1; then _exite "wrong ctid '$1' or not exists"; fi
 
 
 FILE_RSYSLOG="${S_PATH_INSTALL_CONF}/rsyslog/host-mail.conf"
@@ -24,7 +24,7 @@ FILE_RSYSLOG="${S_PATH_INSTALL_CONF}/rsyslog/host-mail.conf"
 _echoT "----------  file required"
 
 FILES="$FILE_RSYSLOG"
-for FILE in $FILES; do ! [ -f "$FILE" ] && _exitE "Unable to find file: '$FILE'"; done
+for FILE in $FILES; do ! [ -f "$FILE" ] && _exite "Unable to find file: '$FILE'"; done
 
 
 ####################################  FAIL2BAN

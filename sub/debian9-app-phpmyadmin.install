@@ -12,7 +12,7 @@ FILE_XTRA_SUB=${S_PATH_INSTALL_CONF}/apache2/sub-site.conf
 FILE_XTRA_SUB_SSL=${S_PATH_INSTALL_CONF}/apache2/sub-site-ssl.conf
 
 FILES="$FILE_XTRA_SUB $FILE_XTRA_SUB_SSL"
-for FILE in $FILES; do ! [ -f "$FILE" ] && _exitE "Unable to find file: '$FILE'"; done
+for FILE in $FILES; do ! [ -f "$FILE" ] && _exite "Unable to find file: '$FILE'"; done
 
 
 ####################################  FUNCTION
@@ -24,7 +24,7 @@ if [ "$S_SERVER_TYPE" == vz ]; then
 	_echoT "----------  ctid"
 
 	[ "${S_SERVICE_IPS['admin']/$_IPTHIS/}" == "${S_SERVICE_IPS['admin']}" ] && _askyn "This container is not the default one for Administration: '${S_SERVICE_IPS['admin']}'\nConfirm or type 'n' to exit"
-	[ "$_ANSWER" == "n" ] && _exitE "Bye"
+	[ "$_ANSWER" == "n" ] && _exite "Bye"
 fi
 
 

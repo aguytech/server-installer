@@ -12,7 +12,7 @@ FILEKEY_MARIADB="${S_PATH_INSTALL_XTRA}/mariadb-10.3-${S_RELEASE}.key"
 FILEKEY_POSTGRESQL="${S_PATH_INSTALL_XTRA}/postgresql-10.key"
 
 FILES="$FILE_SITE $FILE_SITESSL $FILEKEY_MARIADB $FILEKEY_POSTGRESQL"
-for FILE in $FILES; do ! [ -f "$FILE" ] && _exitE "Unable to find file: '$FILE'"; done
+for FILE in $FILES; do ! [ -f "$FILE" ] && _exite "Unable to find file: '$FILE'"; done
 
 
 ####################################  CTID
@@ -331,7 +331,7 @@ if [ "${STR/ "$S_SERVER_TYPE" /}" != "$STR" ]; then
 
 	FILECONF="/etc/rsyslog.d/vm-apache.conf"
 	FILE=${S_PATH_INSTALL_CONF}/rsyslog/vm-apache.conf
-	[ ! -f "$FILE" ] && _exitE "Unable to find file: '$FILE'"
+	[ ! -f "$FILE" ] && _exite "Unable to find file: '$FILE'"
 
 	_evalq cp -a "$FILE" "$FILECONF"
 	_var_replace "$FILECONF"
@@ -407,7 +407,7 @@ if [ "${STR/ "$S_SERVER_TYPE" /}" != "$STR" ] && ! grep -q "$PARTSUB" "${S_FILE_
 		_echoi "from an other terminal in server host edit file '${S_PATH_CONF}/firewall.conf'"
 		_echoI "add a key to array '_PORTSIDVZ' for Ip forwading"
 		_askno "Confirm"
-		[ "$_ANSWER" == n ] && _exitE "exit"
+		[ "$_ANSWER" == n ] && _exite "exit"
 	done
 fi
 

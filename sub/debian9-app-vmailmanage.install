@@ -7,7 +7,7 @@ _echoT "\n==========================================  $S_RELEASE $_PART"
 
 _echoT "------------------ file required"
 files=""
-for file in $files; do ! [ -f "$file" ] && _exitE "Unable to find file: '$file'"; done
+for file in $files; do ! [ -f "$file" ] && _exite "Unable to find file: '$file'"; done
 
 
 ####################################  MAIN

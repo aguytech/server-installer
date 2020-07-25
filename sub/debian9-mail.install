@@ -26,7 +26,7 @@ _POSTFIXMASTER=${S_PATH_INSTALL_CONF}/mail/master.cf
 _POSTFIXMAIN=${S_PATH_INSTALL_CONF}/mail/main_add.cf
 
 FILES="$_POSTFIXMASTER $_POSTFIXMAIN"
-for FILE in $FILES; do ! [ -f "$FILE" ] && _exitE "Unable to find file: '$FILE'"; done
+for FILE in $FILES; do ! [ -f "$FILE" ] && _exite "Unable to find file: '$FILE'"; done
 
 
 ####################################  MAIN

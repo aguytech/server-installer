@@ -5,19 +5,22 @@
 _PART=conf-init
 echo -e "${blueb}==========================================  $_PART${cclear}"
 
-path_base="$(readlink -e "${BASH_SOURCE[0]}" |xargs dirname)"
+path_base=`dirname "$(readlink -e "${BASH_SOURCE[0]}")"`
 sdate="$(date +%s)"
 
-path_conf="/etc/server"
+S_PATH_CONF="/etc/server"
 path_install_conf="${path_base}/conf"
 
 file_conf_server="${path_base}/conf-server.install"
 file_install_server="${path_install_conf}/server.conf"
 file_install_env="${path_install_conf}/env.conf"
 
-S_GLOBAL_CONF="${path_conf}/server.conf"
+S_GLOBAL_CONF="${S_PATH_CONF}/server.conf"
 
 ####################################  MAIN
+
+# exit
+[ "$USER" != root ] && echo -e "${redb}You have to run this script under root privileges${cclear}" && exit 1
 
 echo -e "${blueb}----------  initialisation${cclear}"
 
@@ -40,18 +43,18 @@ echo -e "${blueb}----------  log path${cclear}"
 
 echo -e "${blueb}----------  ssl paths${cclear}"
 
-for path in "$path_conf/ssl/private" "$path_conf/ssl/certs"; do
+for path in "${S_PATH_CONF}/ssl/private" "${S_PATH_CONF}/ssl/certs"; do
 	! [ -d "$path" ] && mkdir -p "$path"
 done
-find "$path_conf" -type d -exec chmod 750 -R "{}" \;
-find "$path_conf" -type f -exec chmod 640 -R "{}" \;
-find "$path_conf/ssl/private" -type d -exec chmod 700 -R "{}" \;
-find "$path_conf/ssl/private" -type f -exec chmod 600 -R "{}" \;
+find "${S_PATH_CONF}" -type d -exec chmod 750 -R "{}" \;
+find "${S_PATH_CONF}" -type f -exec chmod 640 -R "{}" \;
+find "${S_PATH_CONF}/ssl/private" -type d -exec chmod 700 -R "{}" \;
+find "${S_PATH_CONF}/ssl/private" -type f -exec chmod 600 -R "{}" \;
 
 
 echo -e "${blueb}----------  server.conf${cclear}"
 
-file="$path_conf/server.conf"
+file="${S_PATH_CONF}/server.conf"
 [ -e "${file}" ] && cp -a "${file}" "${file}.keep${sdate}"
 ! [ -f "$file" ] && cp -a "$file_install_server" "$file"
 . "$file"
@@ -59,7 +62,7 @@ file="$path_conf/server.conf"
 
 echo -e "${blueb}----------  env.conf${cclear}"
 
-file="$path_conf/env.conf"
+file="${S_PATH_CONF}/env.conf"
 [ -e "${file}" ] && cp -a "${file}" "${file}.keep${sdate}"
 ! [ -f "$file" ] && cp -a "$file_install_env" "$file"
 . "$file"
@@ -67,7 +70,7 @@ file="$path_conf/env.conf"
 
 echo -e "${blueb}----------  install.conf${cclear}"
 
-file="$path_conf/install.conf"
+file="${S_PATH_CONF}/install.conf"
 ! [ -f "$file" ] && touch "$file"
 . "$file"
 
@@ -79,7 +82,7 @@ _redirect
 
 echo -e "${blueb}----------  server settings${cclear}"
 
-file="$(dirname $0)/conf-server.install"
+file="${path_base}/conf-server.install"
 if ! . "$file"; then
 	echo -e "${redb}error - unable to find file '$file' from ${BASH_SOURCE[0]}${cclear}"
 	exit 1
