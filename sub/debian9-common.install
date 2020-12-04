@@ -212,7 +212,7 @@ _eval "upgrade"
 
 _echoT "----------  install base"
 
-_eval "apt-get install -y bash-completion bsdmainutils cron htop less logrotateman openssh-server rsync" # apt-utils iotop lsb-release nano netcat telnet curl
+_eval "apt-get install -y bash-completion bsdmainutils cron htop less logrotate man openssh-server rsync" # apt-utils iotop lsb-release nano netcat telnet curl
 # acpid apt-file apt-utils dstat hdparm iputils-tracepath jwhois mlocate mtop p7zip p7zip-plugins pciutils rcconf sysstat sysv-rc-conf wget
 
 # while debian8 problem in lxd
@@ -221,7 +221,7 @@ _eval "apt-get install -y bash-completion bsdmainutils cron htop less logrotatem
 
 _echoT "----------  bash_completion"
 
-_evalq "cp -a "$path_install_bash_completion"/* /usr/share/bash-completion/"
+_evalq "cp -a "$path_install_bash_completion"/* /usr/share/bash-completion/completions"
 
 
 _echoT "----------  exim4 install"

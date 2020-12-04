@@ -18,7 +18,7 @@ rsync /home/shared/dev/install/ root@${server}:/usr/local/bs/install/ -e 'ssh -p
 # HOST
 ssh root@${server}
 
-/usr/local/bs/install/ubuntu.install
+/usr/local/bs/install/debian.install
 MANUALY
 
 ################################ global functions

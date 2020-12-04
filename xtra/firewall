@@ -166,20 +166,20 @@ _init() {
 	_echo "Allow all PREROUTING/INPUT/OUTPUT/FORWARD/POSTROUTING in Mangle table"
 
 	# CONNECTIONS
-	iptables -A INPUT -p all -i $S_ETH -m state --state ESTABLISHED,RELATED -j ACCEPT
-	iptables -A OUTPUT -p all -o $S_ETH -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
-	_echo "Allow existing INPUT & new OUTPUT for $S_ETH"
+	iptables -A INPUT -p all -i $_ETH -m state --state ESTABLISHED,RELATED -j ACCEPT
+	iptables -A OUTPUT -p all -o $_ETH -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+	_echo "Allow existing INPUT & new OUTPUT for $_ETH"
 
 	# FORWARD
-	iptables -A FORWARD -p all -i $S_ETH -m state --state ESTABLISHED,RELATED -j ACCEPT
-	iptables -A FORWARD -p all -o $S_ETH -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
-	_echo "Allow existing incomming FORWARD & new outcomming FORWARD for $S_ETH"
+	iptables -A FORWARD -p all -i $_ETH -m state --state ESTABLISHED,RELATED -j ACCEPT
+	iptables -A FORWARD -p all -o $_ETH -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+	_echo "Allow existing incomming FORWARD & new outcomming FORWARD for $_ETH"
 	iptables -A FORWARD -p all -i $_ETH_SUB -m state --state ESTABLISHED,RELATED -j ACCEPT
 	iptables -A FORWARD -p all -o $_ETH_SUB -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
 	_echo "Allow existing incomming FORWARD & new outcomming FORWARD for $_ETH_SUB"
-	#iptables -A FORWARD -i $S_ETHIn -o $_ETHOut -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
-	#iptables -A FORWARD -i $S_ETHIn -o $_ETHOut -m state --state ! INVALID -j ACCEPT # idem NEW,ESTABLISHED,RELATED
-	#iptables -A FORWARD -i $S_ETHOut -o $_ETHIn -m state --state ESTABLISHED,RELATED -j ACCEPT
+	#iptables -A FORWARD -i $_ETHIn -o $_ETHOut -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+	#iptables -A FORWARD -i $_ETHIn -o $_ETHOut -m state --state ! INVALID -j ACCEPT # idem NEW,ESTABLISHED,RELATED
+	#iptables -A FORWARD -i $_ETHOut -o $_ETHIn -m state --state ESTABLISHED,RELATED -j ACCEPT
 
 	# LO
 	iptables -A INPUT -i lo -j ACCEPT
@@ -204,17 +204,17 @@ _init() {
 	_echo "Allow all PREROUTING/INPUT/OUTPUT/FORWARD/POSTROUTING in Mangle table - IPV6"
 
 	# CONNECTIONS
-	ip6tables -A INPUT -p all -i $S_ETH -m state --state ESTABLISHED,RELATED -j ACCEPT
-	ip6tables -A OUTPUT -p all -o $S_ETH -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
-	_echo "Allow existing INPUT & new OUTPUT for $S_ETH - IPV6"
+	ip6tables -A INPUT -p all -i $_ETH -m state --state ESTABLISHED,RELATED -j ACCEPT
+	ip6tables -A OUTPUT -p all -o $_ETH -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+	_echo "Allow existing INPUT & new OUTPUT for $_ETH - IPV6"
 
 	# FORWARD
-	ip6tables -A FORWARD -p all -i $S_ETH -m state --state ESTABLISHED,RELATED -j ACCEPT
-	ip6tables -A FORWARD -p all -o $S_ETH -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
-	_echo "Allow existing incomming FORWARD & new outcomming FORWARD for $S_ETH - IPV6"
-	#ip6tables -A FORWARD -i $S_ETHIn -o $_ETHOut -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
-	#ip6tables -A FORWARD -i $S_ETHIn -o $_ETHOut -m state --state ! INVALID -j ACCEPT # idem NEW,ESTABLISHED,RELATED
-	#ip6tables -A FORWARD -i $S_ETHOut -o $_ETHIn -m state --state ESTABLISHED,RELATED -j ACCEPT
+	ip6tables -A FORWARD -p all -i $_ETH -m state --state ESTABLISHED,RELATED -j ACCEPT
+	ip6tables -A FORWARD -p all -o $_ETH -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+	_echo "Allow existing incomming FORWARD & new outcomming FORWARD for $_ETH - IPV6"
+	#ip6tables -A FORWARD -i $_ETHIn -o $_ETHOut -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+	#ip6tables -A FORWARD -i $_ETHIn -o $_ETHOut -m state --state ! INVALID -j ACCEPT # idem NEW,ESTABLISHED,RELATED
+	#ip6tables -A FORWARD -i $_ETHOut -o $_ETHIn -m state --state ESTABLISHED,RELATED -j ACCEPT
 
 	# LO
 	ip6tables -A INPUT -i lo -j ACCEPT
@@ -369,11 +369,11 @@ _ovh() {
 	_echo "--------------------------- OVH"
 
 	# OVH
-	chain='iptables -A INPUT -i $S_ETH -p icmp -s $IP -j ACCEPT'
+	chain='iptables -A INPUT -i $_ETH -p icmp -s $IP -j ACCEPT'
 	comment="Allow INPUT ICMP, OVH /SLA/MRTG for IP: "
 	_add_chain "$chain" -i "$_IPSOVHICMP ${_IPTHIS%.*}.250 ${_IPTHIS%.*}.251" -c "$comment"
 
-	chain='iptables -A INPUT -i $S_ETH -s $IP -j ACCEPT'
+	chain='iptables -A INPUT -i $_ETH -s $IP -j ACCEPT'
 	comment="Allow INPUT UDP, *.253 *.252 for IP: "
 	_add_chain "$chain" -i "${_IPTHIS%.*}.252 ${_IPTHIS%.*}.253" -c "$comment"
 
@@ -388,53 +388,53 @@ _add_rules() {
 	_echo "--------------------------- RULES"
 
 	# SSH
-	chain='iptables -A INPUT -i $S_ETH -p tcp -s $IP -d $_IPTHIS --sport $_PORTSSHS --dport $_PORTSSH -j ACCEPT'
+	chain='iptables -A INPUT -i $_ETH -p tcp -s $IP -d $_IPTHIS --sport $_PORTSSHS --dport $_PORTSSH -j ACCEPT'
 	comment="Allow INPUT port: $_PORTSSHS -> $_PORTSSH SSH, for IP: "
 	_add_chain "$chain" -i "$_IPSSSH" -c "$comment"
 
 	# ICMP
-	chain='iptables -A INPUT -i $S_ETH -p icmp -s $IP -j ACCEPT'
+	chain='iptables -A INPUT -i $_ETH -p icmp -s $IP -j ACCEPT'
 	comment="Allow INPUT ICMP for IP:"
 	_add_chain "$chain" -i "$_IPSICMP" -c "$comment"
 
 	# RSYSLOG
-	chain='iptables -A INPUT -i $S_ETH -p udp -s $IP --dport $_PORTRSYSLOG -j ACCEPT'
+	chain='iptables -A INPUT -i $_ETH -p udp -s $IP --dport $_PORTRSYSLOG -j ACCEPT'
 	comment="Allow INPUT ICMP for IP on $_ETH_SUB:"
 	_add_chain "$chain" -i "$_IPSRSYSLOG" -c "$comment"
 
 	# DNS
-	chain='iptables -A INPUT -i $S_ETH -p tcp -s $IP --dport $_PORTDNS -j ACCEPT'
+	chain='iptables -A INPUT -i $_ETH -p tcp -s $IP --dport $_PORTDNS -j ACCEPT'
 	comment="Allow INPUT port : $_PORTDNS, TCP DNS for IP:"
 	_add_chain "$chain" -i "$_IPSDNS" -c "$comment"
 
-	chain='iptables -A INPUT -i $S_ETH -p udp -s $IP --dport $_PORTDNS -j ACCEPT'
+	chain='iptables -A INPUT -i $_ETH -p udp -s $IP --dport $_PORTDNS -j ACCEPT'
 	comment="Allow INPUT port : $_PORTDNS, UDP DNS for IP:"
 	_add_chain "$chain" -i "$_IPSDNS" -c "$comment"
 
 	# NTP (time) server
-	#chain='iptables -A INPUT -i $S_ETH -p udp --sport $_PORTNTP --dport $_PORTNTP -j ACCEPT'
+	#chain='iptables -A INPUT -i $_ETH -p udp --sport $_PORTNTP --dport $_PORTNTP -j ACCEPT'
 	#comment="Allow INPUT port : $_PORTNTP, UDP NTP for IP:"
 	#_add_chain "$chain" -i "$_IPSNTP" -c "$comment"
 
 	# HTTP
 	if [ "$_LIMITHTTP" ]
 	then
-		chain='iptables -A INPUT -i $S_ETH -p tcp --syn --dport $port -m limit --limit $_LIMITHTTP --limit-burst $_LIMITBURSTHTTP -j ACCEPT'
+		chain='iptables -A INPUT -i $_ETH -p tcp --syn --dport $port -m limit --limit $_LIMITHTTP --limit-burst $_LIMITBURSTHTTP -j ACCEPT'
 		comment="Allow INPUT all IPs Mails with LIMIT $_LIMITHTTP & Burst $_LIMITBURSTHTTP for Port: "
 	else
-		chain='iptables -A INPUT -i $S_ETH -p tcp --dport $port -j ACCEPT'
+		chain='iptables -A INPUT -i $_ETH -p tcp --dport $port -j ACCEPT'
 		comment="Allow INPUT all IPs HTTP for Port: "
 	fi
 	_add_chain "$chain" -p "$_PORTSHTTP" -c "$comment"
 
 	if [ "$_CONMAXHTTP" ]
 	then
-		#chain='iptables -A INPUT -i $S_ETH -p tcp --dport $port -j ACCEPT'
-		chain='iptables -A INPUT -i $S_ETH -p tcp --syn --dport $port -m connlimit --connlimit-upto $_CONMAXHTTP --connlimit-mask 32 -j LOG --log-prefix "ipt-fw-limit-$port $_CONMAXHTTP HTTP $port : "'
+		#chain='iptables -A INPUT -i $_ETH -p tcp --dport $port -j ACCEPT'
+		chain='iptables -A INPUT -i $_ETH -p tcp --syn --dport $port -m connlimit --connlimit-upto $_CONMAXHTTP --connlimit-mask 32 -j LOG --log-prefix "ipt-fw-limit-$port $_CONMAXHTTP HTTP $port : "'
 		comment="Log LIMIT INPUT all IPs HTTP with max // connLimit of $_CONMAXHTTP for Port: "
 		_add_chain "$chain" -p "$_PORTSHTTP" -c "$comment"
 
-		chain='iptables -A INPUT -i $S_ETH -p tcp --syn --dport $port -m connlimit --connlimit-upto $_CONMAXHTTP --connlimit-mask 32 -j DROP'
+		chain='iptables -A INPUT -i $_ETH -p tcp --syn --dport $port -m connlimit --connlimit-upto $_CONMAXHTTP --connlimit-mask 32 -j DROP'
 		comment="Log DROPPED INPUT all IPs HTTP with max // connLimit of $_CONMAXHTTP for Port: "
 		_add_chain "$chain" -p "$_PORTSHTTP" -c "$comment"
 	fi
@@ -442,22 +442,22 @@ _add_rules() {
 	# MAIL
 	if [ "$_LIMITMAIL" ]
 	then
-		chain='iptables -A INPUT -i $S_ETH -p tcp --syn --dport $port -m limit --limit $_LIMITMAIL --limit-burst $_LIMITBURSTMAIL -j ACCEPT'
+		chain='iptables -A INPUT -i $_ETH -p tcp --syn --dport $port -m limit --limit $_LIMITMAIL --limit-burst $_LIMITBURSTMAIL -j ACCEPT'
 		comment="Allow INPUT all IPs Mails with LIMIT $_LIMITMAIL & Burst $_LIMITBURSTMAIL for Port: "
 	else
-		chain='iptables -A INPUT -i $S_ETH -p tcp --dport $port -j ACCEPT'
+		chain='iptables -A INPUT -i $_ETH -p tcp --dport $port -j ACCEPT'
 		comment="Allow INPUT all IPs Mails for Port: "
 	fi
 	_add_chain "$chain" -p "$_PORTSMAIL" -c "$comment"
 
 	# HAPROXY
-	chain='iptables -A INPUT -i $S_ETH -p tcp -s $IP -d $_IPTHIS --dport $_PORTHAPROXY -j ACCEPT'
+	chain='iptables -A INPUT -i $_ETH -p tcp -s $IP -d $_IPTHIS --dport $_PORTHAPROXY -j ACCEPT'
 	comment="Allow INPUT HAPROXY for IP:"
 	_add_chain "$chain" -i "$_IPSHAPROXY" -c "$comment"
 
 	# MariaDB
-	#chain='iptables -A INPUT -i $S_ETH -p tcp -s $IP --sport $_PORTMARIADBS -d $_IPTHIS --dport $_PORTMARIADB -m state --state NEW,ESTABLISHED -j ACCEPT'
-	chain='iptables -A INPUT -i $S_ETH -p tcp -s $IP --sport $_PORTMARIADB -d $_IPTHIS --dport $_PORTMARIADB -m state --state NEW,ESTABLISHED -j ACCEPT'
+	#chain='iptables -A INPUT -i $_ETH -p tcp -s $IP --sport $_PORTMARIADBS -d $_IPTHIS --dport $_PORTMARIADB -m state --state NEW,ESTABLISHED -j ACCEPT'
+	chain='iptables -A INPUT -i $_ETH -p tcp -s $IP --sport $_PORTMARIADB -d $_IPTHIS --dport $_PORTMARIADB -m state --state NEW,ESTABLISHED -j ACCEPT'
 	comment="Allow INPUT port : $_PORTMARIADB -> $_PORTMARIADB, MariaDB for IP:"
 	_add_chain "$chain" -i "$_IPSMARIADB" -c "$comment"
 
@@ -466,8 +466,8 @@ _add_rules() {
 	#_add_chain "$chain" -i "$_IPSMARIADB" -c "$comment"
 
 	# PostgreSQL
-	#chain='iptables -A INPUT -i $S_ETH -p tcp -s $IP --sport $_PORTPGSQLS -d $_IPTHIS --dport $_PORTPGSQL -m state --state NEW,ESTABLISHED -j ACCEPT'
-	chain='iptables -A INPUT -i $S_ETH -p tcp -s $IP --sport $_PORTPGSQL -d $_IPTHIS --dport $_PORTPGSQL -m state --state NEW,ESTABLISHED -j ACCEPT'
+	#chain='iptables -A INPUT -i $_ETH -p tcp -s $IP --sport $_PORTPGSQLS -d $_IPTHIS --dport $_PORTPGSQL -m state --state NEW,ESTABLISHED -j ACCEPT'
+	chain='iptables -A INPUT -i $_ETH -p tcp -s $IP --sport $_PORTPGSQL -d $_IPTHIS --dport $_PORTPGSQL -m state --state NEW,ESTABLISHED -j ACCEPT'
 	comment="Allow INPUT port : $_PORTPGSQL -> $_PORTPGSQL, PostgreSQL for IP:"
 	_add_chain "$chain" -i "$_IPSPGSQL" -c "$comment"
 
@@ -486,9 +486,9 @@ _vm_ssh() {
 			ctip=${_VM_IP_BASE}.${ctid}
 			port_from=${S_VM_PORT_SSH_PRE}${ctid}
 			port_to=${_PORTSSH}
-			_echoD "VM - PREROUTING $S_ETH / SSH $ctip: $port_from > $port_to"
-			iptables -t nat -A PREROUTING -j DNAT -i $S_ETH -p tcp -d $_IPTHIS --dport $port_from --to-destination ${ctip}:${port_to}
-			_echo "Allow PREROUTING $S_ETH / SSH port $port_from to ct ${ctip}:${port_to}"
+			_echoD "VM - PREROUTING $_ETH / SSH $ctip: $port_from > $port_to"
+			iptables -t nat -A PREROUTING -j DNAT -i $_ETH -p tcp -d $_IPTHIS --dport $port_from --to-destination ${ctip}:${port_to}
+			_echo "Allow PREROUTING $_ETH / SSH port $port_from to ct ${ctip}:${port_to}"
 		done
 	fi
 }
@@ -504,12 +504,12 @@ _vm_nat() {
 		do
 			port_from=${PORTS%-*}
 			port_to=${PORTS#*-}
-			_echoD "VM - PREROUTING $S_ETH / $ctip: $port_from > $port_to"
-			#iptables -t nat -A PREROUTING -i "$S_ETH" -d "$_IPTHIS" -p tcp --dport "$port_from" -j DNAT --to-destination "${ctip}:${port_to}"
-			#iptables -t nat -A PREROUTING -i "$S_ETH" -p tcp --dport "$port_from" -j DNAT --to-destination "${ctip}:${port_to}"
+			_echoD "VM - PREROUTING $_ETH / $ctip: $port_from > $port_to"
+			#iptables -t nat -A PREROUTING -i "$_ETH" -d "$_IPTHIS" -p tcp --dport "$port_from" -j DNAT --to-destination "${ctip}:${port_to}"
+			#iptables -t nat -A PREROUTING -i "$_ETH" -p tcp --dport "$port_from" -j DNAT --to-destination "${ctip}:${port_to}"
 			iptables -t nat -A PREROUTING -d "$_IPTHIS" -p tcp --dport "$port_from" -j DNAT --to-destination "${ctip}:${port_to}"
 			iptables -t nat -A OUTPUT -p tcp -o lo --dport "$port_from" -j DNAT --to-destination "${ctip}:${port_to}"
-			_echo "Allow PREROUTING $S_ETH / port $port_from to ct ${ctip}:${port_to}"
+			_echo "Allow PREROUTING $_ETH / port $port_from to ct ${ctip}:${port_to}"
 		done
 	done
 }
@@ -527,9 +527,9 @@ _vm_nat_admin() {
 			do
 				port_from=${PORTS%-*}
 				port_to=${PORTS#*-}
-				_echoD "VM ADMIN - PREROUTING $S_ETH / $ctip: $port_from > $port_to"
-				iptables -t nat -A PREROUTING -j DNAT -i $S_ETH -p tcp -s $ipadmin -d $_IPTHIS --dport $port_from --to-destination ${ctip}:${port_to}
-				_echo "Allow PREROUTING $S_ETH / port $port_from to ct ${ctip}:${port_to}"
+				_echoD "VM ADMIN - PREROUTING $_ETH / $ctip: $port_from > $port_to"
+				iptables -t nat -A PREROUTING -j DNAT -i $_ETH -p tcp -s $ipadmin -d $_IPTHIS --dport $port_from --to-destination ${ctip}:${port_to}
+				_echo "Allow PREROUTING $_ETH / port $port_from to ct ${ctip}:${port_to}"
 			done
 		done
 	done
@@ -544,31 +544,31 @@ _vm_init() {
 	_echo "Allow INPUT/OUTPUT $_ETH_SUB connections INPUT/OUTPUT"
 
 	# Output access
-	#iptables -t nat -A POSTROUTING -s ${_VM_IP_BASE}.1/24 -o $S_ETH -j SNAT --to $_IPTHIS
-	iptables -t nat -A POSTROUTING -o $S_ETH -j MASQUERADE
+	#iptables -t nat -A POSTROUTING -s ${_VM_IP_BASE}.1/24 -o $_ETH -j SNAT --to $_IPTHIS
+	iptables -t nat -A POSTROUTING -o $_ETH -j MASQUERADE
 	_echo "Allow OUTPUT acces to all cts"
 
-	iptables -A FORWARD -i $S_ETH -p tcp -d ${_VM_IP_BASE}.1/24 -j ACCEPT
+	iptables -A FORWARD -i $_ETH -p tcp -d ${_VM_IP_BASE}.1/24 -j ACCEPT
 	_echo "Allow FORWARD to ${_VM_IP_BASE}.1/24 port all"
-	#iptables -A FORWARD -i $S_ETH -p tcp --dport 80 -d $_VM_IP_BASE.$_ctid_80_vm/32 -j ACCEPT
+	#iptables -A FORWARD -i $_ETH -p tcp --dport 80 -d $_VM_IP_BASE.$_ctid_80_vm/32 -j ACCEPT
 	#_echo "Allow FORWARD to ${_VM_IP_BASE}.$_ctid_80_vm/32 port 80"
-	#iptables -A FORWARD -i $S_ETH -p tcp --dport 8100:8254 -d ${_VM_IP_BASE}.1/24 -j ACCEPT
+	#iptables -A FORWARD -i $_ETH -p tcp --dport 8100:8254 -d ${_VM_IP_BASE}.1/24 -j ACCEPT
 	#_echo "Allow FORWARD to ${_VM_IP_BASE}.1/24 port 8100:8254"
 
 
 	# 80
-	#iptables -t nat -A PREROUTING -j DNAT -i $S_ETH -p tcp -d $_IPTHIS --dport 80 --to-destination $_VM_IP_BASE.$_ctid_80_vm:80
+	#iptables -t nat -A PREROUTING -j DNAT -i $_ETH -p tcp -d $_IPTHIS --dport 80 --to-destination $_VM_IP_BASE.$_ctid_80_vm:80
 	#_echo "Allow PREROUTING port 80 to ct $_VM_IP_BASE.$_ctid_80_vm:80"
-	# iptables -t nat -A POSTROUTING -s $ctIp -o $S_ETH -j SNAT --to $hIp # if web access is not already given
-	# iptables -t nat -A POSTROUTING -o $S_ETH -p tcp --dport $hPort -d $ctIp -j MASQUERADE # if web access is not already given
+	# iptables -t nat -A POSTROUTING -s $ctIp -o $_ETH -j SNAT --to $hIp # if web access is not already given
+	# iptables -t nat -A POSTROUTING -o $_ETH -p tcp --dport $hPort -d $ctIp -j MASQUERADE # if web access is not already given
 }
 
 _vm_init_nat() {
 	_echo "--------------------------- VM INIT NAT"
 
 	# Output access
-	#iptables -t nat -A POSTROUTING -s ${_VM_IP_BASE}.1/24 -o $S_ETH -j SNAT --to $_IPTHIS
-	iptables -t nat -A POSTROUTING -o $S_ETH -j MASQUERADE
+	#iptables -t nat -A POSTROUTING -s ${_VM_IP_BASE}.1/24 -o $_ETH -j SNAT --to $_IPTHIS
+	iptables -t nat -A POSTROUTING -o $_ETH -j MASQUERADE
 	_echo "Allow OUTPUT acces to all cts"
 }
 
@@ -589,7 +589,7 @@ case $1 in
 start)
 	_init
 	_ovh
-	$is_fail2ban && service fail2ban start && _echo "-- fail2ban STARTED"
+	$is_fail2ban && $_FAIL2BAN && service fail2ban start && _echo "-- fail2ban STARTED"
 	_add_rules
 	$is_vz && _vm_init && _vm_rules
 	_scan
@@ -601,30 +601,30 @@ startvm)
 	_allow
 	_clear
 	$is_vz && _vm_rules
-	$is_fail2ban && service fail2ban start && _echo "--------- fail2ban STARTED"
+	$is_fail2ban && $_FAIL2BAN && service fail2ban start && _echo "--------- fail2ban STARTED"
 
 	_echo "========================== VM NAT STARTED"
 	;;
 stop)
-	$is_fail2ban && service fail2ban stop && _echo "--------- fail2ban STOPPED"
+	$is_fail2ban && $_FAIL2BAN && service fail2ban stop && _echo "--------- fail2ban STOPPED"
 	_allow
 	_clear
 	_echo "========================== Firewall STOPPED"
 	;;
 stopnot)
-	$is_fail2ban && service fail2ban stop && _echo "--------- fail2ban STOPPED"
+	$is_fail2ban && $_FAIL2BAN && service fail2ban stop && _echo "--------- fail2ban STOPPED"
 	_allow
 	_clear
 	$is_vz && _vm_rules
 	_echo "========================== Firewall STOPPED except VM NAT"
 	;;
 restart)
-	$is_fail2ban && service fail2ban stop && _echo "--------- fail2ban STOPPED"
+	$is_fail2ban && $_FAIL2BAN && service fail2ban stop && _echo "--------- fail2ban STOPPED"
 	_allow
 	_clear
 	_init
 	_ovh
-	$is_fail2ban && service fail2ban start && _echo "--------- fail2ban STARTED"
+	$is_fail2ban && $_FAIL2BAN && service fail2ban start && _echo "--------- fail2ban STARTED"
 	_add_rules
 	$is_vz && _vm_init && _vm_rules
 	_scan
