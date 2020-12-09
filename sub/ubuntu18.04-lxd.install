@@ -32,13 +32,39 @@ _eval apt install -y lxd jq # criu lxd-tools
 _echoT "----------  conf path"
 
 path="$S_PATH_CONF/lxd"
-! [ -d "$path" ] && _eval mkdir "$path"
+[ -d "$path" ] || _eval mkdir "$path"
 
 ! [ -h /vm ] && _eval ln -s /var/lib/lxd /vm
 
 _echoT "----------  init"
 
 _eval lxd init
+
+_echoT "----------  systemd-resolved"
+
+# for selected interface
+# dynamically
+#resolvectl --interface lxdbr0 dnssec set no
+#resolvectl dns lxdbr0 "$(lxc network show lxdbr0 | sed -n 's|.*ipv4\.address: \(.*\)/.*|\1|p')"
+#resolvectl domain lxdbr0 '~lxd'
+
+# persistence
+path="/etc/systemd/resolved.conf.d/"
+[ -d "${path}" ] || mkdir -p "${path}"
+cidr="$(lxc network show lxdbr0 | sed -n 's|.*ipv4\.address: \(.*\)/.*|\1|p')"
+echo "# Configuration file for lxdbr0
+[Resolve]
+DNS=${cidr}
+Domains=lxd
+DNSSEC=no" > "${path}/lxd.conf"
+
+# enable systemd-resolved.service
+[ "$(systemctl is-enabled systemd-resolved.service)" ] && _eval systemctl enable systemd-resolved.service
+if [ "$(systemctl status systemd-resolved.service)" = inactive ]; then
+  _eval systemctl start systemd-resolved.service
+else
+  _eval systemctl restart systemd-resolved.service
+fi
 
 _echoT "----------  network"
 
