@@ -492,7 +492,7 @@ chmod 600 "$file"
 ---------------------------------------------------------------------------
 my.cnf()
 
-cp -p /etc/my.cnf /etc/my.cnf.$DDATE
+cp -p /etc/my.cnf /etc/my.cnf.$_DDATE
 cat > /etc/my.cnf << EOF
 # Example MariaDB config file for medium systems.
 #

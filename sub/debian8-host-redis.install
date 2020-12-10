@@ -66,7 +66,7 @@ fi
 FILE=/etc/rsyslog.d/host-redis.conf
 
 # save old configuration
-[ -f "$FILE" ] && ! [ -f "$FILE.$DDATE" ] && cp -a "$FILE" "$FILE.$DDATE"
+[ -f "$FILE" ] && ! [ -f "$FILE.$_DDATE" ] && cp -a "$FILE" "$FILE.$DDATE"
 
 
 _echoT "----------  rsyslog conf"
@@ -86,7 +86,7 @@ _evalq "service rsyslog restart"
 FILE=/etc/logrotate.d/host-redis
 
 # save old configuration
-[ -f "$FILE" ] && ! [ -f "$FILE.$DDATE" ] && cp -a "$FILE" "$FILE.$DDATE"
+[ -f "$FILE" ] && ! [ -f "$FILE.$_DDATE" ] && cp -a "$FILE" "$FILE.$DDATE"
 
 
 _echoT "----------  logrotate conf add"

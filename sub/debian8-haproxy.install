@@ -99,9 +99,9 @@ for domain in $domains; do _evalq "cat '$path_lets/$domain/fullchain.pem' '$path
 _echoT "----------  conf keep old"
 
 FILECONF=/etc/haproxy/haproxy.cfg
-[ -f "$FILECONF" ] && [ ! -f $FILECONF.$DDATE ] && _evalq cp -a "$FILECONF" "$FILECONF.$DDATE"
+[ -f "$FILECONF" ] && [ ! -f $FILECONF.$_DDATE ] && _evalq cp -a "$FILECONF" "$FILECONF.$DDATE"
 paths_conf="/etc/haproxy/conf-available /etc/haproxy/conf-enabled"
-for path_conf in $paths_conf; do [ -f "$path_conf" ] && [ ! -f $path_conf.$DDATE ] && _evalq mv "$path_conf" "$path_conf.$DDATE"; done
+for path_conf in $paths_conf; do [ -f "$path_conf" ] && [ ! -f $path_conf.$_DDATE ] && _evalq mv "$path_conf" "$path_conf.$DDATE"; done
 
 
 _echoT "----------  conf install"
@@ -126,7 +126,7 @@ sed -i "s|_ACCESS_URI|$_ACCESS_URI|g" $files
 _echoT "----------  ssl copying"
 
 path_conf=${S_PATH_INSTALL_CONF}/ssl
-[ -f "$S_PATH_CONF_SSL" ] && [ ! -f $S_PATH_CONF_SSL.$DDATE ] && _evalq mv "$S_PATH_CONF_SSL" "$S_PATH_CONF_SSL.$DDATE"
+[ -f "$S_PATH_CONF_SSL" ] && [ ! -f $S_PATH_CONF_SSL.$_DDATE ] && _evalq mv "$S_PATH_CONF_SSL" "$S_PATH_CONF_SSL.$DDATE"
 _evalq cp -a $path_conf/* "$S_PATH_CONF_SSL"
 
 
@@ -169,7 +169,7 @@ _service restart haproxy
 _echoT "----------  haconf bash_completion"
 
 file="/etc/bash_completion.d/haconf"
-[ -f "$file" ] && [ ! -f "$file.$DDATE" ] && _evalq cp -a "$file" "$file.$DDATE"
+[ -f "$file" ] && [ ! -f "$file.$_DDATE" ] && _evalq cp -a "$file" "$file.$DDATE"
 
 _evalq cp -a "$fileconf_haconf" "$file"
 
@@ -181,7 +181,7 @@ _evalq chown 0:0 "$file"
 _echoT "----------  rsyslog conf add"
 
 file="/etc/rsyslog.d/49-haproxy.conf"
-[ -f "$file" ] && [ ! -f "$file.$DDATE" ] && _evalq cp -a "$file" "$file.$DDATE"
+[ -f "$file" ] && [ ! -f "$file.$_DDATE" ] && _evalq cp -a "$file" "$file.$DDATE"
 
 _evalq cp -a "$fileconf_haproxy" "$file"
 _evalq "sed -i 's|S_PATH_LOG|$S_PATH_LOG|' $file"

@@ -45,7 +45,7 @@ _echoT "----------  Dovecot conf sql"
 
 # dovecot-sql.conf.ext
 FILE=/etc/dovecot/dovecot-sql.conf.ext
-[ ! -f "$FILE.$DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+[ ! -f "$FILE.$_DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
 
 
 SCH="driver"; STR="mysql"
@@ -81,13 +81,13 @@ _echoT "----------  Dovecot conf"
 
 # dovecot.conf
 FILE=/etc/dovecot/dovecot.conf
-[ ! -f "$FILE.$DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+[ ! -f "$FILE.$_DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
 
 SCH='login_trusted_networks'; STR="127.0.0.1 ${_VM_IP_BASE}.0/24 ${_IPSIN}"; sed -i "s|^#\s*\?\(${SCH}\s*=\).*$|\1 ${STR}|" "$FILE"
 
 # conf.d
 PATHCONF=/etc/dovecot/conf.d
-[ ! -f $PATHCONF.$DDATE ] && _evalq cp -a "$PATHCONF" "$PATHCONF.$DDATE"
+[ ! -f $PATHCONF.$_DDATE ] && _evalq cp -a "$PATHCONF" "$PATHCONF.$DDATE"
 
 
 # 10-auth

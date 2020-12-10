@@ -76,7 +76,7 @@ ln -sv /usr/share/zoneinfo/posix/Europe/Paris /etc/localtime
 _echoT "----------  .bashrc"
 
 FILE=~/.bashrc
-[[ ! -f "$FILE.$DDATE" && -f "$FILE" ]] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+[[ ! -f "$FILE.$_DDATE" && -f "$FILE" ]] && _evalq cp -a "$FILE" "$FILE.$DDATE"
 
 cat > ~/.bashrc << EOF
 # Source global definitions
@@ -106,14 +106,14 @@ EOF
 _echoT "----------  .bash_aliases"
 
 FILE=~/.bash_aliases
-[ -f "$FILE" ] && ! [ -f "$FILE.$DDATE" ] && _evalq mv "$FILE" "$FILE.$DDATE"
+[ -f "$FILE" ] && ! [ -f "$FILE.$_DDATE" ] && _evalq mv "$FILE" "$FILE.$DDATE"
 _evalq "ln -sv $FILE_BASH_ALIASES $FILE"
 
 
 _echoT "----------  .bash_functions"
 
 FILE=~/.bash_functions
-[ -f "$FILE" ] && ! [ -f "$FILE.$DDATE" ] && _evalq mv "$FILE" "$FILE.$DDATE"
+[ -f "$FILE" ] && ! [ -f "$FILE.$_DDATE" ] && _evalq mv "$FILE" "$FILE.$DDATE"
 _evalq "ln -sv $FILE_BASH_FUNCTIONS $FILE"
 
 
@@ -138,7 +138,7 @@ _echoT "----------  repository"
 #fi
 
 FILE=/etc/apt/sources.list
-[ ! -f "$FILE.$DDATE" ] && _evalq cp -p "$FILE" "$FILE.$DDATE"
+[ ! -f "$FILE.$_DDATE" ] && _evalq cp -p "$FILE" "$FILE.$DDATE"
 
 echo "deb http://debian.mirrors.ovh.net/debian $S_RELEASE_NAME main contrib
 deb-src http://debian.mirrors.ovh.net/debian $S_RELEASE_NAME main contrib
@@ -178,7 +178,7 @@ if [ "${STR/ "$S_SERVER_TYPE" /}" != "$STR" ]; then
 	#_evalq "apt-key add $FILE"
 
 	FILE=/etc/apt/sources.list.d/mariadb.list
-	[ -f "$FILE" ] && [ ! -f "$FILE.$DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+	[ -f "$FILE" ] && [ ! -f "$FILE.$_DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
 	echo "# MariaDB 10.3 repository list - created 2018-02-01 14:48 UTC
 # http://downloads.mariadb.org/mariadb/repositories/
 deb [arch=amd64,i386] http://mariadb.mirrors.ovh.net/MariaDB/repo/10.3/debian $S_RELEASE_NAME main
@@ -192,7 +192,7 @@ deb-src http://mariadb.mirrors.ovh.net/MariaDB/repo/10.3/debian $S_RELEASE_NAME 
 	#_evalq "apt-key add $FILE"
 
 	FILE=/etc/apt/sources.list.d/pgdg.list
-	[ -f "$FILE" ] && [ ! -f "$FILE.$DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+	[ -f "$FILE" ] && [ ! -f "$FILE.$_DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
 	echo "deb http://apt.postgresql.org/pub/repos/apt/ ${S_RELEASE_NAME}-pgdg main" > "$FILE"
 
 fi
@@ -225,7 +225,7 @@ _eval "apt install -y exim4-base"
 _echoT "----------  exim4 conf for relaying"
 
 FILE=/etc/exim4/update-exim4.conf.conf
-[ -f "$FILE" ] && [ ! -f "$FILE.$DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+[ -f "$FILE" ] && [ ! -f "$FILE.$_DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
 SCH='dc_eximconfig_configtype'; STR="'satellite'"; sed -i "s|^\($SCH=\).*$|\1$STR|" "$FILE"
 SCH='dc_other_hostnames';       STR="''"; sed -i "s|^\($SCH=\).*$|\1$STR|" "$FILE"
 SCH='dc_local_interfaces';      STR="'127.0.0.1 ; ::1'"; sed -i "s|^\($SCH=\).*$|\1$STR|" "$FILE"
@@ -305,7 +305,7 @@ if [ "${STR/ "$S_SERVER_TYPE" /}" != "$STR" ]; then
 	_echoT "----------  rsyslog hosting conf"
 
 	FILE=/etc/rsyslog.conf
-	[ ! -f "$FILE.$DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+	[ ! -f "$FILE.$_DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
 	# udp
 	if [ "$S_RSYSLOG_PTC" == udp ]; then
 		sed -i "s|^#\(\$ModLoad imudp\)$|\1|" "$FILE"
@@ -339,7 +339,7 @@ if [ "${STR/ "$S_SERVER_TYPE" /}" != "$STR" ]; then
 	_echoT "----------  rsyslog vz conf"
 
 	FILE=/etc/rsyslog.conf
-	[ ! -f "$FILE.$DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+	[ ! -f "$FILE.$_DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
 
 	sed -i "s%\t|/dev/xconsole% |/dev/console%" "$FILE"
 
@@ -434,7 +434,7 @@ if [ "$S_SERVER_TYPE" != "vz" ]; then
 
 	FILE=/etc/ntp.conf
 	# /etc/ntp.conf
-	[ -f "$FILE" ] && [ ! -f "$FILE.$DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+	[ -f "$FILE" ] && [ ! -f "$FILE.$_DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
 	STR='.fr.pool.ntp.org'; sed -i "s/^\(server .\).*/\1$STR/" "$FILE"
 	_eval "systemctl start ntp"
 fi
@@ -460,7 +460,7 @@ _echoT "----------  Openssl conf multi-domains"
 _eval "apt install -y openssl"
 
 FILE='/etc/ssl/openssl.cnf'
-[ -f "$FILE" ] && ! [ -f "$FILE.$DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+[ -f "$FILE" ] && ! [ -f "$FILE.$_DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
 
 SCH='countryName_default';            STR='FR';       sed -i "s|^\(${SCH}\s*= \).*$|\1${STR}|" "$FILE"
 SCH='stateOrProvinceName_default';    STR='Britain';  sed -i "s|^\(${SCH}\s*= \).*$|\1${STR}|" "$FILE"

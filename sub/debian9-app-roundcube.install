@@ -109,7 +109,7 @@ fi
 _echoT "----------  install"
 
 [ -h "$_SUBDOMAIN" ] && _evalq rm "$_SUBDOMAIN"
-[ -d "$PATHTO" ] && ! [ -d "$PATHTO.$DDATE" ] && _evalq mv "$PATHTO" "$PATHTO.$DDATE"
+[ -d "$PATHTO" ] && ! [ -d "$PATHTO.$_DDATE" ] && _evalq mv "$PATHTO" "$PATHTO.$DDATE"
 [ -d "$PATHTO" ] && _evalq rm -fR "$PATHTO"
 _evalq tar xzf "$FILE"
 #_evalq mv "roundcubemail" "$PATHTO"

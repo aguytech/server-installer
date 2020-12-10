@@ -81,7 +81,7 @@ _echoT "----------  download"
 _eval cd "$_PATH_INSTALL"
 
 URLDOWN="https://github.com/postfixadmin/postfixadmin.git"
-[ -d "postfixadmin" ] && ! [ -d "postfixadmin.$DDATE" ] && _evalq mv "postfixadmin" "postfixadmin.$DDATE"
+[ -d "postfixadmin" ] && ! [ -d "postfixadmin.$_DDATE" ] && _evalq mv "postfixadmin" "postfixadmin.$DDATE"
 [ -e "postfixadmin" ] && _evalq rm -fR "postfixadmin"
 # asks
 while ! git clone "$URLDOWN" "postfixadmin"; do
@@ -98,7 +98,7 @@ _echoT "----------  install"
 
 _VERSION=$(grep -m1 '^Version [\.0-9]\+ - .*' postfixadmin/CHANGELOG.TXT |sed 's/^Version \([\.0-9]\+\) - .*/\1/') && _confset _VERSION "$_VERSION"
 PATHTO="postfixadmin-${_VERSION}"
-[ -d "$PATHTO" ] && ! [ -d "$PATHTO.$DDATE" ] && _evalq mv "$PATHTO" "$PATHTO.$DDATE"
+[ -d "$PATHTO" ] && ! [ -d "$PATHTO.$_DDATE" ] && _evalq mv "$PATHTO" "$PATHTO.$DDATE"
 [ -d "$PATHTO" ] && _evalq rm -fR "$PATHTO"
 _evalq mv "${PARTNAME}" "$PATHTO"
 _evalq ln -sv "$PATHTO" "$_SUBDOMAIN"

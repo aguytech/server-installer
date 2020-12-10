@@ -166,7 +166,7 @@ fi
 
 _echoT "----------  conf global php.ini"
 
-[ ! -f "$PHPCONF.$DDATE" ] && cp -a "$PHPCONF" "$PHPCONF.$DDATE"
+[ ! -f "$PHPCONF.$_DDATE" ] && cp -a "$PHPCONF" "$PHPCONF.$DDATE"
 
 # global
 SCH='track_errors';             STR='Off';               sed -i "s|^;\?\($SCH\s*=\).*$|\1 $STR|" "$PHPCONF"
@@ -256,7 +256,7 @@ if [ "$_PHPMODE" == "php-fpm" ]; then
 	[ -z ${_CONTROL_TIMEOUT+x} ] && anstmp='10' && _askno "Give value for 'process_CONTROL_TIMEOUT' ($anstmp)s" && _CONTROL_TIMEOUT=${_ANSWER:-$anstmp} && _confset _CONTROL_TIMEOUT "$_CONTROL_TIMEOUT"
 
 	FILE="$PATH_FPM_CONF/php-fpm.conf"
-	[ ! -f "$FILE.$DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+	[ ! -f "$FILE.$_DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
 	#SCH='error_log';        STR="$PATHLOGPHP/$PHPFPM_SERVICE.log";   sed -i "s|^;\?\($SCH\s*=\).*$|\1 $STR|" "$FILE"
 	SCH='error_log';                    STR="syslog";         sed -i "s|^;\?\($SCH\s*=\).*$|\1 $STR|" "$FILE"
 	SCH='log_level';                    STR="notice";         sed -i "s|^;\?\($SCH\s*=\).*$|\1 $STR|" "$FILE"
@@ -289,7 +289,7 @@ if [ "$_PHPMODE" == "php-fpm" ]; then
 
 
 	FILE="$PATH_FPM_POOL/www.conf"
-	[ ! -f "$FILE.$DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+	[ ! -f "$FILE.$_DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
 	SCH='listen\.backlog';         STR="$_MAX_BACKLOG";                  sed -i "s|^;\?\($SCH\s*=\).*$|\1 $STR|" "$FILE"
 	SCH='pm';                      STR="dynamic";                        sed -i "s|^;\?\($SCH\s*=\).*$|\1 $STR|" "$FILE"
 	SCH='pm.max_children';         STR="$_WWW_MAX_CHILDREN";             sed -i "s|^;\?\($SCH\s*=\).*$|\1 $STR|" "$FILE"
@@ -429,7 +429,7 @@ PATHTMP="$PATHPROFILE" && [ ! -d "$PATHTMP" ] && _evalq mkdir -p "$PATHTMP"
 PATHTMP="$PATHTRACE" && [ ! -d "$PATHTMP" ] && _evalq mkdir -p "$PATHTMP"
 
 FILE="$PATHMODCONF/xdebug.ini"
-[ ! -f "$FILE.$DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+[ ! -f "$FILE.$_DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
 _evalq cp -a "$FILE_XDEBUG" "$FILE"
 
 SCH='xdebug.profiler_output_dir'; STR="$PATHPROFILE"; sed -i "s|^;\?\($SCH\s*=\).*|\1 $STR|" "$FILE"
@@ -468,7 +468,7 @@ done
 _echoT "----------  zenddebugger conf"
 
 FILE="$PATHMODCONF/zend_debugger.ini"
-[ ! -f "$FILE.$DDATE" ] && [ -f "$FILE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+[ ! -f "$FILE.$_DDATE" ] && [ -f "$FILE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
 _evalq cp -a "$FILE_ZENDDEBUG" "$FILE"
 
 SCH='zend_extension'; STR="$_PATHMOD/ZendDebugger.so"; sed -i "s|^;\?\($SCH\s*=\).*|\1 $STR|" "$FILE"

@@ -58,7 +58,7 @@ echo '<?php phpinfo() ?>' > /var/www/html/phpinf.php
 
 _echoT "----------  global conf php.ini"
 
-! [ -e "$phpconf.$DDATE" ] && cp -a $phpconf $phpconf.$DDATE
+! [ -e "$phpconf.$_DDATE" ] && cp -a $phpconf $phpconf.$DDATE
 
 sch='max_execution_time';              str='20';                       sed -i "s|^.\?\($sch *=\).*$|\1 $str|" $phpconf
 sch='max_input_time';                  str='30';                       sed -i "s|^.\?\($sch *=\).*$|\1 $str|" $phpconf
@@ -184,7 +184,7 @@ path=/var/xcache
 ! [ -d $path ] && _evalq mkdir -p "$path"
 _evalq "find /var/xcache -type d -exec chown root.www-data '{} \\; -exec chmod g+rwx '{}' \\; -exec chmod o-rwx '{}' \\;"
 
-! [ -f "$pathconf/xcache.ini.$DDATE" ] && cp -a $pathconf/xcache.ini $pathconf/xcache.ini.$DDATE
+! [ -f "$pathconf/xcache.ini.$_DDATE" ] && cp -a $pathconf/xcache.ini $pathconf/xcache.ini.$DDATE
 
 sed -i "s|^\(extension *= *php_xcache.dll\)$|; \1|" $pathconf/xcache.ini
 str="/var/xcache/nmap"; sed -i "s|^;\? *\(xcache\.mmap_path *= *\).*$|\1\"$str\"|" $pathconf/xcache.ini
@@ -201,7 +201,7 @@ path=$pathtrace
 
 _evalq "find '$S_PATH_LOG/xdebug' -type d -exec chown root.www-data '{}' \\; -exec chmod g+rwx '{}' \\; -exec chmod o-rwx '{}' \\;"
 
-! [ -f "$pathconf/xdebug.ini.$DDATE" ] && cp -a $pathconf/xdebug.ini $pathconf/xdebug.ini.$DDATE
+! [ -f "$pathconf/xdebug.ini.$_DDATE" ] && cp -a $pathconf/xdebug.ini $pathconf/xdebug.ini.$DDATE
 
 cat > $pathconf/xdebug.ini << EOF
 ; Enable xdebug extension module
@@ -259,7 +259,7 @@ xdebug.remote_handler             = dbgp
 xdebug.idekey                     = ECLIPSE_DBGPEOF
 EOF
 
-! [ -f "$pathconf/xdebug.ini.$DDATE" ] && cp -a $pathconf/xdebug.ini $pathconf/xdebug.ini.$DDATE
+! [ -f "$pathconf/xdebug.ini.$_DDATE" ] && cp -a $pathconf/xdebug.ini $pathconf/xdebug.ini.$DDATE
 
 
 _echoT "----------  Xdebug Xcache enable"
@@ -321,7 +321,7 @@ zend_debugger.httpd_uid=$(id -u www-data)" > $pathconf/zend_debugger.ini
 
 #cd /etc/php5/apache2/conf.d; ln -sv ../../mods-available/zend_debugger.ini 20-zend_debugger.ini
 
-! [ -f $pathconf/zend_debugger.ini.$DDATE ] && cp -a $pathconf/zend_debugger.ini $pathconf/zend_debugger.ini.$DDATE
+! [ -f $pathconf/zend_debugger.ini.$_DDATE ] && cp -a $pathconf/zend_debugger.ini $pathconf/zend_debugger.ini.$DDATE
 
 
 _echoT "----------  ZendDebugger enable"
@@ -362,9 +362,9 @@ php5dismod xcache
 [ $phpdebug == "zend_debugger" ] && php5enmod zend_debugger
 
 if [ "$phpusage" == "pro" ]; then
-	_echoT "----------  move phpinf.php to phpinf.php.$DDATE"
+	_echoT "----------  move phpinf.php to phpinf.php.$_DDATE"
 
-	mv /var/www/html/phpinf.php /var/www/html/phpinf.php.$DDATE
+	mv /var/www/html/phpinf.php /var/www/html/phpinf.php.$_DDATE
 fi
 
 _echoT "----------  apache restart"

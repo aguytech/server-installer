@@ -23,12 +23,12 @@ _askno "Give an port for SSH connection ($ssh_port) "
 
 # client
 file='/etc/ssh/ssh_config'
-[ ! -f "$file.$DDATE" ] && _evalq cp -p "$file" "$file.$DDATE"
+[ ! -f "$file.$_DDATE" ] && _evalq cp -p "$file" "$file.$DDATE"
 sed -i "s/^\( *GSSAPIAuthentication\).*/\1 no/" $file
 
 # server
 file='/etc/ssh/sshd_config'
-[ ! -f "$file.$DDATE" ] && _evalq cp -p "$file" "$file.$DDATE"
+[ ! -f "$file.$_DDATE" ] && _evalq cp -p "$file" "$file.$DDATE"
 
 sed -i "s/^#\?Port .*/Port ${ssh_port}/" $file
 sed -i "s/^#\?\(GSSAPIAuthentication\) .*/\1 no/" $file

@@ -16,7 +16,7 @@ FILE="${S_PATH_INSTALL_XTRA}/mariadb-10.3-${S_RELEASE}.key"
 _evalq "apt-key add $FILE"
 
 FILE="/etc/apt/sources.list.d/mariadb.list"
-[ ! -f "$FILE.$DDATE" ] && [ -f "$FILE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+[ ! -f "$FILE.$_DDATE" ] && [ -f "$FILE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
 echo "# MariaDB 10.3 repository list - created 2018-02-01 14:48 UTC
 # http://downloads.mariadb.org/mariadb/repositories/
 deb [arch=amd64,i386] http://mariadb.mirrors.ovh.net/MariaDB/repo/10.3/debian $S_RELEASE_NAME main

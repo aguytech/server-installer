@@ -37,7 +37,7 @@ _ask "Please enter the password of the account $email"
 emailpwd=$_ANSWER
 
 FILE=/etc/postfix/main.cf
-[ ! -f "$FILE.$DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+[ ! -f "$FILE.$_DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
 
 str="myhostname = $myhostname"; ! grep -q "^$str" "$FILE" && sed -i "s|^\(#myhostname *= host.*\)$|$str\n\1|" "$FILE"
 str="mydomain = localdomain"; ! grep -q "^$str" "$FILE" && sed -i "s|^\(#mydomain *= .*\)$|$str\n\1|" "$FILE"

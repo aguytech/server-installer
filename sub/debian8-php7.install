@@ -76,7 +76,7 @@ echo '<?php phpinfo() ?>' > /var/www/html/phpinf.php
 
 _echoT "----------  global conf php.ini"
 
-! [ -e "$phpconf.$DDATE" ] && cp -a $phpconf $phpconf.$DDATE
+! [ -e "$phpconf.$_DDATE" ] && cp -a $phpconf $phpconf.$DDATE
 
 sch='max_execution_time';              str='20';                       sed -i "s|^.\?\($sch *=\).*$|\1 $str|" $phpconf
 sch='max_input_time';                  str='30';                       sed -i "s|^.\?\($sch *=\).*$|\1 $str|" $phpconf
@@ -214,7 +214,7 @@ path=$pathtrace
 
 _evalq "find '$S_PATH_LOG/xdebug' -type d -exec chown root.www-data '{}' \\; -exec chmod g+rwx '{}' \\; -exec chmod o-rwx '{}' \\;"
 
-! [ -f "$pathconf/xdebug.ini.$DDATE" ] && cp -a $pathconf/xdebug.ini $pathconf/xdebug.ini.$DDATE
+! [ -f "$pathconf/xdebug.ini.$_DDATE" ] && cp -a $pathconf/xdebug.ini $pathconf/xdebug.ini.$DDATE
 
 cat > $pathconf/xdebug.ini << EOF
 ; Enable xdebug extension module
@@ -272,7 +272,7 @@ xdebug.remote_handler             = dbgp
 xdebug.idekey                     = ECLIPSE_DBGPEOF
 EOF
 
-! [ -f "$pathconf/xdebug.ini.$DDATE" ] && cp -a $pathconf/xdebug.ini $pathconf/xdebug.ini.$DDATE
+! [ -f "$pathconf/xdebug.ini.$_DDATE" ] && cp -a $pathconf/xdebug.ini $pathconf/xdebug.ini.$DDATE
 
 
 _echoT "----------  Xdebug Xcache enable"

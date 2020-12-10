@@ -20,7 +20,7 @@ _eval "apt-get install -y postfix mailutils"
 _echoT "----------  conf main.cf"
 
 FILE=/etc/postfix/main.cf
-[ ! -f "$FILE.$DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+[ ! -f "$FILE.$_DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
 
 # ask
 _ask "Please enter a value for 'myhostname'"

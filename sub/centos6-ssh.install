@@ -26,12 +26,12 @@ sed -i "s|^\(S_SSH_PORT=\).*$|\1$port|" $S_GLOBAL_CONF
 
 # client
 file='/etc/ssh/ssh_config'
-[ ! -f "$file.$DDATE" ] && _evalq cp -p "$file" "$file.$DDATE"
+[ ! -f "$file.$_DDATE" ] && _evalq cp -p "$file" "$file.$DDATE"
 sed -i "s/^\( *GSSAPIAuthentication\).*/\1 no/" $file
 
 # server
 file='/etc/ssh/sshd_config'
-[ ! -f "$file.$DDATE" ] && _evalq cp -p "$file" "$file.$DDATE"
+[ ! -f "$file.$_DDATE" ] && _evalq cp -p "$file" "$file.$DDATE"
 
 str=$port; sed -i "s/^#\?\(Port \).*/\1$str/" $file
 str=no; sed -i "s/^#\(GSSAPIAuthentication \).*/\1$str/" $file

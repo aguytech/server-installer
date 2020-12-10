@@ -64,7 +64,7 @@ ln -sv /usr/share/zoneinfo/posix/Europe/Paris /etc/localtime
 _echoT "----------  .bashrc"
 
 FILE=~/.bashrc
-[[ ! -f "$FILE.$DDATE" && -f "$FILE" ]] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+[[ ! -f "$FILE.$_DDATE" && -f "$FILE" ]] && _evalq cp -a "$FILE" "$FILE.$DDATE"
 
 cat > ~/.bashrc << EOF
 # PS1
@@ -96,7 +96,7 @@ EOF
 _echoT "----------  .bash_aliases"
 
 FILE=~/.bash_aliases
-[[ ! -f "$FILE.$DDATE" && -f "$FILE" ]] && _eval cp -a "$FILE" "$FILE.$DDATE"
+[[ ! -f "$FILE.$_DDATE" && -f "$FILE" ]] && _eval cp -a "$FILE" "$FILE.$DDATE"
 _eval "[ -f "$FILE" ] && rm $FILE"
 _eval "ln -sv $FILEBASHALIASES $FILE"
 
@@ -243,7 +243,7 @@ if [[ "$S_SERVER_TYPE" != "vz" ]]; then
 
 	FILE=/etc/ntp.conf
 	# /etc/ntp.conf
-	[ ! -f "$FILE.$DDATE" ] && [ -f "$FILE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+	[ ! -f "$FILE.$_DDATE" ] && [ -f "$FILE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
 	str='.fr.pool.ntp.org'; sed -i "s/^\(server .\).*/\1$str/" "$FILE"
 	_eval "service ntp start"
 fi
@@ -262,7 +262,7 @@ _echoT "----------  Openssl conf multi-domains"
 _eval "apt install -y openssl"
 
 FILE='/etc/ssl/openssl.cnf'
-! [ -f "$FILE.$DDATE" ] && [ -f "$FILE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+! [ -f "$FILE.$_DDATE" ] && [ -f "$FILE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
 
 # FILE
 srh='countryName_default';            str='FR';       sed -i "s|^\(${srh}\s*= \).*$|\1${str}|" "$FILE"

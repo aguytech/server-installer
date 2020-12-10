@@ -21,7 +21,7 @@ _eval "apt-get install -y vzctl vzquota ploop vzstats vzdump bridge-utils"
 
 _echoT "----------  vzdump modify"
 
-cp -a /usr/share/perl5/PVE/VZDump.pm /usr/share/perl5/PVE/VZDump.pm.$DDATE
+cp -a /usr/share/perl5/PVE/VZDump.pm /usr/share/perl5/PVE/VZDump.pm.$_DDATE
 str='\"vzdump_\" . \$vmid . \"_\" . $vmname;'; pre='\tmy $vmname = `vzlist -Ho hostname $vmid`; chomp $vmname;'; sed -i "s/^\(\(.*my \$bkname = \).*\)$/#\1\n$pre\n\2$str/" /usr/share/perl5/PVE/VZDump.pm
 str='sprintf \"\${bkname}_%04d%02d%02d-%02d%02d%02d\",'; sed -i "s/^\(\(.*my \$basename = \).*\)$/#\1\n\2$str/" /usr/share/perl5/PVE/VZDump.pm
 

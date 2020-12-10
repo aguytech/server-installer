@@ -40,7 +40,7 @@ FILE=${S_PATH_INSTALL_XTRA}/mariadb-10.3-${S_RELEASE}.key
 _eval "apt-key add $FILE"
 
 FILE=/etc/apt/sources.list.d/mariadb.list
-[ ! -f "$FILE.$DDATE" ] && [ -f "$FILE" ] && _eval cp -a "$FILE" "$FILE.$DDATE"
+[ ! -f "$FILE.$_DDATE" ] && [ -f "$FILE" ] && _eval cp -a "$FILE" "$FILE.$DDATE"
 echo "# MariaDB 10.3 repository list - created 2018-02-01 14:48 UTC
 # http://downloads.mariadb.org/mariadb/repositories/
 deb [arch=amd64,i386] http://mariadb.mirrors.ovh.net/MariaDB/repo/10.3/debian $S_RELEASE_NAME main
@@ -54,7 +54,7 @@ FILE=${S_PATH_INSTALL_XTRA}/postgresql-10.key
 _eval "apt-key add $FILE"
 
 FILE=/etc/apt/sources.list.d/pgdg.list
-[ ! -f "$FILE.$DDATE" ] && [ -f "$FILE" ] && _eval cp -a "$FILE" "$FILE.$DDATE"
+[ ! -f "$FILE.$_DDATE" ] && [ -f "$FILE" ] && _eval cp -a "$FILE" "$FILE.$DDATE"
 echo "deb http://apt.postgresql.org/pub/repos/apt/ ${S_RELEASE_NAME}-pgdg main" > "$FILE"
 
 
@@ -70,14 +70,14 @@ _eval "apt-get install -y mariadb-client postgresql-client"
 _echoT "----------  apache conf"
 
 FILE=/etc/apache2/apache2.conf
-[ ! -f "$FILE.$DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+[ ! -f "$FILE.$_DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
 # apache2 : ServerName
 str=localhost; ! grep -q "ServerName" "$FILE" && echo -e "\n# servername for default\nServerName $str" >> "$FILE"
 
 
 _echoT "----------  apache ssl conf"
 FILE=/etc/apache2/sites-available/default-ssl.conf
-[ ! -f "$FILE.$DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+[ ! -f "$FILE.$_DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
 # ssl : base directory
 str=/var/www/html; sed -i "s|^\([[:space:]]*DocumentRoot \)/var/www/html|\1$str|" "$FILE"
 
@@ -85,7 +85,7 @@ str=/var/www/html; sed -i "s|^\([[:space:]]*DocumentRoot \)/var/www/html|\1$str|
 _echoT "----------  apache security"
 
 FILE=/etc/apache2/conf-available/security.conf
-[ ! -f "$FILE.$DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+[ ! -f "$FILE.$_DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
 # security : DenyFromAll
 str="<Directory />\n   AllowOverride None\n   Order Deny,Allow\n   Deny from all\n</Directory>"; sed -i "s|^\(#<Directory />\)|$str\n\1|" "$FILE"
 # security : svn
@@ -99,7 +99,7 @@ str=Off; sed -i "s/^\(TraceEnable\).*$/\1 $str/" "$FILE"
 _echoT "----------  apache evasive"
 
 FILE=/etc/apache2/mods-available/evasive.conf
-[ ! -f "$FILE.$DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+[ ! -f "$FILE.$_DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
 str="3097"; sed -i "s|^\( *\)#\(DOSHashTableSize *\).*$|\1\2 $str|" "$FILE"
 str="4"; sed -i "s|^\( *\)#\(DOSPageCount *\).*$|\1\2 $str|" "$FILE"
 str="100"; sed -i "s|^\( *\)#\(DOSSiteCount *\).*$|\1\2 $str|" "$FILE"
@@ -111,12 +111,12 @@ str="10"; sed -i "s|^\( *\)#\(DOSBlockingPeriod *\).*$|\1\2 $str|" "$FILE"
 _echoT "----------  apache info & status"
 
 FILE=/etc/apache2/mods-available/info.conf
-[ ! -f "$FILE.$DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+[ ! -f "$FILE.$_DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
 # optimize require for info
 str="\1Require ip 127.0.0.1 ${_IPS_AUTH}"; sed -i "s/\(\t\+\)\(Require*\)/$str\n\1#\2/" "$FILE"
 
 FILE=/etc/apache2/mods-available/status.conf
-[ ! -f "$FILE.$DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+[ ! -f "$FILE.$_DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
 # optimize require for status
 str="\1Require ip 127.0.0.1 ${_IPS_AUTH}"; sed -i "s/\(\t\+\)\(Require*\)/$str\n\1#\2/" "$FILE"
 
@@ -143,7 +143,7 @@ _echoT "----------  default site"
 name=localhost
 
 FILE=/etc/apache2/sites-available/000-default.conf
-[ ! -f "$FILE.$DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+[ ! -f "$FILE.$_DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
 cat > $FILE << EOF
 # $name
 <VirtualHost *:80>
@@ -197,7 +197,7 @@ pathkey="${S_VM_PATH_SHARE}/www/ssl/private"
 ! [ -f ${pathkey}/${S_NODE_IPV4}.key ] && ! [ -f ${pathcer}/${S_NODE_IPV4}.crt ] && _eval "openssl req -x509 -nodes -days 3650 -newkey rsa:4096 -keyout ${pathkey}/${S_NODE_IPV4}.key -out ${pathcer}/${S_NODE_IPV4}.crt"
 
 FILE=/etc/apache2/sites-available/000-default-ssl.conf
-[ ! -f "$FILE.$DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+[ ! -f "$FILE.$_DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
 cat > $FILE << EOF
 <IfModule mod_ssl.c>
     <VirtualHost _default_:443>

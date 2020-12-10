@@ -156,7 +156,7 @@ _echoT "----------  mariadb repos"
 _evalq apt-key add "$FILEKEY_MARIADB"
 
 FILE=/etc/apt/sources.list.d/mariadb.list
-[ ! -f "$FILE.$DDATE" ] && [ -f "$FILE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+[ ! -f "$FILE.$_DDATE" ] && [ -f "$FILE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
 echo "# MariaDB 10.3 repository list - created 2018-02-01 14:48 UTC
 # http://downloads.mariadb.org/mariadb/repositories/
 deb [arch=amd64,i386] http://mariadb.mirrors.ovh.net/MariaDB/repo/10.3/debian $S_RELEASE_NAME main
@@ -168,7 +168,7 @@ _echoT "----------  pgsql repos"
 _evalq apt-key add "$FILEKEY_POSTGRESQL"
 
 FILE=/etc/apt/sources.list.d/pgdg.list
-[ ! -f "$FILE.$DDATE" ] && [ -f "$FILE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+[ ! -f "$FILE.$_DDATE" ] && [ -f "$FILE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
 echo "deb http://apt.postgresql.org/pub/repos/apt/ ${S_RELEASE_NAME}-pgdg main" > "$FILE"
 
 
@@ -185,7 +185,7 @@ if [ "$_MODEMPM" == "mpm_worker" ]; then
 	_echoT "----------  apache worker"
 
 	FILE=$PATHMOD/mpm_worker.conf
-	[ ! -f "$FILE.$DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+	[ ! -f "$FILE.$_DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
 	SCH='StartServers'; STR="\t\t\t2"; sed -i "s|^\s*\($SCH\)\s*.*|\t\1$STR|" "$FILE"
 	SCH='MinSpareThreads'; STR="\t\t\t25"; sed -i "s|^\s*\($SCH\)\s*.*|\t\1$STR|" "$FILE"
 	SCH='MaxSpareThreads'; STR="\t\t\t75"; sed -i "s|^\s*\($SCH\)\s*.*|\t\1$STR|" "$FILE"
@@ -198,7 +198,7 @@ elif [ "$_MODEMPM" == "mpm_event" ]; then
 	_echoT "----------  apache event"
 
 	FILE=$PATHMOD/mpm_event.conf
-	[ ! -f "$FILE.$DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+	[ ! -f "$FILE.$_DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
 	SCH='StartServers'; STR="\t\t\t2"; sed -i "s|^\s*\($SCH\)\s*.*|\t\1$STR|" "$FILE"
 	SCH='MinSpareThreads'; STR="\t\t\t25"; sed -i "s|^\s*\($SCH\)\s*.*|\t\1$STR|" "$FILE"
 	SCH='MaxSpareThreads'; STR="\t\t\t75"; sed -i "s|^\s*\($SCH\)\s*.*|\t\1$STR|" "$FILE"
@@ -239,13 +239,13 @@ _evalq apachectl graceful
 _echoT "----------  conf ssl"
 
 FILE=$PATHSITE/default-ssl.conf
-[ ! -f "$FILE.$DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+[ ! -f "$FILE.$_DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
 
 
 _echoT "----------  conf security"
 
 FILE=$PATHCONF/security.conf
-[ ! -f "$FILE.$DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+[ ! -f "$FILE.$_DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
 # Require all denied
 begin='#<Directory \/>'; end='#<\/Directory>'
 sed -i "/^${begin}/,/^${end}/s|^#\?\(.*\)$|\1|" $path/$FILE
@@ -273,7 +273,7 @@ if [ "$_MODEVASIVE" ]; then
 	_echoT "----------  conf evasive"
 
 	FILE=$PATHMOD/evasive.conf
-	[ ! -f "$FILE.$DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+	[ ! -f "$FILE.$_DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
 	SCH='DOSHashTableSize'; STR="3097"; sed -i "s|^\( *\)#\($SCH *\).*$|\1\2 $STR|" "$FILE"
 	SCH='DOSPageCount'; STR="4"; sed -i "s|^\( *\)#\($SCH *\).*$|\1\2 $STR|" "$FILE"
 	SCH='DOSSiteCount'; STR="100"; sed -i "s|^\( *\)#\($SCH *\).*$|\1\2 $STR|" "$FILE"
@@ -288,12 +288,12 @@ fi
 _echoT "----------  conf info & status"
 
 FILE=$PATHMOD/info.conf
-[ ! -f "$FILE.$DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+[ ! -f "$FILE.$_DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
 # optimize require for info
 STR="\1Require ip 127.0.0.1 ${_IPS_AUTH}"; sed -i "s/\(\t\+\)\(Require*\)/$STR\n\1#\2/" "$FILE"
 
 FILE=$PATHMOD/status.conf
-[ ! -f "$FILE.$DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+[ ! -f "$FILE.$_DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
 # optimize require for status
 STR="\1Require ip 127.0.0.1 ${_IPS_AUTH}"; sed -i "s/\(\t\+\)\(Require*\)/$STR\n\1#\2/" "$FILE"
 
@@ -346,7 +346,7 @@ fi
 _echoT "----------  default site"
 
 FILE=$PATHSITE/000-default.conf
-[ ! -f "$FILE.$DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+[ ! -f "$FILE.$_DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
 cp -a $FILE_SITE "$FILE"
 
 STR=${S_HOST_IPV4//./\\\\.}; sed -i "s|S_HOST_IPV4|$STR|" "$FILE"
@@ -373,7 +373,7 @@ _echoT "----------  default-ssl conf"
 ! [ -f "${PATHKEY}/${S_NODE_IPV4}.key" ] && ! [ -f "${PATHCER}/${S_NODE_IPV4}.crt" ] && _evalq openssl req -x509 -nodes -days 3650 -newkey rsa:4096 -keyout "${PATHKEY}/${S_NODE_IPV4}.key" -out "${PATHCER}/${S_NODE_IPV4}.crt"
 
 FILE="$PATHSITE/000-default-ssl.conf"
-[ ! -f "$FILE.$DDATE" ] && [ -f "$FILE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+[ ! -f "$FILE.$_DDATE" ] && [ -f "$FILE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
 cp -a $FILE_SITESSL "$FILE"
 
 STR=${S_HOST_IPV4//./\\\\.}; sed -i "s|S_HOST_IPV4|$STR|" "$FILE"

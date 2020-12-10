@@ -9,6 +9,7 @@ _echoT "\n==========================================  $S_RELEASE $_PART"
 
 # get inet, cidr, base
 eval ${S_ETH_VM['default']}
+cidr="${cidr:-10.0.0.1/24}"
 
 ####################################  MAIN
 
@@ -54,9 +55,9 @@ path="/etc/systemd/resolved.conf.d/"
 cidr="$(lxc network show lxdbr0 | sed -n 's|.*ipv4\.address: \(.*\)/.*|\1|p')"
 echo "# Configuration file for lxdbr0
 [Resolve]
-DNS=${cidr}
-Domains=lxd
-DNSSEC=no" > "${path}/lxd.conf"
+DNS=${cidr%/*}
+Domains=lxdbr0
+DNSSEC=no" > "${path}/lxdbr0.conf"
 
 # enable systemd-resolved.service
 [ "$(systemctl is-enabled systemd-resolved.service)" ] && _eval systemctl enable systemd-resolved.service
@@ -68,14 +69,17 @@ fi
 
 _echoT "----------  network"
 
-echo "alpine-init,10.0.0.10"
-
 # inet for default
-_eval lxc network set lxdbr0 ipv4.address $cidr
+_eval lxc network set lxdbr0 ipv4.address ${cidr}
+# dns domain name
+_eval lxc network set dns.domain lxdbr0
+# modify ip range for dhcp
+lxc network set lxdbr0 ipv4.dhcp.ranges ${cidr%.*}.2-${cidr%.*}.99
 # inet for stock
-_eval lxc network create lxdbr1 ipv4.address=10.0.1.1/24
+base_ip=${cidr%.*}
+_eval lxc network create lxdbr1 ipv4.address=${base_ip%.*}.1.1/24
 # inet for prod
-_eval lxc network create lxdbr2 ipv4.address=10.0.2.1/24
+_eval lxc network create lxdbr2 ipv4.address=${base_ip%.*}.2.1/24
 
 _echoT "----------  profile copy"
 

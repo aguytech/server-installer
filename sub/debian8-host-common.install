@@ -32,7 +32,7 @@ FILE=/etc/rsyslog.d/host-auth.conf
 _echoT "----------  conf save"
 
 # save old configuration
-[ -f "$FILE" ] && ! [ -f "$FILE.$DDATE" ] && cp -a "$FILE" "$FILE.$DDATE"
+[ -f "$FILE" ] && ! [ -f "$FILE.$_DDATE" ] && cp -a "$FILE" "$FILE.$DDATE"
 
 
 _echoT "----------  rsyslog conf"
@@ -54,7 +54,7 @@ FILE=/etc/logrotate.d/host
 _echoT "----------  conf save"
 
 # save old configuration
-[ -f "$FILE" ] && ! [ -f "$FILE.$DDATE" ] && cp -a "$FILE" "$FILE.$DDATE"
+[ -f "$FILE" ] && ! [ -f "$FILE.$_DDATE" ] && cp -a "$FILE" "$FILE.$DDATE"
 
 _echoT "----------  logrotate conf add"
 

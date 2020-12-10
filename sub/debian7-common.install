@@ -70,7 +70,7 @@ ln -sv /usr/share/zoneinfo/posix/Europe/Paris /etc/localtime
 _echoT "----------  .bashrc"
 
 FILE=~/.bashrc
-[[ ! -f "$FILE.$DDATE" && -f "$FILE" ]] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+[[ ! -f "$FILE.$_DDATE" && -f "$FILE" ]] && _evalq cp -a "$FILE" "$FILE.$DDATE"
 
 cat > $FILE << EOF
 # PS1
@@ -99,7 +99,7 @@ EOF
 _echoT "----------  .bash_aliases"
 
 FILE=~/.bash_aliases
-[[ ! -f "$FILE.$DDATE" && -f "$FILE" ]] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+[[ ! -f "$FILE.$_DDATE" && -f "$FILE" ]] && _evalq cp -a "$FILE" "$FILE.$DDATE"
 
 FILE=${S_PATH_SCRIPT_CONF}/.bash_aliases
 if ! [ -f "$FILE" ]
@@ -191,7 +191,7 @@ if [ "${str/ "$S_SERVER_TYPE" /}" != "$str" ]; then
 	#_eval "apt-key add $FILE"
 
 	FILE=/etc/apt/sources.list.d/mariadb.list
-	[ ! -f "$FILE.$DDATE" ] && [ -f "$FILE" ] && _eval cp -a "$FILE" "$FILE.$DDATE"
+	[ ! -f "$FILE.$_DDATE" ] && [ -f "$FILE" ] && _eval cp -a "$FILE" "$FILE.$DDATE"
 	echo "# MariaDB 10.3 repository list - created 2018-02-01 14:48 UTC
 # http://downloads.mariadb.org/mariadb/repositories/
 deb [arch=amd64,i386] http://mariadb.mirrors.ovh.net/MariaDB/repo/10.32/debian $S_RELEASE_NAME main
@@ -205,7 +205,7 @@ deb-src http://mariadb.mirrors.ovh.net/MariaDB/repo/10.3/debian $S_RELEASE_NAME 
 	#_eval "apt-key add $FILE"
 
 	FILE=/etc/apt/sources.list.d/pgdg.list
-	[ ! -f "$FILE.$DDATE" ] && [ -f "$FILE" ] && _eval cp -a "$FILE" "$FILE.$DDATE"
+	[ ! -f "$FILE.$_DDATE" ] && [ -f "$FILE" ] && _eval cp -a "$FILE" "$FILE.$DDATE"
 	echo "deb http://apt.postgresql.org/pub/repos/apt/ ${S_RELEASE_NAME}-pgdg main" > "$FILE"
 
 fi
@@ -334,7 +334,7 @@ if [[ "$S_SERVER_TYPE" != "vz" ]]; then
 
 	FILE=/etc/ntp.conf
 	# /etc/ntp.conf
-	[ ! -f "$FILE.$DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+	[ ! -f "$FILE.$_DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
 
 	str='.fr.pool.ntp.org'; sed -i "s/^\(server .\).*/\1$str/" "$FILE"
 

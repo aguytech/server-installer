@@ -75,7 +75,7 @@ _askno "Please give an email for 'noreply' ($sys_noreply)"
 sys_noreply=${_ANSWER:-$sys_noreply}
 
 file=/etc/tuleap/conf/local.inc
-[ ! -f "$FILE.$DDATE" ] && cp -a $file $file.$DDATE
+[ ! -f "$FILE.$_DDATE" ] && cp -a $file $file.$DDATE
 
 str="\"$sys_default_domain\";"; sed -i "s|^\(\$sys_default_domain = \).*$|\1$str|" $file
 str="\"$sys_https_host\";"; sed -i "s|^\(\$sys_https_host = \).*$|\1$str|" $file

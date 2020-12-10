@@ -96,7 +96,7 @@ _evalq "chmod 640 $FILE"
 _echoT "----------  postfix conf master.cf"
 
 FILE=/etc/postfix/master.cf
-[[ ! -f "$FILE.$DDATE" && -f "$FILE" ]] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+[[ ! -f "$FILE.$_DDATE" && -f "$FILE" ]] && _evalq cp -a "$FILE" "$FILE.$DDATE"
 _evalq "cp -a $_POSTFIXMASTER $FILE"
 _evalq "chmod 640 $FILE"
 

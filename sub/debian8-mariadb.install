@@ -94,7 +94,7 @@ FILE=${S_PATH_INSTALL_XTRA}/mariadb-10.3-${S_RELEASE}.key
 _eval "apt-key add $FILE"
 
 FILE=/etc/apt/sources.list.d/mariadb.list
-[ ! -f "$FILE.$DDATE" ] && [ -f "$FILE" ] && _eval cp -a "$FILE" "$FILE.$DDATE"
+[ ! -f "$FILE.$_DDATE" ] && [ -f "$FILE" ] && _eval cp -a "$FILE" "$FILE.$DDATE"
 echo "# MariaDB 10.3 repository list - created 2018-02-01 14:48 UTC
 # http://downloads.mariadb.org/mariadb/repositories/
 deb [arch=amd64,i386] http://mariadb.mirrors.ovh.net/MariaDB/repo/10.3/debian $S_RELEASE_NAME main
@@ -202,7 +202,7 @@ _eval "systemctl stop mysql"
 _echoT "----------  conf mysqld_safe_syslog.cnf"
 
 FILE=/etc/mysql/conf.d/mysqld_safe_syslog.cnf
-[ ! -f "$FILE.$DDATE" ] && _evalq cp -p "$FILE" "$FILE.$DDATE"
+[ ! -f "$FILE.$_DDATE" ] && _evalq cp -p "$FILE" "$FILE.$DDATE"
 
 # error_log
 sed -i "s|^\(skip_log_error.*\)$|#\1|" "$FILE"
@@ -221,7 +221,7 @@ bindip="$_ANSWER"
 keep
 
 FILE=/etc/mysql/conf.d/mariadb.cnf
-[ ! -f "$FILE.$DDATE" ] && _evalq cp -p "$FILE" "$FILE.$DDATE"
+[ ! -f "$FILE.$_DDATE" ] && _evalq cp -p "$FILE" "$FILE.$DDATE"
 
 marialog="$S_PATH_LOG/mysql"
 echo -e "# MariaDB-specific config file.
@@ -384,7 +384,7 @@ keep
 ---------------------------------------------------------------------------
 my.cnf()
 
-cp -p /etc/my.cnf /etc/my.cnf.$DDATE
+cp -p /etc/my.cnf /etc/my.cnf.$_DDATE
 cat > /etc/my.cnf << EOF
 # Example MariaDB config file for medium systems.
 #
