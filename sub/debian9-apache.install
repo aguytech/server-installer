@@ -143,7 +143,7 @@ _evalq a2dismod access_compat mpm_event mpm_prefork mpm_worker
 
 _echoT "----------  modules enable"
 
-modules="$_MODEMPM info rewrite info status remoteip" # dav cgid dav_svn deflate geoip perl unique_id userdir vhost_alias
+modules="$_MODEMPM info rewrite info status" # dav cgid dav_svn deflate geoip perl unique_id userdir vhost_alias remoteip
 [ "$_MODEVASIVE" ] && modules+=" evasive"
 
 _evalq a2enmod "$modules"
@@ -264,8 +264,11 @@ _echoT "----------  apache2.conf error.log"
 
 FILE="/etc/apache2/apache2.conf"
 sed -i 's|^\(ErrorLog\).*|\1 ${APACHE_LOG_DIR}/default.err|' "$FILE"
+#sed -i 's|^\(.* vhost_combined\)$|RemoteIPHeader X-Forwarded-For\nLogFormat "%v:%p %a %l %u %t \\"%r\\" %>s %O \\"%{Referer}i\\" \\"%{User-Agent}i\\"" vhost_combined\n#\1|' "$FILE"
+#sed -i 's|^\(.* vhost_combined\)$|SetEnvIf X-Forwarded-For ".+" forwarded\nLogFormat "%{X-Forwarded-For}i %v:%p %a %l %u %t \"%r\" %>s %O \"%{Referer}i\" \"%{User-Agent}i\"" proxy\nCustomLog "|/usr/bin/logger -p local7.info -t ambau.ovh/apache" proxy env=forwarded\n#\1|' "$FILE"
+sed -i 's|^\(.* vhost_combined\)$|SetEnvIf X-Forwarded-For ".+" forwarded\nLogFormat "%{X-Forwarded-For}i %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-Agent}i\"" proxy\nCustomLog "|/usr/bin/logger -p local7.info -t ambau.ovh/apache" proxy env=forwarded\n#\1|' "$FILE"
+sed -i '/^.* ErrorLog / iErrorLogFormat "[%{u}t] [%-m:%l] [pid %P:tid %T] %7F: %E: [client\ %{X-Forwarded-For}i-%a-%A] %M% ,\ referer\ %{Referer}i"|' "$FILE"
 
-sed -i 's|^\(.* vhost_combined\)$|RemoteIPHeader X-Forwarded-For\nLogFormat "%v:%p %a %l %u %t \\"%r\\" %>s %O \\"%{Referer}i\\" \\"%{User-Agent}i\\"" vhost_combined\n#\1|' "$FILE"
 sed -i 's|^\(.* combined\)$|LogFormat "%a %l %u %t \\"%r\\" %>s %O \\"%{Referer}i\\" \\"%{User-Agent}i\\"" combined\n#\1|' "$FILE"
 
 if [ "$_MODEVASIVE" ]; then

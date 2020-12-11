@@ -451,9 +451,11 @@ _add_rules() {
 	_add_chain "$chain" -p "$_PORTSMAIL" -c "$comment"
 
 	# HAPROXY
-	chain='iptables -A INPUT -i $_ETH -p tcp -s $IP -d $_IPTHIS --dport $_PORTHAPROXY -j ACCEPT'
-	comment="Allow INPUT HAPROXY for IP:"
-	_add_chain "$chain" -i "$_IPSHAPROXY" -c "$comment"
+	for port in $_PORTHAPROXY; do
+		chain='iptables -A INPUT -i $_ETH -p tcp -s $IP -d $_IPTHIS --dport $port -j ACCEPT'
+		comment="Allow INPUT HAPROXY for IP:$_IPSHAPROXY port:$port"
+		_add_chain "$chain" -i "$_IPSHAPROXY" -c "$comment"
+	done
 
 	# MariaDB
 	#chain='iptables -A INPUT -i $_ETH -p tcp -s $IP --sport $_PORTMARIADBS -d $_IPTHIS --dport $_PORTMARIADB -m state --state NEW,ESTABLISHED -j ACCEPT'
