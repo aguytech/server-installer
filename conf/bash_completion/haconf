@@ -5,27 +5,22 @@
 
 _haconf()
 {
-   local cur prev
+    local cur prev path_enabled path_available files
 
-   PATHCONF_ENABLED="/etc/haproxy/conf-enabled"
-    PATHCONF_AVAILABLE="/etc/haproxy/conf-available"
+    path_enabled="/etc/haproxy/conf-enabled"
+    path_available="/etc/haproxy/conf-available"
 
     __disabled() {
-        local FILES CONFS CONF
-        CONFS="$(find $PATHCONF_AVAILABLE/ -type f|sort|sed "s|$PATHCONF_AVAILABLE/\(.*\).cfg|\1|"|xargs)"
-        for CONF in $CONFS; do
-            [ -f "$PATHCONF_AVAILABLE/${CONF}.cfg" ] && ! [ -h "$PATHCONF_ENABLED/${CONF}.cfg" ] && FILES="$FILES $CONF"
+        local confs conf notused
+        confs="$(ls "${path_available}")"
+        for conf in ${confs}; do
+            ! [ -h "${path_enabled}/${conf}" ] && notused="${notused} ${conf}"
         done
-        echo $FILES
+        echo ${notused}
     }
 
     __enabled() {
-        local FILES CONFS CONF
-        CONFS="$(find $PATHCONF_ENABLED/ -type l|sort|sed "s|$PATHCONF_ENABLED/\(.*\).cfg|\1|"|xargs)"
-        for CONF in $CONFS; do
-            [ -h "$PATHCONF_ENABLED/${CONF}.cfg" ] && FILES="$FILES $CONF"
-        done
-        echo $FILES
+        ls ${path_enabled}
     }
 
     COMPREPLY=()

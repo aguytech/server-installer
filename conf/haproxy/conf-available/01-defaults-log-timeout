@@ -1,0 +1,8 @@
+# AMBAU
+# included file for haproxy configuration
+
+defaults
+
+	timeout		connect 	600s
+	timeout		client		600s
+	timeout		server		600s
