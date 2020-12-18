@@ -38,7 +38,7 @@ backend	wigwam
 	# 16000000 seconds: a bit more than 6 months
 	http-response set-header Strict-Transport-Security "max-age=16000000; includeSubDomains; preload;"
 
-	server			wigwam					10.0.0.105:80 check maxconn 64
+	server			wigwam					10.0.0.105:80 check maxconn 16
 	#server		171120182	10.0.0.104:80  check inter 2s backup
 
 #backend		17112018-dev
