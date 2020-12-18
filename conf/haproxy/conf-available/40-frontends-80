@@ -8,13 +8,13 @@ frontend	ambau.ovh:80
 
 	http-request				set-header X-Forwarded-Protocol http
 
-	acl ambau					hdr_end(host) -i ambau.ovh
+	#acl ambau					hdr_end(host) -i ambau.ovh
 	#acl ambau-check		path_dir /server-status /server-info /status-www /ping-www /ping-monitor
-	#acl ambau-check		path_reg ^/(server-status|server-info|status-www|ping-www|ping-monitor)
-	acl ambau-check		path_beg /server-status /server-info /status-www /ping-www /ping-monitor
+	acl ambau-check		path_reg ^/(server-status|server-info|status-www|ping-www|ping-monitor)
+	#acl ambau-check		path_beg /server-status /server-info /status-www /ping-www /ping-monitor
 
 	# 17112018.fr
-	acl 17112018				hdr_end(host) -i 17112018.fr
+	#acl 17112018				hdr_end(host) -i 17112018.fr
 
 	#redirect						scheme https code 301 if ambau !ambau-check !{ ssl_fc }
 	redirect						scheme https code 301 if !ambau-check !{ ssl_fc }

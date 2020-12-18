@@ -6,7 +6,8 @@ backend ambau
 	# retries x times before to redispatch to other server
 	#retries	3
 	#option		redispatch
-	option						httpchk     GET /ping-monitor "HTTP/1.0\r\nHost: ambau.ovh"
+	#option						httpchk GET /ping-monitor "HTTP/1.1\r\nHost: ambau.ovh"
+	option						httpchk GET /ping-monitor
 	http-check	            expect string pong
 	default-server			inter 3s fall 4 rise 2
 
@@ -19,23 +20,25 @@ backend ambau
 	server			ambau2					10.0.0.102:80 check backup
 
 backend 17112018
-	option						httpchk GET /ping-monitor "HTTP/1.0\r\nHost: 17112018.fr"
+	option						httpchk GET /ping-monitor
 	http-check				expect string pong
 	default-server 		inter 3s fall 4 rise 2
 
 	# 16000000 seconds: a bit more than 6 months
 	http-response set-header Strict-Transport-Security "max-age=16000000; includeSubDomains; preload;"
 
-	server			171120181				10.0.0.103:80  check
-	server			171120182				10.0.0.104:80  check backup
+	server			171120181				10.0.0.103:80 maxconn 16  check
+	server			171120182				10.0.0.104:80 maxconn 16  check backup
 
 backend	wigwam
-	option						httpchk GET /ping-monitor "HTTP/1.0\r\nHost: cloud.wigwam.bzh"
+	option						httpchk GET /ping-monitor
 	http-check				expect string pong
+	default-server			inter 3s fall 4 rise 2
 
 	# 16000000 seconds: a bit more than 6 months
 	http-response set-header Strict-Transport-Security "max-age=16000000; includeSubDomains; preload;"
-	server			wigwam					10.0.0.105:80  check inter 3s fall 4 rise 2
+
+	server			wigwam					10.0.0.105:80 check maxconn 64
 	#server		171120182	10.0.0.104:80  check inter 2s backup
 
 #backend		17112018-dev
@@ -43,16 +46,19 @@ backend	wigwam
 
 backend	ambau-admin
 	#option					httpchk GET /ping-www HTTP/1.1\r\nHost:\ admin.ambau.ovh
-	option						httpchk GET /ping-monitor "HTTP/1.0\r\nHost: admin.ambau.ovh"
+	option						httpchk GET /ping-monitor
 	http-check				expect string admin
 	default-server			inter 3s fall 4 rise 2
 	#option		allbackups
 
-	server			ambau-admin		10.0.0.190:80  check
-	server			ambau-admin2		10.0.0.191:80  check backup
+	# 16000000 seconds: a bit more than 6 months
+	http-response set-header Strict-Transport-Security "max-age=16000000; includeSubDomains; preload;"
+
+	server			ambau-admin		10.0.0.190:80  check maxconn 16
+	server			ambau-admin2		10.0.0.191:80  check maxconn 16 backup
 
 #backend		letsencrypt
 	#server		letsencrypt 127.0.0.1:50000
 
 backend	default
-	server 		default						10.0.0.109:80 maxconn 64 check
+	server 		default						10.0.0.109:80 maxconn 16 check
