@@ -1,0 +1,82 @@
+#!/bin/bash
+#
+# write by Aguy
+
+_echoT "\n==========================================  $S_RELEASE $_PART"
+
+
+####################################  MAIN
+
+_echoT "------------------ fileconf source"
+[ -f "$S_FILE_INSTALL_CONF" ] && . "$S_FILE_INSTALL_CONF"
+
+_echoT "----------  LXD shared path"
+
+[ -z ${_LXD_PATH+x} ] && anstmp="/home/shared/lxd" && _askno "Please give a path for LXD container ($anstmp)" && _LXD_PATH=${_ANSWER:-$anstmp} && _confset _LXD_PATH "${_LXD_PATH}"
+
+! [ -d "${_LXD_PATH}" ] && mkdir -p "${_LXD_PATH}"
+setfacl -R -m u:100000:rwx "${_LXD_PATH}"
+setfacl -R -m d:u:100000:rwx "${_LXD_PATH}"
+
+
+#_echoT "------------------ path required"
+#for path in ${_LXD_PATH}; do ! [ -e "$path" ] && _exite "Unable to find path: '${path}'"; done
+
+
+_echoT "----------  images copy"
+
+release="alpine"
+[ -z ${_VM_ALPINE_VER+x} ] && anstmp="3.14" && _askno "Please give a version image container for LXC ${release} ($anstmp)" && _VM_ALPINE_VER=${_ANSWER:-$anstmp} && _confset _VM_ALPINE_VER "${_VM_ALPINE_VER}"
+
+if ! [ "`lxc image list --format=json | jq -r '.[].aliases[].name | select(. | contains("'${release}${_VM_ALPINE_VER/./}'"))'`" ]; then
+	_echo "copy images ${release}${_VM_ALPINE_VER}"
+	lxc image copy images:${release}/${_VM_ALPINE_VER} local: --alias ${release}${_VM_ALPINE_VER/./} --alias ${release}-${_VM_ALPINE_VER/./} --auto-update
+fi
+
+
+release="debian"
+[ -z ${_VM_DEBIAN_VER+x} ] && anstmp="10" && _askno "Please give a version image container for LXC ${release} ($anstmp)" && _VM_DEBIAN_VER=${_ANSWER:-$anstmp} && _confset _VM_DEBIAN_VER "${_VM_DEBIAN_VER}"
+
+if ! [ "`lxc image list --format=json | jq -r '.[].aliases[].name | select(. | contains("'${release}${_VM_DEBIAN_VER/./}'"))'`" ]; then
+	_echo "copy images ${release}${_VM_DEBIAN_VER}"
+	lxc image copy images:${release}/${_VM_DEBIAN_VER} local: --alias ${release}${_VM_DEBIAN_VER/./} --alias ${release}-${_VM_DEBIAN_VER/./} --auto-update
+fi
+
+
+_echoT "----------  images init"
+
+for name in alpine${_VM_ALPINE_VER/./} debian${_VM_DEBIAN_VER/./}; do
+	if ! [ "`lxc list --format=json | jq -r '.[] | select(.name == "'${name}'").name'`" ]; then
+		lxc init ${name} ${name}
+	fi
+done
+
+
+_echoT "----------  profiles www/share"
+
+profile="www"
+path="${_LXD_PATH}/www/share"
+path_ct="/var/share"
+! [ -d "${path}" ] && sudo mkdir -p "${path}"
+
+if ! [ "`lxc profile list --format=json | jq -r '.[] | select(.name == "'${profile}'").name'`" ]; then
+	lxc profile create ${profile}
+	lxc profile device add ${profile} share disk source="${path}" path="${path_ct}"
+fi
+
+
+_echoT "----------  profiles sgbd/share"
+
+profile="sgbd"
+path="${_LXD_PATH}/sgbd/share"
+path_ct="/var/share"
+! [ -d "${path}" ] && sudo mkdir -p "${path}"
+
+if ! [ "`lxc profile list --format=json | jq -r '.[] | select(.name == "'${profile}'").name'`" ]; then
+	lxc profile create ${profile}
+	lxc profile device add ${profile} share disk source="${path}" path="${path_ct}"
+fi
+
+
+_echoT "----------  end"
+_eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"
