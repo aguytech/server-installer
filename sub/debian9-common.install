@@ -302,6 +302,8 @@ STR="MAILTO=$S_DOMAIN_EMAIL_TECH"
 ! grep -q '^MAILTO' "$file" && sed -i "/^PATH=.*/ a $STR" "$file"
 
 
+####################################  RSYSLOG
+
 _echoT "----------  rsyslog cron conf"
 
 file=/etc/rsyslog.d/cron.conf
@@ -380,6 +382,8 @@ _echoT "----------  rsyslog mail conf"
 # remove mail logs for syslog
 #! grep -q "mail\.\* *stop" "$file" && sed -i 's|^\(mail\.err.*\)$|\1\nmail.*              stop|' "$file"
 
+
+####################################  LOGROTATE
 
 _echoT "----------  logrotate server conf"
 

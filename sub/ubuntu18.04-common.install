@@ -229,7 +229,7 @@ fi
 
 
 PARTSUB="host-$_PART"
-if [[ " docker kvm lxc kvm " = *" $S_SERVER_TYPE "* ]] && ! grep -q "$PARTSUB" "${S_FILE_INSTALL_DONE}"; then
+if [[ " docker kvm lxd kvm " = *" $S_SERVER_TYPE "* ]] && ! grep -q "$PARTSUB" "${S_FILE_INSTALL_DONE}"; then
 
 	_echoT "----------  $PARTSUB"
 
@@ -241,7 +241,7 @@ if [[ " docker kvm lxc kvm " = *" $S_SERVER_TYPE "* ]] && ! grep -q "$PARTSUB" "
 fi
 
 
-if [[ " docker kvm lxc kvm " = *" $S_SERVER_TYPE "* ]]; then
+if [[ " docker kvm lxd kvm " = *" $S_SERVER_TYPE "* ]]; then
 
 	_echoT "----------  rsyslog conf auth"
 

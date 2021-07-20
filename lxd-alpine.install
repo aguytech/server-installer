@@ -1,0 +1,83 @@
+#!/bin/bash
+#
+# write by Aguy
+
+################################ global functions
+#S_TRACE=debug
+
+if [[ -z "$S_GLOBAL_FUNCTIONS" || -f $S_GLOBAL_FUNCTIONS ]]; then
+	file="/usr/local/bs/inc-functions.sh"
+	if ! . "$file"; then echo -e "\e[1;31merror - unable to find file '$file' from ${BASH_SOURCE[0]}\e[0;0m" && exit 1; fi
+fi
+. $S_GLOBAL_FUNCTIONS
+
+
+################################  conf
+
+_echoT "------------------ conf && data"
+
+# for install from desktop
+S_PATH_INSTALL="/home/shared/dev/install"
+S_PATH_INSTALL_XTRA="${S_PATH_INSTALL}/xtra"
+S_PATH_INSTALL_CONF="${S_PATH_INSTALL}/conf"
+
+S_FILE_INSTALL_CONF="${S_PATH_CONF}/lxd.conf"
+S_FILE_INSTALL_DONE="${S_PATH_CONF}/lxd.done"
+_RELEASE="alpine"
+
+! [ -f "$S_FILE_INSTALL_CONF" ] && touch "$S_FILE_INSTALL_CONF"
+! [ -f "$S_FILE_INSTALL_DONE" ] && touch "$S_FILE_INSTALL_DONE"
+[ -f "$S_FILE_INSTALL_CONF" ] && . "$S_FILE_INSTALL_CONF"
+
+
+################################  mandatory parts
+
+
+# init common
+ parts="init common"
+for _PART in $parts; do
+	! _parthave "$_PART" "$S_FILE_INSTALL_DONE" && _source "${_PATH_BASE_SUB}/lxd-${_RELEASE}-${_PART}.install"
+done
+
+
+################################  MENU
+
+while [ "$_PART" != "quit" ]; do
+
+	partsall="$(sed -n "s|^\t*\(\w\+\)) # .*$S_SERVER_TYPE.*$|\1|p" "$0" | xargs)"
+	partsrelease=" $(ls -1 "$_PATH_BASE_SUB"/*lxd-${_RELEASE}* | sed -n "s|.*lxd-${_RELEASE}-\(.*\)\.install|\1|p" | xargs) "
+	partsmade=" $(cat ${S_FILE_INSTALL_DONE} | xargs) "
+	parts2do=
+	for part in $partsall; do
+		[ "${partsmade/ $part /}" = "$partsmade" ] && [ "${partsrelease/ $part /}" != "$partsrelease" ] && parts2do+="$part "
+	done
+
+	_echoD "partsall='$partsall'"
+	_echoD "partsmade='$partsmade'"
+	_echoD "parts2do='$parts2do'"
+
+	_echo "Part already made: ${blueb}$partsmade${cclear}"
+	PS3="Give your choice: "
+	select _PART in quit $parts2do; do
+		case "$_PART" in
+			quit)
+				break
+				;;
+			haproxy) # ovh home
+				_source "${_PATH_BASE_SUB}/lxd-${_RELEASE}-${_PART}.install"
+				;;
+			apache) # ovh home
+				_source "${_PATH_BASE_SUB}/lxd-${_RELEASE}-${_PART}.install"
+				;;
+			*)
+				_echoE "Wrong option: '$_PART'"
+				;;
+		esac
+		break
+	done
+
+done
+
+_exit
+
+

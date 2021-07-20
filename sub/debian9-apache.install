@@ -252,10 +252,10 @@ sed -i "/^${begin}/,/^${end}/s|^#\?\(.*\)$|\1|" $path/$FILE
 begin='<Directory \/>'; end='<\/Directory>'
 SCH='Require'; STR="all denied"; sed -i "/^${begin}/,/^${end}/s|^\(\s*$SCH\).*$|\1 $STR|" $path/$FILE
 
-# ServerTokens OS
-
 # ServerSignature Off
 STR=Off; sed -i "s/^\(ServerSignature\).*$/\1 $STR/" "$FILE"
+# ServerTokens Off
+STR=Off; sed -i "s/^\(ServerTokens\).*$/\1 $STR/" "$FILE"
 # TraceEnable Off
 STR=Off; sed -i "s/^\(TraceEnable\).*$/\1 $STR/" "$FILE"
 

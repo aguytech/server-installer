@@ -6,32 +6,27 @@
 ################################ global functions
 #S_TRACE=debug
 
-if [[ -z "$S_GLOBAL_FUNCTIONS" || -f $S_GLOBAL_FUNCTIONS ]]; then
-	file="/usr/local/bs/inc-functions"
+if [[ -z "$S_GLOBAL_FUNCTIONS" || ! -f $S_GLOBAL_FUNCTIONS ]]; then
+	file="/usr/local/bs/inc-functions.sh"
 	if ! . "$file"; then echo -e "\e[1;31merror - unable to find file '$file' from ${BASH_SOURCE[0]}\e[0;0m" && exit 1; fi
 fi
 . $S_GLOBAL_FUNCTIONS
 
+
+_echoT "------------------ fileconf source"
+
+S_FILE_INSTALL_CONF="${S_PATH_CONF}/lxd.conf"
+S_FILE_INSTALL_DONE="${S_PATH_CONF}/lxd.done"
+[ -f "$S_FILE_INSTALL_CONF" ] && . "$S_FILE_INSTALL_CONF"
+! [ -f "$S_FILE_INSTALL_CONF" ] && touch "$S_FILE_INSTALL_CONF"
+
 ################################  mandatory parts
 
 # init
-parts="init alpine debian"
+parts="lxd-init"
 for _PART in $parts; do
-	! _parthave "$_PART" "$S_FILE_INSTALL_DONE" && _source "${_PATH_BASE_SUB}/lxd-${_PART}.install"
+	! _parthave "$_PART" "$S_FILE_INSTALL_DONE" && _source "${_PATH_BASE_SUB}/${_PART}.install"
 done
 
-
-# common
-parts="alpine debian"
-for _PART in $parts; do
-	#! _parthave "$_PART" "$S_FILE_INSTALL_DONE" && _source "${_PATH_BASE_SUB}/lxd-${_PART}-common.install"
-	! _parthave "$_PART" "$S_FILE_INSTALL_DONE" && echo _source "${_PATH_BASE_SUB}/lxd-${_PART}-common.install"
-done
-
-
-################################  common parts
-
-release="alpine${_VM_ALPINE_VER}"
-! _parthave "$_PART" "$S_FILE_INSTALL_DONE" && _source "${_PATH_BASE_SUB}/lxd-${release}-common.install"
 
 _exit

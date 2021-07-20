@@ -563,8 +563,8 @@ __data() {
 	_SDDATE=`date +%s`
 
 	# installation
-	S_FILE_INSTALL_DONE="${S_PATH_CONF}/install.done"
 	S_FILE_INSTALL_CONF="${S_PATH_CONF}/install.conf"
+	S_FILE_INSTALL_DONE="${S_PATH_CONF}/install.done"
 
 	# cluster
 	_CLUSTER_IPS=`sed 'y/ /\n/' <<<${S_CLUSTER[*]} | sed -n 's/^ip=\([^ ]\?\)/\1/p' | xargs`
@@ -575,7 +575,7 @@ __data() {
 	[ ${S_SERVER_TYPE} != 'vz' ] && _IPTHISV6=`_get_ipv6`
 
 	# IPs
-	if [[ " lxc vz docker " = *" $S_SERVER_TYPE "* ]]; then
+	if [[ " lxd vz docker " = *" $S_SERVER_TYPE "* ]]; then
 		_VM_IP_BASE="${_IPTHIS%.*}}"
 	else
 		_VM_IP_BASE=`sed -n 's|.*base=\([^ ]\+\).*|\1|p' <<<${S_ETH_VM['default']}`
@@ -597,8 +597,8 @@ if [ -z $S_INC_FUNCTIONS ]; then
 	# init functions
 	__function_common
 	__function_install
-	__function_openvz
-	__function_obsolete
+	[ "$S_SERVER_TYPE" = "vz" ] && __function_openvz
+	#__function_obsolete
 
 	# set global data
 	__data

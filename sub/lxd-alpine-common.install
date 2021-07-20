@@ -1,0 +1,91 @@
+#!/bin/bash
+#
+# write by Aguy
+
+_echoT "\n==========================================  $S_RELEASE $_PART"
+
+
+####################################  MAIN
+
+if ! [ "`lxc list --format=json | jq -r '.[] | select(.status == "Running") | select(.name == "'${_CT_NAME}'").name'`" ]; then
+	_echoT "----------  start ${_CT_NAME}"
+
+	lxc start ${_CT_NAME}
+	sleep 1
+fi
+
+
+_echoT "----------  apk update"
+
+lxc exec ${_CT_NAME} -- sh -c "apk update && apk upgrade"
+
+_echoT "----------  apk profile.d"
+
+lxc exec ${_CT_NAME} -- sh -c "! [ -e /etc/profile.d/bash-lxc-aliases.sh ] && ln -sv /var/share/global/bash-lxc-aliases.sh /etc/profile.d/bash-lxc-aliases.sh"
+lxc exec ${_CT_NAME} -- sh -c "! [ -e /etc/profile.d/bash-lxc-alpine.sh ] && ln -sv /var/share/global/bash-lxc-alpine.sh /etc/profile.d/bash-lxc-alpine.sh"
+
+
+_echoT "----------  timezone Paris"
+
+lxc exec ${_CT_NAME} -- sh -c "apk add tzdata"
+lxc exec ${_CT_NAME} -- sh -c "cp /usr/share/zoneinfo/Europe/Paris /etc/localtime && echo 'Europe/Paris' > /etc/timezone && date"
+lxc exec ${_CT_NAME} -- sh -c "apk del tzdata"
+
+
+####################################  RSYSLOG
+
+_echoT "----------  rsyslog install"
+
+lxc exec ${_CT_NAME} -- sh -c "apk list -I|grep -q ^rsyslog || apk add rsyslog"
+path="/etc/rsyslog.d"
+lxc exec ${_CT_NAME} -- sh -c "[ -d ${path} ] || mkdir ${path}"
+
+
+_echoT "----------  rsyslog conf"
+
+file="/etc/rsyslog.conf"
+lxc exec ${_CT_NAME} -- sh -c "[ ! -f '${file}.${_SDDATE}' ] && cp -a '${file}' '${file}.${_SDDATE}'"
+
+cmds="sed -i 's|^.\?\(module(load=\"immark\")\)$|#\1|' $file
+sed -i 's|^.\?\(module(load=\"imklog\")\)$|#\1|' $file"
+lxc exec ${_CT_NAME} -- sh -c "$cmds"
+
+
+_echoT "----------  rsyslog cron"
+
+lxc exec ${_CT_NAME} -- sh -c 'echo -e "# rsyslog filter to separate cron log\ncron.* action(type=\"omfile\" dirCreateMode=\"0700\" FileCreateMode=\"0644\" File=\"/var/log/cron.log\")\n& stop" > /etc/rsyslog.d/cron.conf'
+
+
+_echoT "----------  rsyslog restart"
+
+lxc exec ${_CT_NAME} -- sh -c "rc-service rsyslog restart"
+
+
+####################################  LOGROTATE
+
+_echoT "----------  logrotate install"
+
+lxc exec ${_CT_NAME} -- sh -c "! apk list -I |grep -q ^logrotate && apk add logrotate"
+
+
+####################################  CRON
+
+_echoT "----------  cron"
+
+file="/etc/crontabs/root"
+lxc exec ${_CT_NAME} -- sh -c "sed -i '/^\*\/15/ s|^|#|' ${file}"
+lxc exec ${_CT_NAME} -- sh -c "rc-service crond restart"
+
+
+####################################  PUBLISH
+
+_echoT "----------  publish ${_CT_NAME}"
+
+lxc image list --format=json | jq -r '.[].aliases[].name' | grep -q ^${_CT_NAME}-com$ && lxc image alias rename ${_CT_NAME}-com ${_CT_NAME}-com-$(date +%s)
+lxc publish ${_CT_NAME} --alias ${_CT_NAME}-com --force
+
+
+####################################  END
+
+_echoT "----------  end"
+_eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"

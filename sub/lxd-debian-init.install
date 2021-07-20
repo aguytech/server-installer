@@ -1,0 +1,41 @@
+#!/bin/bash
+#
+# write by Aguy
+
+_echoT "\n==========================================  $S_RELEASE $_PART"
+
+
+####################################  MAIN
+
+release="debian"
+ct_name="debian${_VM_DEBIAN_VER/./}"
+
+_echoT "----------  ${release} data"
+
+[ -z ${_VM_DEBIAN_VER+x} ] && anstmp="10" && _askno "Please give a version image container for LXC ${release} ($anstmp)" && _VM_DEBIAN_VER=${_ANSWER:-$anstmp} && _confset _VM_DEBIAN_VER "${_VM_DEBIAN_VER}"
+
+
+_echoT "----------  ${release} copy"
+
+if ! [ "`lxc image list --format=json | jq -r '.[].aliases[].name | select(. | contains("'${release}${_VM_DEBIAN_VER/./}'"))'`" ]; then
+	_echo "copy images ${release}${_VM_DEBIAN_VER}"
+	lxc image copy images:${release}/${_VM_DEBIAN_VER} local: --alias ${release}${_VM_DEBIAN_VER/./} --alias ${release}-${_VM_DEBIAN_VER/./} --auto-update
+fi
+
+
+_echoT "----------  ${release} init"
+
+if ! [ "`lxc list --format=json | jq -r '.[] | select(.name == "'${ct_name}'").name'`" ]; then
+	lxc init ${ct_name} ${ct_name} -p stock
+fi
+
+
+_echoT "----------  ${release} profile global"
+
+if ! [ "`lxc list "${ct_name}" --format=json | jq -r '.[] | select(.profiles | any(contains("global"))).name'`" ]; then
+	lxc profile add "${ct_name}" global
+fi
+
+
+_echoT "----------  end"
+_eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"

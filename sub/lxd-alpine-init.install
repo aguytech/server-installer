@@ -1,0 +1,42 @@
+#!/bin/bash
+#
+# write by Aguy
+
+_echoT "\n==========================================  $S_RELEASE $_PART"
+
+
+####################################  DATA
+
+_echoT "----------  ${_RELEASE} data"
+
+[ -z ${_VM_ALPINE_VER+x} ] && anstmp="3.14" && _askno "Give a version image container for LXC ${_RELEASE} ($anstmp)" && _VM_ALPINE_VER=${_ANSWER:-$anstmp} && _confset _VM_ALPINE_VER "${_VM_ALPINE_VER}"
+
+_CT_NAME="${_RELEASE}${_VM_ALPINE_VER/./}"
+
+
+####################################  MAIN
+
+_echoT "----------  ${_RELEASE} copy"
+
+if ! [ "`lxc image list --format=json | jq -r '.[].aliases[].name | select(. | contains("'${_RELEASE}${_VM_ALPINE_VER/./}'"))'`" ]; then
+	_echo "copy images ${_RELEASE}${_VM_ALPINE_VER}"
+	lxc image copy images:${_RELEASE}/${_VM_ALPINE_VER} local: --alias ${_RELEASE}${_VM_ALPINE_VER/./} --alias ${_RELEASE}-${_VM_ALPINE_VER/./} --auto-update
+fi
+
+
+_echoT "----------  ${_RELEASE} init"
+
+if ! [ "`lxc list --format=json | jq -r '.[] | select(.name == "'${_CT_NAME}'").name'`" ]; then
+	lxc init ${_CT_NAME} ${_CT_NAME} -p stock
+fi
+
+
+_echoT "----------  ${_RELEASE} profile global"
+
+if ! [ "`lxc list "${_CT_NAME}" --format=json | jq -r '.[] | select(.profiles | any(contains("global"))).name'`" ]; then
+	lxc profile add "${_CT_NAME}" global
+fi
+
+
+_echoT "----------  end"
+_eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"

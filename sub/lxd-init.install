@@ -7,12 +7,13 @@ _echoT "\n==========================================  $S_RELEASE $_PART"
 
 ####################################  MAIN
 
-_echoT "------------------ fileconf source"
-[ -f "$S_FILE_INSTALL_CONF" ] && . "$S_FILE_INSTALL_CONF"
-
 _echoT "----------  LXD shared path"
 
-[ -z ${_LXD_PATH+x} ] && anstmp="/home/shared/lxd" && _askno "Please give a path for LXD container ($anstmp)" && _LXD_PATH=${_ANSWER:-$anstmp} && _confset _LXD_PATH "${_LXD_PATH}"
+[ -z ${_LXD_PATH+x} ] && anstmp="${S_HOSTING_PATH_SHARE}" && _askno "Give a path for LXD container ($anstmp)" && _LXD_PATH=${_ANSWER:-$anstmp} && _confset _LXD_PATH "${_LXD_PATH}"
+
+[ -z ${_LXD_STORAGE_DRIVER+x} ] && anstmp="zfs" && _askno "Give a driver for stock storage ($anstmp)" && _LXD_STORAGE_DRIVER=${_ANSWER:-$anstmp} && _confset _LXD_STORAGE_DRIVER "${_LXD_STORAGE_DRIVER}"
+
+[ -z ${_LXD_STORAGE_SIZE+x} ] && anstmp="20GB" && _askno "Give a size for stock storage ($anstmp)" && _LXD_STORAGE_SIZE=${_ANSWER:-$anstmp} && _confset _LXD_STORAGE_SIZE "${_LXD_STORAGE_SIZE}"
 
 ! [ -d "${_LXD_PATH}" ] && mkdir -p "${_LXD_PATH}"
 setfacl -R -m u:100000:rwx "${_LXD_PATH}"
@@ -23,40 +24,57 @@ setfacl -R -m d:u:100000:rwx "${_LXD_PATH}"
 #for path in ${_LXD_PATH}; do ! [ -e "$path" ] && _exite "Unable to find path: '${path}'"; done
 
 
-_echoT "----------  images copy"
+_echoT "----------  network lxdbr1"
 
-release="alpine"
-[ -z ${_VM_ALPINE_VER+x} ] && anstmp="3.14" && _askno "Please give a version image container for LXC ${release} ($anstmp)" && _VM_ALPINE_VER=${_ANSWER:-$anstmp} && _confset _VM_ALPINE_VER "${_VM_ALPINE_VER}"
-
-if ! [ "`lxc image list --format=json | jq -r '.[].aliases[].name | select(. | contains("'${release}${_VM_ALPINE_VER/./}'"))'`" ]; then
-	_echo "copy images ${release}${_VM_ALPINE_VER}"
-	lxc image copy images:${release}/${_VM_ALPINE_VER} local: --alias ${release}${_VM_ALPINE_VER/./} --alias ${release}-${_VM_ALPINE_VER/./} --auto-update
+name="lxdbr1"
+if ! [ "`lxc network list -f json|jq -r '.[] | select(.name == "'${name}'").name'`" ]; then
+	lxc network create "${name}" --type=bridge ipv4.address=10.0.1.1/24
 fi
 
 
-release="debian"
-[ -z ${_VM_DEBIAN_VER+x} ] && anstmp="10" && _askno "Please give a version image container for LXC ${release} ($anstmp)" && _VM_DEBIAN_VER=${_ANSWER:-$anstmp} && _confset _VM_DEBIAN_VER "${_VM_DEBIAN_VER}"
+_echoT "----------  iptables lxdbr1"
 
-if ! [ "`lxc image list --format=json | jq -r '.[].aliases[].name | select(. | contains("'${release}${_VM_DEBIAN_VER/./}'"))'`" ]; then
-	_echo "copy images ${release}${_VM_DEBIAN_VER}"
-	lxc image copy images:${release}/${_VM_DEBIAN_VER} local: --alias ${release}${_VM_DEBIAN_VER/./} --alias ${release}-${_VM_DEBIAN_VER/./} --auto-update
+if ! `sudo iptables -t nat -L POSTROUTING | grep -q '10.0.1.0/24'`; then
+	sudo iptables -t nat -A POSTROUTING -s 10.0.1.0/24 ! -d 10.0.1.0/24 -m comment --comment "generated for LXD network lxdbr1" -j MASQUERADE
 fi
 
 
-_echoT "----------  images init"
+_echoT "----------  storage stock"
 
-for name in alpine${_VM_ALPINE_VER/./} debian${_VM_DEBIAN_VER/./}; do
-	if ! [ "`lxc list --format=json | jq -r '.[] | select(.name == "'${name}'").name'`" ]; then
-		lxc init ${name} ${name}
-	fi
-done
+storage="stock"
+if ! [ "`lxc storage list -f json|jq -r '.[] | select(.name == "'${storage}'").name'`" ]; then
+	lxc storage create "${storage}" "${_LXD_STORAGE_DRIVER}" size="${_LXD_STORAGE_SIZE}"
+fi
+
+
+_echoT "----------  profiles stock"
+
+profile="stock"
+if ! [ "`lxc profile list --format=json | jq -r '.[] | select(.name == "'${profile}'").name'`" ]; then
+	lxc profile create ${profile}
+	lxc profile device add stock root disk pool=stock path=/
+	lxc network attach-profile lxdbr1 stock eth0
+fi
+
+
+_echoT "----------  profiles global"
+
+profile="global"
+path="${_LXD_PATH}/global"
+path_ct="/var/share/global"
+! [ -d "${path}" ] && sudo mkdir -p "${path}"
+
+if ! [ "`lxc profile list --format=json | jq -r '.[] | select(.name == "'${profile}'").name'`" ]; then
+	lxc profile create ${profile}
+	lxc profile device add ${profile} share disk source="${path}" path="${path_ct}"
+fi
 
 
 _echoT "----------  profiles www/share"
 
 profile="www"
 path="${_LXD_PATH}/www/share"
-path_ct="/var/share"
+path_ct="/var/share/www"
 ! [ -d "${path}" ] && sudo mkdir -p "${path}"
 
 if ! [ "`lxc profile list --format=json | jq -r '.[] | select(.name == "'${profile}'").name'`" ]; then
@@ -69,7 +87,7 @@ _echoT "----------  profiles sgbd/share"
 
 profile="sgbd"
 path="${_LXD_PATH}/sgbd/share"
-path_ct="/var/share"
+path_ct="/var/share/sgbd"
 ! [ -d "${path}" ] && sudo mkdir -p "${path}"
 
 if ! [ "`lxc profile list --format=json | jq -r '.[] | select(.name == "'${profile}'").name'`" ]; then

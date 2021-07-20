@@ -51,7 +51,7 @@ file="/etc/profile.d/bs_path.sh"
 
 _echoT "----------  conf S_SERVER_TYPE"
 
-_menu "Select the server type for this server" home ovh docker kvm lxc vz
+_menu "Select the server type for this server" home ovh docker kvm lxd vz
 S_SERVER_TYPE=$_ANSWER && _confset "S_SERVER_TYPE" "$S_SERVER_TYPE" "$S_GLOBAL_CONF"
 
 
@@ -367,7 +367,7 @@ for path in $paths; do
 	! [ -d "$path" ] && mkdir -p "$path"
 done
 
-if [[ " docker kvm lxc vz " = *" ${S_SERVER_TYPE} "* ]]; then
+if [[ " docker kvm lxd vz " = *" ${S_SERVER_TYPE} "* ]]; then
 
 	_echoT "----------  create shared paths for VMS"
 
@@ -381,7 +381,7 @@ if [[ " docker kvm lxc vz " = *" ${S_SERVER_TYPE} "* ]]; then
 fi
 
 <<KEEP
-if [ "${S_SERVER_TYPE}" = "lxc" ]; then
+if [ "${S_SERVER_TYPE}" = "lxd" ]; then
 
 	_echoT "----------  create shared paths for LXD"
 
