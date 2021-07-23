@@ -5,6 +5,7 @@
 
 _echoT "\n==========================================  $S_RELEASE $_PART"
 
+file_env="${S_PATH_SCRIPT_CONF}/env.conf"
 FILE_BASH_ALIASES="${S_PATH_SCRIPT_CONF}/.bash_aliases"
 FILE_BASH_FUNCTIONS="${S_PATH_SCRIPT_CONF}/.bash_functions"
 PATH_BASH_COMPLETION="${S_PATH_INSTALL_CONF}/bash_completion"
@@ -94,7 +95,7 @@ fi
 [ "\$PS1" ] && PS1="\${debian_chroot:+(\$debian_chroot)}\[$colorroot\]\u\[\e[1;37m\]@\[$color\]\h\[\e[1;37m\]:\w\[$color\]\$\[\e[0;0m\]"
 
 # source global variables
-[ -f /etc/server/env.conf ] && . /etc/server/env.conf
+[ -f ${S_PATH_SCRIPT_CONF}/env.conf ] && . ${S_PATH_SCRIPT_CONF}/env.conf
 
 # aliases
 [ -f ~/.bash_aliases ] && . ~/.bash_aliases

@@ -6,6 +6,7 @@
 _echoT "\n==========================================  $_RELEASE $_PART"
 
 PHPFPM_SERVICE=php-fpm
+PHPFPM_VERSION=`ls -1 /etc/php/|tail -n1`
 
 _echoT "------------------ file required"
 FILE_XDEBUG="${S_PATH_INSTALL_CONF}/php/xdebug.ini"

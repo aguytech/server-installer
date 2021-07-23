@@ -102,6 +102,8 @@ _echoT "----------  network forward"
 file=/proc/sys/net/ipv4/ip_forward
 grep -q 1 $file || echo 1 > "$file"
 
+sysctl net.ipv4.ip_forward=1
+
 
 _echoT "----------  rsyslog conf"
 

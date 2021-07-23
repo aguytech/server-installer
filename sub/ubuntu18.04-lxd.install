@@ -8,7 +8,7 @@ _echoT "\n==========================================  $S_RELEASE $_PART"
 ####################################  DATA
 
 # get inet, cidr, base
-eval ${S_ETH_VM['default']}
+eval ${S_VM_ETH['default']}
 cidr="${cidr:-10.0.0.1/24}"
 
 ####################################  MAIN
