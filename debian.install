@@ -24,6 +24,9 @@ MANUALY
 ################################ global functions
 #S_TRACE=debug
 
+#allow conf-init
+_INSTALL=debian
+
 if [[ -z "$S_GLOBAL_FUNCTIONS" || -f $S_GLOBAL_FUNCTIONS ]]; then
 	file="/usr/local/bs/inc-functions.sh"
 	if ! . "$file"; then echo -e "\e[1;31merror - unable to find file '$file' from ${BASH_SOURCE[0]}\e[0;0m" && exit 1; fi
