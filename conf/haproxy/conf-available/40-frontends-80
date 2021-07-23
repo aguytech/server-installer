@@ -1,23 +1,24 @@
 # AMBAU
 # included file for haproxy configuration
 
-frontend	ambau.ovh:80
-	bind	ambau.ovh:80
+frontend	_MYDOMAIN_FQDN:80
+	bind	_MYDOMAIN_FQDN:80
 
 	default_backend		default
 
 	http-request				set-header X-Forwarded-Protocol http
 
-	#acl ambau					hdr_end(host) -i ambau.ovh
-	#acl ambau-check		path_dir /server-status /server-info /status-www /ping-www /ping-monitor
-	acl ambau-check		path_reg ^/(server-status|server-info|status-www|ping-www|ping-monitor)
-	#acl ambau-check		path_beg /server-status /server-info /status-www /ping-www /ping-monitor
+	acl _MYDOMAIN_NAME					hdr_end(host) -i _MYDOMAIN_FQDN
+	#acl _MYDOMAIN_NAME-check		path_dir /server-status /server-info /status-www /ping-www /ping-monitor
+	acl _MYDOMAIN_NAME-check		path_reg ^/(server-status|server-info|status-www|ping-www|ping-monitor)
+	#acl _MYDOMAIN_NAME-check		path_beg /server-status /server-info /status-www /ping-www /ping-monitor
 
 	# 17112018.fr
 	#acl 17112018				hdr_end(host) -i 17112018.fr
 
-	#redirect						scheme https code 301 if ambau !ambau-check !{ ssl_fc }
-	redirect						scheme https code 301 if !ambau-check !{ ssl_fc }
+	#redirect						scheme https code 301 if _MYDOMAIN_NAME !_MYDOMAIN_NAME-check !{ ssl_fc }
+	redirect						scheme https code 301 if !_MYDOMAIN_NAME-check !{ ssl_fc }
 
-	#use_backend	ambau-admin if ambau-admin
-	use_backend				ambau if ambau-check
+	#use_backend	_MYDOMAIN_NAME-admin if _MYDOMAIN_NAME-admin
+	use_backend				_MYDOMAIN_NAME if _MYDOMAIN_NAME
+	use_backend				_MYDOMAIN_NAME if _MYDOMAIN_NAME-check

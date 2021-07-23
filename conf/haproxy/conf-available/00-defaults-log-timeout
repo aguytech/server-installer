@@ -9,11 +9,15 @@ defaults
 	option			log-health-checks
 	option			forwardfor except 127.0.0.0/8
 	option			http-server-close
-	maxconn		256
+	maxconn		1000
 
-	timeout		connect 	600s
+	timeout		connect 	60s
 	timeout		client		600s
 	timeout		server		600s
+	#timeout		queue					600s
+	#timeout		http-request		60s
+	#timeout		http-keep-alive	60s
+	#timeout		check					60s
 
 	errorfile 400	/etc/haproxy/errors/400.http
 	errorfile 403	/etc/haproxy/errors/403.http
