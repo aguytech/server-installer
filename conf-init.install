@@ -5,17 +5,20 @@
 _PART=conf-init
 echo -e "${blueb}==========================================  $_PART${cclear}"
 
-path_base=`dirname "$(readlink -e "${BASH_SOURCE[0]}")"`
-sdate="$(date +%s)"
+_SDDATE="$(date +%s)"
+
+
+####################################  DATA
+
+S_PATH_INSTALL=`dirname "$(readlink -e "${BASH_SOURCE[0]}")"`
 
 S_PATH_CONF="/etc/server"
-path_install_conf="${path_base}/conf"
-
-file_conf_server="${path_base}/conf-server.install"
-file_install_server="${path_install_conf}/server.conf"
-file_install_env="${path_install_conf}/env.conf"
-
+S_PATH_INSTALL_CONF="${S_PATH_INSTALL}/conf"
 S_GLOBAL_CONF="${S_PATH_CONF}/server.conf"
+
+file_conf_server="${S_PATH_INSTALL}/conf-server.install"
+file_install_server="${S_PATH_INSTALL_CONF}/server.conf"
+
 
 ####################################  MAIN
 
@@ -31,7 +34,7 @@ read answer
 
 echo -e "${blueb}----------  required files${cclear}"
 
-for file in "$file_conf_server" "$file_install_env" "$file_install_server"; do
+for file in "$file_conf_server" "$file_install_server"; do
 	! [ -f "$file" ] && echo -e "${redb}error - unable to find file: '$file'${cclear}" && exit 1
 done
 
@@ -55,24 +58,19 @@ find "${S_PATH_CONF}/ssl/private" -type f -exec chmod 600 -R "{}" \;
 echo -e "${blueb}----------  server.conf${cclear}"
 
 file="${S_PATH_CONF}/server.conf"
-[ -e "${file}" ] && cp -a "${file}" "${file}.keep${sdate}"
+[ -e "${file}" ] && cp -a "${file}" "${file}.keep${_SDDATE}"
 ! [ -f "$file" ] && cp -a "$file_install_server" "$file"
 . "$file"
 
 
-echo -e "${blueb}----------  env.conf${cclear}"
-
-file="${S_PATH_CONF}/env.conf"
-[ -e "${file}" ] && cp -a "${file}" "${file}.keep${sdate}"
-! [ -f "$file" ] && cp -a "$file_install_env" "$file"
-. "$file"
-
-
-echo -e "${blueb}----------  install.conf${cclear}"
+echo -e "${blueb}----------  install files${cclear}"
 
 file="${S_PATH_CONF}/install.conf"
 ! [ -f "$file" ] && touch "$file"
 . "$file"
+
+file="${S_PATH_CONF}/install.done"
+! [ -f "$file" ] && touch "$file"
 
 
 echo -e "${blueb}----------  fd open${cclear}"
@@ -82,12 +80,11 @@ _redirect
 
 echo -e "${blueb}----------  server settings${cclear}"
 
-file="${path_base}/conf-server.install"
-if ! . "$file"; then
-	echo -e "${redb}error - unable to find file '$file' from ${BASH_SOURCE[0]}${cclear}"
+if ! [ -f "${file_conf_server}" ]; then
+	echo -e "${redb}error - unable to find file '${file_conf_server}' from ${BASH_SOURCE[0]}${cclear}"
 	exit 1
 fi
-
+. "${file_conf_server}"
 
 _echoT "----------  end"
 _eval _partadd "$_PART" "$S_FILE_INSTALL_DONE"
