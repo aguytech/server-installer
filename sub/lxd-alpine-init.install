@@ -2,25 +2,25 @@
 #
 # write by Aguy
 
-_echoT "\n==========================================  $S_RELEASE $_PART"
+_echoT "\n==========================================  $_RELEASE $_PART"
 
 
 ####################################  DATA
 
 _echoT "----------  ${_RELEASE} data"
 
-[ -z ${_VM_ALPINE_VER+x} ] && anstmp="3.14" && _askno "Give a version image container for LXC ${_RELEASE} ($anstmp)" && _VM_ALPINE_VER=${_ANSWER:-$anstmp} && _confset _VM_ALPINE_VER "${_VM_ALPINE_VER}"
+[ -z ${_ALPINE_VER+x} ] && anstmp="3.14" && _askno "Give a version image container for LXC ${_RELEASE} ($anstmp)" && _ALPINE_VER=${_ANSWER:-$anstmp} && _confset _ALPINE_VER "${_ALPINE_VER}"
 
-_CT_NAME="${_RELEASE}${_VM_ALPINE_VER/./}"
+_CT_NAME="${_RELEASE}${_ALPINE_VER/./}"
 
 
 ####################################  MAIN
 
 _echoT "----------  ${_RELEASE} copy"
 
-if ! [ "`lxc image list --format=json | jq -r '.[].aliases[].name | select(. | contains("'${_RELEASE}${_VM_ALPINE_VER/./}'"))'`" ]; then
-	_echo "copy images ${_RELEASE}${_VM_ALPINE_VER}"
-	lxc image copy images:${_RELEASE}/${_VM_ALPINE_VER} local: --alias ${_RELEASE}${_VM_ALPINE_VER/./} --alias ${_RELEASE}-${_VM_ALPINE_VER/./} --auto-update
+if ! [ "`lxc image list --format=json | jq -r '.[].aliases[].name | select(. | contains("'${_RELEASE}${_ALPINE_VER/./}'"))'`" ]; then
+	_echo "copy images ${_RELEASE}${_ALPINE_VER}"
+	lxc image copy images:${_RELEASE}/${_ALPINE_VER} local: --alias ${_RELEASE}${_ALPINE_VER/./} --alias ${_RELEASE}-${_ALPINE_VER/./} --auto-update
 fi
 
 
@@ -37,6 +37,8 @@ if ! [ "`lxc list "${_CT_NAME}" --format=json | jq -r '.[] | select(.profiles | 
 	lxc profile add "${_CT_NAME}" global
 fi
 
+
+####################################  END
 
 _echoT "----------  end"
 _eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"

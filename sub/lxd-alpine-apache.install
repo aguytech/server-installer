@@ -3,21 +3,21 @@
 # write by Aguy
 
 
-_echoT "\n==========================================  $S_RELEASE $_PART"
+_echoT "\n==========================================  $_RELEASE $_PART"
 
 _echoT "------------------ file required"
-FILE_SITE="${S_PATH_INSTALL_CONF}/apache2/000-default.conf"
+FILE_RSYSLOG="${S_PATH_INSTALL_CONF}/rsyslog/vm-apache.conf"
 
-FILES="$FILE_SITE"
-for FILE in $FILES; do ! [ -f "$FILE" ] && _exite "Unable to find file: '$FILE'"; done
+files="${FILE_RSYSLOG}"
+for file in $files; do ! [ -f ${file} ] && _exite "Unable to find file: '${file}'"; done
 
 
 ####################################  MAIN
 
 _echoT "----------  data"
 
-[ -z ${_CT_NAME+x} ] && anstmp="${_RELEASE}${_VM_ALPINE_VER/./}-apache" && _askno "container name for apache ($anstmp)" && _CT_NAME=${_ANSWER:-$anstmp} && _confset _CT_NAME "$_CT_NAME"
-
+[ -z ${_CT_NAME_APACHE+x} ] && anstmp="${_RELEASE}${_ALPINE_VER/./}-apache" && _askno "container NAME for 'apache' ($anstmp)" && _CT_NAME_APACHE=${_ANSWER:-$anstmp} && _confset _CT_NAME_APACHE "${_CT_NAME_APACHE}"
+_CT_NAME=${_CT_NAME_APACHE}
 
 _echoT "----------  data sysctl.conf"
 
@@ -28,6 +28,7 @@ _echoT "----------  data sysctl.conf"
 [ -z ${_KEEPALIVE_PROBES+x} ] && anstmp="5" && _askno "Set net.ipv4.tcp_KEEPALIVE_PROBES ($anstmp)" && _KEEPALIVE_PROBES=${_ANSWER:-$anstmp} && _confset _KEEPALIVE_PROBES "$_KEEPALIVE_PROBES"
 [ -z ${_KEEPALIVE_INTVL+x} ] && anstmp="15" && _askno "Set net.ipv4.tcp_KEEPALIVE_INTVL ($anstmp)" && _KEEPALIVE_INTVL=${_ANSWER:-$anstmp} && _confset _KEEPALIVE_INTVL "$_KEEPALIVE_INTVL"
 
+PATH_WWW=/var/www/localhost/html
 PATH_SITE=/etc/apache2/sites
 PATH_CONF=/etc/apache2/conf.d
 FILE_CONF_HTTP="/etc/apache2/httpd.conf"
@@ -37,17 +38,32 @@ FILE_CONF_HTTP="/etc/apache2/httpd.conf"
 
 _echoT "----------  init"
 
-ct_name="${_RELEASE}${_VM_ALPINE_VER/./}-com"
+ct_name="${_RELEASE}${_ALPINE_VER/./}-com"
 
 ! lxc image list -f json |jq -r '.[].aliases[].name' | grep -q ^${ct_name}$ && _exite "Unable to find image container '${ct_name}'"
+if lxc list -f json |jq -r '.[].name' | grep -q ^${_CT_NAME}$; then
+	if lxc list --format=json | jq -r '.[] | select(.status == "Running").name' | grep -q ^${_CT_NAME}$; then
+		lxc stop ${_CT_NAME}
+		lxc rename ${_CT_NAME} ${_CT_NAME}.${_SDDATE}
+		lxc start ${_CT_NAME}
+	else
+		lxc rename ${_CT_NAME} ${_CT_NAME}.${_SDDATE}
+	fi
+
+fi
 
 lxc init ${ct_name} ${_CT_NAME} -p stock -p global
+
+
+_echoT "----------  ct start"
+
 lxc start ${_CT_NAME}
 
 
 _echoT "----------  conf sysctl.conf"
 
 file=/etc/sysctl.d/lxd.conf
+
 txt="# apache2 php-fpm
 net.core.somaxconn = ${_SOMAXCONN}
 net.core.netdev_MAX_BACKLOG = ${_MAX_BACKLOG}
@@ -59,6 +75,8 @@ net.ipv4.tcp_KEEPALIVE_INTVL = ${_KEEPALIVE_INTVL}"
 lxc exec ${_CT_NAME} -- sh -c "echo '$txt' > $file"
 
 
+####################################  INSTALL
+
 _echoT "----------  install"
 
 lxc exec ${_CT_NAME} -- sh -c "apk add apache2-proxy"
@@ -68,14 +86,13 @@ _echoT "----------  paths"
 
 lxc exec ${_CT_NAME} -- sh -c "! [ -d "${PATH_SITE}" ] && mkdir -p ${PATH_SITE}"
 path="/var/www/localhost/htdocs"
-lxc exec ${_CT_NAME} -- sh -c "[ -d /var/www/localhost/htdocs ] && mv /var/www/localhost/htdocs /var/www/localhost/html"
+lxc exec ${_CT_NAME} -- sh -c "[ -d /var/www/localhost/htdocs ] && mv /var/www/localhost/htdocs ${PATH_WWW}"
 #lxc exec ${_CT_NAME} -- sh -c "chown -R apache/apache ${PATH_SITE}"
 
 
 _echoT "----------  conf httpd module"
 
 lxc exec ${_CT_NAME} -- sh -c "[ -f \"${FILE_CONF_HTTP}\" ] && cp -a ${FILE_CONF_HTTP} ${FILE_CONF_HTTP}.${_SDDATE}"
-lxc exec ${_CT_NAME} -- sh -c "grep -q CustomLog.*/usr/bin/logger ${FILE_CONF_HTTP} || sed -i 's|^\(\s*\)\(CustomLog.*\)$|\1#\2\n    SetEnvIf X-Forwarded-For \".+\" forwarded\n    CustomLog \"\|/usr/bin/logger -p local7.info -t localhost/apache\" combined env=forwarded|' ${FILE_CONF_HTTP}"
 
 cmds="sed -i 's|^.\?\(LoadModule mpm_event_module.*\)$|\1|' ${FILE_CONF_HTTP}
 sed -i 's|^.\?\(LoadModule mpm_prefork_module.*\)$|#\1|' ${FILE_CONF_HTTP}
@@ -102,7 +119,7 @@ lxc exec ${_CT_NAME} -- sh -c "sed -i 's|^\(ServerSignature\).*$|\1 Off|' ${FILE
 lxc exec ${_CT_NAME} -- sh -c "sed -i 's|^\(ServerTokens\).*$|\1 Prod|' ${FILE_CONF_HTTP}"
 
 # htdocs
-lxc exec ${_CT_NAME} -- sh -c "sed -i 's|/var/www/localhost/htdocs|/var/www/localhost/html|' ${FILE_CONF_HTTP}"
+lxc exec ${_CT_NAME} -- sh -c "sed -i 's|/var/www/localhost/htdocs|${PATH_WWW}|' ${FILE_CONF_HTTP}"
 # Options
 lxc exec ${_CT_NAME} -- sh -c "sed -i '/^<Directory \"\/var\/www\/localhost\/html\">/,/<\/Directory>/ {s|^\(\s*Options\) .*|\1 -Indexes -MultiViews +FollowSymLinks|}' ${FILE_CONF_HTTP}"
 
@@ -112,19 +129,6 @@ lxc exec ${_CT_NAME} -- sh -c "sed -i 's|^\(LogLevel\).*$|\1 warn|' ${FILE_CONF_
 lxc exec ${_CT_NAME} -- sh -c "sed -i 's|^\(ErrorLog\).*$|\1 \"\|/usr/bin/logger -p local7.err -t localhost/apache\"|' ${FILE_CONF_HTTP}"
 # CustomLog
 lxc exec ${_CT_NAME} -- sh -c "grep -q CustomLog.*/usr/bin/logger ${FILE_CONF_HTTP} || sed -i 's|^\(\s*\)\(CustomLog.*\)$|\1#\2\n    SetEnvIf X-Forwarded-For \".+\" forwarded\n    CustomLog \"\|/usr/bin/logger -p local7.info -t localhost/apache\" combined\n    CustomLog \"\|/usr/bin/logger -p local7.info -t localhost/apache\" combined env=forwarded|' ${FILE_CONF_HTTP}"
-
-
-
-# Directory /
-lxc exec ${_CT_NAME} -- sh -c "sed -i 's|^\(<Directory />\)$|\1\n    Options FollowSymLinks|' ${FILE_CONF_HTTP}"
-# ErrorLog
-lxc exec ${_CT_NAME} -- sh -c "sed -i 's|^\(ErrorLog\).*$|\1 logs/default.err|' ${FILE_CONF_HTTP}"
-# LogFormat
-lxc exec ${_CT_NAME} -- sh -c "! grep -q LogFormat.*vhost_combined ${FILE_CONF_HTTP} && sed -i 's|^\s*\(LogFormat.*combined\)$|    LogFormat \"%v:%p %a %l %u %t \\\\\"%r\\\\\" %>s %b \\\\\"%{Referer}i\\\\\" \\\\\"%{User-Agent}i\\\\\"\" vhost_combined\n    LogFormat \"%a %l %u %t \\\\\"%r\\\\\" %>s %b \\\\\"%{Referer}i\\\\\" \\\\\"%{User-Agent}i\\\\\"\" combined\n    #\1|' ${FILE_CONF_HTTP}"
-# CustomLog
-lxc exec ${_CT_NAME} -- sh -c "sed -i 's|^\(\s*CustomLog\).*combined$|\1 logs/access.log vhost_combined|' ${FILE_CONF_HTTP}"
-
-lxc exec ${_CT_NAME} -- sh -c "sed -i '/^DocumentRoot.*/,/^<\/Directory>.*/ {s|^|#|}' ${FILE_CONF_HTTP}"
 
 
 _echoT "----------  conf mpm"
@@ -157,153 +161,53 @@ lxc exec ${_CT_NAME} -- sh -c "sed -i '/<Location \/server-status>/,/<\/Location
 lxc exec ${_CT_NAME} -- sh -c "sed -i '/<Location \/server-info>/,/<\/Location>/ {s|^\(\s*\)\(Require host\).*|\1\2 ${S_DOMAIN_FQDN}\n\1Require ip ${_IPS_AUTH}|}' ${file}"
 
 
-_echoT "----------  apache set service"
+_echoT "----------  service set"
 
 lxc exec ${_CT_NAME} -- sh -c "rc-update add apache2"
 lxc exec ${_CT_NAME} -- sh -c "rc-service apache2 start"
 
 
+########################################  PING
 
+_echoT "----------  ping-monitor"
 
-
-_echoT "----------  create ping-monitor.html"
-
-PATHTMP="$_PATH_WWW/html"
-! [ -d "$PATHTMP" ] && _echoE "Unable to find path $PATHTMP"
-_evalq "echo 'pong' > '$PATHTMP/ping-monitor.html'"
+lxc exec ${_CT_NAME} -- sh -c "echo 'pong' > ${PATH_WWW}/ping-monitor.html"
 
 
 ########################################  RSYSLOG
 
-STR=" vz lxd "
-if [ "${STR/ "$S_SERVER_TYPE" /}" != "$STR" ]; then
+_echoT "----------  rsyslog conf apache"
 
-	_echoT "----------  rsyslog conf apache"
-
-	FILECONF="/etc/rsyslog.d/vm-apache.conf"
-	FILE=${S_PATH_INSTALL_CONF}/rsyslog/vm-apache.conf
-	[ ! -f "$FILE" ] && _exite "Unable to find file: '$FILE'"
-
-	_evalq cp -a "$FILE" "$FILECONF"
-	_var_replace "$FILECONF"
+file="/etc/rsyslog.d/vm-apache.conf"
+lxc file push ${FILE_RSYSLOG} ${_CT_NAME}${file}
+_var_replace "$fileconf"
 
 
-	_echoT "----------  restart rsyslog"
+_echoT "----------  restart rsyslog"
 
-	systemctl restart rsyslog.service
-fi
-
-
-_echoT "----------  default site"
-
-FILE=$PATH_SITE/000-default.conf
-[ ! -f "$FILE.$_SDDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
-cp -a $FILE_SITE "$FILE"
-
-STR=${S_HOST_IPV4//./\\\\.}; sed -i "s|S_HOST_IPV4|$STR|" "$FILE"
-STR=${_VM_IP_BASE//./\\\\.}; sed -i "s|S_HOST_IPV4|$STR|" "$FILE"
-
-_var_replace_www "$FILE"
-
-# put tweak for compatibility to debian 8
-[ "$S_HOST_RELEASE" == "debian8" ] && sed -i "s|/usr/bin/logger -t|/usr/bin/logger --rfc3164 -t|g" "$FILE"
+systemctl restart rsyslog.service
 
 
-_echoT "----------  server restart"
-
-_evalq systemctl restart apache2
-
-
-#_echoT "----------  ssl enable"
-#
-#_evalq a2enmod ssl
-
-
-_echoT "----------  default-ssl conf"
-
-! [ -f "${PATHKEY}/${S_NODE_IPV4}.key" ] && ! [ -f "${PATHCER}/${S_NODE_IPV4}.crt" ] && _evalq openssl req -x509 -nodes -days 3650 -newkey rsa:4096 -keyout "${PATHKEY}/${S_NODE_IPV4}.key" -out "${PATHCER}/${S_NODE_IPV4}.crt"
-
-FILE="$PATH_SITE/000-default-ssl.conf"
-[ ! -f "$FILE.$_SDDATE" ] && [ -f "$FILE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
-cp -a $FILE_SITESSL "$FILE"
-
-STR=${S_HOST_IPV4//./\\\\.}; sed -i "s|S_HOST_IPV4|$STR|" "$FILE"
-
-SCH='SSLCertificateFile'; STR="${PATHCER}/${S_NODE_IPV4}.crt"; sed -i "s|^\(\s*$SCH\).*|\1    $STR|" "$FILE"
-SCH='SSLCertificateKeyFile'; STR="${PATHKEY}/${S_NODE_IPV4}.key"; sed -i "s|^\(\s*$SCH\).*|\1 $STR|" "$FILE"
-
-_var_replace_www "$FILE"
-
-# put tweak for compatibility to debian 8
-[ "$S_HOST_RELEASE" == "debian8" ] && sed -i "s|/usr/bin/logger -t|/usr/bin/logger --rfc3164 -t|g" "$FILE"
-
-
-#_echoT "----------  ssl site enable"
-#
-#_evalq a2ensite 000-default-ssl.conf
-
-
-_echoT "----------  server restart"
-
-_evalq systemctl restart apache2
-
-
-PARTSUB=host-apache-iptables
-STR=" vz lxd "
-if [ "${STR/ "$S_SERVER_TYPE" /}" != "$STR" ] && ! grep -q "$PARTSUB" "${S_FILE_INSTALL_DONE}"; then
-	_echoT "----------  $PARTSUB"
-
-	while ! grep -q "^$PARTSUB$" "${S_FILE_INSTALL_DONE}"; do
-		_echoi "To forward incoming traffic to this container '$_IPTHIS',"
-		_echoi "from an other terminal in server host edit file '${S_PATH_CONF}/firewall.conf'"
-		_echoI "add a key to array '_PORTSIDVZ' for Ip forwading"
-		_askno "Confirm"
-		[ "$_ANSWER" == n ] && _exite "exit"
-	done
-fi
-
-
-_echoT "----------  rights /var/www"
-
-_evalq chown www-data:www-data -R "/var/www"
-
-
-_echoT "----------  Apache test"
-
-if [ "$S_SERVER_TYPE" == vz ]; then
-    IPHTTP=${S_NODE_IPV4}:${S_VM_PORT_HTTP_PRE}$_CTIDTHIS
-    IPHTTPS=${S_NODE_IPV4}:${S_VM_PORT_HTTPS_PRE}$_CTIDTHIS
-else
-    IPHTTP=$(ifconfig $S_ETH | awk '/inet addr/{print substr($2,6)}')
-    IPHTTPS=$iphhtp
-fi
-_echoi "Test this following addresses in your browser"
-_echoI "http://$IPHTTP/server-info\nhttps://$IPHTTPS/server-status?refresh=10"
-_askno "Confirm"
-
+########################################  LOGROTATE
 
 _echoT "----------  logrotate conf"
 
-FILE=/etc/logrotate.d/apache2
-! grep -q "$S_PATH_LOG/apache2/\*.info" $FILE && sed -i "1i$S_PATH_LOG/apache2/*.info" "$FILE"
-! grep -q "$S_PATH_LOG/apache2/\*.err" $FILE && sed -i "1i$S_PATH_LOG/apache2/*.err" "$FILE"
+file=/etc/logrotate.d/apache2
+lxc exec ${_CT_NAME} -- sh -c "grep -q /var/log/apache2/\*.info ${file} || sed -i '1i/var/log/apache2/*.info' ${file}"
+lxc exec ${_CT_NAME} -- sh -c "grep -q /var/log/apache2/\*.info ${file} || sed -i '1i/var/log/apache2/*.err' ${file}"
+lxc exec ${_CT_NAME} -- sh -c "grep -q daily ${file} || sed -i 's|^\(\s*missingok\)|    daily\n\1|' ${file}"
+lxc exec ${_CT_NAME} -- sh -c "grep -q ^\s*rotate ${file} || sed -i 's|^\(\s*missingok\)|\1\n    rotate 14|' ${file}"
 
 
-_echoT "----------  log old delete"
+########################################  PUBLISH
 
-FILES="$S_PATH_LOG/apache2/error.log $S_PATH_LOG/apache2/access.log $S_PATH_LOG/apache2/other_vhosts_access.log"
-for FILE in $FILES; do [ -f "$FILE" ] && rm $FILE; done
+_echoT "----------  publish ${_CT_NAME}"
 
-
-####################################  USAGE
-
-_echoT "----------  conf S_USAGE www"
-_confset "S_USAGE" "www" "$S_GLOBAL_CONF"
-
-_echoT "----------  conf S_PARTS $_PART"
-_confmulti_add "S_PARTS" "$_PART" "$S_GLOBAL_CONF"
+lxc image list --format=json | jq -r '.[].aliases[].name' | grep -q ^${_CT_NAME}$ && lxc image alias rename ${_CT_NAME} ${_CT_NAME}-$(date +%s)
+lxc publish ${_CT_NAME} --alias ${_CT_NAME} --force
 
 
 ####################################  END
 
 _echoT "----------  end"
+_eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"

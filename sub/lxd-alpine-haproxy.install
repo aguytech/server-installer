@@ -1,0 +1,168 @@
+#!/bin/bash
+#
+# write by Aguy
+
+
+_echoT "\n==========================================  $_RELEASE $_PART"
+
+_echoT "------------------ file required"
+#FILE_SITE="${S_PATH_INSTALL_CONF}/apache2/000-default.conf"
+
+#FILES="$FILE_SITE"
+#for FILE in $FILES; do ! [ -f "$FILE" ] && _exite "Unable to find file: '$FILE'"; done
+
+
+####################################  DATA
+
+_echoT "----------  data"
+
+[ -z ${_CT_NAME_HAPROXY+x} ] && anstmp="${_RELEASE}${_ALPINE_VER/./}-haproxy" && _askno "container NAME for 'haproxy' ($anstmp)" && _CT_NAME_HAPROXY=${_ANSWER:-$anstmp} && _confset _CT_NAME_HAPROXY "$_CT_NAME_HAPROXY"
+_CT_NAME=${_CT_NAME_HAPROXY}
+
+[ -z ${_CT_IP_PROXY+x} ] && anstmp="10.0.1.2" && _askno "container IP for 'haproxy' ($anstmp)" && _CT_IP_PROXY=${_ANSWER:-$anstmp} && _confset _CT_IP_PROXY "$_CT_IP_PROXY"
+
+[ -z ${_IPTABLES_PORTS+x} ] && anstmp="80 443" && _askno "IPs to redirect to haproxy container ($anstmp)" && _IPTABLES_PORTS=${_ANSWER:-$anstmp} && _confset _IPTABLES_PORTS "$_IPTABLES_PORTS"
+
+
+[ -z ${_MYDOMAIN_FQDN+x} ] && anstmp="$S_DOMAIN_FQDN" && _askno "Enter a fqdn domain name ($anstmp)" && _MYDOMAIN_FQDN="${_ANSWER:-$anstmp}" && _confset _MYDOMAIN_FQDN "$_MYDOMAIN_FQDN"
+_MYDOMAIN_NAME="${_MYDOMAIN_FQDN%.*}" && _confset _MYDOMAIN_NAME "$_MYDOMAIN_NAME"
+
+[ -z ${_ACCESS_USER+x} ] && anstmp="admin" && _askno "Enter a name for stats access ($anstmp)" && _ACCESS_USER="${_ANSWER:-$anstmp}" && _confset _ACCESS_USER "$_ACCESS_USER"
+
+[ -z ${_ACCESS_PWD+x} ] && anstmp="$(_pwd)" && _askno "Enter a password to stats access ($anstmp)" && _ACCESS_PWD="${_ANSWER:-$anstmp}" && _confset _ACCESS_PWD "$_ACCESS_PWD"
+
+[ -z ${_ACCESS_URI+x} ] && anstmp="/haproxy-stats" && _askno "Enter the URI to access to admin site ($anstmp)" && _ACCESS_URI="${_ANSWER:-$anstmp}" && _confset _ACCESS_URI "$_ACCESS_URI"
+
+
+####################################  CONTAINER
+
+_echoT "----------  init"
+
+ct_name="${_RELEASE}${_ALPINE_VER/./}-com"
+
+! lxc image list -f json |jq -r '.[].aliases[].name' | grep -q ^${ct_name}$ && _exite "Unable to find image container '${ct_name}'"
+if lxc list -f json |jq -r '.[].name' | grep -q ^${_CT_NAME}$; then
+	if lxc list --format=json | jq -r '.[] | select(.status == "Running").name' | grep -q ^${_CT_NAME}$; then
+		lxc stop ${_CT_NAME}
+		lxc rename ${_CT_NAME} ${_CT_NAME}.${_SDDATE}
+		lxc start ${_CT_NAME}
+	else
+		lxc rename ${_CT_NAME} ${_CT_NAME}.${_SDDATE}
+	fi
+
+fi
+
+lxc init ${ct_name} ${_CT_NAME} -p stock -p global
+
+
+_echoT "----------  profile www-${_MYDOMAIN_FQDN}"
+
+if ! lxc list --format=json | jq -r '.[] | select(.name == "'${_CT_NAME}'").devices[].name' | grep -q eth0; then
+	lxc network attach lxdbr1 ${_CT_NAME} eth0 eth0
+fi
+lxc config device set ${_CT_NAME} eth0 ipv4.address ${_CT_IP_PROXY}
+
+
+_echoT "----------  network fixed ip"
+
+if ! lxc list --format=json | jq -r '.[] | select(.name == "'${_CT_NAME}'").devices[].name' | grep -q eth0; then
+	lxc network attach lxdbr1 ${_CT_NAME} eth0 eth0
+fi
+lxc config device set ${_CT_NAME} eth0 ipv4.address ${_CT_IP_PROXY}
+
+
+_echoT "----------  ct start"
+
+lxc start ${_CT_NAME}
+
+
+####################################  INSTALL
+
+_echoT "----------  install"
+
+lxc exec ${_CT_NAME} -- sh -c "apk add haproxy bash"
+
+
+_echoT "----------  service set"
+
+lxc exec ${_CT_NAME} -- sh -c "rc-update add haproxy"
+lxc exec ${_CT_NAME} -- sh -c "rc-service haproxy start"
+
+
+####################################  CONF
+
+_echoT "----------  conf"
+
+path="/etc/haproxy"
+lxc exec ${_CT_NAME} -- sh -c "[ -d ${path} ] && mv ${path} ${path}.${_SDDATE}"
+lxc file push --recursive ${S_PATH_INSTALL_CONF}/haproxy ${_CT_NAME}/etc
+
+if [ "${_MYDOMAIN_FQDN}" != "ambau.ovh" ]; then
+	lxc exec ${_CT_NAME} -- sh -c "grep ambau.ovh -rl ${path} |xargs sed -i 's|ambau.ovh|${_MYDOMAIN_FQDN}|g'"
+	lxc exec ${_CT_NAME} -- sh -c "grep ambau -rl ${path} |xargs sed -i 's|ambau|${_MYDOMAIN_NAME}|g'"
+fi
+
+
+_echoT "----------  init.d"
+
+file="/etc/init.d/haproxy"
+lxc exec ${_CT_NAME} -- sh -c "[ -f ${file} ] && mv ${file} ${file}.${_SDDATE} && chmod -x ${file}.${_SDDATE}"
+lxc file push ${S_PATH_INSTALL_CONF}/init.d/haproxy ${_CT_NAME}/etc/init.d/
+lxc exec ${_CT_NAME} -- sh -c "chmod +x ${file}"
+
+
+####################################  SSL
+
+_echoT "----------  ssl path"
+
+path="${S_PATH_CONF_SSL}/certs"
+lxc exec ${_CT_NAME} -- sh -c "[ -d ${path} ] || mkdir -p ${path}"
+path="${S_PATH_CONF_SSL}/private"
+lxc exec ${_CT_NAME} -- sh -c "[ -d ${path} ] || mkdir -p ${path}"
+
+lxc exec ${_CT_NAME} -- sh -c "chown -R 0:0 ${S_PATH_CONF_SSL} && chmod -R 750 ${S_PATH_CONF_SSL}"
+path="${S_PATH_CONF_SSL}/private"
+lxc exec ${_CT_NAME} -- sh -c "chmod -R 700 ${path}"
+
+
+echo exit && exit
+
+
+####################################  IPTABLES
+
+_echoT "----------  iptables rules"
+
+for port in ${_IPTABLES_PORTS}; do
+	#cmd="PREROUTING -d ${S_NODE_IPV4}/32 -i ${S_ETH} -p tcp -m tcp --dport ${port} -j DNAT --to-destination ${_CT_IP_PROXY}:${port}"
+	cmd="PREROUTING -d ${S_NODE_IPV4}/32 -p tcp -m tcp --dport ${port} -j DNAT --to-destination ${_CT_IP_PROXY}:${port}"
+	sudo iptables -S -t nat | grep -qi "${cmd}" || sudo iptables -t nat -I $cmd
+done
+
+_echoT "----------  iptables persistent"
+
+file="/etc/iptables/iptables.rules"
+sudo systemctl stop lxd.*
+sudo iptables-save -f ${file}
+sudo sed -i 's|^\(.* ACCEPT\) .*$|\1|' ${file}
+sudo systemctl start lxd.service
+
+
+####################################  CERTBOT
+
+_echoT "----------  certbot install"
+
+lxc exec ${_CT_NAME} -- sh -c "apk add certbot"
+
+
+########################################  PUBLISH
+
+_echoT "----------  publish ${_CT_NAME}"
+
+lxc image list --format=json | jq -r '.[].aliases[].name' | grep -q ^${_CT_NAME}$ && lxc image alias rename ${_CT_NAME} ${_CT_NAME}-$(date +%s)
+lxc publish ${_CT_NAME} --alias ${_CT_NAME} --force
+
+
+####################################  END
+
+_echoT "----------  end"
+_eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"

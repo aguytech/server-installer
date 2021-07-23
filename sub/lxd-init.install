@@ -5,7 +5,7 @@
 _echoT "\n==========================================  $S_RELEASE $_PART"
 
 
-####################################  MAIN
+####################################  DATA
 
 _echoT "----------  LXD shared path"
 
@@ -13,39 +13,44 @@ _echoT "----------  LXD shared path"
 
 [ -z ${_LXD_STORAGE_DRIVER+x} ] && anstmp="zfs" && _askno "Give a driver for stock storage ($anstmp)" && _LXD_STORAGE_DRIVER=${_ANSWER:-$anstmp} && _confset _LXD_STORAGE_DRIVER "${_LXD_STORAGE_DRIVER}"
 
-[ -z ${_LXD_STORAGE_SIZE+x} ] && anstmp="20GB" && _askno "Give a size for stock storage ($anstmp)" && _LXD_STORAGE_SIZE=${_ANSWER:-$anstmp} && _confset _LXD_STORAGE_SIZE "${_LXD_STORAGE_SIZE}"
-
 ! [ -d "${_LXD_PATH}" ] && mkdir -p "${_LXD_PATH}"
 setfacl -R -m u:100000:rwx "${_LXD_PATH}"
 setfacl -R -m d:u:100000:rwx "${_LXD_PATH}"
 
 
+####################################  NETWORK
+
 #_echoT "------------------ path required"
 #for path in ${_LXD_PATH}; do ! [ -e "$path" ] && _exite "Unable to find path: '${path}'"; done
+
+
+_echoT "----------  network lxdbr0"
+
+name="lxdbr0"
+if ! [ "`lxc network list -f json|jq -r '.[] | select(.name == "'${name}'").name'`" ]; then
+	lxc network set "${name}" ipv4.address=10.0.0.1/24 ipv4.dhcp.ranges=10.0.0.10-10.0.0.254
+fi
 
 
 _echoT "----------  network lxdbr1"
 
 name="lxdbr1"
 if ! [ "`lxc network list -f json|jq -r '.[] | select(.name == "'${name}'").name'`" ]; then
-	lxc network create "${name}" --type=bridge ipv4.address=10.0.1.1/24
+	lxc network create "${name}" --type=bridge ipv4.address=10.0.1.1/24 ipv4.dhcp.ranges=10.0.1.10-10.0.1.254 ipv4.nat=true
 fi
 
 
-_echoT "----------  iptables lxdbr1"
-
-if ! `sudo iptables -t nat -L POSTROUTING | grep -q '10.0.1.0/24'`; then
-	sudo iptables -t nat -A POSTROUTING -s 10.0.1.0/24 ! -d 10.0.1.0/24 -m comment --comment "generated for LXD network lxdbr1" -j MASQUERADE
-fi
-
+####################################  STORAGE
 
 _echoT "----------  storage stock"
 
 storage="stock"
 if ! [ "`lxc storage list -f json|jq -r '.[] | select(.name == "'${storage}'").name'`" ]; then
-	lxc storage create "${storage}" "${_LXD_STORAGE_DRIVER}" size="${_LXD_STORAGE_SIZE}"
+	[ "${_LXD_STORAGE_DRIVER}" = btrfs ] && lxc storage create ${storage} ${_LXD_STORAGE_DRIVER} source=/var/lib/lxd/storage-pools/stock
 fi
 
+
+####################################  PROFILE
 
 _echoT "----------  profiles stock"
 
@@ -95,6 +100,8 @@ if ! [ "`lxc profile list --format=json | jq -r '.[] | select(.name == "'${profi
 	lxc profile device add ${profile} share disk source="${path}" path="${path_ct}"
 fi
 
+
+####################################  END
 
 _echoT "----------  end"
 _eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"

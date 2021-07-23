@@ -2,7 +2,7 @@
 #
 # write by Aguy
 
-_echoT "\n==========================================  $S_RELEASE $_PART"
+_echoT "\n==========================================  $_RELEASE $_PART"
 
 
 ####################################  MAIN
@@ -15,14 +15,39 @@ if ! [ "`lxc list --format=json | jq -r '.[] | select(.status == "Running") | se
 fi
 
 
+####################################  PATHS
+
+_echoT "----------  path bs"
+
+path=/tmp/bs
+[ -d ${path} ] && rm -fR ${path}
+cp -a ${S_PATH_INSTALL%/*}/bs ${path}
+rm -fR ${path}/.git
+lxc exec ${_CT_NAME} -- sh -c "[ -d /usr/local/bs ] && mv /usr/local/bs /usr/local/bs.${_SDDATE}"
+lxc file push --recursive ${path} ${_CT_NAME}/usr/local/
+[ -d ${path} ] && rm -fR ${path}
+
+
+_echoT "----------  path server"
+
+lxc exec ${_CT_NAME} -- sh -c "[ -d ${S_PATH_CONF} ] || mkdir -p ${S_PATH_CONF}"
+path="${S_PATH_CONF_SSL}/private"
+lxc exec ${_CT_NAME} -- sh -c "[ -d ${path} ] || mkdir -p ${path}"
+
+lxc file push ${S_PATH_INSTALL_CONF}/server.conf-apline ${_CT_NAME}${S_PATH_CONF}/server.conf
+
+####################################  CONF
+
 _echoT "----------  apk update"
 
 lxc exec ${_CT_NAME} -- sh -c "apk update && apk upgrade"
 
 _echoT "----------  apk profile.d"
 
-lxc exec ${_CT_NAME} -- sh -c "! [ -e /etc/profile.d/bash-lxc-aliases.sh ] && ln -sv /var/share/global/bash-lxc-aliases.sh /etc/profile.d/bash-lxc-aliases.sh"
-lxc exec ${_CT_NAME} -- sh -c "! [ -e /etc/profile.d/bash-lxc-alpine.sh ] && ln -sv /var/share/global/bash-lxc-alpine.sh /etc/profile.d/bash-lxc-alpine.sh"
+lxc exec ${_CT_NAME} -- sh -c "! [ -e /etc/profile.d/bash-lxc-aliases.sh ] && ln -sv /usr/local/bs/conf/bash-lxc-aliases.sh /etc/profile.d/bash-lxc-aliases.sh"
+lxc exec ${_CT_NAME} -- sh -c "! [ -e /etc/profile.d/bash-lxc-alpine.sh ] && ln -sv /usr/local/bs/conf/bash-lxc-alpine.sh /etc/profile.d/bash-lxc-alpine.sh"
+lxc exec ${_CT_NAME} -- sh -c "! [ -e /etc/profile.d/bash_functions.sh ] && ln -sv /usr/local/bs/conf/.bash_functions /etc/profile.d/bash_functions.sh"
+lxc exec ${_CT_NAME} -- sh -c "! [ -e /etc/profile.d/env.sh ] && ln -sv /usr/local/bs/conf/env.conf /etc/profile.d/env.sh"
 
 
 _echoT "----------  timezone Paris"
