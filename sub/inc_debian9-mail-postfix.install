@@ -64,11 +64,11 @@ SCH="$(sed '/^#\?myhostname/h;g;$!d' $FILE)"; STR="myhostname = mail.$_MYDOMAIN"
 
 # inet_interfaces
 #SCH='inet_interfaces'; STR="all"; sed -i "s|^\(${SCH}\s*= \).*$|\1${STR}|" "$FILE"
-#SCH="$(sed '/^#\?inet_interfaces/h;g;$!d' $FILE)"; STR="inet_interfaces = 127.0.0.1, ::1 ${_VM_IP_BASE}.1 ${_IPSIN} ${S_NODE_IPV6}"; sed -i "s|^\(${SCH}.*\)$|\1\n${STR}|" "$FILE"
+#SCH="$(sed '/^#\?inet_interfaces/h;g;$!d' $FILE)"; STR="inet_interfaces = 127.0.0.1, ::1 ${_VM_IP_BASE}.1 ${_IPSIN} ${_IPTHISV6}"; sed -i "s|^\(${SCH}.*\)$|\1\n${STR}|" "$FILE"
 SCH="$(sed '/^#\?inet_interfaces/h;g;$!d' $FILE)"; STR="inet_interfaces = all"; sed -i "s|^\(${SCH}.*\)$|\1\n${STR}|" "$FILE"
 
 # mynetworks
-SCH='mynetworks'; STR="127.0.0.0/8 [::1]/128 ${_VM_IP_BASE}.0/24 ${_IPSIN} [${S_NODE_IPV6}]/128"; sed -i "s|^\(${SCH}\s*=\).*$|\1 ${STR}|" "$FILE"
+SCH='mynetworks'; STR="127.0.0.0/8 [::1]/128 ${_VM_IP_BASE}.0/24 ${_IPSIN} [${_IPTHISV6}]/128"; sed -i "s|^\(${SCH}\s*=\).*$|\1 ${STR}|" "$FILE"
 
 
 # inet_protocols
