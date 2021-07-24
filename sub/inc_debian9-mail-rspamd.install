@@ -115,7 +115,7 @@ EOF
 _echoT "----------  conf network"
 
 cat > "$PATHCONF/options.inc" << EOF
-local_addrs = "127.0.0.0/8, ::1, ${_VM_IP_BASE}.0/24, ${S_NODE_IPV4}, ${S_NODE_IPV6}";
+local_addrs = "127.0.0.0/8, ::1, ${_VM_IP_BASE}.0/24, ${_IPTHIS}, ${_IPTHISV6}";
 
 dns {
     nameserver = ["127.0.0.1:53:10"];
@@ -140,8 +140,8 @@ cat > "${_PATH_RSPAMD}/ips_local_network.map" << EOF
 127.0.0.0/8
 [::1]/64
 ${_VM_IP_BASE}.0/24
-${S_NODE_IPV4}
-[${S_NODE_IPV6}]
+${_IPTHIS}
+[${_IPTHISV6}]
 EOF
 
 
@@ -279,7 +279,7 @@ _evalq "systemctl start rspamd"
 _echoT "----------  RSPAMD access"
 
 _echo "Test this URL to access to RSPAMD statistics"
-_echoi "http://${S_NODE_IPV4}:${S_RSPAMD_STATS_PORT}"
+_echoi "http://${_IPTHIS}:${S_RSPAMD_STATS_PORT}"
 _askno "Confirm"
 
 

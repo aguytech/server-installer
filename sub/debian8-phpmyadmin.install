@@ -188,7 +188,7 @@ _echoI "\nKeep safe the following connection informations to mariaDB : '$pmauser
 
 _echoT "----------  $pmauser test"
 
-[ "$S_SERVER_TYPE" == vz ] && iptest=${S_NODE_IPV4}:${S_VM_PORT_HTTP_PRE}$(awk '{print $1}' < /proc/vz/veinfo) \
+[ "$S_SERVER_TYPE" == vz ] && iptest=${_IPTHIS}:${S_VM_PORT_HTTP_PRE}$(awk '{print $1}' < /proc/vz/veinfo) \
 || iptest=$(ifconfig $S_ETH | awk '/inet addr/{print substr($2,6)}')
 _askyn "Test this address http://$iptest/$pmauser\nTo verify phpmyadmin configuration"
 [ $_ANSWER != y ] && _exit 1

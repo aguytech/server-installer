@@ -76,7 +76,7 @@ PATHTRACE="${_PATH_PHP}/xdebug/trace"
 PATHMODCONF="/etc/php/7.0/mods-available"
 PHPCONF="/etc/php/7.0/apache2/php.ini"
 
-[ "$S_SERVER_TYPE" == vz ] && THISURL="http://${S_NODE_IPV4}:${S_VM_PORT_HTTP_PRE}$(awk '{print $1}' < /proc/vz/veinfo)" \
+[ "$S_SERVER_TYPE" == vz ] && THISURL="http://${_IPTHIS}:${S_VM_PORT_HTTP_PRE}$(awk '{print $1}' < /proc/vz/veinfo)" \
 || THISURL="http://$(ifconfig $S_ETH | awk '/inet addr/{print substr($2,6)}')"
 
 

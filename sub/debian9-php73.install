@@ -105,7 +105,7 @@ path_trace="${_PATH_PHP}/xdebug/trace"
 file_conf_mod="/etc/php/${php_version}/mods-available"
 file_conf_phpini="/etc/php/${php_version}/apache2/php.ini"
 
-[ "$S_SERVER_TYPE" = vz ] && this_url="http://${S_NODE_IPV4}:${S_VM_PORT_HTTP_PRE}$(awk '{print $1}' < /proc/vz/veinfo)" \
+[ "$S_SERVER_TYPE" = vz ] && this_url="http://${_IPTHIS}:${S_VM_PORT_HTTP_PRE}$(awk '{print $1}' < /proc/vz/veinfo)" \
 || this_url="http://$(ifconfig $S_ETH | awk '/inet addr/{print substr($2,6)}')"
 
 

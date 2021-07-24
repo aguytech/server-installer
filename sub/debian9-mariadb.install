@@ -211,10 +211,10 @@ _evalq "mysql -uroot -p$_PWDLOCAL -e \"GRANT SELECT, INSERT, UPDATE ON *.* TO pe
 _echoT "----------  right innotop"
 
 _evalq "mysql -uroot -p$_PWDLOCAL -e \"GRANT SUPER, RELOAD, PROCESS ON *.* to innotop@'${_VM_IP_BASE}.%' IDENTIFIED BY '$_PWDTOP'\""
-_evalq "mysql -uroot -p$_PWDLOCAL -e \"GRANT SUPER, RELOAD, PROCESS ON *.* to innotop@'${S_NODE_IPV4}' IDENTIFIED BY '$_PWDTOP'\""
+_evalq "mysql -uroot -p$_PWDLOCAL -e \"GRANT SUPER, RELOAD, PROCESS ON *.* to innotop@'${_IPTHIS}' IDENTIFIED BY '$_PWDTOP'\""
 _evalq "mysql -uroot -p$_PWDLOCAL -e \"CREATE USER innotop@'localhost'\""
 _evalq "mysql -uroot -p$_PWDLOCAL -e \"GRANT SUPER, RELOAD, PROCESS ON *.* to innotop@'localhost'\""
-strpass+="innotop @ '${S_NODE_IPV4}%' - $_PWDTOP\n"
+strpass+="innotop @ '${_IPTHIS}%' - $_PWDTOP\n"
 strpass+="innotop @ '${_VM_IP_BASE}.%' - $_PWDTOP\n"
 strpass+="innotop @ 'localhost' - \n"
 

@@ -71,7 +71,7 @@ VMAILS_ACRO=( [postfixadmin]="pfa" [vmailmanage]="vmail" [vimbadmin]="vma" )
 
 _FILEMAILDONE="$_PATH_LOG/${S_RELEASE}-${_PART}.done"
 _RELEASEMAIL="inc_${S_RELEASE}"
-_IPSIN=${_CLUSTER_IPS}; [ "${_IPSIN/$S_NODE_IPV4/}" == "${_IPSIN}" ] && _IPSIN+=$S_NODE_IPV4  && _IPSIN=${_IPSIN%,}
+_IPSIN=${_CLUSTER_IPS}; [ "${_IPSIN/${_IPTHIS}/}" == "${_IPSIN}" ] && _IPSIN+=${_IPTHIS}  && _IPSIN=${_IPSIN%,}
 
 _PATH_DKIM="${_PATH_RSPAMD}/dkim"
 

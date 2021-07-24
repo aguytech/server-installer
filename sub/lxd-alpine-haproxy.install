@@ -133,8 +133,8 @@ echo exit && exit
 _echoT "----------  iptables rules"
 
 for port in ${_IPTABLES_PORTS}; do
-	#cmd="PREROUTING -d ${S_NODE_IPV4}/32 -i ${S_ETH} -p tcp -m tcp --dport ${port} -j DNAT --to-destination ${_CT_IP_PROXY}:${port}"
-	cmd="PREROUTING -d ${S_NODE_IPV4}/32 -p tcp -m tcp --dport ${port} -j DNAT --to-destination ${_CT_IP_PROXY}:${port}"
+	#cmd="PREROUTING -d ${_IPTHIS}/32 -i ${S_ETH} -p tcp -m tcp --dport ${port} -j DNAT --to-destination ${_CT_IP_PROXY}:${port}"
+	cmd="PREROUTING -d ${_IPTHIS}/32 -p tcp -m tcp --dport ${port} -j DNAT --to-destination ${_CT_IP_PROXY}:${port}"
 	sudo iptables -S -t nat | grep -qi "${cmd}" || sudo iptables -t nat -I $cmd
 done
 

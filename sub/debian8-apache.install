@@ -183,60 +183,6 @@ _echoT "----------  server restart"
 _eval "service apache2 restart"
 
 
-_echoT "----------  ssl enable"
-
-_eval "a2enmod ssl"
-
-
-_echoT "----------  default-ssl conf"
-
-name=localhost
-pathcer="${S_VM_PATH_SHARE}/www/ssl/certs"
-pathkey="${S_VM_PATH_SHARE}/www/ssl/private"
-
-! [ -f ${pathkey}/${S_NODE_IPV4}.key ] && ! [ -f ${pathcer}/${S_NODE_IPV4}.crt ] && _eval "openssl req -x509 -nodes -days 3650 -newkey rsa:4096 -keyout ${pathkey}/${S_NODE_IPV4}.key -out ${pathcer}/${S_NODE_IPV4}.crt"
-
-FILE=/etc/apache2/sites-available/000-default-ssl.conf
-[ ! -f "$FILE.$_DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
-cat > $FILE << EOF
-<IfModule mod_ssl.c>
-    <VirtualHost _default_:443>
-        ServerName $name
-        ServerAdmin webmaster@localhost
-
-        SSLEngine on
-        SSLCertificateFile    ${pathcer}/${S_NODE_IPV4}.crt
-        SSLCertificateKeyFile ${pathkey}/${S_NODE_IPV4}.key
-
-        DocumentRoot /var/www/$name/html
-
-         <FilesMatch "\.(cgi|shtml|phtml|php)\$">
-            SSLOptions +StdEnvVars
-        </FilesMatch>
-        <Directory /usr/lib/cgi-bin>
-            SSLOptions +StdEnvVars
-        </Directory>
-
-        BrowserMatch "MSIE [2-6]" \
-            nokeepalive ssl-unclean-shutdown \
-            downgrade-1.0 force-response-1.0
-        # MSIE 7 and newer should be able to use keepalive
-        BrowserMatch "MSIE [17-9]" ssl-unclean-shutdown
-
-       # Available loglevels: trace8, ..., trace1, debug, info, notice, warn, error, crit, alert, emerg
-        LogLevel info ssl:warn
-        ErrorLog \${APACHE_LOG_DIR}/ssl-error.log
-        CustomLog \${APACHE_LOG_DIR}/ssl-access.log  vhost_combined env=!nolog
-    </VirtualHost>
-</IfModule>
-EOF
-
-
-_echoT "----------  ssl site enable"
-
-_eval "a2ensite 000-default-ssl.conf"
-
-
 _echoT "----------  server restart"
 
 _eval "service apache2 restart"
