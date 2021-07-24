@@ -1,8 +1,8 @@
 ########################  CONF
-S_RELEASE=
-S_RELEASE_ID=
-S_RELEASE_NAME=
-S_RELEASE_DESKTOP=
+S_RELEASE="alpine314"
+S_RELEASE_ID="alpine"
+S_RELEASE_NAME="alpine314"
+S_RELEASE_DESKTOP=""
 
 ########################  PATH
 # path for global server configuration
@@ -15,16 +15,16 @@ S_PATH_SCRIPT="/usr/local/bs"
 S_PATH_SCRIPT_CONF="${S_PATH_SCRIPT}/conf"
 
 # path for installation scripts
-S_PATH_INSTALL=
+S_PATH_INSTALL="/usr/local/install"
 # path for extra conf for installation
 S_PATH_INSTALL_CONF="${S_PATH_INSTALL}/conf"
 # path for extra installation scripts
 S_PATH_INSTALL_XTRA="${S_PATH_INSTALL}/xtra"
 
 # path for save
-S_PATH_SAVE="/save"
+#S_PATH_SAVE="/save"
 # path for backup
-S_PATH_SAVE_BACKUP="${S_PATH_SAVE}/backup"
+#S_PATH_SAVE_BACKUP="${S_PATH_SAVE}/backup"
 
 # path for global logs
 S_PATH_LOG="/var/log"
@@ -44,35 +44,35 @@ S_CLUSTER['ns364584']="name=node2 ip=91.121.209.163 user=root port=2002 fqdn=ns3
 S_ETH=
 
 # type of server : home ovh vz lxd kvm
-S_SERVER_TYPE=
+S_SERVER_TYPE="lxd"
 
 ########################  HOST
 # type of virtual machine hosting : docker kvm lxd
-S_HOST_TYPE="lxd"
+#S_HOST_TYPE="lxd"
 # host pathroot of VM
-S_HOST_PATH="/var/lib/lxd"
+#S_HOST_PATH="/var/lib/lxd"
 # host sharing path
-S_HOST_PATH_SHARE="${S_HOST_PATH}/share"
+#S_HOST_PATH_SHARE="${S_HOST_PATH}/share"
 # host log path for VM
-S_HOST_PATH_LOG="${S_PATH_LOG}/lxd"
+#S_HOST_PATH_LOG="${S_PATH_LOG}/lxd"
 # host sharing path to save
-S_HOST_PATH_SAVE="${S_PATH_SAVE}/vm"
+#S_HOST_PATH_SAVE="${S_PATH_SAVE}/vm"
 
 # network interface for VM
 declare -A S_VM_ETH
 S_HOST_VM_ETH['default']="inet=lxdbr0 cidr=10.0.0.1/24 base=10.0.0"
 S_HOST_VM_ETH['stock']="inet=lxdbr1 cidr=10.0.1.1/24 base=10.0.1"
 # minimal IP for DHCP container
-S_HOST_DHCP_MIN="10"
+#S_HOST_DHCP_MIN="10"
 # maximal IP for DHCP container
-S_HOST_DHCP_MAX="254"
+#S_HOST_DHCP_MAX="254"
 
 # prefix for ssh prerouting port
-S_HOST_PORT_PRE_SSH="20"
+#S_HOST_PORT_PRE_SSH="20"
 # prefix for http prerouting port
-S_HOST_PORT_PRE_HTTP="8"
+#S_HOST_PORT_PRE_HTTP="8"
 # prefix for https prerouting port
-S_HOST_PORT_PRE_HTTPS="9"
+#S_HOST_PORT_PRE_HTTPS="9"
 
 ########################  VM
 # VM sharing path
@@ -97,17 +97,17 @@ S_SERVICE['admin']="admin"
 
 ########################  LXD
 # path for containers
-S_LXD_PATH_CT="${S_HOST_PATH}/containers"
+#S_LXD_PATH_CT="${S_HOST_PATH}/containers"
 # path for containers images
-S_LXD_PATH_IMAGES="${S_HOST_PATH}/images"
+#S_LXD_PATH_IMAGES="${S_HOST_PATH}/images"
 # path for containers snapshots
-S_LXD_PATH_SNAPSHOTS="${S_HOST_PATH}/snapshots"
+#S_LXD_PATH_SNAPSHOTS="${S_HOST_PATH}/snapshots"
 # path for export
-S_LXD_PATH_EXPORT="${S_HOST_PATH}/export"
+#S_LXD_PATH_EXPORT="${S_HOST_PATH}/export"
 # root path of storage pools for
-S_LXD_PATH_PS="${S_HOST_PATH}/storage-pools"
+#S_LXD_PATH_PS="${S_HOST_PATH}/storage-pools"
 # port for remote connection
-S_LXD_PORT="8443"
+#S_LXD_PORT="8443"
 
 ########################  DOMAIN
 # FQDN of principal domain
@@ -127,21 +127,21 @@ S_IPS_DEV="92.154.29.60 129.20.228.3 129.20.228.19 129.20.228.20 129.20.228.21"
 
 ########################  RSYSLOG
 # protocol for rsyslog connection udp / tcp, default udp
-S_RSYSLOG_PTC="udp"
+#S_RSYSLOG_PTC="udp"
 # port for rsyslog connection, default 514
 S_RSYSLOG_PORT="514"
 
 ########################  HAPROXY
 # port for haproxy statistics
-S_HAPROXY_STATS_PORT="1777"
+#S_HAPROXY_STATS_PORT="1777"
 
 ########################  RSPAMD
 # port for rspamd statistics
-S_RSPAMD_STATS_PORT="1778"
+#S_RSPAMD_STATS_PORT="1778"
 
 ########################  CACHE
 # port for redis connection, default 6379
-S_CACHE_PORT="6379"
+#S_CACHE_PORT="6379"
 
 ########################  DB
 # user for http acces to db
