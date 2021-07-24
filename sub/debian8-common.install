@@ -349,9 +349,9 @@ if [ "${STR/ "$S_SERVER_TYPE" /}" != "$STR" ]; then
 
 	FILE=/etc/rsyslog.d/vm-auth.conf
 	echo "##############################  AUTH
-# forward auth logs from vm to hosting server $S_HOST_IPV4
-#auth.* @$S_HOST_IPV4
-auth.* action(type=\"omfwd\" target=\"$S_HOST_IPV4\" port=\"$S_RSYSLOG_PORT\" protocol=\"$S_RSYSLOG_PTC\")" > "$FILE"
+# forward auth logs from vm to hosting server ${S_SERVICE_LOG}
+#auth.* @${S_SERVICE_LOG}
+auth.* action(type=\"omfwd\" target=\"${S_SERVICE_LOG}\" port=\"${S_RSYSLOG_PORT}\" protocol=\"${S_RSYSLOG_PTC}\")" > "$FILE"
 fi
 
 

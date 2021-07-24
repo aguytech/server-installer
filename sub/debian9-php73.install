@@ -339,7 +339,7 @@ if [ "$_PHPMODE" = "php-fpm" ]; then
 	_evalq cp -a "$file_xtra_fpm_apache" "$file"
 
 	sed -i "s|LocationMatch \"/(status-www\|ping-www)$\"|LocationMatch \"/(${path_pm_status#/}\|${path_pm_ping#/})$\"|" "$file"
-	sed -i "s|^\(\s*Require ip\).*|\1 127.0.0.1 ${_VM_IP_BASE}.1/24 ${S_HOST_IPV4} ${_IPS_AUTH}|" "$file"
+	sed -i "s|^\(\s*Require ip\).*|\1 127.0.0.1 ${_VM_IP_BASE}.1/24 ${_IPS_AUTH}|" "$file"
 
 
 	_echoT "----------  apache2 restart"
@@ -364,7 +364,7 @@ if [ "$_PHPMODE" = "php-fpm" ]; then
 
 		# ping.php
 	    <LocationMatch \"/ping-monitor$\">
-	        Require ip 127.0.0.1 ${_VM_IP_BASE}.1/24 ${S_HOST_IPV4} $_IPS
+	        Require ip 127.0.0.1 ${_VM_IP_BASE}.1/24 $_IPS
 	        SetHandler \"proxy:unix:/run/php/${phpfpm_service}.sock|fcgi://localhost${file_pm_ping}\"
 	    </LocationMatch>
 	</IfModule>
@@ -582,12 +582,6 @@ pm.max_spare_servers = 3
 pm.max_requests = 100"
 
 fi
-
-
-####################################  USAGE
-
-_echoT "----------  conf S_PARTS $_PART"
-_confmulti_add "S_PARTS" "php" "$S_GLOBAL_CONF"
 
 
 ####################################  MONITOR

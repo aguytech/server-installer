@@ -400,15 +400,6 @@ if [ "${str/ "$S_SERVER_TYPE" /}" != "$str" ]; then
 fi
 
 
-####################################  USAGE
-
-_echoT "----------  conf S_USAGE sgbd"
-_confset "S_USAGE" "sgbd" "$S_GLOBAL_CONF"
-
-_echoT "----------  conf S_PARTS $_PART"
-_confmulti_add "S_PARTS" "$_PART" "$S_GLOBAL_CONF"
-
-
 ####################################  END
 
 _echoT "----------  conf clear pwd"

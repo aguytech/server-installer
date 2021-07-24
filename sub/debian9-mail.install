@@ -157,7 +157,7 @@ if [ "${STR/ "$S_SERVER_TYPE" /}" != "$STR" ]; then
 
 	_echoT "----------  rsyslog conf mail"
 
-	! grep -q "^mail\.\*.*@$S_HOST_IPV4:$S_RSYSLOG_PORT" /etc/rsyslog.conf && sed -i "s|^\(.\?mail\.\*.*\)$|\1\nmail.*\t\t\t\t@$S_HOST_IPV4|" /etc/rsyslog.conf
+	! grep -q "^mail\.\*.*@${S_SERVICE_LOG}:${S_RSYSLOG_PORT}" /etc/rsyslog.conf && sed -i "s|^\(.\?mail\.\*.*\)$|\1\nmail.*\t\t\t\t@${S_SERVICE_LOG}|" /etc/rsyslog.conf
 
 
 	_echoT "----------  rsyslog restart"
@@ -196,15 +196,6 @@ _echoi "${yellowb}IMAP-Server${cclear} mail.$_MYDOMAIN | Port: 143 | STARTTLS"
 _echoi "${yellowb}SMTP-Server${cclear} mail.$_MYDOMAIN | Port: 587 | STARTTLS"
 _echoi "${yellowb}Managesieve${cclear} mail.$_MYDOMAIN | Port: 4190 | STARTTLS"
 _echoi "${yellowb}Username${cclear} Complete e-mail address"
-
-
-####################################  USAGE
-
-_echoT "----------  conf S_USAGE mail"
-_confset "S_USAGE" "mail" "$S_GLOBAL_CONF"
-
-_echoT "----------  conf S_PARTS $_PART"
-_confmulti_add "S_PARTS" "$_PART" "$S_GLOBAL_CONF"
 
 
 ####################################  END

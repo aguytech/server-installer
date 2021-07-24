@@ -9,11 +9,11 @@ _echoT "\n==========================================  $S_RELEASE $_PART"
 
 __replace_val() {
 	# put right host IP
-	sed -i "s|S_HOST_IPV4|$S_HOST_IPV4|g" "$1"
+	sed -i "s|S_SERVICE_CACHE|${S_SERVICE_CACHE}|g" "$1"
 	# put right rsyslog protocol
-	sed -i "s|S_RSYSLOG_PTC|$S_RSYSLOG_PTC|g" "$1"
+	sed -i "s|S_RSYSLOG_PTC|${S_RSYSLOG_PTC}|g" "$1"
 	# put right rsyslog port
-	sed -i "s|S_RSYSLOG_PORT|$S_RSYSLOG_PORT|g" "$1"
+	sed -i "s|S_RSYSLOG_PORT|${S_RSYSLOG_PORT}|g" "$1"
 	# put the right server log path
 	sed -i "s|S_PATH_LOG|$S_PATH_LOG|g" "$1"
 }
@@ -99,15 +99,6 @@ fi
 _echoT "----------  restart"
 
 _service restart redis-server
-
-
-####################################  USAGE
-
-_echoT "----------  conf S_USAGE cache"
-_confset "S_USAGE" "cache" "$S_GLOBAL_CONF"
-
-_echoT "----------  conf S_PARTS $_PART"
-_confmulti_add "S_PARTS" "$_PART" "$S_GLOBAL_CONF"
 
 
 ####################################  END
