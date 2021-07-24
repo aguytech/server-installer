@@ -144,7 +144,8 @@ if [ -f ~/.bash_aliases ]; then
 fi
 
 # source global variables
-[ -f /etc/server/env.conf ] && . /etc/server/env.conf
+#[ -f /etc/server/env.conf ] && . /etc/server/env.conf
+[ -f /usr/local/bs/conf/env.conf ] && . /usr/local/bs/conf/env.conf
 
 # functions
 [ -f ~/.bash_functions ] && . ~/.bash_functions

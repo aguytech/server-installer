@@ -266,8 +266,13 @@ S_DB_USER_DEV=${_ANSWER:-$anstmp} && _confset "S_DB_USER_DEV" "${S_DB_USER_DEV}"
 
 _echoT "----------  conf S_MARIA_PORT"
 
-anstmp="$S_MARIA_PORT" && _askno "ports connections for mariaDB (${anstmp})"
+anstmp="$S_MARIA_PORT" && _askno "connections ports for mariadb (${anstmp})"
 S_MARIA_PORT=${_ANSWER:-$anstmp} && _confset "S_MARIA_PORT" "${S_MARIA_PORT}" "${S_GLOBAL_CONF}"
+
+_echoT "----------  conf S_PGSQL_PORT"
+
+anstmp="$S_PGSQL_PORT" && _askno "connections ports for postgre (${anstmp})"
+S_PGSQL_PORT=${_ANSWER:-$anstmp} && _confset "S_PGSQL_PORT" "${S_PGSQL_PORT}" "${S_GLOBAL_CONF}"
 
 
 ####################################  GLOBAL_CONF
