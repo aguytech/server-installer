@@ -26,7 +26,7 @@ S_RELEASE=`sed -n '/^ID=/ s|.*=||p' /etc/os-release`
 [ -d /usr/local/bs ] && export PATH=${PATH}:/usr/local/bs
 
 # source global variables
-[ -f /etc/server/env.conf ] && . /etc/server/env.conf
+[ -f /usr/local/bs/conf/env ] && . /usr/local/bs/conf/env
 
 # functions
 [ -f ~/.bash_functions ] && . ~/.bash_functions

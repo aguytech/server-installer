@@ -16,7 +16,7 @@ fi
 [ "$PS1" ] && PS1="${debian_chroot:+($debian_chroot)}\[\e[1;91m\]\u\[\e[1;37m\]@\[\e[1;32m\]\h\[\e[1;37m\]:\W\[\e[1;32m\]$\[\e[0;0m\]"
 
 # source global variables
-[ -f /etc/server/env.conf ] && . /etc/server/env.conf
+[ -f /usr/local/bs/conf/env ] && . /usr/local/bs/conf/env
 
 # aliases
 [ -f ~/.bash_aliases ] && . ~/.bash_aliases

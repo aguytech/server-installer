@@ -81,6 +81,10 @@ _echoT "----------  install"
 
 lxc exec ${_CT_NAME} -- sh -c "apk add apache2-proxy"
 
+service="apache2"
+lxc exec ${_CT_NAME} -- sh -c "rc-update add ${service}"
+lxc exec ${_CT_NAME} -- sh -c "rc-service ${service} start"
+
 
 _echoT "----------  paths"
 
@@ -161,10 +165,10 @@ lxc exec ${_CT_NAME} -- sh -c "sed -i '/<Location \/server-status>/,/<\/Location
 lxc exec ${_CT_NAME} -- sh -c "sed -i '/<Location \/server-info>/,/<\/Location>/ {s|^\(\s*\)\(Require host\).*|\1\2 ${S_DOMAIN_FQDN}\n\1Require ip ${_IPS_AUTH}|}' ${file}"
 
 
-_echoT "----------  service set"
+_echoT "----------  service restart"
 
-lxc exec ${_CT_NAME} -- sh -c "rc-update add apache2"
-lxc exec ${_CT_NAME} -- sh -c "rc-service apache2 start"
+service="apache2"
+lxc exec ${_CT_NAME} -- sh -c "rc-service ${service} restart"
 
 
 ########################################  PING

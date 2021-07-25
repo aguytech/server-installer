@@ -1,0 +1,207 @@
+#!/bin/bash
+#
+# write by Aguy
+
+
+####################################  global configuration
+
+! type _menu &>/dev/null && ! [ -f $S_GLOBAL_FUNCTIONS ] && echo -e "\e[1;31mUnable to load file '/usr/local/bs/inc-functions'${cclear} from ${BASH_SOURCE[0]}\e[0;0m" && exit 1
+. $S_GLOBAL_FUNCTIONS
+
+
+
+_echoT "\n==========================================  $S_RELEASE $_PART"
+
+
+####################################  MAIN
+
+if [ "$S_SERVER_TYPE" == vz ]; then
+
+	_echoT "----------  ctid"
+
+	# test ctid
+	[ "${S_SERVICE['admin']/$_IPTHIS/}" == "${S_SERVICE['admin']}" ] && _askno "This container is not the default for Administration, please update configuration file for 'S_SERVICE['admin']'\nPlease valid to continue"
+
+fi
+
+
+_echoT "----------  install"
+
+pmav="4.8.3"
+_askno "Which version of phpmyadmin would you install, by (default $pmav) ? "
+pmav=${_ANSWER:-$pmav}
+
+path=/var/www/html
+
+_eval "cd $path"
+[ -d phpMyAdmin-${pmav}-all-languages ] && _eval "mv phpMyAdmin-${pmav}-all-languages phpMyAdmin-${pmav}-all-languages.$(date "+%Y%m%d")"
+_eval "wget https://files.phpmyadmin.net/phpMyAdmin/$pmav/phpMyAdmin-$pmav-all-languages.tar.gz"
+_eval "tar xzf phpMyAdmin-$pmav-all-languages.tar.gz"
+_eval "ln -sv phpMyAdmin-$pmav-all-languages $pmaacro"
+_eval "chown www-data.www-data -R /var/www/localhost"
+
+
+_echoT "----------  apache conf"
+
+echo "Alias /$pmaacro $path/$pmaacro
+
+Alias /${pmaacro}old $path/${pmaacro}old
+
+<Directory $path/$pmaacro>
+    Options -Indexes -MultiViews +FollowSymLinks
+    AllowOverride None
+    AllowOverride Options
+    Order allow,deny
+    Allow from all
+
+    php_value session.gc_maxlifetime 14400
+</Directory>
+" > /etc/apache2/conf-available/$pmaacro.conf
+
+_eval "a2enconf $pmaacro"
+
+
+_echoT "----------  apache restart"
+
+_eval "service apache2 restart"
+
+
+_echoT "----------  shared path"
+
+# dir
+pathup="${S_VM_PATH_SHARE}/php/$pmaacro/up"
+! [ -d $pathup ] && mkdir -p $pathup
+
+pathsave="${S_VM_PATH_SHARE}/php/$pmaacro/save"
+! [ -d $pathsave ] && mkdir -p $pathsave
+
+find ${S_VM_PATH_SHARE}/php/$pmaacro -type d -exec chown root.www-data {} \; -exec chmod g+rw {} \; -exec chmod o-rwx {} \;
+
+sed -i "s|^\(\$cfg\['UploadDir'\] = \).*$|\1'$pathup';|" $file
+sed -i "s|^\(\$cfg\['SaveDir'\] = \).*$|\1'$pathsave';|" $file
+
+
+_echoT "----------  phpmyadmin conf access"
+
+file=config.inc.php
+
+# path
+cd $path/$pmaacro
+[ -f config.inc.php ] && mv config.inc.php config.inc.php.$(date "+%Y%m%d")
+cp config.sample.inc.php config.inc.php
+
+# asks
+_ask "Give password for remote connection to MariaDB with user 'rootadmin'"
+pwdrootadmin=$_ANSWER
+pmauser="pma"
+_askno "Give name for phpMyAdmin user to access to MariaDB ($pmauser)"
+pmauser=${_ANSWER:-$pmauser}
+pmapwd="$(_pwd)"
+_askno "Give the phpMyAdmin client password to access to MariaDB ($pmapwd)"
+pmapwd=${_ANSWER:-$pmapwd}
+pmahost="${S_SERVICE_IPS['sgbd']%% *}"
+_askno "Give the location of mariadb server 'localhost' ? ($pmahost)"
+pmahost=${_ANSWER:-$pmahost}
+
+# host
+sed -i "s|^\(\$cfg\['Servers'\]\[\$i\]\['host'\] = \).*$|\1'$pmahost';|" $file
+# control
+sed -i "s|^/* \?\(\$cfg\['Servers'\]\[\$i\]\['controlhost'\] = \).*$|\1'$pmahost';|" $file
+sed -i "s|^/* \?\(\$cfg\['Servers'\]\[\$i\]\['controlport'\] = \).*$|\1'$S_DB_MARIA_PORT';|" $file
+sed -i "s|^/* \?\(\$cfg\['Servers'\]\[\$i\]\['controluser'\] = \).*$|\1'$pmauser';|" $file
+sed -i "s|^/* \?\(\$cfg\['Servers'\]\[\$i\]\['controlpass'\] = \).*$|\1'$pmapwd';|" $file
+
+
+_echoT "----------  phpmyadmin conf global"
+
+# session timing
+str="\n/* Configuration */\n\$cfg['LoginCookieValidity'] = 60*60*4;"
+sed -i "s|^\(\$cfg\['blowfish_secret'\] = .*\)$|\1\n$str|" $file
+
+# blowfish
+pmablowfish="$(_pwd32)"
+sed -i "s|^\(\$cfg\['blowfish_secret'\] = \).*$|\1'$pmablowfish';|" $file
+# ShowAll
+str="true;"; sed -i "s|^/* \?\(\$cfg\['ShowAll'\] = \).*$|\1$str|" $file;
+# RowActionType
+str="'icons';"; sed -i "s|^/* \?\(\$cfg\['RowActionType'\] = \).*$|\1$str|" $file;
+# MaxRows
+str="100;"; sed -i "s|^/* \?\(\$cfg\['MaxRows'\] = \).*$|\1$str|" $file;
+# DefaultLang
+str="'en';"; sed -i "s|^/* \?\(\$cfg\['DefaultLang'\] = \).*$|\1$str|" $file;
+# QueryHistoryDB
+str="true;"; sed -i "s|^/* \?\(\$cfg\['QueryHistoryDB'\] = \).*$|\1$str|" $file;
+# QueryHistoryMax
+str="100;"; sed -i "s|^/* \?\(\$cfg\['QueryHistoryMax'\] = \).*$|\1$str|" $file;
+# SendErrorReports
+str="'ask';"; sed -i "s|^/* \?\(\$cfg\['SendErrorReports'\] = \).*$|\1$str|" $file;
+
+# \$cfg['MaxTableList'] = 100;
+
+
+_echoT "----------  phpmyadmin storage conf"
+
+# pma
+sed -i "s|^// \(\$cfg\['Servers'\]\[\$i\]\['pmadb'\].*\)$|\1|" $file;
+sed -i "s|^// \(\$cfg\['Servers'\]\[\$i\]\['bookmarktable'\].*\)$|\1|" $file;
+sed -i "s|^// \(\$cfg\['Servers'\]\[\$i\]\['relation'\].*\)$|\1|" $file;
+sed -i "s|^// \(\$cfg\['Servers'\]\[\$i\]\['table_info'\].*\)$|\1|" $file;
+sed -i "s|^// \(\$cfg\['Servers'\]\[\$i\]\['table_coords'\].*\)$|\1|" $file;
+sed -i "s|^// \(\$cfg\['Servers'\]\[\$i\]\['pdf_pages'\].*\)$|\1|" $file;
+sed -i "s|^// \(\$cfg\['Servers'\]\[\$i\]\['column_info'\].*\)$|\1|" $file;
+sed -i "s|^// \(\$cfg\['Servers'\]\[\$i\]\['history'\].*\)$|\1|" $file;
+sed -i "s|^// \(\$cfg\['Servers'\]\[\$i\]\['table_uiprefs'\].*\)$|\1|" $file;
+sed -i "s|^// \(\$cfg\['Servers'\]\[\$i\]\['tracking'\].*\)$|\1|" $file;
+sed -i "s|^// \(\$cfg\['Servers'\]\[\$i\]\['userconfig'\].*\)$|\1|" $file;
+sed -i "s|^// \(\$cfg\['Servers'\]\[\$i\]\['recent'\].*\)$|\1|" $file;
+sed -i "s|^// \(\$cfg\['Servers'\]\[\$i\]\['favorite'\].*\)$|\1|" $file;
+sed -i "s|^// \(\$cfg\['Servers'\]\[\$i\]\['users'\].*\)$|\1|" $file;
+sed -i "s|^// \(\$cfg\['Servers'\]\[\$i\]\['usergroups'\].*\)$|\1|" $file;
+sed -i "s|^// \(\$cfg\['Servers'\]\[\$i\]\['navigationhiding'\].*\)$|\1|" $file;
+sed -i "s|^// \(\$cfg\['Servers'\]\[\$i\]\['savedsearches'\].*\)$|\1|" $file;
+sed -i "s|^// \(\$cfg\['Servers'\]\[\$i\]\['central_columns'\].*\)$|\1|" $file;
+sed -i "s|^// \(\$cfg\['Servers'\]\[\$i\]\['designer_settings'\].*\)$|\1|" $file;
+sed -i "s|^// \(\$cfg\['Servers'\]\[\$i\]\['export_templates'\].*\)$|\1|" $file;
+#sed -i "s|^// \(\$cfg\['Servers'\]\[\$i\]\['auth_swekey_config'\].*\)$|\1|" $file;
+
+
+_echoT "----------  MariaDB create pma user"
+
+for IP in ${S_SERVICE['admin']}; do
+    _eval "mysql -h'$pmahost' -urootadmin -p'$pwdrootadmin' -e \"GRANT USAGE ON mysql.* TO '$pmauser'@'${IP}' IDENTIFIED BY '$pmapwd'\""
+    _eval "mysql -h'$pmahost' -urootadmin -p'$pwdrootadmin' -e \"GRANT SELECT, INSERT, UPDATE, DELETE ON phpmyadmin.* TO '$pmauser'@'${IP}'\""
+done
+
+
+_echoT "----------  Mariadb create tables"
+
+_eval "mysql -h$pmahost -urootadmin -p"$pwdrootadmin" < sql/create_tables.sql"
+
+
+_echoT "----------  Mariadb show users"
+
+mysql -h$pmahost -urootadmin -p$pwdrootadmin  -e "SELECT User, Host FROM mysql.user"
+
+
+_echoI "\nKeep safe the following connection informations to mariaDB : '$pmauser @ $pmahost - $pmapwd'"
+
+
+_echoT "----------  $pmauser test"
+
+[ "$S_SERVER_TYPE" == vz ] && iptest=${S_NODE_IPV4}:${S_HOST_PORT_PRE_HTTP}$(awk '{print $1}' < /proc/vz/veinfo) \
+|| iptest=$(ifconfig $S_ETH | awk '/inet addr/{print substr($2,6)}')
+_askyn "Test this address http://$iptest/$pmauser\nTo verify phpmyadmin configuration"
+[ $_ANSWER != y ] && _exit 1
+
+
+_echoT "----------  end"
+_eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"
+
+
+<<keep
+
+# config.inc.php
+# $cfg['LoginCookieValidity'] = 60*60*10;
+
+keep
+

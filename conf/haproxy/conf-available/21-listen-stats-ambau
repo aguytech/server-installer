@@ -1,7 +1,7 @@
 # AMBAU
 # included file for haproxy configuration
 
-listen stats-_MYDOMAIN_NAME
+listen stats-S_DOMAIN_FQDN_NAME
 	bind			*:1778
 
 	log				global
@@ -11,10 +11,10 @@ listen stats-_MYDOMAIN_NAME
 	option			contstats
 
 	#stats			scope . # . for only this section
-	stats			scope _MYDOMAIN_FQDN:80
-	stats			scope _MYDOMAIN_FQDN:443
-	stats			scope _MYDOMAIN_NAME
-	#stats			scope _MYDOMAIN_NAME-admin
+	stats			scope S_DOMAIN_FQDN_FQDN:80
+	stats			scope S_DOMAIN_FQDN_FQDN:443
+	stats			scope S_DOMAIN_FQDN_NAME
+	#stats			scope S_DOMAIN_FQDN_NAME-admin
 	stats			enable
 	stats			hide-version
 	stats			refresh 5s

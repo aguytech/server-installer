@@ -1,0 +1,157 @@
+#!/bin/bash
+#
+# write by Aguy
+
+for FILE in "$S_GLOBAL_CONF" "$S_GLOBAL_FUNCTIONS"; do [ ! -f "$FILE" ] && echo -e "\e[1;31merror - unable to find file '$FILE'\e[0;0m" && exit 1 || . "$S_GLOBAL_FUNCTIONS"; done
+
+PART="host-php"
+CTID="$1"
+PATH_SHARE="$2"
+PHPMODE="$3"
+PHPFPM_SERVICE="$4"
+FILEDONE="$5"
+
+_echoT "\n==========================================  debian8 $PART"
+
+
+####################################  MAIN
+
+_echoT "----------  CTID test"
+
+if [ ! "$1" ] || ! vzlist "$CTID" 1>/dev/null 2>&1; then _exite "wrong ctid '$1' or not exists"; fi
+
+
+FILE_RSYSLOG="${S_PATH_INSTALL_CONF}/rsyslog/host-php-fpm.conf"
+
+_echoT "----------  file required"
+
+FILES="$FILE_RSYSLOG"
+for FILE in $FILES; do ! [ -f "$FILE" ] && _exite "Unable to find file: '$FILE'"; done
+
+
+####################################  FAIL2BAN
+
+FILELOCAL="/etc/fail2ban/jail.local"
+
+# test host part change are already made
+if ! grep -q '\[php-url-fopen\]' "$FILELOCAL"; then
+
+	_echoT "----------  fail2ban conf"
+
+
+	echo "###########  php
+
+[php-url-fopen]
+
+enabled = false
+port    = http,https
+filter  = php-url-fopen
+logpath = $S_HOST_PATH_LOG/apache2/*.info
+maxretry = 2
+" >> $FILELOCAL
+
+	# preserve fail2ban error for missing files *.err
+	touch "$S_HOST_PATH_LOG/apache2/fail2ban.info"
+
+	_echoT "----------  firewall restart"
+
+	service firewall restart
+
+else
+	_echoT "----------  fail2ban already made"
+fi
+
+
+####################################  RSYSLOG
+
+if [ "$PHPMODE" == "php-fpm" ]; then
+
+	FILE=/etc/rsyslog.d/host-php-fpm.conf
+
+	_echoT "----------  conf save"
+
+	# save old configuration
+	[ -f "$FILE" ] && ! [ -f "$FILE.$_DDATE" ] && cp -a "$FILE" "$FILE.$DDATE"
+
+
+	_echoT "----------  rsyslog conf"
+
+	_evalq cp -a "$FILE_RSYSLOG" "$FILE"
+	_evalq "sed -i 's|S_HOST_PATH_LOG|$S_HOST_PATH_LOG|' $FILE"
+	_evalq "sed -i 's|PHPFPM_SERVICE|$PHPFPM_SERVICE|' $FILE"
+	_evalq "chown 0:0 $FILE && chmod -x $FILE"
+
+	_evalq "cp -a $FILE $FILE"
+	_evalq "sed -i 's|S_HOST_PATH_LOG|$S_HOST_PATH_LOG|' $FILE"
+	_evalq "chown 0:0 $FILE && chmod -x $FILE"
+
+fi
+
+
+####################################  LOGROTATE
+
+FILE=/etc/logrotate.d/host-php
+
+_echoT "----------  conf save"
+
+# save old configuration
+[ -f "$FILE" ] && ! [ -f "$FILE.$_DDATE" ] && cp -a "$FILE" "$FILE.$DDATE"
+
+
+_echoT "----------  logrotate conf"
+
+# logrotate
+echo -e "$S_HOST_PATH_LOG/php/*.err
+$S_HOST_PATH_LOG/php/*.warn
+$S_HOST_PATH_LOG/php/*.notice
+$S_HOST_PATH_LOG/php/*.info {
+    daily
+    missingok
+    rotate 14
+    compress
+    delaycompress
+    notifempty
+    create 640 root adm
+}" > $FILE
+
+
+####################################  HOST SHARE
+
+SHARE="share-php-default"
+HOSTSHARE="$S_HOST_PATH_SHARE/php/default"
+! [ -d "$HOSTSHARE" ] && mkdir -p "$HOSTSHARE"
+if ! grep -q "SRC_GLOBAL=$HOSTSHARE" "${S_VZ_PATH_CT_CONF}/${CTID}.mount"; then
+
+	_echoT "----------  mount $SHARE"
+
+	# create path
+	! [ -d $HOSTSHARE ] && _evalq mkdir -p "$HOSTSHARE"
+
+		! [ -e "${S_VZ_PATH_CT_CONF}/${CTID}.mount" ] && echo '
+# mount device for '$CTID'
+' > ${S_VZ_PATH_CT_CONF}/${CTID}.mount
+
+		echo "# $SHARE
+SRC_GLOBAL=$HOSTSHARE
+DST_GLOBAL=$PATH_SHARE
+! [ -p \${VE_ROOT}\${DST_GLOBAL} ] && mkdir -p \${VE_ROOT}\${DST_GLOBAL}
+mount -n --bind \${SRC_GLOBAL} \${VE_ROOT}\${DST_GLOBAL}
+" >> ${S_VZ_PATH_CT_CONF}/${CTID}.mount
+
+	chmod +x ${S_VZ_PATH_CT_CONF}/${CTID}.mount
+
+fi
+
+
+_echoT "----------  $CTID restart"
+
+_askno "The container '$CTID' will be restarted, please after confirm, relaunch installation on container '$CTID'"
+
+_evalq vzctl restart $CTID
+
+
+####################################  END
+
+_evalq sleep 2
+_echoT "----------  end"
+_evalq "ssh root@${_VM_IP_BASE}.${CTID} '! grep -q ^${PART}$ ${FILEDONE} && echo $PART >> ${FILEDONE}'"

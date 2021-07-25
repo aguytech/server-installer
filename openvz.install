@@ -192,7 +192,7 @@ for ctid in $(vzlist -aHo ctid |xargs); do
 	echo '# '$path'
 . /etc/vz/vz.conf
 . ${VE_CONFFILE}
-SRC_GLOBAL='$S_HOSTING_PATH_SHARE'
+SRC_GLOBAL='$S_HOST_PATH_SHARE'
 DST_GLOBAL='$S_VM_PATH_SHARE'
 ! [ -p ${VE_ROOT}${DST_GLOBAL} ] && mkdir -p ${VE_ROOT}${DST_GLOBAL}
 mount -n --bind ${SRC_GLOBAL} ${VE_ROOT}${DST_GLOBAL}

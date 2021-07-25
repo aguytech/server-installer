@@ -21,7 +21,7 @@ else
 fi
 
 # source global variables
-[ -f /etc/server/env.conf ] && . /etc/server/env.conf
+[ -f /usr/local/bs/conf/env ] && . /usr/local/bs/conf/env
 
 # aliases
 [ -f ~/.bash_aliases ] && . ~/.bash_aliases

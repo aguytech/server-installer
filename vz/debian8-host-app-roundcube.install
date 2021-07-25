@@ -1,0 +1,117 @@
+#!/bin/bash
+#
+# write by Aguy
+
+for FILE in "$S_GLOBAL_CONF" "$S_GLOBAL_FUNCTIONS"; do [ ! -f "$FILE" ] && echo -e "\e[1;31merror - unable to find file '$FILE'\e[0;0m" && exit 1 || . "$S_GLOBAL_FUNCTIONS"; done
+
+PART="host-app-roundcube"
+CTID="$1"
+DATA="$2"
+FILEDONE="$3"
+
+CTIP=${_VM_IP_BASE}.$CTID
+DBHOST=$(cut -d'|' -f1 <<< $DATA)
+DBNAME=$(cut -d'|' -f2 <<< $DATA)
+DBUSER=$(cut -d'|' -f3 <<< $DATA)
+DBPWD=$(cut -d'|' -f4 <<< $DATA)
+
+! [[ "$DBHOST" && "$DBNAME" && "$DBUSER" && "$DBPWD" ]] && _exite "Wrong options for '$DATA'"
+
+_echoT "\n==========================================  $S_RELEASE $PART"
+
+
+####################################  MAIN
+
+_echoT "----------  CTID test"
+
+if [ ! "$1" ] || ! vzlist "$CTID" 1>/dev/null 2>&1; then _exite "wrong ctid '$1' or not exists"; fi
+
+
+FILE_RSYSLOG="${S_PATH_INSTALL_CONF}/rsyslog/host-roundcube.conf"
+
+_echoT "----------  file required"
+
+FILES="$FILE_RSYSLOG"
+for FILE in $FILES; do ! [ -f "$FILE" ] && _exite "Unable to find file: '$FILE'"; done
+
+
+####################################  DATA
+
+_echoT "----------  password 'roothost'"
+
+# asks
+_ask "Give password to connect to database for 'roothost'@'$DBHOST'"
+PWDROOTHOST=$_ANSWER
+while ! timeout 2 mysql -h$DBHOST -uroothost -p$PWDROOTHOST -e ""; do
+    _echoE "Unable to connect to database for '$DBHOST'@'$PWDROOTHOST'"
+    _ask "Give password to connect to database for 'roothost'@'$DBHOST'"
+    PWDROOTHOST=$_ANSWER
+done
+
+
+_echoT "----------  Database create"
+
+_evalq "mysql -h'$DBHOST' -uroothost -p'$PWDROOTHOST' -e \"GRANT USAGE ON *.* TO '${DBUSER}'@'${_VM_IP_BASE}.10%' IDENTIFIED BY '${DBPWD}'\""
+_evalq "mysql -h'$DBHOST' -uroothost -p'$PWDROOTHOST' -e \"GRANT ALL PRIVILEGES ON ${DBNAME}.* TO '${DBUSER}'@'${_VM_IP_BASE}.10%'\""
+_evalq "mysql -h'$DBHOST' -uroothost -p'$PWDROOTHOST' -e \"CREATE DATABASE IF NOT EXISTS ${DBNAME} CHARACTER SET 'utf8';\""
+_evalq "mysql -h'$_DBHOST' -uroothost -p'$PWDROOTHOST' -e \"FLUSH PRIVILEGES\""
+
+
+_echoT "----------  MariaDB access"
+
+_echoi "Test if the container have access to MariaDB with the following command (test from container $CTID)"
+_echoI "mysql -h$DBHOST -u$DBUSER -p$DBPWD"
+_askyn "Confirm"
+
+
+####################################  RSYSLOG
+
+FILE=/etc/rsyslog.d/host-roundcube.conf
+
+_echoT "----------  conf save"
+
+# save old configuration
+[ -f "$FILE" ] && ! [ -f "$FILE.$_DDATE" ] && cp -a "$FILE" "$FILE.$DDATE"
+
+
+_echoT "----------  rsyslog conf"
+
+_evalq "cp -a $FILE_RSYSLOG $FILE"
+sed -i "s|S_HOST_PATH_LOG|$S_HOST_PATH_LOG|" $FILE
+_evalq "chown 0:0 $FILE && chmod -x $FILE"
+
+
+_echoT "----------  rsyslog restart"
+
+_evalq "service rsyslog restart"
+
+
+####################################  LOGROTATE
+
+FILE=/etc/logrotate.d/host-roundcube
+
+_echoT "----------  conf save"
+
+# save old configuration
+[ -f "$FILE" ] && ! [ -f "$FILE.$_DDATE" ] && cp -a "$FILE" "$FILE.$DDATE"
+
+
+_echoT "----------  logrotate conf add"
+
+# logrotate
+echo "$S_HOST_PATH_LOG/roundcube/roundcube.log {
+    missingok
+    compress
+    delaycompress
+    notifempty
+    daily
+    rotate 14
+    create 0640 www-data www-data
+}" > "$FILE"
+
+
+####################################  END
+
+_echoT "----------  end"
+
+_evalq "ssh root@${CTIP} '! grep -q ^${PART}$ ${FILEDONE} && echo $PART >> ${FILEDONE}'"

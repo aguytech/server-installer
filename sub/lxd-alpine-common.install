@@ -65,6 +65,10 @@ lxc exec ${_CT_NAME} -- sh -c "apk list -I|grep -q ^rsyslog || apk add rsyslog"
 path="/etc/rsyslog.d"
 lxc exec ${_CT_NAME} -- sh -c "[ -d ${path} ] || mkdir ${path}"
 
+service="rsyslog"
+lxc exec ${_CT_NAME} -- sh -c "rc-update add ${service}"
+lxc exec ${_CT_NAME} -- sh -c "rc-service ${service} start"
+
 
 _echoT "----------  rsyslog conf"
 

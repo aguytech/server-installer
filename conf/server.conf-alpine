@@ -22,9 +22,9 @@ S_PATH_INSTALL_CONF="${S_PATH_INSTALL}/conf"
 S_PATH_INSTALL_XTRA="${S_PATH_INSTALL}/xtra"
 
 # path for save
-#S_PATH_SAVE="/save"
+S_PATH_SAVE="/save"
 # path for backup
-#S_PATH_BACKUP="${S_PATH_SAVE}/backup"
+S_PATH_BACKUP="${S_PATH_SAVE}/backup"
 
 # path for global logs
 S_PATH_LOG="/var/log"
@@ -48,31 +48,34 @@ S_SERVER_TYPE="lxd"
 
 ########################  HOST
 # type of virtual machine hosting : docker kvm lxd
-#S_HOST_TYPE="lxd"
+S_HOST_TYPE="lxd"
 # host pathroot of VM
-#S_HOST_PATH="/var/lib/lxd"
+S_HOST_PATH="/var/lib/lxd"
 # host sharing path
-#S_HOST_PATH_SHARE="${S_HOST_PATH}/share"
+S_HOST_PATH_SHARE="${S_HOST_PATH}/share"
 # host log path for VM
-#S_HOST_PATH_LOG="${S_PATH_LOG}/lxd"
+S_HOST_PATH_LOG="${S_PATH_LOG}/lxd"
 # host sharing path to save
-#S_HOST_PATH_SAVE="${S_PATH_SAVE}/vm"
+S_HOST_PATH_SAVE="${S_PATH_SAVE}/vm"
 
 # network interface for VM
 declare -A S_HOST_VM_ETH
 S_HOST_VM_ETH['default']="inet=lxdbr0 cidr=10.0.0.1/24 base=10.0.0"
 S_HOST_VM_ETH['stock']="inet=lxdbr1 cidr=10.0.1.1/24 base=10.0.1"
+# allow an ssh connection dirrectly to VMs from internet, ON to activate, other to desactivate
+S_HOST_VM_SSH_NAT=
+
 # minimal IP for DHCP container
-#S_HOST_DHCP_MIN="10"
+S_HOST_DHCP_MIN="10"
 # maximal IP for DHCP container
-#S_HOST_DHCP_MAX="254"
+S_HOST_DHCP_MAX="254"
 
 # prefix for ssh prerouting port
-#S_HOST_PORT_PRE_SSH="20"
+S_HOST_PORT_PRE_SSH="20"
 # prefix for http prerouting port
-#S_HOST_PORT_PRE_HTTP="8"
+S_HOST_PORT_PRE_HTTP="8"
 # prefix for https prerouting port
-#S_HOST_PORT_PRE_HTTPS="9"
+S_HOST_PORT_PRE_HTTPS="9"
 
 ########################  VM
 # VM sharing path
@@ -83,30 +86,31 @@ S_VM_PATH_SAVE="/save"
 S_VM_PATH_BACKUP="${S_PATH_SAVE}/backup"
 
 ########################  SERVICES
+declare -A S_SERVICE
 # service name for proxy
-S_SERVICE_PROXY="haproxy"
+S_SERVICE['proxy']="haproxy"
 # service name for log
-S_SERVICE_LOG="rsyslog"
+S_SERVICE['log']="rsyslog"
 # service name for cache
-S_SERVICE_CACHE="redis"
+S_SERVICE['cache']="redis"
 # service name for mail
-S_SERVICE_MAIL="postfix"
+S_SERVICE['mail']="postfix"
 # service name for admin
-S_SERVICE_ADMIN="admin"
+S_SERVICE['admin']="admin"
 
 ########################  LXD
 # path for containers
-#S_LXD_PATH_CT="${S_HOST_PATH}/containers"
+S_LXD_PATH_CT="${S_HOST_PATH}/containers"
 # path for containers images
-#S_LXD_PATH_IMAGES="${S_HOST_PATH}/images"
+S_LXD_PATH_IMAGES="${S_HOST_PATH}/images"
 # path for containers snapshots
-#S_LXD_PATH_SNAPSHOTS="${S_HOST_PATH}/snapshots"
+S_LXD_PATH_SNAPSHOTS="${S_HOST_PATH}/snapshots"
 # path for export
-#S_LXD_PATH_EXPORT="${S_HOST_PATH}/export"
+S_LXD_PATH_EXPORT="${S_HOST_PATH}/export"
 # root path of storage pools for
-#S_LXD_PATH_PS="${S_HOST_PATH}/storage-pools"
+S_LXD_PATH_PS="${S_HOST_PATH}/storage-pools"
 # port for remote connection
-#S_LXD_PORT="8443"
+S_LXD_PORT="8443"
 
 ########################  DOMAIN
 # FQDN of principal domain
@@ -163,3 +167,47 @@ S_DNS_SERVER['google']="8.8.8.8 8.8.4.4"
 ########################  FUNCTIONS
 # logging verbosity / quiet info verbose debug
 S_TRACEOPT="info"
+
+<<KEEP
+
+# deleted variables
+#S_HOST_IPV4
+#S_HOST_IPV6
+#S_HOST_RELEASE
+#S_NODE_IPV4
+#S_NODE_IPV6
+#S_PARTS
+#S_SERVICE_NAMES
+#S_USAGE
+#S_VM_CTID
+#S_VM_SSH_USER
+#S_VM_SSH_PORT
+#S_VM_PATH_SHARE_GLOBAL
+#S_SERVICE_NAMES['http']
+#S_SERVICE_NAMES['sgbd']
+
+
+# modified variables
+#S_ETH_VM -> S_HOST_VM_ETH
+#S_HOSTING_TYPE -> S_HOST_TYPE
+#S_HOSTING_PATH -> S_HOST_PATH
+#S_HOSTING_PATH_SHARE -> S_HOST_PATH_SHARE
+#S_HOSTING_PATH_LOG -> S_HOST_PATH_LOG
+#S_HOSTING_PATH_SAVE -> S_HOST_PATH_SAVE
+#S_MARIA_DEV -> S_DB_USER_DEV
+#S_MARIA_HTTP -> S_DB_USER_HTTP
+#S_MARIA_PORT -> S_DB_MARIA_PORT
+#S_PATH_SAVE_BACKUP -> S_PATH_BACKUP
+#S_PGSQL_PORT -> S_DB_PGSQL_PORT
+#S_SSH_NAT -> S_HOST_VM_SSH_NAT
+#S_SERVICE_IPS['cache'] -> S_SERVICE['cache']
+#S_SERVICE_IPS['mail'] -> S_SERVICE['mail']
+#S_SERVICE_IPS['admin'] -> S_SERVICE['admin']
+#S_VM_CTID_MIN -> S_HOST_DHCP_MIN
+#S_VM_CTID_MAX -> S_HOST_DHCP_MAX
+#S_VM_PATH_SAVE_BACKUP -> S_VM_PATH_BACKUP
+#S_VM_PORT_SSH_PRE -> S_HOST_PORT_PRE_SSH
+#S_VM_PORT_HTTP_PRE -> S_HOST_PORT_PRE_HTTP
+#S_VM_PORT_HTTPS_PRE -> S_HOST_PORT_PRE_HTTPS
+
+KEEP

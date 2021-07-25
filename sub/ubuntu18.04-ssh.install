@@ -18,8 +18,8 @@ _askyn "Do you wante to generate new keys for ssh"
 
 _echoT "----------  ssh configure"
 
-_askno "Give an port for SSH connection ($_SSH_PORT) "
-[ "$_ANSWER" ] && _SSH_PORT="$_ANSWER" && _confset _SSH_PORT $_SSH_PORT $S_GLOBAL_CONF
+_askno "Give an port for SSH connection (${_SSH_PORT}) "
+[ "$_ANSWER" ] && _SSH_PORT="$_ANSWER" && _confset _SSH_PORT ${_SSH_PORT} ${S_GLOBAL_CONF}
 
 # client
 file='/etc/ssh/ssh_config'

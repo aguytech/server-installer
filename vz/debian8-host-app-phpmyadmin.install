@@ -1,0 +1,58 @@
+#!/bin/bash
+#
+# write by Aguy
+
+for FILE in "$S_GLOBAL_CONF" "$S_GLOBAL_FUNCTIONS"; do [ ! -f "$FILE" ] && echo -e "\e[1;31merror - unable to find file '$FILE'\e[0;0m" && exit 1 || . "$S_GLOBAL_FUNCTIONS"; done
+
+PART="host-app-phpmyadmin"
+CTID="$1"
+PATH_SHARE="$2"
+FILEDONE="$3"
+
+CTIP=${_VM_IP_BASE}.$CTID
+
+_echoT "\n==========================================  $S_RELEASE $PART"
+
+
+####################################  MAIN
+
+
+####################################  HOST SHARE
+
+SHARE="share-php-admin"
+HOSTSHARE="$S_HOST_PATH_SHARE/php/admin"
+if ! grep -q "SRC_GLOBAL=$HOSTSHARE" "${S_VZ_PATH_CT_CONF}/${CTID}.mount"; then
+
+	_echoT "----------  mount $SHARE"
+
+	# create path
+	! [ -d $HOSTSHARE ] && _evalq mkdir -p "$HOSTSHARE"
+
+		! [ -e "${S_VZ_PATH_CT_CONF}/${CTID}.mount" ] && echo '
+# mount device for '$CTID'
+' > ${S_VZ_PATH_CT_CONF}/${CTID}.mount
+
+		echo "# $SHARE
+SRC_GLOBAL=$HOSTSHARE
+DST_GLOBAL=$PATH_SHARE
+! [ -p \${VE_ROOT}\${DST_GLOBAL} ] && mkdir -p \${VE_ROOT}\${DST_GLOBAL}
+mount -n --bind \${SRC_GLOBAL} \${VE_ROOT}\${DST_GLOBAL}
+" >> ${S_VZ_PATH_CT_CONF}/${CTID}.mount
+
+	chmod +x ${S_VZ_PATH_CT_CONF}/${CTID}.mount
+
+fi
+
+
+_echoT "----------  $CTID restart"
+
+_askno "The container '$CTID' will be restarted, please after confirm, relaunch installation on container '$CTID'"
+
+_evalq vzctl restart $CTID
+
+
+####################################  END
+
+_echoT "----------  end"
+
+_evalq "ssh root@${CTIP} '! grep -q ^${PART}$ ${FILEDONE} && echo $PART >> ${FILEDONE}'"

@@ -482,11 +482,11 @@ _add_rules() {
 _vm_ssh() {
 	_echo "--------------------------- VM SSH"
 
-	if [ "$S_HOSTING_TYPE" == vz ] && [ "$_VM_SSH" == "ON" ] && ctids=$(vzlist -aHo ctid); then
+	if [ "$S_HOST_TYPE" == vz ] && [ "$_VM_SSH" == "ON" ] && ctids=$(vzlist -aHo ctid); then
 		for ctid in $ctids
 		do
 			ctip=${_VM_IP_BASE}.${ctid}
-			port_from=${S_VM_PORT_SSH_PRE}${ctid}
+			port_from=${S_HOST_PORT_PRE_SSH}${ctid}
 			port_to=${_PORTSSH}
 			_echoD "VM - PREROUTING $_ETH / SSH $ctip: $port_from > $port_to"
 			iptables -t nat -A PREROUTING -j DNAT -i $_ETH -p tcp -d $_IPTHIS --dport $port_from --to-destination ${ctip}:${port_to}

@@ -38,12 +38,8 @@ fi
 
 _echoT "----------  data"
 
-[ -z ${_MYORGA+x} ] && _MYORGA="$S_DOMAIN_NAME" && _confset _MYORGA "$_MYORGA"
-[ -z ${_MYDOMAIN+x} ] && _MYDOMAIN="$S_DOMAIN_FQDN" && _confset _MYDOMAIN "$_MYDOMAIN"
-[ -z ${_MYEMAIL+x} ] && _MYEMAIL="$S_DOMAIN_EMAIL_ADMIN" && _confset _MYEMAIL "$_MYEMAIL"
-
 # home
-[ "$S_SERVER_TYPE" = home ] && _evalq chown root.1000 /home && _evalq chmod g+rwx /home
+[ "$S_SERVER_TYPE" = home ] && _evalq chown root:1000 /home && _evalq chmod g+rwx /home
 
 
 _echoT "----------  timezone"
@@ -327,7 +323,7 @@ fi
 #_echoT "----------  certbot install"
 #_eval "apt install -y certbot"
 #_echoT "----------  generate certificates for mail. imap. smtp. "
-#_eval "certbot certonly --standalone --rsa-key-size 4096 -d mail.$_MYDOMAIN -d imap.$_MYDOMAIN -d smtp.$_MYDOMAIN"
+#_eval "certbot certonly --standalone --rsa-key-size 4096 -d mail.$S_DOMAIN_FQDN -d imap.$S_DOMAIN_FQDN -d smtp.$S_DOMAIN_FQDN"
 
 
 _echoT "----------  openssl conf multi-domains"
@@ -339,11 +335,11 @@ _keepcpts "$file"
 
 sed -i "/countryName_default/ s|=.*|= FR|" "$file"
 sed -i "/stateOrProvinceName_default/ s|=.*|= Britain|" "$file"
-sed -i "/0\.organizationName_default/ s|=.*|= $_MYORGA|" "$file"
-sed -i "/#\?organizationalUnitName_default/ {s|^#||;s|=.*|= $_MYORGA|}" "$file"
+sed -i "/0\.organizationName_default/ s|=.*|= ${S_DOMAIN_NAME}|" "$file"
+sed -i "/#\?organizationalUnitName_default/ {s|^#||;s|=.*|= ${S_DOMAIN_NAME}|}" "$file"
 sed -i "/localityName\s*= Locality Name/ a localityName_default\t\t= Nantes" "$file"
-sed -i "/commonName\s*= Common Name/ a commonName_default\t\t= ${_MYDOMAIN}" "$file"
-sed -i "/emailAddress\s*= Email Address/ a emailAddress_default\t\t= ${_MYEMAIL}" "$file"
+sed -i "/commonName\s*= Common Name/ a commonName_default\t\t= ${S_DOMAIN_FQDN}" "$file"
+sed -i "/emailAddress\s*= Email Address/ a emailAddress_default\t\t= ${S_DOMAIN_EMAIL_ADMIN}" "$file"
 
 
 _echoT "----------  clean"

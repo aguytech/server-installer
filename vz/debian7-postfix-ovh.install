@@ -1,0 +1,93 @@
+#!/bin/bash
+#
+# write by Aguy
+
+
+####################################  global configuration
+
+! type _menu &>/dev/null && ! [ -f $S_GLOBAL_FUNCTIONS ] && echo -e "\e[1;31mUnable to load file '/usr/local/bs/inc-functions'${cclear} from ${BASH_SOURCE[0]}\e[0;0m" && exit 1
+. $S_GLOBAL_FUNCTIONS
+
+
+_echoT "\n==========================================  $S_RELEASE $_PART"
+
+
+_echoT "----------  install"
+
+_eval "apt-get install -y postfix mailutils"
+
+
+_echoT "----------  conf main.cf"
+
+FILE=/etc/postfix/main.cf
+[ ! -f "$FILE.$_DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+
+# ask
+_ask "Please enter a value for 'myhostname'"
+myhostname=$_ANSWER
+
+relayhost='[ssl0.ovh.net]:587'
+_askno "Please enter a value for 'relayhost' (default: $relayhost)"
+relayhost="${_ANSWER:-$relayhostd}"
+
+# modify
+str="$myhostname"; sed -i "s|^\(myhostname *= \).*$|\1$str|" "$FILE"
+str="mydomain = localdomain"; ! grep -q "$str" "$FILE" && sed -i "s|^\(myhostname *= .*\)$|\1\n$str|" "$FILE"
+str="$HOSTNAME, localhost.\$S_DOMAIN_FQDN, localhost"; sed -i "s|^\(mydestination *= \).*$|\1$str|" "$FILE"
+sed -i "s|^\(relayhost *= \).*$|\1$relayhost|" "$FILE"
+
+
+_echoT "----------  relay sasl"
+
+! grep -q smtp_sasl "$FILE" && echo "
+smtp_sasl_auth_enable = yes
+smtp_sasl_password_maps = hash:/etc/postfix/sasl/passwd
+smtp_sasl_security_options = noanonymous
+smtp_use_tls = yes
+" >> "$FILE"
+
+_ask "Please enter a vaild email to allow sending emails"
+email=$_ANSWER
+
+_ask "Please enter the password of the account $email"
+emailpwd=$_ANSWER
+
+FILE=/etc/postfix/sasl/passwd
+! [ -d /etc/postfix/sasl ] && mkdir -p /etc/postfix/sasl
+echo "$relayhost $email:$emailpwd" > "$FILE"
+
+postmap "$FILE"
+
+
+_echoT "----------  postfix restart"
+
+service postfix restart
+
+
+_echoT "----------  send an email test to $S_DOMAIN_EMAIL_TECH"
+
+_mail "root <root@${S_DOMAIN_FQDN}>" $S_DOMAIN_EMAIL_TECH test "Here is the first email of Postfix from $HOSTNAME / $_IPTHIS\nYes ;o)"
+sleep 1
+_echo "${bblue}Please verify you have received the email test to $S_DOMAIN_EMAIL_TECH ${cclear}"
+
+
+_echoT "----------  fail2ban"
+
+FILE=/etc/fail2ban/jail.local
+if [ -f "$FILE" ]; then
+	_echoT "----------  fail2ban enable postfix"
+	begin='\[postfix\]'
+	end='\[[a-z-]\+\]'
+	str='true'; sed -i "/$begin/,/$end/{s|\(enabled  = \).*|\1$str|}" "$FILE"
+
+
+	_echoT "----------  firewall restart"
+
+	service firewall restart
+fi
+
+
+_echoT "----------  end"
+_eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"
+
+

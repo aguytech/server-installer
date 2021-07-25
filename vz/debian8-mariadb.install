@@ -1,0 +1,564 @@
+#!/bin/bash
+#
+# write by Aguy
+
+
+####################################  global configuration
+
+! type _menu &>/dev/null && ! [ -f $S_GLOBAL_FUNCTIONS ] && echo -e "\e[1;31mUnable to load file '/usr/local/bs/inc-functions'${cclear} from ${BASH_SOURCE[0]}\e[0;0m" && exit 1
+. $S_GLOBAL_FUNCTIONS
+
+
+<<commands
+
+pwdlocal=
+
+# show log variables
+mysql -uroot -p$pwdlocal -e "show variables like '%log%';"
+
+# show users
+mysql -uroot -p$pwdlocal -e "SELECT User, Host FROM mysql.user"
+mysql -h10.0.0.120 -uroothost -p$pwdlocal -e "SELECT User, Host FROM mysql.user"
+
+# show grants
+mysql -h 10.0.0.120 -u root -p$pwdlocal -e "SHOW GRANTS;"
+
+# tables by engine
+mysql -uroot -p"$pwdlocal" -e "SELECT ENGINE, COUNT(*) AS count FROM INFORMATION_SCHEMA.TABLES GROUP BY ENGINE;"
+
+commands
+
+_echoT "\n==========================================  $S_RELEASE $_PART"
+
+if [ "$S_SERVER_TYPE" == vz ]; then
+
+	_echoT "----------  ctid"
+
+	# test ctid
+	[ "${S_SERVICE_IPS['sgbd']/$_IPTHIS/}" == "${S_SERVICE_IPS['sgbd']}" ] && _askno "This container is not one of the defaults for Database, please update configuration file for 'S_SERVICE_IPS['sgbd']'\nPlease valid to continue"
+
+fi
+
+
+_echoT "----------  data"
+
+anstmp='10.3'
+_askno "Please enter the version of mariadb-backup to install ($anstmp)"
+backupver=${_ANSWER:-$anstmp}
+
+# pwd
+pwdtmp=`_pwd`
+_askno "Enter a password for 'root@localhost ($pwdtmp)"
+pwdlocal=${_ANSWER:-$pwdtmp}
+pwdtmp=`_pwd`
+_askno "Enter a password for 'rootremote@${S_IPS_ADMIN}' ($pwdtmp)"
+pwdremote=${_ANSWER:-$pwdtmp}
+pwdtmp=`_pwd`
+_askno "Enter a password for 'roothost@(${S_CLUSTER[*]}) ($_CLUSTER_IPS)' ($pwdtmp)"
+pwdhost=${_ANSWER:-$pwdtmp}
+pwdtmp=`_pwd`
+_askno "Enter a password for 'rootadmin@${S_SERVICE['admin']}' ($pwdtmp)"
+pwdct=${_ANSWER:-$pwdtmp}
+pwdtmp=`_pwd`
+_askno "Enter a password for '${S_DB_USER_DEV}@(${_VM_IP_BASE}.2% ${S_IPS_DEV})' ($pwdtmp)"
+pwddev=${_ANSWER:-$pwdtmp}
+pwdtmp=`_pwd`
+_askno "Enter a password for '${S_DB_USER_HTTP}@${_VM_IP_BASE}.1%' ($pwdtmp)"
+pwdhttp=${_ANSWER:-$pwdtmp}
+pwdtmp=`_pwd`
+_askno "Enter a password for 'percona@localhost' ($pwdtmp)"
+pwdpercona=${_ANSWER:-$pwdtmp}
+pwdtmp=`_pwd`
+_askno "Enter a password for 'innotop@localhost' ($pwdtmp)"
+pwdmtop=${_ANSWER:-$pwdtmp}
+
+filepass='/root/.mariadb'
+strpass=
+strpass+="root@localhost - $pwdlocal\n"
+strpass+="root@127.0.0.1 - $pwdlocal\n"
+strpass+="root@$HOSTNAME - $pwdlocal\n"
+strpass+="root@::1 - $pwdlocal\n"
+
+
+_echoT "----------  dirmngr install"
+
+_eval "apt-get install -y dirmngr"
+
+
+_echoT "----------  mariadb repos"
+
+#apt-key adv --recv-keys --keyserver keyserver.ubuntu.com 0xcbcb082a1bb943db
+# search 0xCBCB082A1BB943DB in http://keyserver.ubuntu.com:11371/
+FILE=${S_PATH_INSTALL_XTRA}/mariadb-10.3-${S_RELEASE}.key
+! [ -f "$FILE" ] && _exite "Unable to find file: '$FILE'"
+_eval "apt-key add $FILE"
+
+FILE=/etc/apt/sources.list.d/mariadb.list
+[ ! -f "$FILE.$_DDATE" ] && [ -f "$FILE" ] && _eval cp -a "$FILE" "$FILE.$DDATE"
+echo "# MariaDB 10.3 repository list - created 2018-02-01 14:48 UTC
+# http://downloads.mariadb.org/mariadb/repositories/
+deb [arch=amd64,i386] http://mariadb.mirrors.ovh.net/MariaDB/repo/10.3/debian $S_RELEASE_NAME main
+deb-src http://mariadb.mirrors.ovh.net/MariaDB/repo/10.3/debian $S_RELEASE_NAME main" > "$FILE"
+
+
+_echoT "----------  percona repos"
+
+#apt-key adv --keyserver keys.gnupg.net --recv-keys 8507EFA5
+# http://keys.gnupg.net/pks/lookup?op=get&search=0x9334A25F8507EFA5
+FILE=${S_PATH_INSTALL_XTRA}/percona-3.0.key
+! [ -f "$FILE" ] && _exite "Unable to find file: '$FILE'"
+_eval "apt-key add $FILE"
+
+FILE=/etc/apt/sources.list.d/percona.list
+! [ -f "$FILE" ] && echo "deb http://repo.percona.com/apt $S_RELEASE_NAME main testing
+deb-src http://repo.percona.com/apt $S_RELEASE_NAME main testing" > "$FILE"
+
+
+_echoT "----------  apt update"
+
+_eval "apt-get update"
+
+
+_echoT "----------  mariadb server/client & percona install"
+
+_eval "apt-get install -y mariadb-server mariadb-client mariadb-backup-${backupver} percona-toolkit"
+
+
+_echoT "----------  secure install"
+
+#/usr/bin/mysqladmin -u root password ''
+
+_echoI "Please give the root password for localhost: $pwdlocal\nAnd not change it after the next question !"
+_eval "mysql_secure_installation"
+
+#sudo iptables -I INPUT -p tcp --dport ${S_DB_MARIA_PORT} -j ACCEPT
+#service iptables save
+
+_echoT "----------  right rootremote"
+
+for ip in ${S_IPS_ADMIN}; do
+	strpass+="rootremote@${ip} - $pwdremote\n"
+	_eval "mysql -uroot -p'$pwdlocal' -e \"GRANT ALL PRIVILEGES ON *.* TO rootremote@'${ip}' IDENTIFIED BY '$pwdremote' WITH GRANT OPTION\""
+	_eval "mysql -uroot -p'$pwdlocal' -e \"GRANT PROXY ON ''@'%' TO 'rootremote'@'${ip}' WITH GRANT OPTION\""
+done
+
+
+_echoT "----------  right roothost"
+
+for id in ${!S_CLUSTER[*]}; do
+	strpass+="roothost@${ip} - $pwdhost\n"
+	_eval "mysql -uroot -p'$pwdlocal' -e \"GRANT ALL PRIVILEGES ON *.* TO roothost@'${ip}' IDENTIFIED BY '$pwdhost' WITH GRANT OPTION\""
+done
+
+
+_echoT "----------  right rootadmin"
+
+for IP in ${S_SERVICE['admin']}; do
+	strpass+="rootadmin@${IP} - $pwdct\n"
+	_eval "mysql -uroot -p'$pwdlocal' -e \"GRANT ALL PRIVILEGES ON *.* TO rootadmin@'${IP}' IDENTIFIED BY '$pwdct' WITH GRANT OPTION\""
+done
+
+
+_echoT "----------  right ${S_DB_USER_DEV}"
+
+_eval "mysql -uroot -p'$pwdlocal' -e \"GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, DROP, FILE, INDEX, ALTER, CREATE TEMPORARY TABLES, EXECUTE, CREATE VIEW, SHOW VIEW, CREATE ROUTINE, ALTER ROUTINE, EVENT, TRIGGER ON *.* TO ${S_DB_USER_DEV}@'${_VM_IP_BASE}.2%' IDENTIFIED BY '$pwddev'\""
+for ip in ${S_IPS_DEV}; do
+	strpass+="${S_DB_USER_DEV}@${ip} - $pwddev\n"
+	_eval "mysql -uroot -p'$pwdlocal' -e \"GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, DROP, FILE, INDEX, ALTER, CREATE TEMPORARY TABLES, EXECUTE, CREATE VIEW, SHOW VIEW, CREATE ROUTINE, ALTER ROUTINE, EVENT, TRIGGER ON *.* TO ${S_DB_USER_DEV}@'${ip}' IDENTIFIED BY '$pwddev'\""
+done
+
+
+_echoT "----------  right ${S_DB_USER_HTTP}"
+
+<<keep
+for IP in ${S_SERVICE_IPS['http']}; do
+	strpass+="${S_DB_USER_HTTP}@${IP} - $pwdhttp\n"
+	_eval "mysql -uroot -p'$pwdlocal' -e \"GRANT SELECT, INSERT, UPDATE ON *.* TO '${S_DB_USER_HTTP}'@'${IP}' IDENTIFIED BY '$pwdhttp'\""
+done
+keep
+strpass+="${S_DB_USER_HTTP}@${_VM_IP_BASE}.1% - $pwdhttp\n"
+_eval "mysql -uroot -p'$pwdlocal' -e \"GRANT SELECT, INSERT, UPDATE ON *.* TO '${S_DB_USER_HTTP}'@'${_VM_IP_BASE}.1%' IDENTIFIED BY '$pwdhttp'\""
+
+
+_echoT "----------  right percona"
+
+_eval "mysql -uroot -p'$pwdlocal' -e \"GRANT SELECT, INSERT, UPDATE ON *.* TO percona@'localhost' IDENTIFIED BY '$pwdpercona'\""
+85PdjbqpwiQW_F
+
+_echoT "----------  right innotop"
+
+_eval "mysql -uroot -p'$pwdlocal' -e \"CREATE USER innotop@localhost\""
+_eval "mysql -uroot -p'$pwdlocal' -e \"GRANT SUPER, RELOAD, PROCESS ON *.* to innotop@localhost\""
+_eval "mysql -uroot -p'$pwdlocal' -e \"GRANT SUPER, RELOAD, PROCESS ON *.* to innotop@'${_VM_IP_BASE}.%' IDENTIFIED BY '$pwdmtop'\""
+_eval "mysql -uroot -p'$pwdlocal' -e \"GRANT SUPER, RELOAD, PROCESS ON *.* to innotop@'${S_NODE_IPV4}' IDENTIFIED BY '$pwdmtop'\""
+strpass+="innotop@'${_VM_IP_BASE}.%' - $pwdmtop\n"
+
+
+_echoT "----------  server stop"
+
+_eval "systemctl stop mysql"
+
+<<keep
+_echoT "----------  conf mysqld_safe_syslog.cnf"
+
+FILE=/etc/mysql/conf.d/mysqld_safe_syslog.cnf
+[ ! -f "$FILE.$_DDATE" ] && _evalq cp -p "$FILE" "$FILE.$DDATE"
+
+# error_log
+sed -i "s|^\(skip_log_error.*\)$|#\1|" "$FILE"
+# syslog
+#sed -i "s|^\(syslog.*\)$|#\1|" "$FILE"
+keep
+
+_echoT "----------  mariadb conf"
+
+<<keep
+_ask "Please give an adress to bind for mysql:
+127.0.0.1 / give only a local access
+$_VM_IP_BASE.$([ "$S_SERVER_TYPE" == vz ] && awk '{print $1}' < /proc/vz/veinfo)  give an access forothers containers & host
+0.0.0.0  / give an access for the world\n"
+bindip="$_ANSWER"
+keep
+
+FILE=/etc/mysql/conf.d/mariadb.cnf
+[ ! -f "$FILE.$_DDATE" ] && _evalq cp -p "$FILE" "$FILE.$DDATE"
+
+marialog="$S_PATH_LOG/mysql"
+echo -e "# MariaDB-specific config file.
+# Read by /etc/mysql/my.cnf
+
+[client]
+# Default is Latin1, if you need UTF-8 set this (also in server section)
+default-character-set                = utf8
+
+[mysqld_safe]
+nice = 0
+
+[mysqld]
+#
+# * Character sets
+#
+# Default is Latin1, if you need UTF-8 set all this (also in client section)
+#
+character_set_server                 = utf8
+collation_server                     = utf8_unicode_ci
+
+# default engine
+default_storage_engine               = InnoDB
+
+# type of access for server
+bind-address                         = 0.0.0.0
+
+# resolve name
+skip-name-resolve
+
+# log
+log_error                            = $marialog/error.log
+general_log_file                     = $marialog/general.log
+slow_query_log_file                  = $marialog/slow.log
+long_query_time                      = 1
+log_slow_verbosity                   = explain
+expire_logs_days                     = 30
+
+log_warnings                         = 2
+general_log                          = 0
+slow_query_log                       = 1
+log-queries-not-using-indexes        = 0
+
+aria_log_file_size                   = 48M
+
+# include configuration files
+!includedir /etc/mysql/mariadb.conf.d/" > "$FILE"
+
+
+_echoT "----------  percona conf"
+
+echo "h=localhost,P=${S_DB_MARIA_PORT},u=percona,p=${pwdpercona}" > ~/.percona-toolkit.conf
+
+
+_echoT "----------  logrotate conf"
+
+FILE=/etc/logrotate.d/mysql-server
+sed -i "s|^$S_PATH_LOG/mysql/mysql.log.*|$S_PATH_LOG/mysql/mysql.log\n$S_PATH_LOG/mysql/error.log\n$S_PATH_LOG/mysql/general.log\n$S_PATH_LOG/mysql/slow.log\n{|" "$FILE"
+! grep -q delaycompress "$FILE" && sed -i "s/^\(\s\)\(compress.*\)$/\1\2\n\1delaycompress/" "$FILE"
+
+
+_echoT "----------  delete old config files"
+
+FILE="$S_PATH_LOG/mysql.log"; [ -f "$FILE" ] && rm "$FILE"
+FILE="$S_PATH_LOG/mysql.err"; [ -f "$FILE" ] && rm "$FILE"
+
+
+_echoT "----------  server start"
+
+_eval "systemctl start mysql"
+
+
+# ctid to iptables rules
+if [ "$S_SERVER_TYPE" == vz ]
+then
+	_echoT "----------  ctid to iptables rules"
+
+	_CTIDTHIS="$(_get_ctid)"
+
+	_echoI "To forward incoming traffic to this container with ctid='$_CTIDTHIS', please:"
+	_echoI "${whiteb}Exit from container ${_CTIDTHIS} and edit file '${S_PATH_CONF}/firewall.conf'"
+	_echoI "add a key to array '_PORTSIDVZ' for Ip prerouting"
+fi
+
+
+_echoT "----------  show privileges"
+
+# show users
+mysql -uroot -p"$pwdlocal" -e "FLUSH PRIVILEGES"
+mysql -uroot -p"$pwdlocal" -e "SELECT user,host FROM mysql.user WHERE Host <> 'localhost'"
+
+
+_echoT "----------  Passwords"
+
+echo -e $strpass |column -t > $filepass
+cat $filepass
+
+_echoE "\nPlease read the file '$filepass' containing password for mariadb connections\nand DELETE this file after keeping safe data"
+
+
+_echoT "----------  innotop conf"
+
+_echoT "PLease after, launch the following command to initialize innotop !\ninnotop -h localhost -u innotop --write"
+_askyn ""
+
+
+_echoT "----------  end"
+_evalq _clear_conf_pwd
+_eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"
+
+
+<<keep
+_echoT "----------  mtop install"
+
+_eval "apt-get install -y libncurses5-dev make gcc libmariadbclient-dev"
+_eval "perl -MCPAN -e 'install Curses'"
+_eval "perl -MCPAN -e 'install Getopt::Long'"
+_eval "perl -MCPAN -e 'install Net::Domain'"
+_eval "perl -MCPAN -e 'install DBI'"
+_eval "perl -MCPAN -e 'install DBD::mysql'"
+
+version='0.6.6'
+_askno "${blueb}Give the version of mtop to download from 'http://downloads.sourceforge.net/project/mtop/mtop' ($version) ${cclear}"
+version=${_ANSWER:-$version}
+cd /tmp
+wget -q "http://downloads.sourceforge.net/project/mtop/mtop/v$version/mtop-$version.tar.gz"
+tar xzf "mtop-$version.tar.gz"
+cd "mtop-$version"
+_eval "perl Makefile.PL"
+_eval "make"
+_eval "make install"
+
+
+_echoT "----------  mytop install"
+
+_eval "apt-get install -y mytop"
+
+
+_echoT "----------  mytop conf"
+
+FILE=/root/.mytop
+echo "# Local configuration file for mytop
+user=root
+pass=$pwdlocal
+host=localhost
+db=
+delay=2
+port=${S_DB_MARIA_PORT}
+socket=/var/run/mysqld/mysqld.sock
+batchmode=0
+header=1
+color=1
+idle=1" > "$FILE"
+chmod 600 "$FILE"
+keep
+
+
+<<keep
+
+---------------------------------------------------------------------------
+my.cnf()
+
+cp -p /etc/my.cnf /etc/my.cnf.$_DDATE
+cat > /etc/my.cnf << EOF
+# Example MariaDB config file for medium systems.
+#
+# This is for a system with little memory (32M - 64M) where MariaDB plays
+# an important part, or systems up to 128M where MariaDB is used together with
+# other programs (such as a web server)
+#
+# MariaDB programs look for option files in a set of
+# locations which depend on the deployment platform.
+# You can copy this option file to one of those
+# locations. For information about these locations, do:
+# 'my_print_defaults --help' and see what is printed under
+# Default options are read from the following files in the given order:
+# More information at: http://dev.mysql.com/doc/mysql/en/option-files.html
+#
+# In this file, you can use all long options that a program supports.
+# If you want to know which options a program supports, run the program
+# with the "--help" option.
+
+# The following options will be passed to all MariaDB clients
+[client]
+#password= your_password
+port= ${S_DB_MARIA_PORT}
+socket= /var/lib/mysql/mysql.sock
+
+# Here follows entries for some specific programs
+
+# The MariaDB server
+[mysqld]
+port= ${S_DB_MARIA_PORT}
+socket= /var/lib/mysql/mysql.sock
+skip-external-locking
+key_buffer_size = 16M
+max_allowed_packet = 1M
+table_open_cache = 64
+sort_buffer_size = 512K
+net_buffer_length = 8K
+read_buffer_size = 256K
+read_rnd_buffer_size = 512K
+myisam_sort_buffer_size = 8M
+
+# skip unuses engines
+skip-archive
+skip-blackhole
+skip-federated
+#skip-innodb
+
+################  LOG
+general-log-file = $S_PATH_LOG/mysql/general.log
+slow-query-log-file = $S_PATH_LOG/mysql/slow.log
+log-error = $S_PATH_LOG/mysql/error.log
+
+general-log = 1
+slow-query-log = 1
+log-queries-not-using-indexes = 1
+log-warnings = 1
+
+#log-output= FILE
+
+################ binary log
+# log-bin=/var/lib/mysql/sgbd1-bin
+# binlog-do-db=inforeg
+# max_binlog_size=500M
+# max_binlog_cache_size=1G
+
+# Point the following paths to different dedicated disks
+#tmpdir= /tmp/
+
+# Don't listen on a TCP/IP port at all. This can be a security enhancement,
+# if all processes that need to connect to mysqld run on the same host.
+# All interaction with mysqld must be made via Unix sockets or named pipes.
+# Note that using this option without enabling named pipes on Windows
+# (via the "enable-named-pipe" option) will render mysqld useless!
+#
+#skip-networking
+
+# Replication Master Server (default)
+# binary logging is required for replication
+#log-bin=mysql-bin
+
+# binary logging format - mixed recommended
+#binlog_format=mixed
+
+# required unique id between 1 and 2^32 - 1
+# defaults to 1 if master-host is not set
+# but will not function as a master if omitted
+# server-id= 1
+
+# Replication Slave (comment out master section to use this)
+#
+# To configure this host as a replication slave, you can choose between
+# two methods:
+#
+# 1) Use the CHANGE MASTER TO command (fully described in our manual) -
+#    the syntax is:
+#
+#    CHANGE MASTER TO MASTER_HOST=<host>, MASTER_PORT=<port>,
+#    MASTER_USER=<user>, MASTER_PASSWORD=<password> ;
+#
+#    where you replace <host>, <user>, <password> by quoted strings and
+#    <port> by the master's port number (3306 by default).
+#
+#    Example:
+#
+#    CHANGE MASTER TO MASTER_HOST='125.564.12.1', MASTER_PORT=3306,
+#    MASTER_USER='joe', MASTER_PASSWORD='secret';
+#
+# OR
+#
+# 2) Set the variables below. However, in case you choose this method, then
+#    start replication for the first time (even unsuccessfully, for example
+#    if you mistyped the password in master-password and the slave fails to
+#    connect), the slave will create a master.info file, and any later
+#    change in this file to the variables' values below will be ignored and
+#    overridden by the content of the master.info file, unless you shutdown
+#    the slave server, delete master.info and restart the slaver server.
+#    For that reason, you may want to leave the lines below untouched
+#    (commented) and instead use CHANGE MASTER TO (see above)
+#
+# required unique id between 2 and 2^32 - 1
+# (and different from the master)
+# defaults to 2 if master-host is set
+# but will not function as a slave if omitted
+#server-id       = 2
+#
+# The replication master for this slave - required
+#master-host     =   <hostname>
+#
+# The username the slave will use for authentication when connecting
+# to the master - required
+#master-user     =   <username>
+#
+# The password the slave will authenticate with when connecting to
+# the master - required
+#master-password =   <password>
+#
+# The port the master is listening on.
+# optional - defaults to 3306
+#master-port     =  <port>
+#
+# binary logging - not required for slaves, but recommended
+#log-bin=mysql-bin
+
+# Uncomment the following if you are using InnoDB tables
+#innodb_data_home_dir = /var/lib/mysql
+#innodb_data_file_path = ibdata1:10M:autoextend
+#innodb_log_group_home_dir = /var/lib/mysql
+# You can set .._buffer_pool_size up to 50 - 80 %
+# of RAM but beware of setting memory usage too high
+#innodb_buffer_pool_size = 16M
+#innodb_additional_mem_pool_size = 2M
+# Set .._log_file_size to 25 % of buffer pool size
+#innodb_log_file_size = 5M
+#innodb_log_buffer_size = 8M
+#innodb_flush_log_at_trx_commit = 1
+#innodb_lock_wait_timeout = 50
+
+[mysqldump]
+quick
+max_allowed_packet = 16M
+
+[mysql]
+no-auto-rehash
+# Remove the next comment character if you are not familiar with SQL
+#safe-updates
+
+[myisamchk]
+key_buffer_size = 20M
+sort_buffer_size = 20M
+read_buffer = 2M
+write_buffer = 2M
+
+[mysqlhotcopy]
+interactive-timeout
+EOF
+
+keep
