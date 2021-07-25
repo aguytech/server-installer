@@ -4,80 +4,13 @@
 
 _echoT "\n==========================================  $S_RELEASE $_PART"
 
-file_conf_env="${S_PATH_SCRIPT_CONF}/env"
-file_conf_bash_aliases="${S_PATH_SCRIPT_CONF}/.bash_aliases"
-file_conf_bash_functions="${S_PATH_SCRIPT_CONF}/.bash_functions"
-
-_echoT "------------------ file required"
-
-_require "${file_conf_bash_aliases}" "${file_conf_bash_functions}"
-
 
 ####################################  MAIN
 
-_echoT "----------  .bashrc"
+_echoT "----------  timezone"
 
-file=~/.bashrc
-_keepcpts "${file}"
-
-sed -i '/^HISTSIZE/ s/=.*/=2000/' "${file}"
-sed -i '/^HISTFILESIZE/ s/=.*/=6000/' "${file}"
-sed -i '/^#force_color_prompt/ s/^#//' "${file}"
-
-<<KEEP
-color_root="\\e[1;91m"
-case "$S_SERVER_TYPE" in
-	home)	color="\\e[1;34m" ;;
-	ovh)	color="\\e[1;32m" ;;
-	docker)	color="\\e[1;33m" ;;
-	kvm)	color="\\e[1;38;5;172m" ;;
-	lxd)	color="\\e[1;33m" ;;
-	*)		color="\\e[1;34m"; color_root=$color ;;
-esac
-KEEP
-
-color_root="\033[01;31m"
-case "$S_SERVER_TYPE" in
-	home)	color='\\[\\033[01;34m\\]' ;;
-	ovh)	color='\\[\\033[01;32m\\]' ;;
-	docker)	color='\\[\\033[01;33m\\]' ;;
-	kvm)	color='"\\[\\033[01;38;5;172m\\]' ;;
-	lxd)	color='\\[\\033[01;33m\\]' ;;
-	*)		color='\\[\\033[01;34m\\]'; color_root=$color ;;
-esac
-
-# PS1
-ps1='${debian_chroot:+($debian_chroot)}'${color}'\\h\\[\\033[00m\\]\\w\\[\\033[01;31m\\]\\$\\[\\033[00m\\]'
-# no root
-#ps1='${debian_chroot:+($debian_chroot)}\\[\\033[01;31m\\]\\u\\[\\033[00m\\]@\\[\\033[01;32m\\]\\h\\[\\033[00m\\]:\\w\\[\\033[01;31m\\]\\$\\[\\033[00m\\]'
-sed -i "\|if \[ \"\$color_prompt\" = yes \]|{n;s|=.*|='$ps1'|}" "${file}"
-
-! grep -q '${file_conf_env}' "${file}" && echo '
-
-# source global variables
-[ -f ${file_conf_env} ] && . ${file_conf_env}
-
-# aliases
-[ -f ~/.bash_aliases ] && . ~/.bash_aliases
-
-# functions
-[ -f ~/.bash_functions ] && . ~/.bash_functions
-' >> "${file}"
-
-_source "${file}"
-
-_echoT "----------  .bash_aliases"
-
-file=~/.bash_aliases
-_keepmvts "${file}"
-_evalq ln -s "$file_conf_bash_aliases" "${file}"
-
-
-_echoT "----------  .bash_functions"
-
-file=~/.bash_functions
-_keepmvts "${file}"
-_evalq ln -s "$file_conf_bash_functions" "${file}"
+[ -e /etc/localtime ] && rm /etc/localtime
+ln -s /usr/share/zoneinfo/posix/Europe/Paris /etc/localtime
 
 
 _echoT "----------  grub"
@@ -92,8 +25,23 @@ update-grub
 _echoT "----------  conf"
 
 _askyn "Please edit manually the file '${S_GLOBAL_CONF}'\nto adapt global parameters for server configuration & confirm to continue"
-[ "$_ANSWER" = n ] && _exit
+[ "$_ANSWER" = "n" ] && _exit 1
 
 
 _echoT "----------  end"
+
 _eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"
+
+<<KEEP
+color_root="\\e[1;91m"
+case "$S_SERVER_TYPE" in
+	home)	color="\\e[1;34m" ;;
+	ovh)	color="\\e[1;32m" ;;
+	docker)	color="\\e[1;33m" ;;
+	kvm)	color="\\e[1;38;5;172m" ;;
+	lxd)	color="\\e[1;33m" ;;
+	*)		color="\\e[1;34m"; color_root=$color ;;
+esac
+KEEP
+
+

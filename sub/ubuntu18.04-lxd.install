@@ -7,39 +7,76 @@ _echoT "\n==========================================  $S_RELEASE $_PART"
 
 ####################################  DATA
 
-# get inet, cidr, base
-eval ${S_VM_ETH['default']}
-cidr="${cidr:-10.0.0.1/24}"
+_echoT "----------  data"
 
-####################################  MAIN
+anstmp="${S_HOST_PATH_SHARE}" && _askno "Give a path for LXD container ($anstmp)"
+[ "${_ANSWER}" ] && S_HOST_PATH_SHARE=${_ANSWER:-$anstmp} && _confset S_HOST_PATH_SHARE "${S_HOST_PATH_SHARE}" "$S_GLOBAL_CONF"
 
-_echoT "----------  zpool"
+[ -z ${S_LXD_STORAGE+x} ] && anstmp="zfs" && _askno "Give a driver for stock storage ($anstmp)" && S_LXD_STORAGE=${_ANSWER:-$anstmp} && _confset S_LXD_STORAGE "${S_LXD_STORAGE}"  "$S_GLOBAL_CONF"
 
-_eval zpool create stock /dev/sda5
-_eval zpool create prod /dev/sda6
 
-_echoT "----------  zfs"
+####################################  STORAGE
 
-path="/var/lib/lxd"
-systemctl stop lxd.socket
-[ -d "$path" ] && rm -fR $path
-zfs create -o mountpoint=/var/lib/lxd -o compression=lz4 zroot/lxd
-systemctl start lxd.socket
+if [ "${S_LXD_STORAGE}" = "zfs" ]; then
+
+	_echoT "----------  zpool data"
+
+	blkid
+
+	[ -z ${_LXD_STORAGE_DEFAULT+x} ] && anstmp="/dev/sda5" && _askno "Give a device name for 'default' pool ($anstmp)" && _LXD_STORAGE_DEFAULT=${_ANSWER:-$anstmp} && _confset _LXD_STORAGE_DEFAULT "${_LXD_STORAGE_DEFAULT}"
+
+	[ -z ${_LXD_STORAGE_STOCK+x} ] && anstmp="/dev/sda6" && _askno "Give a device name for 'stock' pool ($anstmp)" && _LXD_STORAGE_STOCK=${_ANSWER:-$anstmp} && _confset _LXD_STORAGE_STOCK "${_LXD_STORAGE_STOCK}"
+
+	_echoT "----------  zpool"
+
+	_eval zpool create default /dev/sda5
+	_eval zpool create stock /dev/sda6
+
+	_echoT "----------  zfs"
+
+	path="/var/lib/lxd"
+	systemctl stop lxd.*
+	[ -d "${S_HOST_PATH}" ] && rm -fR ${S_HOST_PATH}
+	zfs create -o mountpoint="${S_HOST_PATH}" -o compression=lz4 zroot/lxd
+	systemctl start lxd.service
+
+elif [ "${S_LXD_STORAGE}" = "btrfs" ]; then
+
+	storage="stock"
+	if ! [ "`lxc storage list -f json|jq -r '.[] | select(.name == "'${storage}'").name'`" ]; then
+		[ "${S_LXD_STORAGE}" = btrfs ] && lxc storage create ${storage} ${S_LXD_STORAGE} source=/var/lib/lxd/storage-pools/stock
+	fi
+
+fi
+
+####################################  INSTALL
 
 _echoT "----------  install"
 
 _eval apt install -y lxd jq # criu lxd-tools
 
-_echoT "----------  conf path"
+_echoT "----------  link ${S_HOST_PATH} to /vm"
 
-path="$S_PATH_CONF/lxd"
-[ -d "$path" ] || _eval mkdir "$path"
+! [ -h /vm ] && _eval ln -s "${S_HOST_PATH}" /vm
 
-! [ -h /vm ] && _eval ln -s /var/lib/lxd /vm
+_echoT "----------  ${S_HOST_PATH_SHARE}"
 
-_echoT "----------  init"
+! [ -d "${S_HOST_PATH_SHARE}" ] && mkdir -p "${S_HOST_PATH_SHARE}"
+setfacl -R -m u:100000:rwx "${S_HOST_PATH_SHARE}"
+setfacl -R -m d:u:100000:rwx "${S_HOST_PATH_SHARE}"
+
+
+_echoT "----------  lxd init"
 
 _eval lxd init
+
+
+####################################  NETWORK
+
+_echoT "----------  network 'default'"
+
+# get : inet cidr base
+eval ${S_HOST_VM_ETH['default']}
 
 _echoT "----------  systemd-resolved"
 
@@ -52,67 +89,96 @@ _echoT "----------  systemd-resolved"
 # persistence
 path="/etc/systemd/resolved.conf.d/"
 [ -d "${path}" ] || mkdir -p "${path}"
-cidr="$(lxc network show lxdbr0 | sed -n 's|.*ipv4\.address: \(.*\)/.*|\1|p')"
 echo "# Configuration file for lxdbr0
 [Resolve]
 DNS=${cidr%/*}
-Domains=lxdbr0
-DNSSEC=no" > "${path}/lxdbr0.conf"
+Domains=${inet}
+DNSSEC=no" > "${path}/${inet}.conf"
 
 # enable systemd-resolved.service
 [ "$(systemctl is-enabled systemd-resolved.service)" ] && _eval systemctl enable systemd-resolved.service
 if [ "$(systemctl status systemd-resolved.service)" = inactive ]; then
-  _eval systemctl start systemd-resolved.service
+	_eval systemctl start systemd-resolved.service
 else
-  _eval systemctl restart systemd-resolved.service
+	_eval systemctl restart systemd-resolved.service
 fi
 
-_echoT "----------  network"
+_echoT "----------  network ${inet}"
 
-# inet for default
-_eval lxc network set lxdbr0 ipv4.address ${cidr}
-# dns domain name
-_eval lxc network set dns.domain lxdbr0
-# modify ip range for dhcp
-lxc network set lxdbr0 ipv4.dhcp.ranges ${cidr%.*}.2-${cidr%.*}.99
-# inet for stock
-base_ip=${cidr%.*}
-_eval lxc network create lxdbr1 ipv4.address=${base_ip%.*}.1.1/24
-# inet for prod
-_eval lxc network create lxdbr2 ipv4.address=${base_ip%.*}.2.1/24
+if ! [ "`lxc network list -f json|jq -r '.[] | select(.name == "'${inet}'").name'`" ]; then
+	lxc network create "${inet}" --type=bridge
+fi
+lxc network set "${inet}" ipv4.address="${cidr}" ipv4.dhcp.ranges="${cidr%.*}"."${S_HOST_DHCP_MIN}"-"${cidr%.*}"."${S_HOST_DHCP_MIN}" ipv4.nat=true dns.mode=managed dns.domain="${inet}"
 
-_echoT "----------  profile copy"
+_echoT "----------  network 'stock'"
 
-_eval lxc profile copy default stock
-_eval lxc profile copy default prod
+# get : inet cidr base
+eval ${S_HOST_VM_ETH['stock']}
 
-_echoT "----------  profile device"
+_echoT "----------  network ${inet}"
 
-_eval lxc profile device remove prod root
-_eval lxc profile device add prod root disk pool=prod path=/
-
-_echoT "----------  profile network"
-
-_eval lxc network attach-profile lxdbr1 stock eth1 eth1
-
-_eval lxc network detach-profile lxdbr0 prod
-_eval lxc network attach-profile lxdbr2 prod eth0 eth0
-
-_echoT "----------  images import"
-
-declare -A images_alias
-images_alias['images:alpine/3.11']="--alias alpine311 --alias alpine-311"
-images_alias['images:debian/9']="--alias debian9 --alias debian-9 --alias stretch"
-images_alias['images:debian/10']="--alias debian10 --alias debian-10 --alias buster"
-images_alias['ubuntu:18.04']="--alias ubuntu18.04 --alias ubuntu-18.04 --alias bionic"
-for url in ${!images_alias[*]}; do
-	_echoi "import from $url"
-	_eval lxc image copy $url local: ${images_alias[$url]} --auto-update
-done
-
-_echoT "----------  init"
+if ! [ "`lxc network list -f json|jq -r '.[] | select(.name == "'${inet}'").name'`" ]; then
+	lxc network create "${inet}" --type=bridge
+fi
+lxc network set "${inet}" ipv4.address="${cidr}" ipv4.dhcp.ranges="${cidr%.*}"."${S_HOST_DHCP_MIN}"-"${cidr%.*}"."${S_HOST_DHCP_MIN}" ipv4.nat=true dns.mode=managed dns.domain="${inet}"
 
 
+####################################  PROFILE
+
+
+_echoT "----------  profiles stock"
+
+profile="stock"
+if ! [ "`lxc profile list --format=json | jq -r '.[] | select(.name == "'${profile}'").name'`" ]; then
+	lxc profile create ${profile}
+	lxc profile device add stock root disk pool=stock path=/
+	lxc network attach-profile lxdbr1 stock eth0
+fi
+
+_echoT "----------  profiles global"
+
+profile="global"
+path="${_LXD_PATH}/global"
+path_ct="/var/share/global"
+! [ -d "${path}" ] && sudo mkdir -p "${path}"
+
+if ! [ "`lxc profile list --format=json | jq -r '.[] | select(.name == "'${profile}'").name'`" ]; then
+	lxc profile create ${profile}
+	lxc profile device add ${profile} share disk source="${path}" path="${path_ct}"
+fi
+
+_echoT "----------  profiles www/share"
+
+profile="www"
+path="${_LXD_PATH}/www/share"
+path_ct="/var/share/www"
+! [ -d "${path}" ] && sudo mkdir -p "${path}"
+
+if ! [ "`lxc profile list --format=json | jq -r '.[] | select(.name == "'${profile}'").name'`" ]; then
+	lxc profile create ${profile}
+	lxc profile device add ${profile} share disk source="${path}" path="${path_ct}"
+fi
+
+_echoT "----------  profiles sgbd/share"
+
+profile="sgbd"
+path="${_LXD_PATH}/sgbd/share"
+path_ct="/var/share/sgbd"
+! [ -d "${path}" ] && sudo mkdir -p "${path}"
+
+if ! [ "`lxc profile list --format=json | jq -r '.[] | select(.name == "'${profile}'").name'`" ]; then
+	lxc profile create ${profile}
+	lxc profile device add ${profile} share disk source="${path}" path="${path_ct}"
+fi
+
+
+_echoT "----------  lxc container"
+
+_echoi "To install and configure container use:"
+_echoi "$(ls -1 ${S_PATH_INSTALL/-desktop/}/lxd-*)"
+
+
+####################################  END
 
 _echoT "----------  end"
 _eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"

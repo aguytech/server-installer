@@ -77,13 +77,13 @@ while [ "${_PART}" != "quit" ]; do
 			quit)
 				break
 				;;
-			iptables) # ovh home
+			haproxy) # ovh home
+				_source "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
+				;;
+			iptables) # ovh
 				_source "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
 				;;
 			lxd) # ovh home
-				_source "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
-				;;
-			haproxy) # ovh home
 				_source "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
 				;;
 			*)

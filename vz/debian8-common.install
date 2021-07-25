@@ -10,9 +10,9 @@ file_bash_aliases="${S_PATH_SCRIPT_CONF}/.bash_aliases"
 file_bash_functions="${S_PATH_SCRIPT_CONF}/.bash_functions"
 path_install_bash_completion="${S_PATH_INSTALL_CONF}/bash_completion"
 
-_echoT "------------------ file required"
-files="${file_env} ${file_bash_aliases} ${file_bash_functions}"
-for file in ${files}; do ! [ -e "${file}" ] && _exite "Unable to find file: '${file}'"; done
+_echoT "----------  required files"
+
+_require "${file_env}" "${file_bash_aliases}" "${file_bash_functions}"
 
 
 ####################################  MAIN
@@ -30,20 +30,19 @@ esac
 
 _echoT "----------  root password change"
 
-_askyn "Would you change the default root password "
-if [ "$_ANSWER" == y ]; then
+_askyn "Do you change the default root password"
+if [ "$_ANSWER" = y ]; then
 	_ask "Please enter a root password"
-	passwd root <<EOF
+	passwd root <<<"$_ANSWER
 $_ANSWER
-$_ANSWER
-EOF
+"
 fi
 
 
 _echoT "----------  home"
 
 # home
-[ "$S_SERVER_TYPE" == home ] && _evalq "chown root.1000 /home; chmod g+rwx /home"
+[ "$S_SERVER_TYPE" = home ] && _evalq chown root:1000 /home && _evalq chmod g+rwx /home
 
 
 if [ "$S_SERVER_TYPE" != "lxd" ]; then
@@ -54,12 +53,6 @@ if [ "$S_SERVER_TYPE" != "lxd" ]; then
 	_eval "dpkg-reconfigure dash"
 
 fi
-
-
-_echoT "----------  timezone"
-
-[ -e /etc/localtime ] && rm /etc/localtime
-ln -sv /usr/share/zoneinfo/posix/Europe/Paris /etc/localtime
 
 
 _echoT "----------  .bashrc"
@@ -92,30 +85,20 @@ fi
 [ -f ~/.bash_functions ] && . ~/.bash_functions
 EOF
 
+_source "${file}"
 
 _echoT "----------  .bash_aliases"
 
 file=~/.bash_aliases
 _keepmvts "${file}"
-_evalq "ln -sv ${file_bash_aliases} ${file}"
+_evalq ln -s "${file_bash_aliases}" "${file}"
 
 
 _echoT "----------  .bash_functions"
 
 file=~/.bash_functions
 _keepmvts "${file}"
-_evalq "ln -sv ${file_bash_functions} ${file}"
-
-
-_echoT "----------  grub"
-
-file=/etc/default/grub
-if [ -f "${file}" ]; then
-	# grub timeout
-	STR=0; sed -i "s/^\(GRUB_TIMEOUT=\).*/\1$STR/" "${file}"
-
-	update-grub
-fi
+_evalq ln -s "$file_bash_functions" "${file}"
 
 
 _echoT "----------  repository"
@@ -242,6 +225,18 @@ if [ "${STR/ "$S_SERVER_TYPE" /}" != "$STR" ]; then
 fi
 
 
+_echoT "----------  conf vim"
+
+file="/etc/vim/vimrc"
+sed -i "s|^\"\(syntax\).*|\1 on|" "${file}"
+
+opts="background=dark showmatch"
+# uncomment
+for opt in $opts; do
+	sed -i "s|^\"\(set $opt.*\)$|\1|" "${file}"
+done
+
+
 _echoT "----------  conf nano"
 
 # *.nanorc
@@ -268,7 +263,7 @@ _echoT "----------  cron conf"
 
 file="/etc/crontab"
 STR="MAILTO=$S_DOMAIN_EMAIL_TECH"
-! grep -q '^MAILTO' "$FILE" && sed -i "/^PATH=.*/ a $STR" "$FILE"
+! grep -q '^MAILTO' "${file}" && sed -i "/^PATH=.*/ a $STR" "${file}"
 
 
 ####################################  RSYSLOG
@@ -279,16 +274,16 @@ file=/etc/rsyslog.d/cron.conf
 echo "#################  CRON
 # rsyslog filter to separate cron log
 cron.* action(type=\"omfile\" dirCreateMode=\"0700\" FileCreateMode=\"0644\" File=\"$S_PATH_LOG/cron.log\")
-& stop" > "$FILE"
+& stop" > "${file}"
 
 
 _echoT "----------  rsyslog mail conf"
 
 file="/etc/rsyslog.conf"
 # remove mail logs for mail.log
-#sed -i 's|^\(mail\.\*.*\)$|#\1|' "$FILE"
+#sed -i 's|^\(mail\.\*.*\)$|#\1|' "${file}"
 # remove mail logs for syslog
-! grep -q "mail\.\* *stop" "$FILE" && sed -i 's|^\(mail\.err.*\)$|\1\nmail.*              stop|' "$FILE"
+! grep -q "mail\.\* *stop" "${file}" && sed -i 's|^\(mail\.err.*\)$|\1\nmail.*              stop|' "${file}"
 
 
 STR=" ovh home "
@@ -338,11 +333,11 @@ if [ "${STR/ "$S_SERVER_TYPE" /}" != "$STR" ]; then
 
 	_echoT "----------  rsyslog conf auth"
 
-	FILE=/etc/rsyslog.d/vm-auth.conf
+	file=/etc/rsyslog.d/vm-auth.conf
 	echo "##############################  AUTH
 # forward auth logs from vm to hosting server ${S_SERVICE_LOG}
 #auth.* @${S_SERVICE_LOG}
-auth.* action(type=\"omfwd\" target=\"${S_SERVICE_LOG}\" port=\"${S_RSYSLOG_PORT}\" protocol=\"${S_RSYSLOG_PTC}\")" > "$FILE"
+auth.* action(type=\"omfwd\" target=\"${S_SERVICE_LOG}\" port=\"${S_RSYSLOG_PORT}\" protocol=\"${S_RSYSLOG_PTC}\")" > "${file}"
 fi
 
 
@@ -353,12 +348,14 @@ _eval _service restart rsyslog
 
 _echoT "----------  rsyslog mail conf"
 
-FILE="/etc/rsyslog.conf"
+#file="/etc/rsyslog.conf"
 # remove mail logs for mail.log
-#sed -i 's|^\(mail\.\*.*\)$|#\1|' "$FILE"
+#sed -i 's|^\(mail\.\*.*\)$|#\1|' "${file}"
 # remove mail logs for syslog
-#! grep -q "mail\.\* *stop" "$FILE" && sed -i 's|^\(mail\.err.*\)$|\1\nmail.*              stop|' "$FILE"
+#! grep -q "mail\.\* *stop" "${file}" && sed -i 's|^\(mail\.err.*\)$|\1\nmail.*              stop|' "${file}"
 
+
+####################################  LOGROTATE
 
 _echoT "----------  logrotate server conf"
 
@@ -369,7 +366,7 @@ echo "# Logrotate file for server functions logs
 #$S_PATH_LOG_INSTALL/*.info
 $S_PATH_LOG_SERVER/*.log
 $S_PATH_LOG_SERVER/*.err
-$S_PATH_LOG_SERVER/*.info
+$S_PATH_LOG_SERVER/*.debug
 {
     missingok
     compress
@@ -380,17 +377,17 @@ $S_PATH_LOG_SERVER/*.info
 }
 " > /etc/logrotate.d/server
 
-FILE=/etc/logrotate.d/exim4-base
+file=/etc/logrotate.d/exim4-base
 STR='7'
-[ -f "$FILE" ] && sed -i "s/\(\t\+rotate\).*/\1 $STR/" "$FILE"
+[ -f "${file}" ] && sed -i "s/\(\t\+rotate\).*/\1 $STR/" "${file}"
 
-FILE=/etc/logrotate.d/munin-node
+file=/etc/logrotate.d/munin-node
 STR='7'
-[ -f "$FILE" ] && sed -i "s/\(\t\+rotate\).*/\1 $STR/" "$FILE"
+[ -f "${file}" ] && sed -i "s/\(\t\+rotate\).*/\1 $STR/" "${file}"
 
-FILE=/etc/logrotate.d/rsyslog
+file=/etc/logrotate.d/rsyslog
 STR='5'
-[ -f "$FILE" ] && sed -i "s/\(\t\+rotate\) 4/\1 $STR/" "$FILE"
+[ -f "${file}" ] && sed -i "s/\(\t\+rotate\) 4/\1 $STR/" "${file}"
 
 
 STR=" ovh home "
@@ -398,24 +395,27 @@ if [ "${STR/ "$S_SERVER_TYPE" /}" != "$STR" ]; then
 
 	_echoT "----------  logrotate rsyslog conf"
 
-	FILE=/etc/logrotate.d/rsyslog
-	_eval "sed -i '\|$S_PATH_LOG/auth.log|d' '$FILE'"
-	_eval "sed -i '1i$S_PATH_LOG/auth.log' '$FILE'"
+	file=/etc/logrotate.d/rsyslog
+	_eval "sed -i '\|$S_PATH_LOG/auth.log|d' '${file}'"
+	_eval "sed -i '1i$S_PATH_LOG/auth.log' '${file}'"
 
-	_eval "sed -i '\|$S_PATH_LOG/cron.log|d' '$FILE'"
-	_eval "sed -i '1i$S_PATH_LOG/cron.log' '$FILE'"
+	_eval "sed -i '\|$S_PATH_LOG/cron.log|d' '${file}'"
+	_eval "sed -i '1i$S_PATH_LOG/cron.log' '${file}'"
 
 
 	_echoT "----------  bind conf -IPV6"
 
-	FILE=/etc/default/bind9
-	SCH="OPTIONS="; STR="\"-u bind -4\""; sed -i "s|^\($SCH\).*|\1$STR|" "$FILE"
+	file=/etc/default/bind9
+	sch="OPTIONS="; str="\"-u bind -4\""; sed -i "s|^\(${sch}\).*|\1${str}|" "${file}"
 
 	_service restart bind9
 fi
 
 
 if [ "$S_SERVER_TYPE" != "vz" ]; then
+
+
+	####################################  NTP
 
 	_echoT "----------  install ntp"
 
@@ -424,10 +424,10 @@ if [ "$S_SERVER_TYPE" != "vz" ]; then
 
 	_echoT "----------  conf ntp"
 
-	FILE=/etc/ntp.conf
-	# /etc/ntp.conf
-	[ -f "$FILE" ] && [ ! -f "$FILE.$_DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
-	STR='.fr.pool.ntp.org'; sed -i "s/^\(server .\).*/\1$STR/" "$FILE"
+	file=/etc/ntp.conf
+	_keepcpts "${file}"
+
+	str='.fr.pool.ntp.org'; sed -i "s/^\(server .\).*/\1${str}/" "$file"
 	_eval "systemctl start ntp"
 fi
 
@@ -447,20 +447,20 @@ _service restart cron
 #_eval "certbot certonly --standalone --rsa-key-size 4096 -d mail.$S_DOMAIN_FQDN -d imap.$S_DOMAIN_FQDN -d smtp.$S_DOMAIN_FQDN"
 
 
-_echoT "----------  Openssl conf multi-domains"
+_echoT "----------  openssl conf multi-domains"
 
 _eval "apt install -y openssl"
 
-FILE='/etc/ssl/openssl.cnf'
-[ -f "$FILE" ] && ! [ -f "$FILE.$_DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+file='/etc/ssl/openssl.cnf'
+_keepcpts "${file}"
 
-SCH='countryName_default';            STR='FR';       sed -i "s|^\(${SCH}\s*= \).*$|\1${STR}|" "$FILE"
-SCH='stateOrProvinceName_default';    STR='Britain';  sed -i "s|^\(${SCH}\s*= \).*$|\1${STR}|" "$FILE"
-SCH="0\\.organizationName_default";   STR="${S_DOMAIN_NAME}";  sed -i "s|^\(${SCH}\s*= \).*$|\1${STR}|" "$FILE"
-SCH="organizationalUnitName_default"; STR="${S_DOMAIN_NAME}";  sed -i "s|^#\?\(${SCH}\s*=\).*$|\1 ${STR}|" "$FILE"
-SCH='localityName'; STR="localityName_default\t\t= Nantes"; sed -i "s|^\(${SCH}\s*= Locality Name.*\)$|\1\n${STR}|" "$FILE"
-SCH='commonName'; STR="commonName_default\t\t= ${S_DOMAIN_FQDN}"; sed -i "s|^\(${SCH}\s*= Common Name.*\)$|\1\n${STR}|" "$FILE"
-SCH='emailAddress'; STR="emailAddress_default\t\t= ${S_DOMAIN_EMAIL_ADMIN}"; sed -i "s|^\(${SCH}\s*= Email Address.*\)$|\1\n${STR}|" "$FILE"
+SCH='countryName_default';            STR='FR';       sed -i "s|^\(${SCH}\s*= \).*$|\1${STR}|" "${file}"
+SCH='stateOrProvinceName_default';    STR='Britain';  sed -i "s|^\(${SCH}\s*= \).*$|\1${STR}|" "${file}"
+SCH="0\\.organizationName_default";   STR="${S_DOMAIN_NAME}";  sed -i "s|^\(${SCH}\s*= \).*$|\1${STR}|" "${file}"
+SCH="organizationalUnitName_default"; STR="${S_DOMAIN_NAME}";  sed -i "s|^#\?\(${SCH}\s*=\).*$|\1 ${STR}|" "${file}"
+SCH='localityName'; STR="localityName_default\t\t= Nantes"; sed -i "s|^\(${SCH}\s*= Locality Name.*\)$|\1\n${STR}|" "${file}"
+SCH='commonName'; STR="commonName_default\t\t= ${S_DOMAIN_FQDN}"; sed -i "s|^\(${SCH}\s*= Common Name.*\)$|\1\n${STR}|" "${file}"
+SCH='emailAddress'; STR="emailAddress_default\t\t= ${S_DOMAIN_EMAIL_ADMIN}"; sed -i "s|^\(${SCH}\s*= Email Address.*\)$|\1\n${STR}|" "${file}"
 
 
 _echoT "----------  clean"

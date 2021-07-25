@@ -10,20 +10,23 @@ fallback_relay = [admin2.hl.local]
 
 TODO
 
+
 _echoT "\n==========================================  $S_RELEASE $_PART"
 
-path_install_bash_completion="${S_PATH_SCRIPT_CONF}/bash_completion"
-file_conf_vim="${S_PATH_SCRIPT_CONF}/.vimrc"
-file_conf_tmux="${S_PATH_SCRIPT_CONF}/.tmux.conf"
-file_conf_postfix_master="${S_PATH_INSTALL_CONF}/mail/master-satellite.cf"
-file_conf_postfix_main="${S_PATH_INSTALL_CONF}/mail/main-satellite.cf"
+file_env="${S_PATH_SCRIPT_CONF}/env"
+file_bash_aliases="${S_PATH_SCRIPT_CONF}/.bash_aliases"
+file_bash_functions="${S_PATH_SCRIPT_CONF}/.bash_functions"
+path_install_bash_completion="${S_PATH_INSTALL_CONF}/bash_completion"
 
-####################################  MAIN
+file_vim="${S_PATH_SCRIPT_CONF}/.vimrc"
+file_tmux="${S_PATH_SCRIPT_CONF}/.tmux.conf"
 
 _echoT "----------  required files"
 
-_require "$file_conf_vim" "$file_conf_tmux" "$file_conf_postfix_main" "$file_conf_postfix_master"
+_require "${file_env}" "${file_bash_aliases}" "${file_bash_functions}" "${file_vim}" "${file_tmux}"
 
+
+####################################  MAIN
 
 _echoT "----------  root password change"
 
@@ -36,16 +39,63 @@ $_ANSWER
 fi
 
 
-_echoT "----------  data"
+_echoT "----------  home"
 
 # home
 [ "$S_SERVER_TYPE" = home ] && _evalq chown root:1000 /home && _evalq chmod g+rwx /home
 
 
-_echoT "----------  timezone"
+_echoT "----------  .bashrc"
 
-[ -e /etc/localtime ] && rm /etc/localtime
-ln -s /usr/share/zoneinfo/posix/Europe/Paris /etc/localtime
+file=~/.bashrc
+_keepcpts "${file}"
+
+sed -i '/^HISTSIZE/ s/=.*/=2000/' "${file}"
+sed -i '/^HISTFILESIZE/ s/=.*/=6000/' "${file}"
+sed -i '/^#force_color_prompt/ s/^#//' "${file}"
+
+color_root="\033[01;31m"
+case "$S_SERVER_TYPE" in
+	home)	color='\\[\\033[01;34m\\]' ;;
+	ovh)	color='\\[\\033[01;32m\\]' ;;
+	docker)	color='\\[\\033[01;33m\\]' ;;
+	kvm)	color='"\\[\\033[01;38;5;172m\\]' ;;
+	lxd)	color='\\[\\033[01;33m\\]' ;;
+	*)		color='\\[\\033[01;34m\\]'; color_root=$color ;;
+esac
+
+# PS1
+ps1='${debian_chroot:+($debian_chroot)}'${color}'\\h\\[\\033[00m\\]\\w\\[\\033[01;31m\\]\\$\\[\\033[00m\\]'
+# no root
+#ps1='${debian_chroot:+($debian_chroot)}\\[\\033[01;31m\\]\\u\\[\\033[00m\\]@\\[\\033[01;32m\\]\\h\\[\\033[00m\\]:\\w\\[\\033[01;31m\\]\\$\\[\\033[00m\\]'
+sed -i "\|if \[ \"\$color_prompt\" = yes \]|{n;s|=.*|='$ps1'|}" "${file}"
+
+! grep -q '${file_env}' "${file}" && echo '
+
+# source global variables
+[ -f ${file_env} ] && . ${file_env}
+
+# aliases
+[ -f ~/.bash_aliases ] && . ~/.bash_aliases
+
+# functions
+[ -f ~/.bash_functions ] && . ~/.bash_functions
+' >> "${file}"
+
+_source "${file}"
+
+_echoT "----------  .bash_aliases"
+
+file=~/.bash_aliases
+_keepmvts "${file}"
+_evalq ln -s "${file_bash_aliases}" "${file}"
+
+
+_echoT "----------  .bash_functions"
+
+file=~/.bash_functions
+_keepmvts "${file}"
+_evalq ln -s "${file_bash_functions}" "${file}"
 
 
 _echoT "----------  repository"
@@ -63,7 +113,7 @@ if [ "${str/ "$S_SERVER_TYPE" /}" != "$str" ]; then
 # http://downloads.mariadb.org/mariadb/repositories/
 deb [arch=amd64,arm64,ppc64el] http://mirror.mva-n.net/mariadb/repo/10.4/ubuntu bionic main
 # deb-src [arch=amd64,arm64,ppc64el] http://mirror.mva-n.net/mariadb/repo/10.4/ubuntu bionic main
-" > "$file"
+" > "${file}"
 
 	_echoT "----------  pgsql repos"
 
@@ -71,11 +121,8 @@ deb [arch=amd64,arm64,ppc64el] http://mirror.mva-n.net/mariadb/repo/10.4/ubuntu 
 
 	file=/etc/apt/sources.list.d/pgdg.list
 	echo "# PostgreSQL
-deb http://apt.postgresql.org/pub/repos/apt/ ${S_RELEASE_NAME}-pgdg main" > "$file"
+deb http://apt.postgresql.org/pub/repos/apt/ ${S_RELEASE_NAME}-pgdg main" > "${file}"
 
-	_echoT "----------  yq repos"
-
-	add-apt-repository ppa:rmescandon/yq
 fi
 
 
@@ -86,56 +133,19 @@ _eval "upgrade"
 
 _echoT "----------  install base"
 
-_eval "apt install -y zfsutils-linux apt-utils bsdmainutils cron curl htop iotop logrotate lsb-release man netcat openssh-server rsync jq yq" # vim acpid apt-file apt-utils dstat hdparm iputils-tracepath jwhois mlocate mtop p7zip p7zip-plugins pciutils wget telnet
+_eval "apt install -y zfsutils-linux apt-utils bsdmainutils cron curl htop iotop logrotate lsb-release man netcat openssh-server rsync jq" # vim acpid apt-file apt-utils dstat hdparm iputils-tracepath jwhois mlocate mtop p7zip p7zip-plugins pciutils wget telnet yq
 
 
 _echoT "----------  bash completion"
 
-_evalq cp -a "$path_install_bash_completion"/* "/usr/share/bash-completion/completions/"
+_evalq cp -a "${path_install_bash_completion}"/* "/usr/share/bash-completion/completions/"
 
-
-<<KEEP
-_echoT "----------  postfix install"
-
-_askno 'choose "No configuration for installation"'
-_eval "apt install -y postfix" # exim4
-
-_echoT "----------  postfix conf"
-
-# master conf
-file="/etc/postfix/master.cf"
-_keepcpts "$file"
-cp -a "$file_conf_postfix_master" "$file"
-
-# main conf
-file="/etc/postfix/main.cf"
-_keepcpts "$file"
-cp -a "$file_conf_postfix_main" "$file"
-
-sed -i "/^myhostname/ c myhostname = ${HOSTNAME}.ovh.net" "$file"
-sed -i "s|^\(mydestination.*\)$|#\1\nmydestination = localhost|" "$file"
-sed -i "/^relayhost/ c relayhost = [smtp.${S_DOMAIN_FQDN}]:25" "$file"
-
-
-_echoT "----------  postfix restart"
-
-_service restart postfix
-
-str=" ovh home "
-if [ "${str/ "$S_SERVER_TYPE" /}" != "$str" ]; then
-
-	_echoT "----------  install tools"
-
-	_eval "apt-get install -y git lnav multitail mariadb-client postgresql-client"
-
-fi
-KEEP
 
 _echoT "----------  conf tmux"
 
 file="$HOME/.tmux.conf"
-_keepmvts "$file"
-_eval ln -s "$file_conf_tmux" "$file"
+_keepmvts "${file}"
+_eval ln -s "${file_tmux}" "${file}"
 
 # colorscheme
 _eval cp ${S_PATH_INSTALL_CONF}/vim/*.vim /usr/share/vim/vim*/colors/
@@ -145,8 +155,8 @@ _echoT "----------  conf vim"
 _eval update-alternatives --set editor /usr/bin/vim.basic
 
 file="$HOME/.vimrc"
-_keepmvts "$file"
-_eval ln -s "$file_conf_vim" "$file"
+_keepmvts "${file}"
+_eval ln -s "${file_vim}" "${file}"
 
 # colorscheme
 _eval cp ${S_PATH_INSTALL_CONF}/vim/*.vim /usr/share/vim/vim*/colors/
@@ -159,12 +169,12 @@ for str in conf install; do
 done
 
 file=/etc/nanorc
-_keepcpts "$file"
+_keepcpts "${file}"
 
-sed -i 's|^.*\(set tabsize\).*|\1 4|' "$file"
-sed -i 's|^\(set cut.*\)$|# \1|' "$file"
-sed -i 's|^\(set linenumbers.*\)$|# \1|' "$file"
-sed -i '/^# *include/ s/^# //' "$file"
+sed -i 's|^.*\(set tabsize\).*|\1 4|' "${file}"
+sed -i 's|^\(set cut.*\)$|# \1|' "${file}"
+sed -i 's|^\(set linenumbers.*\)$|# \1|' "${file}"
+sed -i '/^# *include/ s/^# //' "${file}"
 
 # various
 opts="constantshow historylog matchbrackets multibuffer nohelp softwrap"
@@ -172,7 +182,7 @@ opts="constantshow historylog matchbrackets multibuffer nohelp softwrap"
 opts+=" errorcolor functioncolor keycolor numbercolor selectedcolor statuscolor stripecolor titlecolor"
 # uncomment
 for opt in $opts; do
-	sed -i "s|^.*\(set $opt .*\)$|\1|" "$file"
+	sed -i "s|^.*\(set $opt .*\)$|\1|" "${file}"
 done
 
 
@@ -180,7 +190,7 @@ _echoT "----------  cron conf"
 
 file="/etc/crontab"
 str="MAILTO=$S_DOMAIN_EMAIL_TECH"
-! grep -q '^MAILTO' "$file" && sed -i "/^PATH=.*/ a $str" "$file"
+! grep -q '^MAILTO' "${file}" && sed -i "/^PATH=.*/ a $str" "${file}"
 
 
 _echoT "----------  rsyslog cron conf"
@@ -189,7 +199,7 @@ file=/etc/rsyslog.d/cron.conf
 echo "#  CRON
 # rsyslog filter to separate cron log
 cron.* action(type=\"omfile\" dirCreateMode=\"0700\" FileCreateMode=\"0644\" File=\"$S_PATH_LOG/cron.log\")
-& stop" > "$file"
+& stop" > "${file}"
 
 
 <<KEEP
@@ -197,9 +207,9 @@ _echoT "----------  rsyslog mail conf"
 
 file="/etc/rsyslog.conf"
 # remove mail logs for mail.log
-#sed -i 's|^\(mail\.\*.*\)$|#\1|' "$file"
+#sed -i 's|^\(mail\.\*.*\)$|#\1|' "${file}"
 # remove mail logs for syslog
-! grep -q "mail\.\* *stop" "$file" && sed -i 's|^\(mail\.err.*\)$|\1\nmail.*              stop|' "$file"
+! grep -q "mail\.\* *stop" "${file}" && sed -i 's|^\(mail\.err.*\)$|\1\nmail.*              stop|' "${file}"
 KEEP
 
 
@@ -208,18 +218,18 @@ if [[ " home ovh " = *" $S_SERVER_TYPE "* ]]; then
 	_echoT "----------  rsyslog hosting conf"
 
 	file=/etc/rsyslog.conf
-	_keepcpts "$file"
+	_keepcpts "${file}"
 
 	# udp
 	if [ "$S_RSYSLOG_PTC" = udp ]; then
-		sed -i "s|^#\(\$ModLoad imudp\)$|\1|" "$file"
-		sed -i "s|^#\?\(\$UDPServerRun\).*$|\1 $S_RSYSLOG_PORT|" "$file"
+		sed -i "s|^#\(\$ModLoad imudp\)$|\1|" "${file}"
+		sed -i "s|^#\?\(\$UDPServerRun\).*$|\1 $S_RSYSLOG_PORT|" "${file}"
 	fi
 
 	# tcp
 	if [ "$S_RSYSLOG_PTC" = tcp ]; then
-		sed -i "s|^#\(\$ModLoad imtcp\)$|\1|" "$file"
-		sed -i "s|^#\?\(\$InputTCPServerRun\).*$|\1 $S_RSYSLOG_PORT|" "$file"
+		sed -i "s|^#\(\$ModLoad imtcp\)$|\1|" "${file}"
+		sed -i "s|^#\?\(\$InputTCPServerRun\).*$|\1 $S_RSYSLOG_PORT|" "${file}"
 	fi
 fi
 
@@ -245,7 +255,7 @@ if [[ " docker kvm lxd kvm " = *" $S_SERVER_TYPE "* ]]; then
 	echo "##############################  AUTH
 # forward auth logs from vm to hosting server ${S_SERVICE_LOG}
 #auth.* @${S_SERVICE_LOG}
-auth.* action(type=\"omfwd\" target=\"${S_SERVICE_LOG}\" port=\"${S_RSYSLOG_PORT}\" protocol=\"${S_RSYSLOG_PTC}\")" > "$file"
+auth.* action(type=\"omfwd\" target=\"${S_SERVICE_LOG}\" port=\"${S_RSYSLOG_PORT}\" protocol=\"${S_RSYSLOG_PTC}\")" > "${file}"
 fi
 
 
@@ -276,7 +286,7 @@ $S_PATH_LOG_SERVER/*.debug
 
 file=/etc/logrotate.d/rsyslog
 str='5'
-[ -f "$file" ] && sed -i "s/\(\t\+rotate\) 4/\1 $str/" "$file"
+[ -f "${file}" ] && sed -i "s/\(\t\+rotate\) 4/\1 $str/" "${file}"
 
 
 if [[ " home ovh " = *" $S_SERVER_TYPE "* ]]; then
@@ -284,17 +294,17 @@ if [[ " home ovh " = *" $S_SERVER_TYPE "* ]]; then
 	_echoT "----------  logrotate rsyslog conf"
 
 	file=/etc/logrotate.d/rsyslog
-	sed -i "\|$S_PATH_LOG/auth.log|d" "$file"
-	sed -i "1i$S_PATH_LOG/auth.log" "$file"
+	sed -i "\|$S_PATH_LOG/auth.log|d" "${file}"
+	sed -i "1i$S_PATH_LOG/auth.log" "${file}"
 
-	sed -i "\|$S_PATH_LOG/cron.log|d" "$file"
-	sed -i "1i$S_PATH_LOG/cron.log" "$file"
+	sed -i "\|$S_PATH_LOG/cron.log|d" "${file}"
+	sed -i "1i$S_PATH_LOG/cron.log" "${file}"
 
 
 	_echoT "----------  bind conf -IPV6"
 
 	file=/etc/default/bind9
-	sch="OPTIONS="; str="\"-u bind -4\""; sed -i "s|^\($sch\).*|\1$str|" "$file"
+	sch="OPTIONS="; str="\"-u bind -4\""; sed -i "s|^\($sch\).*|\1$str|" "${file}"
 
 	_service restart bind9
 fi
@@ -309,11 +319,10 @@ if [[ " home ovh kvm " = *" $S_SERVER_TYPE "* ]]; then
 
 	_echoT "----------  conf ntp"
 
-	# /etc/ntp.conf
 	file=/etc/ntp.conf
-	_keepcpts "$file"
+	_keepcpts "${file}"
 
-	str='.fr.pool.ntp.org'; sed -i "s/^\(server .\).*/\1$str/" "$file"
+	str='.fr.pool.ntp.org'; sed -i "s/^\(server .\).*/\1$str/" "${file}"
 	_eval "systemctl start ntp"
 fi
 
@@ -331,15 +340,15 @@ _echoT "----------  openssl conf multi-domains"
 _eval "apt install -y openssl"
 
 file='/etc/ssl/openssl.cnf'
-_keepcpts "$file"
+_keepcpts "${file}"
 
-sed -i "/countryName_default/ s|=.*|= FR|" "$file"
-sed -i "/stateOrProvinceName_default/ s|=.*|= Britain|" "$file"
-sed -i "/0\.organizationName_default/ s|=.*|= ${S_DOMAIN_NAME}|" "$file"
-sed -i "/#\?organizationalUnitName_default/ {s|^#||;s|=.*|= ${S_DOMAIN_NAME}|}" "$file"
-sed -i "/localityName\s*= Locality Name/ a localityName_default\t\t= Nantes" "$file"
-sed -i "/commonName\s*= Common Name/ a commonName_default\t\t= ${S_DOMAIN_FQDN}" "$file"
-sed -i "/emailAddress\s*= Email Address/ a emailAddress_default\t\t= ${S_DOMAIN_EMAIL_ADMIN}" "$file"
+sed -i "/countryName_default/ s|=.*|= FR|" "${file}"
+sed -i "/stateOrProvinceName_default/ s|=.*|= Britain|" "${file}"
+sed -i "/0\.organizationName_default/ s|=.*|= ${S_DOMAIN_NAME}|" "${file}"
+sed -i "/#\?organizationalUnitName_default/ {s|^#||;s|=.*|= ${S_DOMAIN_NAME}|}" "${file}"
+sed -i "/localityName\s*= Locality Name/ a localityName_default\t\t= Nantes" "${file}"
+sed -i "/commonName\s*= Common Name/ a commonName_default\t\t= ${S_DOMAIN_FQDN}" "${file}"
+sed -i "/emailAddress\s*= Email Address/ a emailAddress_default\t\t= ${S_DOMAIN_EMAIL_ADMIN}" "${file}"
 
 
 _echoT "----------  clean"

@@ -10,9 +10,9 @@ file_bash_aliases="${S_PATH_SCRIPT_CONF}/.bash_aliases"
 file_bash_functions="${S_PATH_SCRIPT_CONF}/.bash_functions"
 path_install_bash_completion="${S_PATH_INSTALL_CONF}/bash_completion"
 
-_echoT "------------------ file required"
-files="${file_env} ${file_bash_aliases} ${file_bash_functions}"
-for file in ${files}; do ! [ -e "${file}" ] && _exite "Unable to find file: '${file}'"; done
+_echoT "----------  required files"
+
+_require "${file_env}" "${file_bash_aliases}" "${file_bash_functions}"
 
 
 ####################################  MAIN
@@ -30,20 +30,19 @@ esac
 
 _echoT "----------  root password change"
 
-_askyn "Would you change the default root password "
-if [ "$_ANSWER" == y ]; then
+_askyn "Do you change the default root password"
+if [ "$_ANSWER" = y ]; then
 	_ask "Please enter a root password"
-	passwd root <<EOF
+	passwd root <<<"$_ANSWER
 $_ANSWER
-$_ANSWER
-EOF
+"
 fi
 
 
 _echoT "----------  home"
 
 # home
-[ "$S_SERVER_TYPE" == home ] && _evalq "chown root.1000 /home; chmod g+rwx /home"
+[ "$S_SERVER_TYPE" = home ] && _evalq chown root:1000 /home && _evalq chmod g+rwx /home
 
 
 if [ "$S_SERVER_TYPE" != "lxd" ]; then
@@ -54,12 +53,6 @@ if [ "$S_SERVER_TYPE" != "lxd" ]; then
 	_eval "dpkg-reconfigure dash"
 
 fi
-
-
-_echoT "----------  timezone"
-
-[ -e /etc/localtime ] && rm /etc/localtime
-ln -sv /usr/share/zoneinfo/posix/Europe/Paris /etc/localtime
 
 
 _echoT "----------  .bashrc"
@@ -92,30 +85,20 @@ fi
 [ -f ~/.bash_functions ] && . ~/.bash_functions
 EOF
 
+_source "${file}"
 
 _echoT "----------  .bash_aliases"
 
 file=~/.bash_aliases
 _keepmvts "${file}"
-_evalq "ln -sv ${file_bash_aliases} ${file}"
+_evalq ln -s "${file_bash_aliases}" "${file}"
 
 
 _echoT "----------  .bash_functions"
 
 file=~/.bash_functions
 _keepmvts "${file}"
-_evalq "ln -sv ${file_bash_functions} ${file}"
-
-
-_echoT "----------  grub"
-
-file=/etc/default/grub
-if [ -f "${file}" ]; then
-	# grub timeout
-	STR=0; sed -i "s/^\(GRUB_TIMEOUT=\).*/\1$STR/" "${file}"
-
-	update-grub
-fi
+_evalq ln -s "${file_bash_functions}" "${file}"
 
 
 _echoT "----------  repository"
@@ -265,7 +248,7 @@ for opt in $opts; do
 done
 
 
-_echoT "------------------ conf nano"
+_echoT "----------  conf nano"
 
 for str in conf install; do
 	cp -a /usr/share/nano/sh.nanorc /usr/share/nano/$str.nanorc
@@ -273,7 +256,7 @@ for str in conf install; do
 done
 
 file=/etc/nanorc
-cp -a $file $file.keep$(date +%s)
+_keepcpts "${file}"
 sed -i 's|^.*\(set tabsize\).*|\1 4|' "${file}"
 sed -i 's|^\(set cut.*\)$|# \1|' "${file}"
 sed -i 's|^\(set linenumbers.*\)$|# \1|' "${file}"
@@ -385,7 +368,7 @@ _echoT "----------  logrotate server conf"
 
 # logrotate
 echo "# Logrotate file for server functions logs
-#$S_PATH_LOG_INSTALL/*.log
+#$S_PATH_LOG_INSTALL/*.info
 $S_PATH_LOG_SERVER/*.log
 $S_PATH_LOG_SERVER/*.err
 $S_PATH_LOG_SERVER/*.debug
@@ -418,23 +401,26 @@ if [ "${STR/ "$S_SERVER_TYPE" /}" != "$STR" ]; then
 	_echoT "----------  logrotate rsyslog conf"
 
 	file=/etc/logrotate.d/rsyslog
-	_eval "sed -i '\|$S_PATH_LOG/auth.log|d' '$file'"
-	_eval "sed -i '1i$S_PATH_LOG/auth.log' '$file'"
+	_eval "sed -i '\|$S_PATH_LOG/auth.log|d' '${file}'"
+	_eval "sed -i '1i$S_PATH_LOG/auth.log' '${file}'"
 
-	_eval "sed -i '\|$S_PATH_LOG/cron.log|d' '$file'"
-	_eval "sed -i '1i$S_PATH_LOG/cron.log' '$file'"
+	_eval "sed -i '\|$S_PATH_LOG/cron.log|d' '${file}'"
+	_eval "sed -i '1i$S_PATH_LOG/cron.log' '${file}'"
 
 
 	_echoT "----------  bind conf -IPV6"
 
 	file=/etc/default/bind9
-	SCH="OPTIONS="; STR="\"-u bind -4\""; sed -i "s|^\($SCH\).*|\1$STR|" "${file}"
+	sch="OPTIONS="; str="\"-u bind -4\""; sed -i "s|^\(${sch}\).*|\1${str}|" "${file}"
 
 	_service restart bind9
 fi
 
 
 if [ "$S_SERVER_TYPE" != "vz" ]; then
+
+
+	####################################  NTP
 
 	_echoT "----------  install ntp"
 
@@ -445,7 +431,8 @@ if [ "$S_SERVER_TYPE" != "vz" ]; then
 
 	file=/etc/ntp.conf
 	_keepcpts "${file}"
-	STR='.fr.pool.ntp.org'; sed -i "s/^\(server .\).*/\1$STR/" "${file}"
+
+	str='.fr.pool.ntp.org'; sed -i "s/^\(server .\).*/\1${str}/" "${file}"
 	_eval "systemctl start ntp"
 fi
 
@@ -458,7 +445,7 @@ fi
 #_eval "certbot certonly --standalone --rsa-key-size 4096 -d mail.$S_DOMAIN_FQDN -d imap.$S_DOMAIN_FQDN -d smtp.$S_DOMAIN_FQDN"
 
 
-_echoT "----------  Openssl conf multi-domains"
+_echoT "----------  openssl conf multi-domains"
 
 _eval "apt install -y openssl"
 

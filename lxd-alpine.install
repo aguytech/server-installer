@@ -19,15 +19,13 @@ _RELEASE="alpine"
 _echoT "------------------ conf && data"
 
 # for install from desktop
-S_PATH_INSTALL="/home/shared/dev/install"
+S_PATH_INSTALL="${S_PATH_INSTALL/-desktop/}"
 S_PATH_INSTALL_XTRA="${S_PATH_INSTALL}/xtra"
 S_PATH_INSTALL_CONF="${S_PATH_INSTALL}/conf"
 
 S_FILE_INSTALL_CONF="${S_PATH_CONF}/lxd.conf"
 S_FILE_INSTALL_DONE="${S_PATH_CONF}/lxd.done"
 
-! [ -f "$S_FILE_INSTALL_CONF" ] && touch "$S_FILE_INSTALL_CONF"
-! [ -f "$S_FILE_INSTALL_DONE" ] && touch "$S_FILE_INSTALL_DONE"
 [ -f "$S_FILE_INSTALL_CONF" ] && . "$S_FILE_INSTALL_CONF"
 
 

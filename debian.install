@@ -27,37 +27,29 @@ MANUALY
 #allow conf-init
 _INSTALL=debian
 
-if [[ -z "$S_GLOBAL_FUNCTIONS" || -f $S_GLOBAL_FUNCTIONS ]]; then
+if [[ -z "${S_GLOBAL_FUNCTIONS}" || -f ${S_GLOBAL_FUNCTIONS} ]]; then
 	file="/usr/local/bs/inc-functions.sh"
-	if ! . "$file"; then echo -e "\e[1;31merror - unable to find file '$file' from ${BASH_SOURCE[0]}\e[0;0m" && exit 1; fi
+	if ! . "${file}"; then echo -e "\e[1;31merror - unable to find file '${file}' from ${BASH_SOURCE[0]}\e[0;0m" && exit 1; fi
 fi
-. $S_GLOBAL_FUNCTIONS
+. ${S_GLOBAL_FUNCTIONS}
 
 ################################  mandatory parts
 
 # init
 _PART="init"
-! _parthave "$_PART" "$S_FILE_INSTALL_DONE" && _source "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
+! _parthave "${_PART}" "${S_FILE_INSTALL_DONE}" && _source "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
 
-
-# openvz
-part_sub=host-root
-if [ "$S_SERVER_TYPE" = "vz" ] && ! _parthave "$part_sub" "${S_FILE_INSTALL_DONE}"; then
-	_echoi "to mount device(s) in this container\nexit from this container ${_CTIDTHIS} and from hosting server launch:"
-	_echoI "${_PATH_BASE_SUB}/${S_HOST_RELEASE}-${part_sub}.install ${_CTIDTHIS} $S_PATH_LOG_INSTALL/${S_RELEASE}.done"
-	_exit
-fi
 
 # common + ssh
 parts="common ssh"
 for _PART in $parts; do
-	! _parthave "$_PART" "$S_FILE_INSTALL_DONE" && _source "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
+	! _parthave "${_PART}" "$S_FILE_INSTALL_DONE" && _source "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
 done
 
 
 ################################  MENU
 
-while [ "$_PART" != "quit" ]; do
+while [ "${_PART}" != "quit" ]; do
 
 	partsall="$(sed -n "s|^\t*\(\w\+\)) # .*$S_SERVER_TYPE.*$|\1|p" "$0" | xargs)"
 	partsrelease=" $(ls -1 "$_PATH_BASE_SUB"/*${S_RELEASE}* | sed -n "s|.*${S_RELEASE}-\(.*\)\.install|\1|p" | xargs) "
@@ -74,29 +66,29 @@ while [ "$_PART" != "quit" ]; do
 	_echo "Part already made: ${blueb}$partsmade${cclear}"
 	PS3="Give your choice: "
 	select _PART in quit $parts2do; do
-		case "$_PART" in
+		case "${_PART}" in
 			quit)
 				break
 				;;
-			apache) # vz lxd
+			apache) # docker lxd
 				_source "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
 				;;
-			app-matomo) # vz lxd
+			app-matomo) # docker lxd
 				_source "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
 				;;
-			app-nextcloud) # vz lxd
+			app-nextcloud) # docker lxd
 				_source "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
 				;;
-			app-phpmyadmin) # vz lxd
+			app-phpmyadmin) # docker lxd
 				_source "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
 				;;
-			app-postfixadmin) # vz lxd
+			app-postfixadmin) # docker lxd
 				_source "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
 				;;
-			app-roundcube) # vz lxd
+			app-roundcube) # docker lxd
 				_source "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
 				;;
-			app-vmailmanage) # vz lxd
+			app-vmailmanage) # docker lxd
 				_source "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
 				;;
 			fail2ban) # ovh
@@ -114,42 +106,35 @@ while [ "$_PART" != "quit" ]; do
 			logwatch) # ovh
 				_source "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
 				;;
-			mail) # vz lxd
+			lxd) # ovh home
 				_source "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
 				;;
-			mariadb) # vz lxd
+			mail) # docker lxd
 				_source "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
 				;;
-			openvz-1) # ovh
-				# put vz command in host
+			mariadb) # docker lxd
 				_source "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
 				;;
-			openvz-2) # ovh
+			php) # docker lxd
 				_source "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
 				;;
-			php) # vz lxd
+			php73) # docker lxd
 				_source "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
 				;;
-			php73) # vz lxd
+			php7) # docker lxd
 				_source "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
 				;;
-			php7) # vz lxd
+			postfix) # docker lxd
 				_source "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
 				;;
-			postfix) # vz lxd
+			postfix-ovh) # ovh docker lxd
 				_source "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
 				;;
-			postfix-ovh) # ovh vz lxd
-				_source "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
-				;;
-			redis) # vz lxd
-				_source "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
-				;;
-			g1) # vz lxd
+			redis) # docker lxd
 				_source "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
 				;;
 			*)
-				_echoE "Wrong option: '$_PART'"
+				_echoE "Wrong option: '${_PART}'"
 				;;
 		esac
 		break
@@ -158,7 +143,6 @@ while [ "$_PART" != "quit" ]; do
 done
 
 _exit
-
 
 <<KEEP
 # wipe free disk space

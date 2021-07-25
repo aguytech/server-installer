@@ -23,19 +23,19 @@ _askno "Give an port for SSH connection (${_SSH_PORT}) "
 
 # client
 file='/etc/ssh/ssh_config'
-_keepcpts "$file"
-sed -i "/^\s*GSSAPIAuthentication yes/ s| yes| no|" "$file"
+_keepcpts "${file}"
+sed -i "/^\s*GSSAPIAuthentication yes/ s| yes| no|" "${file}"
 
 # server
 file='/etc/ssh/sshd_config'
-_keepcpts "$file"
+_keepcpts "${file}"
 
-sed -i "/^#\?Port/ c Port ${_SSH_PORT}" "$file"
-sed -i "/^#\?GSSAPIAuthentication/ {s|^#||;s| yes| no|}" "$file"
-sed -i "/^#\?UseDNS/ {s|^#||;s| yes| no|}" "$file"
-sed -i "/^#\?PasswordAuthentication/ {s|^#||;s| yes| no|}" "$file"
-sed -i "/^#\?ClientAliveInterval/ c ClientAliveInterval 300" "$file"
-sed -i "/^#\?ClientAliveCountMax/ c ClientAliveCountMax 3" "$file"
+sed -i "/^#\?Port/ c Port ${_SSH_PORT}" "${file}"
+sed -i "/^#\?GSSAPIAuthentication/ {s|^#||;s| yes| no|}" "${file}"
+sed -i "/^#\?UseDNS/ {s|^#||;s| yes| no|}" "${file}"
+sed -i "/^#\?PasswordAuthentication/ {s|^#||;s| yes| no|}" "${file}"
+sed -i "/^#\?ClientAliveInterval/ c ClientAliveInterval 300" "${file}"
+sed -i "/^#\?ClientAliveCountMax/ c ClientAliveCountMax 3" "${file}"
 
 
 _echoT "----------  ssh restart"
@@ -49,17 +49,17 @@ str=" home ovh "; if [ "${str/ "$S_SERVER_TYPE" /}" != "$str" ]; then
 
 	# use saved keys
 	file=${HOSTNAME}-ssh.tgz
-	if [ -f "${S_PATH_INSTALL_CONF}/ssh/$file" ]; then
-		_askyn "Would you replace ssh keys with backuped ones in\n'${S_PATH_INSTALL_XTRA}/$file'"
+	if [ -f "${S_PATH_INSTALL_CONF}/ssh/${file}" ]; then
+		_askyn "Would you replace ssh keys with backuped ones in\n'${S_PATH_INSTALL_XTRA}/${file}'"
 		if [ "$_ANSWER" == y ]; then
 			_evalq cd "$S_PATH_INSTALL_XTRA"
-			_evalq tar xzf "$file"
+			_evalq tar xzf "${file}"
 			_evalq mv .ssh/id_rsa* ~/.ssh
 			_evalq rm -fR .ssh
 			_evalq cd
 		fi
 	else
-		_echoT "Unable to find file: '${S_PATH_INSTALL_XTRA}/$file'"
+		_echoT "Unable to find file: '${S_PATH_INSTALL_XTRA}/${file}'"
 		_askno "If this installation are a re-installation,\nPlease overwrite manually key files in ~/.ssh"
 	fi
 
@@ -78,8 +78,8 @@ str=" home ovh "; if [ "${str/ "$S_SERVER_TYPE" /}" != "$str" ]; then
 
 	file=${S_PATH_BACKUP}/${HOSTNAME}-ssh.tgz
 	cd
-	tar cvzf "$file" .ssh/
-	_echoT "a backup of path '.ssh' have been made in '$file'\nPlease keep it safe"
+	tar cvzf "${file}" .ssh/
+	_echoT "a backup of path '.ssh' have been made in '${file}'\nPlease keep it safe"
 
 fi
 
@@ -88,7 +88,7 @@ _echoT "----------  end"
 _eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"
 
 
-<<keep
+<<KEEP
 # /etc/ssh/sshd_config
 'PermitRootLogin yes
 PubkeyAuthentication yes
@@ -96,5 +96,4 @@ PasswordAuthentication no
 UsePAM yes
 Match User git
     PasswordAuthentication yes'
-keep
-
+KEEP
