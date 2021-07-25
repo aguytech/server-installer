@@ -54,7 +54,7 @@ if ! [ -f "${S_VZ_PATH_CT_CONF}/${CTID}.mount" ] || ! grep -q "SRC_GLOBAL=$HOSTS
 
 		echo "# $SHARE
 SRC_GLOBAL=$HOSTSHARE
-DST_GLOBAL=$S_VM_PATH_SHARE_GLOBAL
+DST_GLOBAL=${S_VM_PATH_SHARE}/global
 ! [ -p \${VE_ROOT}\${DST_GLOBAL} ] && mkdir -p \${VE_ROOT}\${DST_GLOBAL}
 mount -n --bind \${SRC_GLOBAL} \${VE_ROOT}\${DST_GLOBAL}
 " >> ${S_VZ_PATH_CT_CONF}/${CTID}.mount

@@ -76,7 +76,7 @@ PATHTRACE="${_PATH_PHP}/xdebug/trace"
 PATHMODCONF="/etc/php/7.0/mods-available"
 PHPCONF="/etc/php/7.0/apache2/php.ini"
 
-[ "$S_SERVER_TYPE" == vz ] && THISURL="http://${_IPTHIS}:${S_VM_PORT_HTTP_PRE}$(awk '{print $1}' < /proc/vz/veinfo)" \
+[ "$S_SERVER_TYPE" == vz ] && THISURL="http://${S_NODE_IPV4}:${S_VM_PORT_HTTP_PRE}$(awk '{print $1}' < /proc/vz/veinfo)" \
 || THISURL="http://$(ifconfig $S_ETH | awk '/inet addr/{print substr($2,6)}')"
 
 
@@ -317,7 +317,7 @@ if [ "$_PHPMODE" == "php-fpm" ]; then
 	cp -a "$FILE_FPM_APACHE" "/etc/apache2/conf-available/"
 
 	sed -i "s|LocationMatch \"/(status-www\|ping-www)$\"|LocationMatch \"/(${PM_STATUS_PATH#/}\|${PING_PATH#/})$\"|" /etc/apache2/conf-available/$PHPFPM_SERVICE.conf
-	sed -i "s|^\(\s*Require ip \).*|\1127.0.0.1 ${_VM_IP_BASE}.1/24 ${_IPS_AUTH}|" /etc/apache2/conf-available/$PHPFPM_SERVICE.conf
+	sed -i "s|^\(\s*Require ip \).*|\1127.0.0.1 ${_VM_IP_BASE}.1/24 ${S_HOST_IPV4} ${_IPS_AUTH}|" /etc/apache2/conf-available/$PHPFPM_SERVICE.conf
 
 
 	_echoT "----------  apache2 restart"
@@ -343,7 +343,7 @@ if [ "$_PHPMODE" == "php-fpm" ]; then
 
 		# ping.php
 	    <LocationMatch \"/ping-monitor$\">
-	        Require ip 127.0.0.1 ${_VM_IP_BASE}.1/24 ${_IPS_AUTH}
+	        Require ip 127.0.0.1 ${_VM_IP_BASE}.1/24 ${S_HOST_IPV4} ${_IPS_AUTH}
 	        SetHandler \"proxy:unix:/run/php/php7.0-fpm.sock|fcgi://localhost${FILE_PING}\"
 	    </LocationMatch>
 	</IfModule>

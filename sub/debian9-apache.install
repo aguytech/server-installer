@@ -352,8 +352,8 @@ FILE=$PATHSITE/000-default.conf
 [ ! -f "$FILE.$_DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
 cp -a $FILE_SITE "$FILE"
 
-STR=${S_SERVICE_LOG//./\\\\.}; sed -i "s|S_SERVICE_LOG|$STR|" "$FILE"
-STR=${_VM_IP_BASE//./\\\\.}; sed -i "s|_VM_IP_BASE|$STR|" "$FILE"
+STR=${S_HOST_IPV4//./\\\\.}; sed -i "s|S_HOST_IPV4|$STR|" "$FILE"
+STR=${_VM_IP_BASE//./\\\\.}; sed -i "s|S_HOST_IPV4|$STR|" "$FILE"
 
 _var_replace_www "$FILE"
 
@@ -399,8 +399,8 @@ _evalq chown www-data:www-data -R "/var/www"
 _echoT "----------  Apache test"
 
 if [ "$S_SERVER_TYPE" == vz ]; then
-    IPHTTP=${_IPTHIS}:${S_VM_PORT_HTTP_PRE}$_CTIDTHIS
-    IPHTTPS=${_IPTHIS}:${S_VM_PORT_HTTPS_PRE}$_CTIDTHIS
+    IPHTTP=${S_NODE_IPV4}:${S_VM_PORT_HTTP_PRE}$_CTIDTHIS
+    IPHTTPS=${S_NODE_IPV4}:${S_VM_PORT_HTTPS_PRE}$_CTIDTHIS
 else
     IPHTTP=$(ifconfig $S_ETH | awk '/inet addr/{print substr($2,6)}')
     IPHTTPS=$iphhtp
@@ -437,7 +437,7 @@ _evalq _partadd "$_PART" "$S_FILE_INSTALL_DONE"
 
 FILE='/etc/ssl/openssl.cnf'
 FILEMULTI='/etc/ssl/openssl-localhost.cnf'
-DOMAIN="${_IPTHIS}"
+DOMAIN="${S_NODE_IPV4}"
 SUBDOMAINS="localhost 127.0.0.1"
 
 _FILESSLKEY="${_PATH_SSL_SHARE}/private/$DOMAIN.key"

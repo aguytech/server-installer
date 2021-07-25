@@ -44,13 +44,18 @@ _echoT "----------  conf S_PATH_SAVE"
 anstmp="${S_PATH_SAVE}" && _askno "path to save data (${anstmp})"
 S_PATH_SAVE=${_ANSWER:-$anstmp} && _confset "S_PATH_SAVE" "${S_PATH_SAVE}" "${S_GLOBAL_CONF}"
 
+_echoT "----------  conf S_PATH_BACKUP"
+
+anstmp="${S_PATH_BACKUP}" && _askno "path to backup data (${anstmp})"
+S_PATH_BACKUP=${_ANSWER:-$anstmp} && _confset "S_PATH_BACKUP" "${S_PATH_BACKUP}" "${S_GLOBAL_CONF}"
+
 _echoT "----------  conf S_PATH_LOG"
 
 anstmp="${S_PATH_LOG}" && _askno "path to log data (${anstmp})"
 S_PATH_LOG=${_ANSWER:-$anstmp} && _confset "S_PATH_LOG" "${S_PATH_LOG}" "${S_GLOBAL_CONF}"
 
 
-paths="${S_PATH_SAVE} ${S_PATH_SAVE_BACKUP} ${S_PATH_LOG} ${S_PATH_LOG_SERVER} ${S_PATH_LOG_INSTALL}"
+paths="${S_PATH_SAVE} ${S_PATH_BACKUP} ${S_PATH_LOG} ${S_PATH_LOG_SERVER} ${S_PATH_LOG_INSTALL}"
 _echoT "----------  create ${paths}"
 
 for path in $paths; do
@@ -97,70 +102,125 @@ _menu "Select the server type for this server" home ovh docker kvm lxd
 S_SERVER_TYPE=$_ANSWER && _confset "S_SERVER_TYPE" "${S_SERVER_TYPE}" "${S_GLOBAL_CONF}"
 
 
-###################  HOSTING
+###################  HOST
 
 if [[ " ovh home " = *" $S_SERVER_TYPE "* ]]; then
 
-	_echoT "----------  conf S_HOSTING_TYPE"
+	_echoT "----------  conf S_HOST_TYPE"
 
 	_menu "type of VM hosting" docker kvm lxd
-	S_HOSTING_TYPE=$_ANSWER && _confset "S_HOSTING_TYPE" "${S_HOSTING_TYPE}" "${S_GLOBAL_CONF}"
+	S_HOST_TYPE=$_ANSWER && _confset "S_HOST_TYPE" "${S_HOST_TYPE}" "${S_GLOBAL_CONF}"
 
-	_echoT "----------  conf S_HOSTING_PATH"
+	_echoT "----------  conf S_HOST_PATH"
 
-	anstmp="${S_HOSTING_PATH}" && _askno "host pathroot for VM (${anstmp})"
-	[ "${_ANSWER}" ] && S_HOSTING_PATH="${_ANSWER:-$anstmp}" && _confset "S_HOSTING_PATH" "${S_HOSTING_PATH}" "${S_GLOBAL_CONF}"
+	anstmp="${S_HOST_PATH}" && _askno "host pathroot for VM (${anstmp})"
+	S_HOST_PATH="${_ANSWER:-$anstmp}" && _confset "S_HOST_PATH" "${S_HOST_PATH}" "${S_GLOBAL_CONF}"
 
-	_echoT "----------  conf S_HOSTING_PATH_SHARE"
+	_echoT "----------  conf S_HOST_PATH_SHARE"
 
-	anstmp="${S_HOSTING_PATH_SHARE}" && _askno "host sharing path for VM (${anstmp})"
-	[ "${_ANSWER}" ] && S_HOSTING_PATH_SHARE="${_ANSWER:-$anstmp}" && _confset "S_HOSTING_PATH_SHARE" "${S_HOSTING_PATH_SHARE}" "${S_GLOBAL_CONF}"
+	anstmp="${S_HOST_PATH_SHARE}" && _askno "host sharing path for VM (${anstmp})"
+	S_HOST_PATH_SHARE="${_ANSWER:-$anstmp}" && _confset "S_HOST_PATH_SHARE" "${S_HOST_PATH_SHARE}" "${S_GLOBAL_CONF}"
 
-	_echoT "----------  conf S_HOSTING_PATH_LOG"
+	_echoT "----------  conf S_HOST_PATH_LOG"
 
-	anstmp="${S_HOSTING_PATH_LOG}" && _askno "host log path for VM for VM (${anstmp})"
-	[ "${_ANSWER}" ] && S_HOSTING_PATH_LOG="${_ANSWER:-$anstmp}" && _confset "S_HOSTING_PATH_LOG" "${S_HOSTING_PATH_LOG}" "${S_GLOBAL_CONF}"
+	anstmp="${S_HOST_PATH_LOG}" && _askno "host log path for VM for VM (${anstmp})"
+	S_HOST_PATH_LOG="${_ANSWER:-$anstmp}" && _confset "S_HOST_PATH_LOG" "${S_HOST_PATH_LOG}" "${S_GLOBAL_CONF}"
 
-	_echoT "----------  conf S_HOSTING_PATH_SAVE"
+	_echoT "----------  conf S_HOST_PATH_SAVE"
 
-	anstmp="${S_HOSTING_PATH_SAVE}" && _askno "host sharing path to save for VM (${anstmp})"
-	[ "${_ANSWER}" ] && S_HOSTING_PATH_SAVE="${_ANSWER:-$anstmp}" && _confset "S_HOSTING_PATH_SAVE" "${S_HOSTING_PATH_SAVE}" "${S_GLOBAL_CONF}"
+	anstmp="${S_HOST_PATH_SAVE}" && _askno "host sharing path to save for VM (${anstmp})"
+	S_HOST_PATH_SAVE="${_ANSWER:-$anstmp}" && _confset "S_HOST_PATH_SAVE" "${S_HOST_PATH_SAVE}" "${S_GLOBAL_CONF}"
 
 
-	paths="${S_HOSTING_PATH} ${S_HOSTING_PATH_SHARE}"
+	paths="${S_HOST_PATH} ${S_HOST_PATH_SHARE} ${S_HOST_PATH_LOG} ${S_HOST_PATH_SAVE}"
 	_echoT "----------  create ${paths}"
 
 	for path in $paths; do
 		! [ -d "$path" ] && mkdir -p "$path"
 	done
 
+	_echoT "----------  conf S_HOST_VM_ETH"
 
-	###################  VM
-
-	_echoT "----------  conf S_VM_DHCP_MIN"
-
-	anstmp="${S_VM_DHCP_MIN}" && _askno "minimal IP for DHCP container (${anstmp})"
-	S_VM_DHCP_MIN=${_ANSWER:-$anstmp} && _confset "S_VM_DHCP_MIN" "${S_VM_DHCP_MIN}" "${S_GLOBAL_CONF}"
-
-	_echoT "----------  conf S_VM_DHCP_MAX"
-
-	anstmp="${S_VM_DHCP_MAX}" && _askno "maximal IP for DHCP container (${anstmp})"
-	S_VM_DHCP_MAX=${_ANSWER:-$anstmp} && _confset "S_VM_DHCP_MAX" "${S_VM_DHCP_MAX}" "${S_GLOBAL_CONF}"
-
-	_echoT "----------  conf S_VM_ETH"
-
-	_echo "Here is the network actually declared ${!S_VM_ETH[*]}"
+	_echo "Here is the network actually declared ${!S_HOST_VM_ETH[*]}"
 	_askyn "You can modify this in file '${S_GLOBAL_CONF}', before continue or valid to continue."
 
-	_echoT "----------  conf S_VM_PATH_SHARE"
+	_echoT "----------  conf S_HOST_DHCP_MIN"
 
-	anstmp="${S_VM_PATH_SHARE}" && _askno "VM sharing path (${anstmp})"
-	S_VM_PATH_SHARE=${_ANSWER:-$anstmp} && _confset "S_VM_PATH_SHARE" "${S_VM_PATH_SHARE}" "${S_GLOBAL_CONF}"
+	anstmp="${S_HOST_DHCP_MIN}" && _askno "minimal IP for DHCP container (${anstmp})"
+	S_HOST_DHCP_MIN=${_ANSWER:-$anstmp} && _confset "S_HOST_DHCP_MIN" "${S_HOST_DHCP_MIN}" "${S_GLOBAL_CONF}"
+
+	_echoT "----------  conf S_HOST_DHCP_MAX"
+
+	anstmp="${S_HOST_DHCP_MAX}" && _askno "maximal IP for DHCP container (${anstmp})"
+	S_HOST_DHCP_MAX=${_ANSWER:-$anstmp} && _confset "S_HOST_DHCP_MAX" "${S_HOST_DHCP_MAX}" "${S_GLOBAL_CONF}"
+
+	_echoT "----------  conf S_HOST_PORT_PRE_SSH"
+
+	anstmp=
+	regexp='^[0-9]{1,3}$'
+	while ! [[ $anstmp =~ $regexp ]]; do
+	       anstmp="${S_HOST_PORT_PRE_SSH}"
+	       _askno "Give the PREFIX of port for 'SSH' VMs connections S_HOST_PORT_PRE_SSH ($anstmp)"
+	done
+	S_HOST_PORT_PRE_SSH=${_ANSWER:-$anstmp} && _confset "S_HOST_PORT_PRE_SSH" "${S_HOST_PORT_PRE_SSH}" "$S_GLOBAL_CONF"
+
+	_echoT "----------  conf S_HOST_PORT_PRE_HTTP"
+
+	anstmp=
+	regexp="^[0-9]{1,3}$"
+	while ! [[ $anstmp =~ $regexp ]]; do
+	       anstmp="${S_HOST_PORT_PRE_HTTP}"
+	       _askno "Give the PREFIX of port for 'HTTP' VMs connections S_HOST_PORT_PRE_HTTP ($anstmp)"
+	done
+	S_HOST_PORT_PRE_HTTP=${_ANSWER:-$anstmp} && _confset "S_HOST_PORT_PRE_HTTP" "${S_HOST_PORT_PRE_HTTP}" "$S_GLOBAL_CONF"
+
+	_echoT "----------  conf S_HOST_PORT_PRE_HTTPS"
+
+	anstmp=
+	regexp="^[0-9]{1,3}$"
+	while ! [[ $anstmp =~ $regexp ]]; do
+	       anstmp="${S_HOST_PORT_PRE_HTTPS}"
+	       _askno "Give the PREFIX of port for 'HTTP SSL' VMs connections S_HOST_PORT_PRE_HTTPS ($anstmp)"
+	done
+	S_HOST_PORT_PRE_HTTPS=${_ANSWER:-$anstmp} && _confset "S_HOST_PORT_PRE_HTTPS" "${S_HOST_PORT_PRE_HTTPS}" "$S_GLOBAL_CONF"
 
 fi
 
 
+###################  VM
+
+_echoT "----------  conf S_VM_PATH_SHARE"
+
+anstmp="${S_VM_PATH_SHARE}" && _askno "VM sharing path (${anstmp})"
+S_VM_PATH_SHARE=${_ANSWER:-$anstmp} && _confset "S_VM_PATH_SHARE" "${S_VM_PATH_SHARE}" "${S_GLOBAL_CONF}"
+
+_echoT "----------  conf S_VM_PATH_SAVE"
+
+anstmp="${S_VM_PATH_SAVE}" && _askno "VM saving path (${anstmp})"
+S_VM_PATH_SAVE=${_ANSWER:-$anstmp} && _confset "S_VM_PATH_SAVE" "${S_VM_PATH_SAVE}" "${S_GLOBAL_CONF}"
+
+_echoT "----------  conf S_VM_PATH_BACKUP"
+
+anstmp="${S_VM_PATH_BACKUP}" && _askno "VM backing up path (${anstmp})"
+S_VM_PATH_BACKUP=${_ANSWER:-$anstmp} && _confset "S_VM_PATH_BACKUP" "${S_VM_PATH_BACKUP}" "${S_GLOBAL_CONF}"
+
+
+if [[ " docker kvm lxd " = *" ${S_SERVER_TYPE} "* ]]; then
+
+	_echoT "----------  create shared paths for VMS"
+
+	paths="${S_VM_PATH_SHARE} ${S_VM_PATH_SAVE} ${S_VM_PATH_BACKUP}"
+	for path in $paths; do
+		[ ! -d "$path" ] && mkdir -p "$path"
+	done
+fi
+
 ###################  SERVICES
+
+_echoT "----------  conf S_SERVICE_PROXY"
+
+anstmp="${S_SERVICE_PROXY}" && _askno "service name for proxy (${anstmp})"
+S_SERVICE_PROXY=${_ANSWER:-$anstmp} && _confset "S_SERVICE_PROXY" "${S_SERVICE_PROXY}" "${S_GLOBAL_CONF}"
 
 _echoT "----------  conf S_SERVICE_LOG"
 
@@ -191,6 +251,11 @@ anstmp="${S_DOMAIN_FQDN}" && _askno "FQDN of principal domain (${anstmp})"
 S_DOMAIN_FQDN=${_ANSWER:-$anstmp} && _confset "S_DOMAIN_FQDN" "${S_DOMAIN_FQDN}" "${S_GLOBAL_CONF}"
 S_DOMAIN_NAME="${S_DOMAIN_FQDN%.*}" && _confset "S_DOMAIN_NAME" "${S_DOMAIN_NAME}" "${S_GLOBAL_CONF}"
 
+_echoT "----------  conf S_DOMAIN_FQDN"
+
+anstmp="${S_DOMAIN_FQDN%.*}" && _askno "Simple name of principal domain (${anstmp})"
+S_DOMAIN_NAME=${_ANSWER:-$anstmp} && _confset "S_DOMAIN_NAME" "${S_DOMAIN_NAME}" "${S_GLOBAL_CONF}"
+
 _echoT "----------  conf S_DOMAIN_EMAIL_ADMIN"
 
 anstmp="admin@$S_DOMAIN_FQDN" && _askno "Administration email of principal domain (${anstmp})"
@@ -202,7 +267,7 @@ anstmp="tech@$S_DOMAIN_FQDN" && _askno "Technical email of principal domain (${a
 S_DOMAIN_EMAIL_TECH="${_ANSWER:-$anstmp}" && _confset "S_DOMAIN_EMAIL_TECH" "${S_DOMAIN_EMAIL_TECH}" "${S_GLOBAL_CONF}"
 
 
-####################################  NODE & IPS
+####################################  USERS
 
 _echoT "----------  conf S_IPS_ADMIN"
 
@@ -264,15 +329,16 @@ _echoT "----------  conf S_DB_USER_DEV"
 anstmp="$S_DB_USER_DEV" && _askno "user for dev acces to mariadb (${anstmp})"
 S_DB_USER_DEV=${_ANSWER:-$anstmp} && _confset "S_DB_USER_DEV" "${S_DB_USER_DEV}" "${S_GLOBAL_CONF}"
 
-_echoT "----------  conf S_MARIA_PORT"
+_echoT "----------  conf S_DB_MARIA_PORT"
 
-anstmp="$S_MARIA_PORT" && _askno "connections ports for mariadb (${anstmp})"
-S_MARIA_PORT=${_ANSWER:-$anstmp} && _confset "S_MARIA_PORT" "${S_MARIA_PORT}" "${S_GLOBAL_CONF}"
+anstmp="$S_DB_MARIA_PORT" && _askno "connections ports for mariadb (${anstmp})"
+S_DB_MARIA_PORT=${_ANSWER:-$anstmp} && _confset "S_DB_MARIA_PORT" "${S_DB_MARIA_PORT}" "${S_GLOBAL_CONF}"
 
-_echoT "----------  conf S_PGSQL_PORT"
+_echoT "----------  conf S_DB_PGSQL_PORT"
 
-anstmp="$S_PGSQL_PORT" && _askno "connections ports for postgre (${anstmp})"
-S_PGSQL_PORT=${_ANSWER:-$anstmp} && _confset "S_PGSQL_PORT" "${S_PGSQL_PORT}" "${S_GLOBAL_CONF}"
+anstmp="$S_DB_PGSQL_PORT" && _askno "connections ports for rsddn2
+postgre (${anstmp})"
+S_DB_PGSQL_PORT=${_ANSWER:-$anstmp} && _confset "S_DB_PGSQL_PORT" "${S_DB_PGSQL_PORT}" "${S_GLOBAL_CONF}"
 
 
 ####################################  GLOBAL_CONF
@@ -281,23 +347,6 @@ _echoT "----------  source ${S_GLOBAL_CONF}"
 
 . "${S_GLOBAL_CONF}"
 
-
-####################################  GLOBAL_CONF
-
-_echoT "----------  create global paths"
-
-if [[ " docker kvm lxd vz " = *" ${S_SERVER_TYPE} "* ]]; then
-
-	_echoT "----------  create shared paths for VMS"
-
-	paths="${S_VM_PATH_SHARE} ${S_VM_PATH_SHARE_GLOBAL}"
-	for path in $paths; do
-		[ ! -d "$path" ] && mkdir -p "$path"
-	done
-
-	path="${S_VM_PATH_SHARE}"; chown root:root "$path" && chmod 777 "$path"
-	path="${S_VM_PATH_SHARE_GLOBAL}"; chown root:root "$path" && chmod 770 "$path"
-fi
 
 ####################################  END
 

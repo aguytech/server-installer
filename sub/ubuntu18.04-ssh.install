@@ -76,7 +76,7 @@ str=" home ovh "; if [ "${str/ "$S_SERVER_TYPE" /}" != "$str" ]; then
 
 	_echoT "----------  ssh backup"
 
-	file=${S_PATH_SAVE_BACKUP}/${HOSTNAME}-ssh.tgz
+	file=${S_PATH_BACKUP}/${HOSTNAME}-ssh.tgz
 	cd
 	tar cvzf "$file" .ssh/
 	_echoT "a backup of path '.ssh' have been made in '$file'\nPlease keep it safe"

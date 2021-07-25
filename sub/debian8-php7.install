@@ -291,7 +291,7 @@ _eval "service apache2 restart"
 
 _echoT "----------  Xdebug test"
 
-[ "$S_SERVER_TYPE" == vz ] && iptest=${_IPTHIS}:${S_VM_PORT_HTTP_PRE}$(awk '{print $1}' < /proc/vz/veinfo) \
+[ "$S_SERVER_TYPE" == vz ] && iptest=${S_NODE_IPV4}:${S_VM_PORT_HTTP_PRE}$(awk '{print $1}' < /proc/vz/veinfo) \
 || iptest=$(ifconfig $S_ETH | awk '/inet addr/{print substr($2,6)}')
 _askyn "Test this address http://$iptest/phpinf.php\nTo verify Xdebug & Xcache configuration"
 [ $_ANSWER != y ] && _exit 1

@@ -9,7 +9,7 @@ _echoT "\n==========================================  $S_RELEASE $_PART"
 
 __replace_val() {
 	# put right host IP
-	sed -i "s|S_SERVICE_CACHE|${S_SERVICE_CACHE}|g" "$1"
+	sed -i "s|S_HOST_IPV4|${S_HOST_IPV4}|g" "$1"
 	# put right rsyslog protocol
 	sed -i "s|S_RSYSLOG_PTC|${S_RSYSLOG_PTC}|g" "$1"
 	# put right rsyslog port

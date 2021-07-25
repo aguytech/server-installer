@@ -117,7 +117,7 @@ _eval "mysql -h'$_DBHOST' -urootadmin -p'$_PWDROOTADMIN' < ${S_PATH_INSTALL_CONF
 
 _echoT "----------  vmailmanage setup"
 
-_askno "Please load the following url in your browser to setup vmailmanage and confirm to continue: https://${_IPTHIS}:${S_VM_PORT_HTTPS_PRE}/$_SUBDOMAIN/setup.php"
+_askno "Please load the following url in your browser to setup vmailmanage and confirm to continue: https://${S_NODE_IPV4}:${S_VM_PORT_HTTPS_PRE}/$_SUBDOMAIN/setup.php"
 
 
 

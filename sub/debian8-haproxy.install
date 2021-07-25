@@ -210,7 +210,7 @@ _echoT "----------  STATS access"
 
 _echo "------------------------------------------"
 _echo "Test this URL to access to HAPROXY statistics"
-_echoi "${_IPTHIS}:${S_HAPROXY_STATS_PORT}${_ACCESS_URI}"
+_echoi "${S_NODE_IPV4}:${S_HAPROXY_STATS_PORT}${_ACCESS_URI}"
 _echo "------------------------------------------"
 _askno "after it, valid to continue"
 

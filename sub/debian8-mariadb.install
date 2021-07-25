@@ -190,7 +190,7 @@ _echoT "----------  right innotop"
 _eval "mysql -uroot -p'$pwdlocal' -e \"CREATE USER innotop@localhost\""
 _eval "mysql -uroot -p'$pwdlocal' -e \"GRANT SUPER, RELOAD, PROCESS ON *.* to innotop@localhost\""
 _eval "mysql -uroot -p'$pwdlocal' -e \"GRANT SUPER, RELOAD, PROCESS ON *.* to innotop@'${_VM_IP_BASE}.%' IDENTIFIED BY '$pwdmtop'\""
-_eval "mysql -uroot -p'$pwdlocal' -e \"GRANT SUPER, RELOAD, PROCESS ON *.* to innotop@'${_IPTHIS}' IDENTIFIED BY '$pwdmtop'\""
+_eval "mysql -uroot -p'$pwdlocal' -e \"GRANT SUPER, RELOAD, PROCESS ON *.* to innotop@'${S_NODE_IPV4}' IDENTIFIED BY '$pwdmtop'\""
 strpass+="innotop@'${_VM_IP_BASE}.%' - $pwdmtop\n"
 
 

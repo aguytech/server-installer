@@ -71,7 +71,7 @@ VMAILS_ACRO=( [postfixadmin]="pfa" [vmailmanage]="vmail" [vimbadmin]="vma" )
 
 _FILEMAILDONE="$_PATH_LOG/${S_RELEASE}-${_PART}.done"
 _RELEASEMAIL="inc_${S_RELEASE}"
-_IPSIN=${_CLUSTER_IPS}; [ "${_IPSIN/${_IPTHIS}/}" == "${_IPSIN}" ] && _IPSIN+=${_IPTHIS}  && _IPSIN=${_IPSIN%,}
+_IPSIN=${_CLUSTER_IPS}; [ "${_IPSIN/${S_NODE_IPV4}/}" == "${_IPSIN}" ] && _IPSIN+=${S_NODE_IPV4}  && _IPSIN=${_IPSIN%,}
 
 _PATH_DKIM="${_PATH_RSPAMD}/dkim"
 
@@ -157,7 +157,7 @@ if [ "${STR/ "$S_SERVER_TYPE" /}" != "$STR" ]; then
 
 	_echoT "----------  rsyslog conf mail"
 
-	! grep -q "^mail\.\*.*@${S_SERVICE_LOG}:${S_RSYSLOG_PORT}" /etc/rsyslog.conf && sed -i "s|^\(.\?mail\.\*.*\)$|\1\nmail.*\t\t\t\t@${S_SERVICE_LOG}|" /etc/rsyslog.conf
+	! grep -q "^mail\.\*.*@${S_HOST_IPV4}:${S_RSYSLOG_PORT}" /etc/rsyslog.conf && sed -i "s|^\(.\?mail\.\*.*\)$|\1\nmail.*\t\t\t\t@${S_HOST_IPV4}|" /etc/rsyslog.conf
 
 
 	_echoT "----------  rsyslog restart"
