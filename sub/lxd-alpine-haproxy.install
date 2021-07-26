@@ -3,7 +3,7 @@
 # write by Aguy
 
 
-_echoT "\n==========================================  $_RELEASE $_PART"
+_echoT "\n==========================================  ${_RELEASE}${_PART}"
 
 _echoT "------------------ file required"
 #FILE_SITE="${S_PATH_INSTALL_CONF}/apache2/000-default.conf"
@@ -16,7 +16,8 @@ _echoT "------------------ file required"
 
 _echoT "----------  data"
 
-[ -z ${_CT_NAME_HAPROXY+x} ] && anstmp="${_RELEASE}${_ALPINE_VER/./}-haproxy" && _askno "container NAME for 'haproxy' ($anstmp)" && _CT_NAME_HAPROXY=${_ANSWER:-$anstmp} && _confset _CT_NAME_HAPROXY "$_CT_NAME_HAPROXY"
+[ -z ${_CT_NAME_HAPROXY+x} ] && anstmp="${_RELEASE/./}-haproxy" && _askno "container NAME for 'haproxy' ($anstmp)" && _CT_NAME_HAPROXY=${_ANSWER:-$anstmp} && _confset _CT_NAME_HAPROXY "$_CT_NAME_HAPROXY"
+
 _CT_NAME=${_CT_NAME_HAPROXY}
 
 [ -z ${_CT_IP_PROXY+x} ] && anstmp="10.0.1.2" && _askno "container IP for 'haproxy' ($anstmp)" && _CT_IP_PROXY=${_ANSWER:-$anstmp} && _confset _CT_IP_PROXY "$_CT_IP_PROXY"
@@ -38,9 +39,7 @@ S_DOMAIN_FQDN_NAME="${S_DOMAIN_FQDN_FQDN%.*}" && _confset S_DOMAIN_FQDN_NAME "$S
 
 _echoT "----------  init"
 
-ct_name="${_RELEASE}${_ALPINE_VER/./}-com"
-
-! lxc image list -f json |jq -r '.[].aliases[].name' | grep -q ^${ct_name}$ && _exite "Unable to find image container '${ct_name}'"
+! lxc image list -f json |jq -r '.[].aliases[].name' | grep -q ^${_CT_NAME_COM}$ && _exite "Unable to find image container '${_CT_NAME_COM}'"
 if lxc list -f json |jq -r '.[].name' | grep -q ^${_CT_NAME}$; then
 	if lxc list --format=json | jq -r '.[] | select(.status == "Running").name' | grep -q ^${_CT_NAME}$; then
 		lxc stop ${_CT_NAME}
@@ -52,7 +51,7 @@ if lxc list -f json |jq -r '.[].name' | grep -q ^${_CT_NAME}$; then
 
 fi
 
-lxc init ${ct_name} ${_CT_NAME} -p stock -p global
+lxc init ${_CT_NAME_COM} ${_CT_NAME} -p stock -p global
 
 
 _echoT "----------  profile www-${S_DOMAIN_FQDN_FQDN}"

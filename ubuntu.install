@@ -77,9 +77,6 @@ while [ "${_PART}" != "quit" ]; do
 			quit)
 				break
 				;;
-			haproxy) # ovh home
-				_source "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
-				;;
 			iptables) # ovh
 				_source "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
 				;;

@@ -3,7 +3,7 @@
 # write by Aguy
 
 
-_echoT "\n==========================================  $_RELEASE $_PART"
+_echoT "\n==========================================  ${_RELEASE}${_PART}"
 
 _echoT "------------------ file required"
 FILE_RSYSLOG="${S_PATH_INSTALL_CONF}/rsyslog/vm-apache.conf"
@@ -16,7 +16,8 @@ for file in $files; do ! [ -f ${file} ] && _exite "Unable to find file: '${file}
 
 _echoT "----------  data"
 
-[ -z ${_CT_NAME_APACHE+x} ] && anstmp="${_RELEASE}${_ALPINE_VER/./}-apache" && _askno "container NAME for 'apache' ($anstmp)" && _CT_NAME_APACHE=${_ANSWER:-$anstmp} && _confset _CT_NAME_APACHE "${_CT_NAME_APACHE}"
+[ -z ${_CT_NAME_APACHE+x} ] && anstmp="${_RELEASE/./}-apache" && _askno "container NAME for 'apache' ($anstmp)" && _CT_NAME_APACHE=${_ANSWER:-$anstmp} && _confset _CT_NAME_APACHE "${_CT_NAME_APACHE}"
+
 _CT_NAME=${_CT_NAME_APACHE}
 
 _echoT "----------  data sysctl.conf"
@@ -38,9 +39,7 @@ FILE_CONF_HTTP="/etc/apache2/httpd.conf"
 
 _echoT "----------  init"
 
-ct_name="${_RELEASE}${_ALPINE_VER/./}-com"
-
-! lxc image list -f json |jq -r '.[].aliases[].name' | grep -q ^${ct_name}$ && _exite "Unable to find image container '${ct_name}'"
+! lxc image list -f json |jq -r '.[].aliases[].name' | grep -q ^${_CT_NAME_COM}$ && _exite "Unable to find image container '${_CT_NAME_COM}'"
 if lxc list -f json |jq -r '.[].name' | grep -q ^${_CT_NAME}$; then
 	if lxc list --format=json | jq -r '.[] | select(.status == "Running").name' | grep -q ^${_CT_NAME}$; then
 		lxc stop ${_CT_NAME}
@@ -52,7 +51,7 @@ if lxc list -f json |jq -r '.[].name' | grep -q ^${_CT_NAME}$; then
 
 fi
 
-lxc init ${ct_name} ${_CT_NAME} -p stock -p global
+lxc init ${_CT_NAME_COM} ${_CT_NAME} -p stock -p global
 
 
 _echoT "----------  ct start"

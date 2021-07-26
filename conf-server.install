@@ -139,10 +139,16 @@ if [[ " ovh home " = *" $S_SERVER_TYPE "* ]]; then
 		! [ -d "$path" ] && mkdir -p "$path"
 	done
 
+
 	_echoT "----------  conf S_HOST_VM_ETH"
 
 	_echo "Here is the network actually declared ${!S_HOST_VM_ETH[*]}"
 	_askyn "You can modify this in file '${S_GLOBAL_CONF}', before continue or valid to continue."
+
+	_echoT "----------  conf S_HOST_VM_SSH_NAT"
+
+	anstmp="${S_HOST_VM_SSH_NAT}" && _askno "allow an ssh connection from internet  dirrectlyto VMs, on to activate it (${anstmp})"
+	[ "${_ANSWER}" ] && S_HOST_VM_SSH_NAT=${_ANSWER:-$anstmp} && _confset "S_HOST_VM_SSH_NAT" "${S_HOST_VM_SSH_NAT}" "${S_GLOBAL_CONF}"
 
 	_echoT "----------  conf S_HOST_DHCP_MIN"
 
@@ -188,7 +194,7 @@ fi
 
 
 ###################  VM
-
+S
 _echoT "----------  conf S_VM_PATH_SHARE"
 
 anstmp="${S_VM_PATH_SHARE}" && _askno "VM sharing path (${anstmp})"
@@ -217,30 +223,32 @@ fi
 
 ###################  SERVICES
 
-_echoT "----------  conf S_SERVICE_PROXY"
+declare -A S_SERVICE
 
-anstmp="${S_SERVICE_PROXY}" && _askno "service name for proxy (${anstmp})"
-S_SERVICE_PROXY=${_ANSWER:-$anstmp} && _confset "S_SERVICE_PROXY" "${S_SERVICE_PROXY}" "${S_GLOBAL_CONF}"
+_echoT "----------  conf S_SERVICE proxy"
 
-_echoT "----------  conf S_SERVICE_LOG"
+anstmp="${S_SERVICE['proxy']}" && _askno "service name for proxy (${anstmp})"
+[ "${_ANSWER}" ] && S_SERVICE['proxy']=${_ANSWER:-$anstmp} && _confset_array "S_SERVICE" "proxy" "${S_SERVICE['proxy']}" "${S_GLOBAL_CONF}"
 
-anstmp="${S_SERVICE_LOG}" && _askno "service name for log (${anstmp})"
-S_SERVICE_LOG=${_ANSWER:-$anstmp} && _confset "S_SERVICE_LOG" "${S_SERVICE_LOG}" "${S_GLOBAL_CONF}"
+_echoT "----------  conf S_SERVICE log"
 
-_echoT "----------  conf S_SERVICE_CACHE"
+anstmp="${S_SERVICE['log']}" && _askno "service name to log (${anstmp})"
+[ "${_ANSWER}" ] && S_SERVICE['log']=${_ANSWER:-$anstmp} && _confset_array "S_SERVICE" "log" "${S_SERVICE['log']}" "${S_GLOBAL_CONF}"
 
-anstmp="${S_SERVICE_CACHE}" && _askno "service name for cache (${anstmp})"
-S_SERVICE_CACHE=${_ANSWER:-$anstmp} && _confset "S_SERVICE_CACHE" "${S_SERVICE_CACHE}" "${S_GLOBAL_CONF}"
+_echoT "----------  conf S_SERVICE cache"
 
-_echoT "----------  conf S_SERVICE_MAIL"
+anstmp="${S_SERVICE['cache']}" && _askno "service name for cache (${anstmp})"
+[ "${_ANSWER}" ] && S_SERVICE['cache']=${_ANSWER:-$anstmp} && _confset_array "S_SERVICE" "cache" "${S_SERVICE['cache']}" "${S_GLOBAL_CONF}"
 
-anstmp="${S_SERVICE_MAIL}" && _askno "service name for mail (${anstmp})"
-S_SERVICE_MAIL=${_ANSWER:-$anstmp} && _confset "S_SERVICE_MAIL" "${S_SERVICE_MAIL}" "${S_GLOBAL_CONF}"
+_echoT "----------  conf S_SERVICE mail"
 
-_echoT "----------  conf S_SERVICE_ADMIN"
+anstmp="${S_SERVICE['mail']}" && _askno "service name for mail (${anstmp})"
+[ "${_ANSWER}" ] && S_SERVICE['mail']=${_ANSWER:-$anstmp} && _confset_array "S_SERVICE" "mail" "${S_SERVICE['mail']}" "${S_GLOBAL_CONF}"
 
-anstmp="${S_SERVICE_ADMIN}" && _askno "service name for admin (${anstmp})"
-S_SERVICE_ADMIN=${_ANSWER:-$anstmp} && _confset "S_SERVICE_ADMIN" "${S_SERVICE_ADMIN}" "${S_GLOBAL_CONF}"
+_echoT "----------  conf S_SERVICE admin"
+
+anstmp="${S_SERVICE['admin']}" && _askno "service name for admin (${anstmp})"
+[ "${_ANSWER}" ] && S_SERVICE['admin']=${_ANSWER:-$anstmp} && _confset_array "S_SERVICE" "admin" "${S_SERVICE['admin']}" "${S_GLOBAL_CONF}"
 
 
 ###################  DOMAIN

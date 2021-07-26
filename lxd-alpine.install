@@ -14,8 +14,6 @@ fi
 
 ################################  conf
 
-_RELEASE="alpine"
-
 _echoT "------------------ conf && data"
 
 # for install from desktop
@@ -28,6 +26,9 @@ S_FILE_INSTALL_DONE="${S_PATH_CONF}/lxd.done"
 
 [ -f "$S_FILE_INSTALL_CONF" ] && . "$S_FILE_INSTALL_CONF"
 
+#don't mix with S_* variables
+[ -z ${_RELEASE_ID+x} ] && _RELEASE_ID="alpine" && _confset _RELEASE_ID "${_RELEASE_ID}"
+
 
 ################################  mandatory parts
 
@@ -35,7 +36,7 @@ S_FILE_INSTALL_DONE="${S_PATH_CONF}/lxd.done"
 # init common
  parts="init common"
 for _PART in $parts; do
-	! _parthave "$_PART" "$S_FILE_INSTALL_DONE" && _source "${_PATH_BASE_SUB}/lxd-${_RELEASE}-${_PART}.install"
+	! _parthave "$_PART" "$S_FILE_INSTALL_DONE" && _source "${_PATH_BASE_SUB}/lxd-${_RELEASE_ID}-${_PART}.install"
 done
 
 
@@ -44,7 +45,7 @@ done
 while [ "$_PART" != "quit" ]; do
 
 	partsall="$(sed -n "s|^\t*\(\w\+\)) # .*$S_SERVER_TYPE.*$|\1|p" "$0" | xargs)"
-	partsrelease=" $(ls -1 "$_PATH_BASE_SUB"/*lxd-${_RELEASE}* | sed -n "s|.*lxd-${_RELEASE}-\(.*\)\.install|\1|p" | xargs) "
+	partsrelease=" $(ls -1 "$_PATH_BASE_SUB"/*lxd-${_RELEASE_ID}* | sed -n "s|.*lxd-${_RELEASE_ID}-\(.*\)\.install|\1|p" | xargs) "
 	partsmade=" $(cat ${S_FILE_INSTALL_DONE} | xargs) "
 	parts2do=
 	for part in $partsall; do
@@ -63,10 +64,10 @@ while [ "$_PART" != "quit" ]; do
 				break
 				;;
 			haproxy) # ovh home
-				_source "${_PATH_BASE_SUB}/lxd-${_RELEASE}-${_PART}.install"
+				_source "${_PATH_BASE_SUB}/lxd-${_RELEASE_ID}-${_PART}.install"
 				;;
 			apache) # ovh home
-				_source "${_PATH_BASE_SUB}/lxd-${_RELEASE}-${_PART}.install"
+				_source "${_PATH_BASE_SUB}/lxd-${_RELEASE_ID}-${_PART}.install"
 				;;
 			*)
 				_echoE "Wrong option: '$_PART'"

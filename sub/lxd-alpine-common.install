@@ -2,45 +2,17 @@
 #
 # write by Aguy
 
-_echoT "\n==========================================  $_RELEASE $_PART"
+_echoT "\n==========================================  ${_RELEASE}${_PART}"
 
 
-####################################  MAIN
+####################################  DATA
 
-if ! [ "`lxc list --format=json | jq -r '.[] | select(.status == "Running") | select(.name == "'${_CT_NAME}'").name'`" ]; then
-	_echoT "----------  start ${_CT_NAME}"
+_echoT "----------  ${_RELEASE_ID} data"
 
-	lxc start ${_CT_NAME}
-	sleep 1
-fi
+[ -z ${_CT_NAME_COM+x} ] && anstmp="${_CT_NAME}-com" && _askno "Give a name for common publishing image container for ${_RELEASE_ID} release ($anstmp)" && _CT_NAME_COM=${_ANSWER:-$anstmp} && _confset _CT_NAME_COM "${_CT_NAME_COM}"
 
-
-####################################  PATHS
-
-_echoT "----------  path bs"
-
-path=/tmp/bs
-[ -d ${path} ] && rm -fR ${path}
-cp -a ${S_PATH_INSTALL%/*}/bs ${path}
-rm -fR ${path}/.git
-lxc exec ${_CT_NAME} -- sh -c "[ -d /usr/local/bs ] && mv /usr/local/bs /usr/local/bs.${_SDDATE}"
-lxc file push --recursive ${path} ${_CT_NAME}/usr/local/
-[ -d ${path} ] && rm -fR ${path}
-
-
-_echoT "----------  path server"
-
-lxc exec ${_CT_NAME} -- sh -c "[ -d ${S_PATH_CONF} ] || mkdir -p ${S_PATH_CONF}"
-path="${S_PATH_CONF_SSL}/private"
-lxc exec ${_CT_NAME} -- sh -c "[ -d ${path} ] || mkdir -p ${path}"
-
-lxc file push ${S_PATH_INSTALL_CONF}/server.conf-apline ${_CT_NAME}${S_PATH_CONF}/server.conf
 
 ####################################  CONF
-
-_echoT "----------  apk update"
-
-lxc exec ${_CT_NAME} -- sh -c "apk update && apk upgrade"
 
 _echoT "----------  apk profile.d"
 
@@ -49,12 +21,24 @@ lxc exec ${_CT_NAME} -- sh -c "! [ -e /etc/profile.d/bash-lxc-alpine.sh ] && ln 
 lxc exec ${_CT_NAME} -- sh -c "! [ -e /etc/profile.d/bash_functions.sh ] && ln -sv /usr/local/bs/conf/.bash_functions /etc/profile.d/bash_functions.sh"
 lxc exec ${_CT_NAME} -- sh -c "! [ -e /etc/profile.d/env.sh ] && ln -sv /usr/local/bs/conf/env.conf /etc/profile.d/env.sh"
 
+file="/tmp/server.conf"
+cp -a ${S_PATH_INSTALL_CONF}/server.conf ${file}
+sed -i "s|^\(S_RELEASE=\).*$|\"${_RELEASE}\"|" ${file}
+sed -i "s|^\(S_RELEASE_ID=\).*$|\"${_RELEASE_ID}\"|" ${file}
+sed -i "s|^\(S_RELEASE_NAME=\).*$|\"${_RELEASE_NAME}\"|" ${file}
+sed -i "s|^\(S_PATH_INSTALL=\).*$|\"/usr/local/install\"|" ${file}
+sed -i "s|^\(S_ETH=\).*$|\"eth0\"|" ${file}
+sed -i "s|^\(S_SERVER_TYPE=\).*$|\"lxd\"|" ${file}
 
-_echoT "----------  timezone Paris"
+lxc file push ${file} ${_CT_NAME}${S_PATH_CONF}/server.conf
 
-lxc exec ${_CT_NAME} -- sh -c "apk add tzdata"
-lxc exec ${_CT_NAME} -- sh -c "cp /usr/share/zoneinfo/Europe/Paris /etc/localtime && echo 'Europe/Paris' > /etc/timezone && date"
-lxc exec ${_CT_NAME} -- sh -c "apk del tzdata"
+
+####################################  SYSLOG
+
+_echoT "----------  syslog remove"
+
+lxc exec ${_CT_NAME} -- sh -c "rc-service syslog stop"
+lxc exec ${_CT_NAME} -- sh -c "rc-status boot|grep -q '^\s*syslog\s' && rc-update del syslog boot"
 
 
 ####################################  RSYSLOG
@@ -67,7 +51,6 @@ lxc exec ${_CT_NAME} -- sh -c "[ -d ${path} ] || mkdir ${path}"
 
 service="rsyslog"
 lxc exec ${_CT_NAME} -- sh -c "rc-update add ${service}"
-lxc exec ${_CT_NAME} -- sh -c "rc-service ${service} start"
 
 
 _echoT "----------  rsyslog conf"
@@ -85,9 +68,9 @@ _echoT "----------  rsyslog cron"
 lxc exec ${_CT_NAME} -- sh -c 'echo -e "# rsyslog filter to separate cron log\ncron.* action(type=\"omfile\" dirCreateMode=\"0700\" FileCreateMode=\"0644\" File=\"/var/log/cron.log\")\n& stop" > /etc/rsyslog.d/cron.conf'
 
 
-_echoT "----------  rsyslog restart"
+_echoT "----------  rsyslog start"
 
-lxc exec ${_CT_NAME} -- sh -c "rc-service rsyslog restart"
+lxc exec ${_CT_NAME} -- sh -c "rc-service ${service} start"
 
 
 ####################################  LOGROTATE
@@ -110,8 +93,8 @@ lxc exec ${_CT_NAME} -- sh -c "rc-service crond restart"
 
 _echoT "----------  publish ${_CT_NAME}"
 
-lxc image list --format=json | jq -r '.[].aliases[].name' | grep -q ^${_CT_NAME}-com$ && lxc image alias rename ${_CT_NAME}-com ${_CT_NAME}-com-$(date +%s)
-lxc publish ${_CT_NAME} --alias ${_CT_NAME}-com --force
+lxc image list --format=json | jq -r '.[].aliases[].name' | grep -q ^${_CT_NAME_COM}$ && lxc image alias rename ${_CT_NAME_COM} ${_CT_NAME_COM}-$(date +%s)
+lxc publish ${_CT_NAME} --alias ${_CT_NAME_COM} --force
 
 
 ####################################  END

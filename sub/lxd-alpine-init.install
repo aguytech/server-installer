@@ -2,40 +2,90 @@
 #
 # write by Aguy
 
-_echoT "\n==========================================  $_RELEASE $_PART"
+_echoT "\n==========================================  $_RELEASE_ID $_PART"
 
 
 ####################################  DATA
 
-_echoT "----------  ${_RELEASE} data"
+_echoT "----------  ${_RELEASE_ID} data"
 
-[ -z ${_ALPINE_VER+x} ] && anstmp="3.14" && _askno "Give a version image container for LXC ${_RELEASE} ($anstmp)" && _ALPINE_VER=${_ANSWER:-$anstmp} && _confset _ALPINE_VER "${_ALPINE_VER}"
+[ -z ${_RELEASE_NAME+x} ] && anstmp="3.14" && _askno "Give a version image container for LXC ${_RELEASE_ID} ($anstmp)" && _RELEASE_NAME=${_ANSWER:-$anstmp} && _confset _RELEASE_NAME "${_RELEASE_NAME}"
 
-_CT_NAME="${_RELEASE}${_ALPINE_VER/./}"
+[ -z ${_RELEASE+x} ] && _RELEASE=${_RELEASE_ID}${_RELEASE_NAME} && _confset _RELEASE "${_RELEASE}"
+
+_CT_NAME="${_RELEASE/./}"
 
 
-####################################  MAIN
+####################################  INIT
 
 _echoT "----------  ${_RELEASE} copy"
 
-if ! [ "`lxc image list --format=json | jq -r '.[].aliases[].name | select(. | contains("'${_RELEASE}${_ALPINE_VER/./}'"))'`" ]; then
-	_echo "copy images ${_RELEASE}${_ALPINE_VER}"
-	lxc image copy images:${_RELEASE}/${_ALPINE_VER} local: --alias ${_RELEASE}${_ALPINE_VER/./} --alias ${_RELEASE}-${_ALPINE_VER/./} --auto-update
+if ! [ "`lxc image list --format=json | jq -r '.[].aliases[].name | select(. | contains("'${_CT_NAME}'"))'`" ]; then
+	_echo "copy images ${_CT_NAME}"
+	lxc image copy images:${_RELEASE_ID}/${_RELEASE_NAME} local: --alias ${_CT_NAME} --alias ${_RELEASE_ID}-${_RELEASE_NAME/./} --auto-update
 fi
 
 
-_echoT "----------  ${_RELEASE} init"
+_echoT "----------  ${_CT_NAME} init"
 
-if ! [ "`lxc list --format=json | jq -r '.[] | select(.name == "'${_CT_NAME}'").name'`" ]; then
-	lxc init ${_CT_NAME} ${_CT_NAME} -p stock
+if [ "`lxc list --format=json | jq -r '.[] | select(.name == "'${_CT_NAME}'").name'`" ]; then
+	[ "`lxc list --format=json | jq -r '.[] | select(.status == "Running") | select(.name == "'${_CT_NAME}'").name'`" ] && lxc stop ${_CT_NAME}
+	lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDDATE}
+fi
+lxc init ${_CT_NAME} ${_CT_NAME} -p stock -p global
+
+
+#_echoT "----------  ${_CT_NAME} profile global"
+
+#if ! [ "`lxc list "${_CT_NAME}" --format=json | jq -r '.[] | select(.profiles | any(contains("global"))).name'`" ]; then
+#	lxc profile add "${_CT_NAME}" global
+#fi
+
+
+if ! [ "`lxc list --format=json | jq -r '.[] | select(.status == "Running") | select(.name == "'${_CT_NAME}'").name'`" ]; then
+	_echoT "----------  start ${_CT_NAME}"
+
+	lxc start ${_CT_NAME}
+	sleep 1
 fi
 
 
-_echoT "----------  ${_RELEASE} profile global"
+####################################  CONF
 
-if ! [ "`lxc list "${_CT_NAME}" --format=json | jq -r '.[] | select(.profiles | any(contains("global"))).name'`" ]; then
-	lxc profile add "${_CT_NAME}" global
-fi
+_echoT "----------  apk update"
+
+lxc exec ${_CT_NAME} -- sh -c "apk update && apk upgrade"
+
+_echoT "----------  timezone Paris"
+
+lxc exec ${_CT_NAME} -- sh -c "apk add tzdata"
+lxc exec ${_CT_NAME} -- sh -c "cp /usr/share/zoneinfo/Europe/Paris /etc/localtime && echo 'Europe/Paris' > /etc/timezone && date"
+lxc exec ${_CT_NAME} -- sh -c "apk del tzdata"
+
+
+####################################  PATHS
+
+_echoT "----------  path bs"
+
+path="/tmp/bs"
+! [ -d ${path} ] && rm -fR ${path}
+cp -a ${S_PATH_INSTALL%/*}/bs ${path}
+rm -fR ${path}/.git
+lxc exec ${_CT_NAME} -- sh -c "[ -d /usr/local/bs ] && mv /usr/local/bs /usr/local/bs.${_SDDATE}"
+lxc file push --recursive ${path} ${_CT_NAME}/usr/local/
+[ -d ${path} ] && rm -fR ${path}
+
+
+_echoT "----------  path server"
+
+paths="${S_PATH_CONF} ${S_PATH_CONF_SSL}/private ${S_PATH_CONF_SSL}/certs"
+for path in ${paths}; do
+	lxc exec ${_CT_NAME} -- sh -c "[ -d ${path} ] || mkdir -p ${path}"
+	lxc exec ${_CT_NAME} -- sh -c "chown 0:0 -R ${path}"
+done
+
+lxc exec ${_CT_NAME} -- sh -c "chmod 770 -R ${S_PATH_CONF_SSL}"
+lxc exec ${_CT_NAME} -- sh -c "chmod 700 -R ${S_PATH_CONF_SSL}/private"
 
 
 ####################################  END
