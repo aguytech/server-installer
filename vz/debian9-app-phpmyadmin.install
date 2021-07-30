@@ -46,7 +46,7 @@ _echoT "----------  data"
 
 [ -z ${_PATH_SHARE+x} ] && anstmp="$S_VM_PATH_SHARE/php/$_SUBDOMAIN" && _askno "Give a shared path for '$_SUBDOMAIN' files ($anstmp)" && _PATH_SHARE=${_ANSWER:-$anstmp} && _confset _PATH_SHARE "$_PATH_SHARE"
 
-[ -z ${_DBHOSTS+x} ] && anstmp="${S_SERVICE_IPS['sgbd']}" && _askno "Give address of ALL database servers to administrate ($anstmp)" && _DBHOSTS=${_ANSWER:-$anstmp} && _confset _DBHOSTS "$_DBHOSTS"
+[ -z ${_DBHOSTS+x} ] && anstmp="${S_SERVICE[sgbd]}" && _askno "Give address of ALL database servers to administrate ($anstmp)" && _DBHOSTS=${_ANSWER:-$anstmp} && _confset _DBHOSTS "$_DBHOSTS"
 
 [ -z ${_DBNAME+x} ] && anstmp="${PARTNAME}" && _askno "Give a name for database ($anstmp)" && _DBNAME=${_ANSWER:-$anstmp} && _confset _DBNAME "$_DBNAME"
 

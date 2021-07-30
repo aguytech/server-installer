@@ -35,7 +35,7 @@ if [ "$S_SERVER_TYPE" == vz ]; then
 	_echoT "----------  ctid"
 
 	# test ctid
-	[ "${S_SERVICE_IPS['sgbd']/$_IPTHIS/}" == "${S_SERVICE_IPS['sgbd']}" ] && _askno "This container is not one of the defaults for Database, please update configuration file for 'S_SERVICE_IPS['sgbd']'\nPlease valid to continue"
+	[ "${S_SERVICE[sgbd]/$_IPTHIS/}" == "${S_SERVICE[sgbd]}" ] && _askno "This container is not one of the defaults for Database, please update configuration file for 'S_SERVICE[sgbd]'\nPlease valid to continue"
 
 fi
 
@@ -171,7 +171,7 @@ done
 _echoT "----------  right ${S_DB_USER_HTTP}"
 
 <<keep
-for IP in ${S_SERVICE_IPS['http']}; do
+for IP in ${S_SERVICE[http]}; do
 	strpass+="${S_DB_USER_HTTP}@${IP} - $pwdhttp\n"
 	_eval "mysql -uroot -p'$pwdlocal' -e \"GRANT SELECT, INSERT, UPDATE ON *.* TO '${S_DB_USER_HTTP}'@'${IP}' IDENTIFIED BY '$pwdhttp'\""
 done

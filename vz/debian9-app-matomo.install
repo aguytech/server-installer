@@ -44,7 +44,7 @@ _echoT "----------  data"
 
 [ -z ${_PATH_INSTALL+x} ] && anstmp="$_PATH_WWW/$S_DOMAIN_FQDN" && _askno "Give a path to install ($anstmp)" && _PATH_INSTALL=${_ANSWER:-$anstmp} && _confset _PATH_INSTALL "$_PATH_INSTALL"
 
-[ -z ${_DBHOST+x} ] && anstmp="${S_SERVICE_IPS['sgbd']%% *}" && _askno "Give address of database ($anstmp)" && _DBHOST=${_ANSWER:-$anstmp} && _confset _DBHOST "$_DBHOST"
+[ -z ${_DBHOST+x} ] && anstmp="${S_SERVICE[sgbd]%% *}" && _askno "Give address of database ($anstmp)" && _DBHOST=${_ANSWER:-$anstmp} && _confset _DBHOST "$_DBHOST"
 
 [ -z ${_DBNAME+x} ] && anstmp="${PARTNAME}" && _askno "Give a name for database ($anstmp)" && _DBNAME=${_ANSWER:-$anstmp} && _confset _DBNAME "$_DBNAME"
 

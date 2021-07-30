@@ -11,10 +11,10 @@ _echoT "\n==========================================  $S_RELEASE $_PART"
 if [ "$S_SERVER_TYPE" == vz ]; then
 	ctidthis="$(_get_ctid)"
 
-	_echoT "----------  ${S_SERVICE_IPS['sgbd']}"
+	_echoT "----------  ${S_SERVICE[sgbd]}"
 
 	# test ctid
-	[ "${S_SERVICE_IPS['sgbd']/$_IPTHIS/}" == "${S_SERVICE_IPS['sgbd']}" ] && _askno "This container is not one of the default declared for sgbd\nConfirm or answer 'n' to exit"
+	[ "${S_SERVICE[sgbd]/$_IPTHIS/}" == "${S_SERVICE[sgbd]}" ] && _askno "This container is not one of the default declared for sgbd\nConfirm or answer 'n' to exit"
 	[ "$_ANSWER" == "n" ] && _exit
 fi
 
@@ -194,7 +194,7 @@ done
 _echoT "----------  right ${S_DB_USER_HTTP}"
 
 <<keep
-for ip in ${S_SERVICE_IPS['http']}; do
+for ip in ${S_SERVICE[http]}; do
 	strpass+="${S_DB_USER_HTTP} @ $ip - $_PWDHTTP\n"
 	_evalq "mysql -uroot -p$_PWDLOCAL -e \"GRANT SELECT, INSERT, UPDATE ON *.* TO '${S_DB_USER_HTTP}'@'$ip' IDENTIFIED BY '$_PWDHTTP'\""
 done

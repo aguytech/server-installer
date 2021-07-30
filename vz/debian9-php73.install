@@ -22,10 +22,10 @@ for file in $files; do [ ! -f "$file" ] && _exite "Unable to find file: '$file'"
 ####################################  CTID
 
 if [ "$S_SERVER_TYPE" = vz ]; then
-	_echoT "----------  ${S_SERVICE_IPS['http']}"
+	_echoT "----------  ${S_SERVICE[http]}"
 
 	# test ctid
-	[ "${S_SERVICE_IPS['http']/$_IPTHIS/}" = "${S_SERVICE_IPS['http']}" ] && _askno "This container is not one of the default declared for www\nConfirm or answer 'n' to exit"
+	[ "${S_SERVICE[http]/$_IPTHIS/}" = "${S_SERVICE[http]}" ] && _askno "This container is not one of the default declared for www\nConfirm or answer 'n' to exit"
 	[ "$_ANSWER" = "n" ] && _exit
 fi
 

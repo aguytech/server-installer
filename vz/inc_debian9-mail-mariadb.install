@@ -36,7 +36,7 @@ _evalq "apt-get install -y mariadb-client"
 _echoT "----------  Mariadb data"
 
 # asks
-[ -z ${_DBHOST+x} ] && anstmp="${S_SERVICE_IPS['sgbd']%% *}" && _askno "Give the location of mariadb server 'localhost' ? ($anstmp)" && _DBHOST=${_ANSWER:-$anstmp} && _confset _DBHOST "$_DBHOST"
+[ -z ${_DBHOST+x} ] && anstmp="${S_SERVICE[sgbd]%% *}" && _askno "Give the location of mariadb server 'localhost' ? ($anstmp)" && _DBHOST=${_ANSWER:-$anstmp} && _confset _DBHOST "$_DBHOST"
 
 [ -z ${_DBNAME+x} ] && anstmp=$_VMAIL_NAME && _askno "Give name for mail database ($anstmp)"  && _DBNAME=${_ANSWER:-$anstmp} && _confset _DBNAME "$_DBNAME"
 

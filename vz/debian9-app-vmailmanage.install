@@ -29,7 +29,7 @@ _echoT "----------  data"
 
 [ -z ${_PWDROOTADMIN+x} ] && _ask "Give password for remote connection to database server for user 'rootadmin'" && _PWDROOTADMIN=$_ANSWER && _confset _PWDROOTADMIN "$_PWDROOTADMIN"
 
-[ -z ${_DBHOST+x} ] && anstmp="${S_SERVICE_IPS['sgbd']%% *}" && _askno "Give the location of database server ? ($anstmp)" && _DBHOST=${_ANSWER:-$anstmp} && _confset _DBHOST "$_DBHOST"
+[ -z ${_DBHOST+x} ] && anstmp="${S_SERVICE[sgbd]%% *}" && _askno "Give the location of database server ? ($anstmp)" && _DBHOST=${_ANSWER:-$anstmp} && _confset _DBHOST "$_DBHOST"
 
 [ -z ${_DBNAME+x} ] && anstmp=vmailmanage && _askno "Give name for vmailmanage database ($anstmp)" && _DBNAME=${_ANSWER:-$anstmp} && _confset _DBNAME "$_DBNAME"
 

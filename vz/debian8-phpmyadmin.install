@@ -99,7 +99,7 @@ pmauser=${_ANSWER:-$pmauser}
 pmapwd="$(_pwd)"
 _askno "Give the phpMyAdmin client password to access to MariaDB ($pmapwd)"
 pmapwd=${_ANSWER:-$pmapwd}
-pmahost="${S_SERVICE_IPS['sgbd']%% *}"
+pmahost="${S_SERVICE[sgbd]%% *}"
 _askno "Give the location of mariadb server 'localhost' ? ($pmahost)"
 pmahost=${_ANSWER:-$pmahost}
 

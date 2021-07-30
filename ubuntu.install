@@ -13,7 +13,7 @@ ln -sv /usr/local/bs/conf/.bash_aliases /root/.bash_aliases"
 
 ssh root@${server} bash -i <<<$cmds
 rsync /home/shared/dev/bs/ root@${server}:/usr/local/bs/ -e 'ssh -p 22' --exclude=/.git --delete -av
-rsync /home/shared/dev/install/ root@${server}:/usr/local/bs/install/ -e 'ssh -p 22' --exclude=/.git --delete -av
+rsync /home/shared/dev/install/ root@${server}:/usr/local/install/ -e 'ssh -p 22' --exclude=/.git --delete -av
 
 # HOST
 ssh root@${server}

@@ -24,7 +24,7 @@ for FILE in $FILES; do ! [ -f "$FILE" ] && _exite "Unable to find file: '$FILE'"
 if [ "$S_SERVER_TYPE" == vz ]; then
     _echoT "----------  ctid"
 
-    [ "${S_SERVICE_IPS['http']/$_IPTHIS/}" == "${S_SERVICE_IPS['http']}" ] && _askyn "This container is not the default one for WWW: '${S_SERVICE_IPS['http']}'\nConfirm or type 'n' to exit"
+    [ "${S_SERVICE[http]/$_IPTHIS/}" == "${S_SERVICE[http]}" ] && _askyn "This container is not the default one for WWW: '${S_SERVICE[http]}'\nConfirm or type 'n' to exit"
     [ "$_ANSWER" == "n" ] && _exite "Bye"
 fi
 
@@ -47,7 +47,7 @@ _echoT "----------  data"
 
 [ -z ${_PATH_SHARE+x} ] && anstmp="$S_VM_PATH_SHARE/save" && _askno "Give a shared path for save files ($anstmp)" && _PATH_SHARE=${_ANSWER:-$anstmp} && _confset _PATH_SHARE "$_PATH_SHARE"
 
-[ -z ${_DBHOST+x} ] && anstmp="${S_SERVICE_IPS['sgbd']%% *}" && _askno "Give address of database server ? ($anstmp)" && _DBHOST=${_ANSWER:-$anstmp} && _confset _DBHOST "$_DBHOST"
+[ -z ${_DBHOST+x} ] && anstmp="${S_SERVICE[sgbd]%% *}" && _askno "Give address of database server ? ($anstmp)" && _DBHOST=${_ANSWER:-$anstmp} && _confset _DBHOST "$_DBHOST"
 
 [ -z ${_DBNAME+x} ] && anstmp="${PARTNAME}" && _askno "Give name for database ($anstmp)" && _DBNAME=${_ANSWER:-$anstmp} && _confset _DBNAME "$_DBNAME"
 
