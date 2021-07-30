@@ -203,7 +203,7 @@ _echo "------------------------------------------"
 _askno "after it, valid to continue"
 
 
-_echoT "----------  end"
+_echoT "---------- ${_PART} end"
 
 _evalq _var_unset "part" "*"
 _evalq "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"

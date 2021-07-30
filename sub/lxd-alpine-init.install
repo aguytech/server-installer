@@ -90,5 +90,5 @@ lxc exec ${_CT_NAME} -- sh -c "chmod 700 -R ${S_PATH_CONF_SSL}/private"
 
 ####################################  END
 
-_echoT "----------  end"
+_echoT "---------- ${_PART} end"
 _eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"

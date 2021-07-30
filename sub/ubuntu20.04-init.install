@@ -28,7 +28,7 @@ _askyn "Please edit manually the file '${S_GLOBAL_CONF}'\nto adapt global parame
 [ "$_ANSWER" = "n" ] && _exit 1
 
 
-_echoT "----------  end"
+_echoT "---------- ${_PART} end"
 
 _eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"
 

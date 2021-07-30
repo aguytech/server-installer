@@ -30,12 +30,13 @@ sed -i "/^\s*GSSAPIAuthentication yes/ s| yes| no|" "${file}"
 file='/etc/ssh/sshd_config'
 _keepcpts "${file}"
 
-sed -i "/^#\?Port/ c Port ${_SSH_PORT}" "${file}"
-sed -i "/^#\?GSSAPIAuthentication/ {s|^#||;s| yes| no|}" "${file}"
-sed -i "/^#\?UseDNS/ {s|^#||;s| yes| no|}" "${file}"
-sed -i "/^#\?PasswordAuthentication/ {s|^#||;s| yes| no|}" "${file}"
-sed -i "/^#\?ClientAliveInterval/ c ClientAliveInterval 300" "${file}"
-sed -i "/^#\?ClientAliveCountMax/ c ClientAliveCountMax 3" "${file}"
+sed -i "s|^#\?\(PermitRootLogin\) .*$|\1 without-password|" $file
+sed -i "s|^#\?\(Port\).*$|\1 ${_SSH_PORT}|" $file
+sed -i "s|^#\?\(GSSAPIAuthentication\) .*$|\1 no|" $file
+sed -i "s|^#\?\(UseDNS\) .*$|\1 no|" $file
+sed -i "s|^#\?\(PasswordAuthentication\) .*$|\1 no|" $file
+sed -i "s|^#\?\(ClientAliveInterval\) .*$|\1 300|" $file
+sed -i "s|^#\?\(ClientAliveCountMax\) .*$|\1 3|" $file
 
 
 _echoT "----------  ssh restart"
@@ -84,7 +85,7 @@ str=" home ovh "; if [ "${str/ "$S_SERVER_TYPE" /}" != "$str" ]; then
 fi
 
 
-_echoT "----------  end"
+_echoT "---------- ${_PART} end"
 _eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"
 
 

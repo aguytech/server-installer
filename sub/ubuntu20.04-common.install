@@ -356,7 +356,7 @@ _echoT "----------  clean"
 _evalq "apt-get -y autoremove; apt-get clean; apt-get autoclean"
 
 
-_echoT "----------  end"
+_echoT "---------- ${_PART} end"
 _eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"
 
 

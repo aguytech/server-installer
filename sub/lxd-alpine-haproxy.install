@@ -163,5 +163,5 @@ lxc publish ${_CT_NAME} --alias ${_CT_NAME} --force
 
 ####################################  END
 
-_echoT "----------  end"
+_echoT "---------- ${_PART} end"
 _eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"

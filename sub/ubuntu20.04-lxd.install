@@ -180,7 +180,7 @@ _echoi "$(ls -1 ${S_PATH_INSTALL/-desktop/}/lxd-*)"
 
 ####################################  END
 
-_echoT "----------  end"
+_echoT "---------- ${_PART} end"
 _eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"
 
 <<DRAWIO
