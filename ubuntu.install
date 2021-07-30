@@ -3,29 +3,43 @@
 # write by Aguy
 
 <<MANUALY
+# HOME PRE
+ssh_port=2002
+
+file="/root/.ssh/authorized_keys"
+sudo  cp -a ${file} ${file}.$(date +%s)
+
+file="/etc/ssh/sshd_config"
+sed -i "s|^#\?\(PermitRootLogin\) .*$|\1 without-password|" $file
+sed -i "s|^#\?\(Port\) .*$|\1 ${ssh_port}|" $file
+
+systemctl restart ssh.service
+
+
 # HOME
 server=node2
+ssh_port=2002
 
 cmds="apt update
-apt dist-upgrade
+apt -y dist-upgrade
 apt install -y rsync zfsutils-linux
 ln -sv /usr/local/bs/conf/.bash_aliases /root/.bash_aliases"
 
-ssh root@${server} bash -i <<<$cmds
-rsync /home/shared/dev/bs/ root@${server}:/usr/local/bs/ -e 'ssh -p 22' --exclude=/.git --delete -av
-rsync /home/shared/dev/install/ root@${server}:/usr/local/install/ -e 'ssh -p 22' --exclude=/.git --delete -av
+ssh root@${server} -p ${ssh_port} bash -c "$cmds"
+rsync /home/shared/dev/bs/ root@${server}:/usr/local/bs/ -e "ssh -p ${ssh_port}" --exclude=/.git* --delete -av
+rsync /home/shared/dev/install/ root@${server}:/usr/local/install/ -e "ssh -p ${ssh_port}" --exclude=/.git* --delete -av
 
 # HOST
-ssh root@${server}
+ssh root@${server} -p${ssh_port}
 blkid
 fdisk /dev/sda # m F n w | extend with 50G / 50G / available
 blkid
-zpool create zroot /dev/sda7
+zpool create zroot /dev/sda5
 zpool list
 zfs create -o mountpoint=/save -o compression=lz4 zroot/save
 zfs list
 
-/usr/local/bs/install/ubuntu.install
+/usr/local/install/ubuntu.install
 MANUALY
 
 ################################ global functions
@@ -44,13 +58,13 @@ fi
 
 # init
 _PART="init"
-! _parthave "${_PART}" "${S_FILE_INSTALL_DONE}" && _source "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
+! _parthave "${_PART}" "${S_FILE_INSTALL_DONE}" && _require "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
 
 
 # common + ssh
 parts="common ssh"
 for _PART in $parts; do
-	! _parthave "${_PART}" "$S_FILE_INSTALL_DONE" && _source "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
+	! _parthave "${_PART}" "$S_FILE_INSTALL_DONE" && _require "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
 done
 
 
@@ -78,10 +92,10 @@ while [ "${_PART}" != "quit" ]; do
 				break
 				;;
 			iptables) # ovh
-				_source "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
+				_require "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
 				;;
 			lxd) # ovh home
-				_source "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
+				_require "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
 				;;
 			*)
 				_echoE "Wrong option: '${_PART}'"

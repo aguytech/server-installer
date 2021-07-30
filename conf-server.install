@@ -3,7 +3,7 @@
 # write by Aguy
 
 _PART=conf-server
-_echoT "==========================================  $_PART"
+_echoT "==========================================  ${_PART}"
 
 ####################################  MAIN
 
@@ -69,8 +69,8 @@ _echoT "----------  create S_CLUSTER"
 
 file=/etc/hosts
 _keepcpts "${file}"
-_echo "Here is the servers list actually declared ${!S_CLUSTER[*]}"
-_askyn "If server missing, modify file '${S_GLOBAL_CONF}', before continue or valid to continue."
+_echo "Here is the servers list actually declared : ${!S_CLUSTER[*]}"
+_askyn "If server missing, answer 'n' and modify file '${S_GLOBAL_CONF}'"
 
 ! grep -q "# ${S_DOMAIN_NAME} cluster" "${file}" && echo -e "\n# ${S_DOMAIN_NAME} cluster" >> "${file}"
 for host in ${!S_CLUSTER[*]}; do
@@ -142,22 +142,22 @@ if [[ " ovh home " = *" $S_SERVER_TYPE "* ]]; then
 
 	_echoT "----------  conf S_HOST_VM_ETH"
 
-	_echo "Here is the network actually declared ${!S_HOST_VM_ETH[*]}"
-	_askyn "You can modify this in file '${S_GLOBAL_CONF}', before continue or valid to continue."
+	_echo "Here is the network actually declared : ${!S_HOST_VM_ETH[*]}"
+	_askyn "If network are wrong, answer 'n' and modify file '${S_GLOBAL_CONF}'"
 
 	_echoT "----------  conf S_HOST_VM_SSH_NAT"
 
-	anstmp="${S_HOST_VM_SSH_NAT}" && _askno "allow an ssh connection from internet  dirrectlyto VMs, on to activate it (${anstmp})"
+	anstmp="${S_HOST_VM_SSH_NAT}" && _askno "allow ssh connections from internet  dirrectly to VMs, on to activate it (${anstmp})"
 	[ "${_ANSWER}" ] && S_HOST_VM_SSH_NAT=${_ANSWER:-$anstmp} && _confset "S_HOST_VM_SSH_NAT" "${S_HOST_VM_SSH_NAT}" "${S_GLOBAL_CONF}"
 
 	_echoT "----------  conf S_HOST_DHCP_MIN"
 
-	anstmp="${S_HOST_DHCP_MIN}" && _askno "minimal IP for DHCP container (${anstmp})"
+	anstmp="${S_HOST_DHCP_MIN}" && _askno "minimal range IP for DHCP container (${anstmp})"
 	S_HOST_DHCP_MIN=${_ANSWER:-$anstmp} && _confset "S_HOST_DHCP_MIN" "${S_HOST_DHCP_MIN}" "${S_GLOBAL_CONF}"
 
 	_echoT "----------  conf S_HOST_DHCP_MAX"
 
-	anstmp="${S_HOST_DHCP_MAX}" && _askno "maximal IP for DHCP container (${anstmp})"
+	anstmp="${S_HOST_DHCP_MAX}" && _askno "maximal range IP for DHCP container (${anstmp})"
 	S_HOST_DHCP_MAX=${_ANSWER:-$anstmp} && _confset "S_HOST_DHCP_MAX" "${S_HOST_DHCP_MAX}" "${S_GLOBAL_CONF}"
 
 	_echoT "----------  conf S_HOST_PORT_PRE_SSH"
@@ -329,17 +329,17 @@ S_CACHE_PORT=${_ANSWER:-$anstmp} && _confset "S_CACHE_PORT" "${S_CACHE_PORT}" "$
 
 _echoT "----------  conf S_DB_USER_HTTP"
 
-anstmp="$S_DB_USER_HTTP" && _askno "user for http acces to mariadb (${anstmp})"
+anstmp="$S_DB_USER_HTTP" && _askno "'http' user to acces to mariadb (${anstmp})"
 S_DB_USER_HTTP=${_ANSWER:-$anstmp} && _confset "S_DB_USER_HTTP" "${S_DB_USER_HTTP}" "${S_GLOBAL_CONF}"
 
 _echoT "----------  conf S_DB_USER_DEV"
 
-anstmp="$S_DB_USER_DEV" && _askno "user for dev acces to mariadb (${anstmp})"
+anstmp="$S_DB_USER_DEV" && _askno "'dev' user to acces to mariadb (${anstmp})"
 S_DB_USER_DEV=${_ANSWER:-$anstmp} && _confset "S_DB_USER_DEV" "${S_DB_USER_DEV}" "${S_GLOBAL_CONF}"
 
 _echoT "----------  conf S_DB_MARIA_PORT"
 
-anstmp="$S_DB_MARIA_PORT" && _askno "connections ports for mariadb (${anstmp})"
+anstmp="$S_DB_MARIA_PORT" && _askno "connections port for mariadb (${anstmp})"
 S_DB_MARIA_PORT=${_ANSWER:-$anstmp} && _confset "S_DB_MARIA_PORT" "${S_DB_MARIA_PORT}" "${S_GLOBAL_CONF}"
 
 _echoT "----------  conf S_DB_PGSQL_PORT"
@@ -349,14 +349,20 @@ postgre (${anstmp})"
 S_DB_PGSQL_PORT=${_ANSWER:-$anstmp} && _confset "S_DB_PGSQL_PORT" "${S_DB_PGSQL_PORT}" "${S_GLOBAL_CONF}"
 
 
-####################################  GLOBAL_CONF
+####################################  GLOBAL
 
 _echoT "----------  source ${S_GLOBAL_CONF}"
 
 . "${S_GLOBAL_CONF}"
 
 
+file_env="${S_PATH_SCRIPT_CONF}/env"
+_echoT "----------  source ${file_env}"
+
+. "${file_env}"
+
+
 ####################################  END
 
-_echoT "----------  end"
+_echoT "---------- ${_PART} end"
 _eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"

@@ -3,9 +3,7 @@
 # write by Aguy
 
 _PART=conf-init
-echo -e "${blueb}==========================================  $_PART${cclear}"
-
-_SDDATE="$(date +%s)"
+echo -e "${blueb}==========================================  ${_PART}${cclear}"
 
 
 ####################################  DATA
@@ -15,6 +13,9 @@ S_PATH_INSTALL=`dirname "$(readlink -e "${BASH_SOURCE[0]}")"`
 S_PATH_CONF="/etc/server"
 S_PATH_INSTALL_CONF="${S_PATH_INSTALL}/conf"
 S_GLOBAL_CONF="${S_PATH_CONF}/server.conf"
+
+S_FILE_INSTALL_CONF="${S_PATH_CONF}/install.conf"
+S_FILE_INSTALL_DONE="${S_PATH_CONF}/install.done"
 
 file_conf_server="${S_PATH_INSTALL}/conf-server.install"
 file_install_server="${S_PATH_INSTALL_CONF}/server.conf"
@@ -86,5 +87,10 @@ if ! [ -f "${file_conf_server}" ]; then
 fi
 . "${file_conf_server}"
 
-_echoT "----------  end"
-_eval _partadd "$_PART" "$S_FILE_INSTALL_DONE"
+
+echo -e "${blueb}----------  server settings${cclear}"
+
+
+_PART=conf-init
+_echoT "---------- ${_PART} end"
+_eval _partadd "${_PART}" "${S_FILE_INSTALL_DONE}"
