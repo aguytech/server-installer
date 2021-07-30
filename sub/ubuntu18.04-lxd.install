@@ -76,7 +76,7 @@ _eval lxd init
 _echoT "----------  network 'default'"
 
 # get : inet cidr base
-eval ${S_HOST_VM_ETH['default']}
+eval ${S_HOST_VM_ETH[default]}
 
 _echoT "----------  systemd-resolved"
 
@@ -113,7 +113,7 @@ lxc network set "${inet}" ipv4.address="${cidr}" ipv4.dhcp.ranges="${cidr%.*}"."
 _echoT "----------  network 'stock'"
 
 # get : inet cidr base
-eval ${S_HOST_VM_ETH['stock']}
+eval ${S_HOST_VM_ETH[stock]}
 
 _echoT "----------  network ${inet}"
 

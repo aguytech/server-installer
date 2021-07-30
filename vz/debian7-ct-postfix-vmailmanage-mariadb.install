@@ -16,7 +16,7 @@ S_FILE_INSTALL_DONE="$S_PATH_LOG_INSTALL/install.done"
 _echoT "\n==========================================  $S_RELEASE $_PART"
 
 # test ctid
-[ "${S_SERVICE['mail']/$ctip/" == "${S_SERVICE['mail']}}" ] && _ask "${redb}the container from you install the MAIL server: $ctid, is not the default configured, please update file '${S_SERVICE['mail']}'${cclear}"
+[ "${S_SERVICE[mail]/$ctip/" == "${S_SERVICE[mail]}}" ] && _ask "${redb}the container from you install the MAIL server: $ctid, is not the default configured, please update file '${S_SERVICE[mail]}'${cclear}"
 
 dbhost=$(cut -d'|' -f1 <<< $2)
 dbname=$(cut -d'|' -f2 <<< $2)

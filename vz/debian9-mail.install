@@ -11,10 +11,10 @@ _echoT "\n==========================================  $S_RELEASE $_PART"
 if [ "$S_SERVER_TYPE" == vz ]; then
 	ctidthis="$(_get_ctid)"
 
-	_echoT "----------  ${S_SERVICE['mail']}"
+	_echoT "----------  ${S_SERVICE[mail]}"
 
 	# test ctid
-	[ "${S_SERVICE['mail']/$_IPTHIS/}" == "${S_SERVICE['mail']}" ] && _askno "This container is not one of the default declared for mail\nConfirm or answer 'n' to exit"
+	[ "${S_SERVICE[mail]/$_IPTHIS/}" == "${S_SERVICE[mail]}" ] && _askno "This container is not one of the default declared for mail\nConfirm or answer 'n' to exit"
 	[ "$_ANSWER" == "n" ] && _exit
 fi
 

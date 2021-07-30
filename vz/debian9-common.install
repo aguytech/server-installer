@@ -217,7 +217,7 @@ SCH='dc_readhost';              STR="'$HOSTNAME'"; sed -i "s|^\($SCH=\).*$|\1$ST
 SCH='dc_relay_domains';         STR="''"; sed -i "s|^\($SCH=\).*$|\1$STR|" "${file}"
 SCH='dc_minimaldns';            STR="'false'"; sed -i "s|^\($SCH=\).*$|\1$STR|" "${file}"
 SCH='dc_relay_nets';            STR="''"; sed -i "s|^\($SCH=\).*$|\1$STR|" "${file}"
-SCH='dc_smarthost';             STR="'${S_SERVICE['mail']%% *}::25'"; sed -i "s|^\($SCH=\).*$|\1$STR|" "${file}"
+SCH='dc_smarthost';             STR="'${S_SERVICE[mail]%% *}::25'"; sed -i "s|^\($SCH=\).*$|\1$STR|" "${file}"
 SCH='CFILEMODE';                STR="'644'"; sed -i "s|^\($SCH=\).*$|\1$STR|" "${file}"
 SCH='dc_use_split_config';      STR="'false'"; sed -i "s|^\($SCH=\).*$|\1$STR|" "${file}"
 SCH='dc_hide_mailname';         STR="'false'"; sed -i "s|^\($SCH=\).*$|\1$STR|" "${file}"

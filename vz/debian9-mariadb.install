@@ -45,7 +45,7 @@ _echoT "----------  data"
 
 [ -z ${_PWDHOST+x} ] && pwdtmp=`_pwd` && _askno "Enter a password for 'roothost@${S_CLUSTER[*]}' ($pwdtmp)" && _PWDHOST=${_ANSWER:-$pwdtmp} && _confset _PWDHOST "$_PWDHOST"
 
-[ -z ${_PWDADMIN+x} ] && pwdtmp=`_pwd` && _askno "Enter a password for 'rootadmin@${S_SERVICE['admin']}' ($pwdtmp)" && _PWDADMIN=${_ANSWER:-$pwdtmp} && _confset _PWDADMIN "$_PWDADMIN"
+[ -z ${_PWDADMIN+x} ] && pwdtmp=`_pwd` && _askno "Enter a password for 'rootadmin@${S_SERVICE[admin]}' ($pwdtmp)" && _PWDADMIN=${_ANSWER:-$pwdtmp} && _confset _PWDADMIN "$_PWDADMIN"
 
 [ -z ${_PWDDEV+x} ] && pwdtmp=`_pwd` && _askno "Enter a password for '${S_DB_USER_DEV}@${_VM_IP_BASE}.2% ${S_IPS_DEV}' ($pwdtmp)" && _PWDDEV=${_ANSWER:-$pwdtmp} && _confset _PWDDEV "$_PWDDEV"
 
@@ -176,7 +176,7 @@ done
 
 _echoT "----------  right rootadmin"
 
-for ip in ${S_SERVICE['admin']}; do
+for ip in ${S_SERVICE[admin]}; do
 	strpass+="rootadmin @ ${ip} - $_PWDADMIN\n"
 	_evalq "mysql -uroot -p$_PWDLOCAL -e \"GRANT ALL PRIVILEGES ON *.* TO rootadmin@'${ip}' IDENTIFIED BY '$_PWDADMIN' WITH GRANT OPTION\""
 done

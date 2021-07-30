@@ -73,7 +73,7 @@ _askno "Configure DNS of the domain '$S_DOMAIN_FQDN' with above parameters\nConf
 ####################  CONF
 
 PATHCONF="/etc/rspamd/local.d"
-REDISIP=${S_SERVICE['cache']%% *}
+REDISIP=${S_SERVICE[cache]%% *}
 
 _echoT "----------  conf worker"
 

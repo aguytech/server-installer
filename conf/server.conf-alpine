@@ -36,8 +36,8 @@ S_PATH_LOG_INSTALL="${S_PATH_LOG_SERVER}/install"
 ########################  CLUSTER
 # list of servers in cluster
 declare -A S_CLUSTER
-S_CLUSTER['ns388803']="name=node1 ip=176.31.255.134 user=root port=2002 fqdn=ns388803.ip-176-31-255.eu vm=vz"
-S_CLUSTER['ns364584']="name=node2 ip=91.121.209.163 user=root port=2002 fqdn=ns364584.ip-91-121-209.eu vm=lxd"
+S_CLUSTER[ns388803]="name=node1 ip=176.31.255.134 user=root port=2002 fqdn=ns388803.ip-176-31-255.eu vm=vz"
+S_CLUSTER[ns364584]="name=node2 ip=91.121.209.163 user=root port=2002 fqdn=ns364584.ip-91-121-209.eu vm=lxd"
 
 ########################  SERVER
 # interface for external connections
@@ -60,8 +60,8 @@ S_HOST_PATH_SAVE="${S_PATH_SAVE}/vm"
 
 # network interface for VM
 declare -A S_HOST_VM_ETH
-S_HOST_VM_ETH['default']="inet=lxdbr0 cidr=10.0.0.1/24 base=10.0.0"
-S_HOST_VM_ETH['stock']="inet=lxdbr1 cidr=10.0.1.1/24 base=10.0.1"
+S_HOST_VM_ETH[default]="inet=lxdbr0 cidr=10.0.0.1/24 base=10.0.0"
+S_HOST_VM_ETH[stock]="inet=lxdbr1 cidr=10.0.1.1/24 base=10.0.1"
 # allow an ssh connection dirrectly to VMs from internet, ON to activate, other to desactivate
 S_HOST_VM_SSH_NAT=
 
@@ -88,15 +88,15 @@ S_VM_PATH_BACKUP="${S_PATH_SAVE}/backup"
 ########################  SERVICES
 declare -A S_SERVICE
 # service name for proxy
-S_SERVICE['proxy']="haproxy"
+S_SERVICE[proxy]="svc-haproxy"
 # service name for log
-S_SERVICE['log']="rsyslog"
+S_SERVICE[log]="svc-rsyslog"
 # service name for cache
-S_SERVICE['cache']="redis"
+S_SERVICE[cache]="svc-redis"
 # service name for mail
-S_SERVICE['mail']="postfix"
+S_SERVICE[mail]="svc-postfix"
 # service name for admin
-S_SERVICE['admin']="admin"
+S_SERVICE[admin]="svc-admin"
 
 ########################  LXD
 # disk driver for lxd
@@ -162,9 +162,9 @@ S_DB_PGSQL_PORT="5432"
 
 ########################  DNS
 declare -A S_DNS_SERVER
-S_DNS_SERVER['opendns']="208.67.222.222 208.67.220.220"
-S_DNS_SERVER['ovh']="127.0.0.1 213.186.33.99"
-S_DNS_SERVER['google']="8.8.8.8 8.8.4.4"
+S_DNS_SERVER[opendns]="208.67.222.222 208.67.220.220"
+S_DNS_SERVER[ovh]="127.0.0.1 213.186.33.99"
+S_DNS_SERVER[google]="8.8.8.8 8.8.4.4"
 
 ########################  FUNCTIONS
 # logging verbosity / quiet info verbose debug
@@ -185,8 +185,8 @@ S_TRACEOPT="info"
 #S_VM_SSH_USER
 #S_VM_SSH_PORT
 #S_VM_PATH_SHARE_GLOBAL
-#S_SERVICE_NAMES['http']
-#S_SERVICE_NAMES['sgbd']
+#S_SERVICE_NAMES[http]
+#S_SERVICE_NAMES[sgbd]
 
 
 # modified variables
@@ -202,9 +202,9 @@ S_TRACEOPT="info"
 #S_PATH_SAVE_BACKUP -> S_PATH_BACKUP
 #S_PGSQL_PORT -> S_DB_PGSQL_PORT
 #S_SSH_NAT -> S_HOST_VM_SSH_NAT
-#S_SERVICE_IPS['cache'] -> S_SERVICE['cache']
-#S_SERVICE_IPS['mail'] -> S_SERVICE['mail']
-#S_SERVICE_IPS['admin'] -> S_SERVICE['admin']
+#S_SERVICE_IPS[cache] -> S_SERVICE[cache]
+#S_SERVICE_IPS[mail] -> S_SERVICE[mail]
+#S_SERVICE_IPS[admin] -> S_SERVICE[admin]
 #S_VM_CTID_MIN -> S_HOST_DHCP_MIN
 #S_VM_CTID_MAX -> S_HOST_DHCP_MAX
 #S_VM_PATH_SAVE_BACKUP -> S_VM_PATH_BACKUP

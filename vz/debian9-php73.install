@@ -90,7 +90,7 @@ fi
 
 if [ "$_PHPREDIS" = "y" ]; then
 
-	[ -z ${_REDIS_IPS+x} ] && anstmp="${S_SERVICE['cache']}" && _askno "Give addresses for redis server ($anstmp)" && _REDIS_IPS=${_ANSWER:-$anstmp} && _confset _REDIS_IPS "$_REDIS_IPS"
+	[ -z ${_REDIS_IPS+x} ] && anstmp="${S_SERVICE[cache]}" && _askno "Give addresses for redis server ($anstmp)" && _REDIS_IPS=${_ANSWER:-$anstmp} && _confset _REDIS_IPS "$_REDIS_IPS"
 
 	[ -z ${_REDISPORT+x} ] && anstmp="$S_CACHE_PORT" && _askno "Give a PORT address for redis server ($anstmp)" && _REDISPORT=${_ANSWER:-$anstmp} && _confset _REDISPORT "$_REDISPORT"
 

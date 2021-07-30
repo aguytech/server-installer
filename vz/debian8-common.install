@@ -98,7 +98,7 @@ _echoT "----------  .bash_functions"
 
 file=~/.bash_functions
 _keepmvts "${file}"
-_evalq ln -s "$file_bash_functions" "${file}"
+_evalq ln -s "${file_bash_functions}" "${file}"
 
 
 _echoT "----------  repository"
@@ -131,7 +131,7 @@ deb-src http://debian.mirrors.ovh.net/debian ${S_RELEASE_NAME}-backports main
 #deb http://http.us.debian.org/debian ${S_RELEASE_NAME}-updates main
 #deb http://http.debian.net/debian ${S_RELEASE_NAME}-backports main
 #deb-src http://http.debian.net/debian ${S_RELEASE_NAME}-backports main
-" > "$FILE"
+" > "${file}"
 
 
 STR=" ovh home "
@@ -206,7 +206,7 @@ SCH='dc_readhost';              STR="'$HOSTNAME'"; sed -i "s|^\($SCH=\).*$|\1$ST
 SCH='dc_relay_domains';         STR="''"; sed -i "s|^\($SCH=\).*$|\1$STR|" "${file}"
 SCH='dc_minimaldns';            STR="'false'"; sed -i "s|^\($SCH=\).*$|\1$STR|" "${file}"
 SCH='dc_relay_nets';            STR="''"; sed -i "s|^\($SCH=\).*$|\1$STR|" "${file}"
-SCH='dc_smarthost';             STR="'${S_SERVICE['mail']%% *}::25'"; sed -i "s|^\($SCH=\).*$|\1$STR|" "${file}"
+SCH='dc_smarthost';             STR="'${S_SERVICE[mail]%% *}::25'"; sed -i "s|^\($SCH=\).*$|\1$STR|" "${file}"
 SCH='CFILEMODE';                STR="'644'"; sed -i "s|^\($SCH=\).*$|\1$STR|" "${file}"
 SCH='dc_use_split_config';      STR="'false'"; sed -i "s|^\($SCH=\).*$|\1$STR|" "${file}"
 SCH='dc_hide_mailname';         STR="'false'"; sed -i "s|^\($SCH=\).*$|\1$STR|" "${file}"
@@ -244,19 +244,19 @@ PATHFROM=${S_PATH_INSTALL_XTRA}/nano
 PATHTO=/usr/share/nano
 FILENANO=/etc/nanorc
 ! grep -q "## Personnal include" "$FILENANO" && echo -e "\n## Personnal include" >> $FILENANO
-for FILE in $(ls -1 "$PATHFROM"); do
-	! [ -f $PATHTO/$FILE ] && _evalq "cp -a $PATHFROM/$FILE $PATHTO/"
-	! grep -q "$FILE" "$FILENANO" && echo -e "include \"$PATHTO/$FILE\"" >> $FILENANO
+for file in $(ls -1 "$PATHFROM"); do
+	! [ -f $PATHTO/${file} ] && _evalq "cp -a $PATHFROM/${file} $PATHTO/"
+	! grep -q "${file}" "$FILENANO" && echo -e "include \"$PATHTO/${file}\"" >> $FILENANO
 done
 
-FILE=/etc/nanorc
-sed -i "s|^.*\(set const\)$|\1|" "$FILE"
-sed -i "s|^.*\(set matchbrackets.*\)$|\1|" "$FILE"
-sed -i "s|^.*\(set softwrap.*\)$|\1|" "$FILE"
-SCH='tabsize'; STR='4'; sed -i "s|^.*\(set ${SCH}\).*$|\1 ${STR}|" "$FILE"
-sed -i "s|^\(set cut.*\)$|# \1|" "$FILE"
-sed -i "s|^\(set nowrap.*\)$|# \1|" "$FILE"
-#sed -i "s|^.*\(set mouse\)$|\1|" "$FILE"
+file=/etc/nanorc
+sed -i "s|^.*\(set const\)$|\1|" "${file}"
+sed -i "s|^.*\(set matchbrackets.*\)$|\1|" "${file}"
+sed -i "s|^.*\(set softwrap.*\)$|\1|" "${file}"
+SCH='tabsize'; STR='4'; sed -i "s|^.*\(set ${SCH}\).*$|\1 ${STR}|" "${file}"
+sed -i "s|^\(set cut.*\)$|# \1|" "${file}"
+sed -i "s|^\(set nowrap.*\)$|# \1|" "${file}"
+#sed -i "s|^.*\(set mouse\)$|\1|" "${file}"
 
 
 _echoT "----------  cron conf"
@@ -325,10 +325,10 @@ if [ "${STR/ "$S_SERVER_TYPE" /}" != "$STR" ]; then
 
 	_echoT "----------  rsyslog vz conf"
 
-	FILE=/etc/rsyslog.conf
-	[ ! -f "$FILE.$_DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+	file=/etc/rsyslog.conf
+	[ ! -f "${file}.$_DDATE" ] && _evalq cp -a "${file}" "${file}.$DDATE"
 
-	sed -i "s%\t|/dev/xconsole% |/dev/console%" "$FILE"
+	sed -i "s%\t|/dev/xconsole% |/dev/console%" "${file}"
 
 
 	_echoT "----------  rsyslog conf auth"

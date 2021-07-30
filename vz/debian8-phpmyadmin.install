@@ -20,7 +20,7 @@ if [ "$S_SERVER_TYPE" == vz ]; then
 	_echoT "----------  ctid"
 
 	# test ctid
-	[ "${S_SERVICE['admin']/$_IPTHIS/}" == "${S_SERVICE['admin']}" ] && _askno "This container is not the default for Administration, please update configuration file for 'S_SERVICE['admin']'\nPlease valid to continue"
+	[ "${S_SERVICE[admin]/$_IPTHIS/}" == "${S_SERVICE[admin]}" ] && _askno "This container is not the default for Administration, please update configuration file for 'S_SERVICE[admin]'\nPlease valid to continue"
 
 fi
 
@@ -167,7 +167,7 @@ sed -i "s|^// \(\$cfg\['Servers'\]\[\$i\]\['export_templates'\].*\)$|\1|" $file;
 
 _echoT "----------  MariaDB create pma user"
 
-for IP in ${S_SERVICE['admin']}; do
+for IP in ${S_SERVICE[admin]}; do
     _eval "mysql -h'$pmahost' -urootadmin -p'$pwdrootadmin' -e \"GRANT USAGE ON mysql.* TO '$pmauser'@'${IP}' IDENTIFIED BY '$pmapwd'\""
     _eval "mysql -h'$pmahost' -urootadmin -p'$pwdrootadmin' -e \"GRANT SELECT, INSERT, UPDATE, DELETE ON phpmyadmin.* TO '$pmauser'@'${IP}'\""
 done

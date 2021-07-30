@@ -6,9 +6,10 @@
 _echoT "\n==========================================  ${_RELEASE}${_PART}"
 
 _echoT "------------------ file required"
-FILE_RSYSLOG="${S_PATH_INSTALL_CONF}/rsyslog/vm-apache.conf"
 
-files="${FILE_RSYSLOG}"
+file_rsyslog="${S_PATH_INSTALL_CONF}/rsyslog/vm-apache.conf"
+
+files="${file_rsyslog}"
 for file in $files; do ! [ -f ${file} ] && _exite "Unable to find file: '${file}'"; done
 
 
@@ -54,7 +55,7 @@ fi
 lxc init ${_CT_NAME_COM} ${_CT_NAME} -p stock -p global
 
 
-_echoT "----------  ct start"
+_echoT "----------  ${_CT_NAME} start"
 
 lxc start ${_CT_NAME}
 
@@ -182,8 +183,8 @@ lxc exec ${_CT_NAME} -- sh -c "echo 'pong' > ${PATH_WWW}/ping-monitor.html"
 _echoT "----------  rsyslog conf apache"
 
 file="/etc/rsyslog.d/vm-apache.conf"
-lxc file push ${FILE_RSYSLOG} ${_CT_NAME}${file}
-_var_replace "$fileconf"
+lxc file push ${file_rsyslog} ${_CT_NAME}${file}
+_lxd_var_replace ${_CT_NAME}${file}
 
 
 _echoT "----------  restart rsyslog"

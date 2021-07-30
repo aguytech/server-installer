@@ -57,7 +57,7 @@ pwdtmp=`_pwd`
 _askno "Enter a password for 'roothost@(${S_CLUSTER[*]}) ($_CLUSTER_IPS)' ($pwdtmp)"
 pwdhost=${_ANSWER:-$pwdtmp}
 pwdtmp=`_pwd`
-_askno "Enter a password for 'rootadmin@${S_SERVICE['admin']}' ($pwdtmp)"
+_askno "Enter a password for 'rootadmin@${S_SERVICE[admin]}' ($pwdtmp)"
 pwdct=${_ANSWER:-$pwdtmp}
 pwdtmp=`_pwd`
 _askno "Enter a password for '${S_DB_USER_DEV}@(${_VM_IP_BASE}.2% ${S_IPS_DEV})' ($pwdtmp)"
@@ -153,7 +153,7 @@ done
 
 _echoT "----------  right rootadmin"
 
-for IP in ${S_SERVICE['admin']}; do
+for IP in ${S_SERVICE[admin]}; do
 	strpass+="rootadmin@${IP} - $pwdct\n"
 	_eval "mysql -uroot -p'$pwdlocal' -e \"GRANT ALL PRIVILEGES ON *.* TO rootadmin@'${IP}' IDENTIFIED BY '$pwdct' WITH GRANT OPTION\""
 done
