@@ -35,16 +35,16 @@ lxc file push ${file} ${_CT_NAME}${S_PATH_CONF}/server.conf
 
 ####################################  HOSTS
 
-_echoT "----------  hosts"
+#_echoT "----------  hosts"
 
-file=" /etc/hosts"
-if ! [ "$(lxc exec ${_CT_NAME} -- sh -c "grep '\ssvc-' ${file}")" ]; then
-	lxc exec ${_CT_NAME} -- sh -c "echo >> ${file}"
-	lxc exec ${_CT_NAME} -- sh -c "echo \"# DNS for services\" >> ${file}"
-	for str in ${S_SERVICE[*]}; do
-		lxc exec ${_CT_NAME} -- sh -c "echo \"${S_SERVICE[$str]}	${str}\" >> ${file}"
-	done
-fi
+#file=" /etc/hosts"
+#if ! [ "$(lxc exec ${_CT_NAME} -- sh -c "grep '\ssvc-' ${file}")" ]; then
+#	lxc exec ${_CT_NAME} -- sh -c "echo >> ${file}"
+#	lxc exec ${_CT_NAME} -- sh -c "echo \"# DNS for services\" >> ${file}"
+#	for str in ${!S_SERVICE[*]}; do
+#		echo lxc exec ${_CT_NAME} -- sh -c "echo \"${S_SERVICE[$str]}	${str}\" >> ${file}"
+#	done
+#fi
 
 
 ####################################  SYSLOG
