@@ -9,9 +9,9 @@ echo -e "${blueb}==========================================  ${_PART}${cclear}"
 ####################################  DATA
 
 S_PATH_INSTALL=`dirname "$(readlink -e "${BASH_SOURCE[0]}")"`
+S_PATH_INSTALL_CONF="${S_PATH_INSTALL}/conf"
 
 S_PATH_CONF="/etc/server"
-S_PATH_INSTALL_CONF="${S_PATH_INSTALL}/conf"
 S_GLOBAL_CONF="${S_PATH_CONF}/server.conf"
 
 S_FILE_INSTALL_CONF="${S_PATH_CONF}/install.conf"
@@ -21,7 +21,7 @@ file_conf_server="${S_PATH_INSTALL}/conf-server.install"
 file_install_server="${S_PATH_INSTALL_CONF}/server.conf"
 
 
-####################################  MAIN
+####################################  PRE
 
 # exit
 [ "$USER" != root ] && echo -e "${redb}You have to run this script under root privileges${cclear}" && exit 1
@@ -39,6 +39,8 @@ for file in "$file_conf_server" "$file_install_server"; do
 	! [ -f "$file" ] && echo -e "${redb}error - unable to find file: '$file'${cclear}" && exit 1
 done
 
+
+####################################  MAIN
 
 echo -e "${blueb}----------  log path${cclear}"
 
@@ -60,7 +62,7 @@ echo -e "${blueb}----------  server.conf${cclear}"
 
 file="${S_PATH_CONF}/server.conf"
 [ -e "${file}" ] && cp -a "${file}" "${file}.keep${_SDDATE}"
-! [ -f "$file" ] && cp -a "$file_install_server" "$file"
+cp -a "$file_install_server" "${file}"
 . "$file"
 
 
@@ -79,17 +81,29 @@ echo -e "${blueb}----------  fd open${cclear}"
 _redirect
 
 
-echo -e "${blueb}----------  server settings${cclear}"
+_echoT "----------  server settings"
 
 if ! [ -f "${file_conf_server}" ]; then
-	echo -e "${redb}error - unable to find file '${file_conf_server}' from ${BASH_SOURCE[0]}${cclear}"
+	_echoe "unable to find file '${file_conf_server}' from ${BASH_SOURCE[0]}"
 	exit 1
 fi
 . "${file_conf_server}"
 
 
-echo -e "${blueb}----------  server settings${cclear}"
+####################################  GLOBAL
 
+_echoT "----------  source ${S_GLOBAL_CONF}"
+
+. "${S_GLOBAL_CONF}"
+
+
+file_env="${S_PATH_SCRIPT_CONF}/env"
+_echoT "----------  source ${file_env}"
+
+. "${file_env}"
+
+
+####################################  END
 
 _PART=conf-init
 _echoT "---------- ${_PART} end"

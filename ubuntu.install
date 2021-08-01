@@ -3,68 +3,54 @@
 # write by Aguy
 
 <<MANUALY
-# HOME PRE
-ssh_port=2002
-
-file="/root/.ssh/authorized_keys"
-sudo  cp -a ${file} ${file}.$(date +%s)
-
-file="/etc/ssh/sshd_config"
-sed -i "s|^#\?\(PermitRootLogin\) .*$|\1 without-password|" $file
-sed -i "s|^#\?\(Port\) .*$|\1 ${ssh_port}|" $file
-
-systemctl restart ssh.service
-
-
 # HOME
-server=node2
-ssh_port=2002
+server=node2 && ssh_port=2002
 
-cmds="apt update
-apt -y dist-upgrade
-apt install -y rsync zfsutils-linux
-ln -sv /usr/local/bs/conf/.bash_aliases /root/.bash_aliases"
+cmds="sudo apt update
+sudo apt -y dist-upgrade
+sudo apt -y autoremove
+sudo apt install -y rsync zfsutils-linux
+[ -e /home/ubuntu/.bash_aliases ] || sudo ln -sv /usr/local/bs/conf/.bash_aliases /home/ubuntu/.bash_aliases
+[ -e /root/.bash_aliases ] || sudo ln -sv /usr/local/bs/conf/.bash_aliases /root/.bash_aliases
+sudo  cp -a /root/.ssh/authorized_keys /root/.ssh/authorized_keys.$(date +%s)
+sudo sed -i 's|^no-port-forwarding.* \(ssh-rsa .*\)$|\1|' /root/.ssh/authorized_keys
+sudo sed -i 's|^#\?\(PermitRootLogin\) .*$|\1 without-password|' /etc/ssh/sshd_config
+sudo sed -i 's|^#\?\(Port\) .*$|\1 ${ssh_port}|' /etc/ssh/sshd_config
+sudo systemctl restart ssh.service"
 
-ssh root@${server} -p ${ssh_port} bash -c "$cmds"
-rsync /home/shared/dev/bs/ root@${server}:/usr/local/bs/ -e "ssh -p ${ssh_port}" --exclude=/.git* --delete -av
-rsync /home/shared/dev/install/ root@${server}:/usr/local/install/ -e "ssh -p ${ssh_port}" --exclude=/.git* --delete -av
+ssh ubuntu@${server} -p22 "${cmds}"
+
+rsync /home/shared/dev/bs/ -e "ssh -p${ssh_port}" root@${server}:/usr/local/bs/ --exclude=/.git* --delete -av && rsync /home/shared/dev/install/ -e "ssh -p${ssh_port}" root@${server}:/usr/local/install/ --exclude=/.git* --delete -av
+
 
 # HOST
 ssh root@${server} -p${ssh_port}
-blkid
-fdisk /dev/sda # m F n w | extend with 50G / 50G / available
-blkid
-zpool create zroot /dev/sda5
-zpool list
-zfs create -o mountpoint=/save -o compression=lz4 zroot/save
-zfs list
+
+blkid|grep -v squashfs
+fdisk /dev/sda # m p F n w | extend with lxd:+50G / save:available
+blkid|grep -v squashfs
 
 /usr/local/install/ubuntu.install
 MANUALY
 
 ################################ global functions
-#S_TRACE=debug
+S_TRACE=debug
 
-#allow conf-init
+# allow conf-init
 _INSTALL=ubuntu
 
 if [[ -z "${S_GLOBAL_FUNCTIONS}" || -f ${S_GLOBAL_FUNCTIONS} ]]; then
-	file="/usr/local/bs/inc-functions.sh"
-	if ! . "${file}"; then echo -e "\e[1;31merror - unable to find file '${file}' from ${BASH_SOURCE[0]}\e[0;0m" && exit 1; fi
+	S_GLOBAL_FUNCTIONS="/usr/local/bs/inc-functions.sh"
+	if ! . "${S_GLOBAL_FUNCTIONS}"; then echo -e "\e[1;31merror - unable to find file '${S_GLOBAL_FUNCTIONS}' from ${BASH_SOURCE[0]}\e[0;0m" && exit 1; fi
 fi
 . ${S_GLOBAL_FUNCTIONS}
 
 ################################  mandatory parts
 
-# init
-_PART="init"
-! _parthave "${_PART}" "${S_FILE_INSTALL_DONE}" && _require "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
-
-
 # common + ssh
-parts="common ssh"
+parts="init common ssh"
 for _PART in $parts; do
-	! _parthave "${_PART}" "$S_FILE_INSTALL_DONE" && _require "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
+	! _parthave "${_PART}" "${S_FILE_INSTALL_DONE}" && _source "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
 done
 
 
@@ -72,8 +58,8 @@ done
 
 while [ "${_PART}" != "quit" ]; do
 
-	partsall="$(sed -n "s|^\t*\(\w\+\)) # .*$S_SERVER_TYPE.*$|\1|p" "$0" | xargs)"
-	partsrelease=" $(ls -1 "$_PATH_BASE_SUB"/*${S_RELEASE}* | sed -n "s|.*${S_RELEASE}-\(.*\)\.install|\1|p" | xargs) "
+	partsall="$(sed -n "s|^\t*\(\w\+\)) # .*${S_SERVER_TYPE}.*$|\1|p" "$0" | xargs)"
+	partsrelease=" $(ls -1 "${_PATH_BASE_SUB}"/*${S_RELEASE}* | sed -n "s|.*${S_RELEASE}-\(.*\)\.install|\1|p" | xargs) "
 	partsmade=" $(cat ${S_FILE_INSTALL_DONE} | xargs) "
 	parts2do=
 	for part in $partsall; do
@@ -92,10 +78,10 @@ while [ "${_PART}" != "quit" ]; do
 				break
 				;;
 			iptables) # ovh
-				_require "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
+				_source "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
 				;;
 			lxd) # ovh home
-				_require "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
+				_source "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
 				;;
 			*)
 				_echoE "Wrong option: '${_PART}'"

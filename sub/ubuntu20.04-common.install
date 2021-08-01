@@ -42,7 +42,7 @@ fi
 _echoT "----------  home"
 
 # home
-[ "$S_SERVER_TYPE" = home ] && _evalq chown root:1000 /home && _evalq chmod g+rwx /home
+_evalq chown root:1000 /home && _evalq chmod g+rwx /home
 
 
 _echoT "----------  .bashrc"
@@ -70,7 +70,7 @@ ps1='${debian_chroot:+($debian_chroot)}'${color}'\\h\\[\\033[00m\\]\\w\\[\\033[0
 #ps1='${debian_chroot:+($debian_chroot)}\\[\\033[01;31m\\]\\u\\[\\033[00m\\]@\\[\\033[01;32m\\]\\h\\[\\033[00m\\]:\\w\\[\\033[01;31m\\]\\$\\[\\033[00m\\]'
 sed -i "\|if \[ \"\$color_prompt\" = yes \]|{n;s|=.*|='$ps1'|}" "${file}"
 
-! grep -q '${file_env}' "${file}" && echo '
+! grep -q "${file_env}" "${file}" && echo "
 
 # source global variables
 [ -f ${file_env} ] && . ${file_env}
@@ -80,7 +80,7 @@ sed -i "\|if \[ \"\$color_prompt\" = yes \]|{n;s|=.*|='$ps1'|}" "${file}"
 
 # functions
 [ -f ~/.bash_functions ] && . ~/.bash_functions
-' >> "${file}"
+" >> "${file}"
 
 _source "${file}"
 
@@ -98,32 +98,26 @@ _keepmvts "${file}"
 _evalq ln -s "${file_bash_functions}" "${file}"
 
 
-_echoT "----------  repository"
+_echoT "----------  mariadb repos"
 
-str=" ovh home "
-if [ "${str/ "$S_SERVER_TYPE" /}" != "$str" ]; then
+#apt-key adv --recv-keys --keyserver hkp://keyserver.ubuntu.com:80 0xF1656F24C74CD1D8
+apt-key adv --fetch-keys "https://mariadb.org/mariadb_release_signing_key.asc"
 
-	_echoT "----------  mariadb repos"
-
-	apt-key adv --recv-keys --keyserver hkp://keyserver.ubuntu.com:80 0xF1656F24C74CD1D8
-
-	#add-apt-repository -y 'deb [arch=amd64,arm64,ppc64el] http://mirror.mva-n.net/mariadb/repo/10.4/ubuntu bionic main'
-	file=/etc/apt/sources.list.d/mariadb.list
-	echo "# MariaDB 10.4
+#add-apt-repository -y 'deb [arch=amd64,arm64,ppc64el] http://mirror.mva-n.net/mariadb/repo/10.4/ubuntu bionic main'
+file=/etc/apt/sources.list.d/mariadb.list
+echo "# MariaDB 10.6
 # http://downloads.mariadb.org/mariadb/repositories/
-deb [arch=amd64,arm64,ppc64el] http://mirror.mva-n.net/mariadb/repo/10.4/ubuntu bionic main
-# deb-src [arch=amd64,arm64,ppc64el] http://mirror.mva-n.net/mariadb/repo/10.4/ubuntu bionic main
+deb [arch=amd64] http://mariadb.mirrors.ovh.net/MariaDB/repo/10.6/ubuntu ${S_RELEASE_NAME} main
+deb-src http://mariadb.mirrors.ovh.net/MariaDB/repo/10.6/ubuntu ${S_RELEASE_NAME} main
 " > "${file}"
 
-	_echoT "----------  pgsql repos"
+_echoT "----------  pgsql repos"
 
-	wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
-
-	file=/etc/apt/sources.list.d/pgdg.list
-	echo "# PostgreSQL
+file=/etc/apt/sources.list.d/pgdg.list
+echo "#https://www.postgresql.org/download/linux/ubuntu/
 deb http://apt.postgresql.org/pub/repos/apt/ ${S_RELEASE_NAME}-pgdg main" > "${file}"
 
-fi
+wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
 
 
 _echoT "----------  upgrade"
@@ -133,7 +127,7 @@ _eval "upgrade"
 
 _echoT "----------  install base"
 
-_eval "apt install -y zfsutils-linux apt-utils bsdmainutils cron curl htop iotop logrotate lsb-release man netcat openssh-server rsync jq" # vim acpid apt-file apt-utils dstat hdparm iputils-tracepath jwhois mlocate mtop p7zip p7zip-plugins pciutils wget telnet yq
+_eval "apt install -y apt-utils bsdmainutils cron curl htop iotop logrotate man openssh-server tree" # vim acpid apt-file apt-utils dstat hdparm iputils-tracepath jwhois mlocate mtop p7zip p7zip-plugins pciutils wget telnet yq zfsutils-linux rsync netcat lsb-release
 
 
 _echoT "----------  bash completion"
@@ -189,7 +183,7 @@ done
 _echoT "----------  cron conf"
 
 file="/etc/crontab"
-str="MAILTO=$S_DOMAIN_EMAIL_TECH"
+str="MAILTO=${S_DOMAIN_EMAIL_TECH}"
 ! grep -q '^MAILTO' "${file}" && sed -i "/^PATH=.*/ a $str" "${file}"
 
 
@@ -198,7 +192,7 @@ _echoT "----------  rsyslog cron conf"
 file=/etc/rsyslog.d/cron.conf
 echo "#  CRON
 # rsyslog filter to separate cron log
-cron.* action(type=\"omfile\" dirCreateMode=\"0700\" FileCreateMode=\"0644\" File=\"$S_PATH_LOG/cron.log\")
+cron.* action(type=\"omfile\" dirCreateMode=\"0700\" FileCreateMode=\"0644\" File=\"${S_PATH_LOG}/cron.log\")
 & stop" > "${file}"
 
 
@@ -213,49 +207,21 @@ file="/etc/rsyslog.conf"
 KEEP
 
 
-if [[ " home ovh " = *" $S_SERVER_TYPE "* ]]; then
+_echoT "----------  rsyslog hosting conf"
 
-	_echoT "----------  rsyslog hosting conf"
+file=/etc/rsyslog.conf
+_keepcpts "${file}"
 
-	file=/etc/rsyslog.conf
-	_keepcpts "${file}"
-
-	# udp
-	if [ "$S_RSYSLOG_PTC" = udp ]; then
-		sed -i "s|^#\(\$ModLoad imudp\)$|\1|" "${file}"
-		sed -i "s|^#\?\(\$UDPServerRun\).*$|\1 $S_RSYSLOG_PORT|" "${file}"
-	fi
-
-	# tcp
-	if [ "$S_RSYSLOG_PTC" = tcp ]; then
-		sed -i "s|^#\(\$ModLoad imtcp\)$|\1|" "${file}"
-		sed -i "s|^#\?\(\$InputTCPServerRun\).*$|\1 $S_RSYSLOG_PORT|" "${file}"
-	fi
+# udp
+if [ "${S_RSYSLOG_PTC}" = udp ]; then
+	sed -i "s|^#\(\$ModLoad imudp\)$|\1|" "${file}"
+	sed -i "s|^#\?\(\$UDPServerRun\).*$|\1 ${S_RSYSLOG_PORT}|" "${file}"
 fi
 
-
-PARTSUB="host-$_PART"
-if [[ " docker kvm lxd kvm " = *" $S_SERVER_TYPE "* ]] && ! grep -q "$PARTSUB" "${S_FILE_INSTALL_DONE}"; then
-
-	_echoT "----------  $PARTSUB"
-
-	while ! grep -q "^$PARTSUB$" "${S_FILE_INSTALL_DONE}"; do
-		_echoi "from an other terminal in server host launch:"
-		_echoI "${S_PATH_INSTALL}/sub/${S_HOST_RELEASE}-${PARTSUB}.install ${_CTIDTHIS} $S_FILE_INSTALL_DONE${cclear}"
-		_askyn "Confirm"
-	done
-fi
-
-
-if [[ " docker kvm lxd kvm " = *" $S_SERVER_TYPE "* ]]; then
-
-	_echoT "----------  rsyslog conf auth"
-
-	file=/etc/rsyslog.d/vm-auth.conf
-	echo "##############################  AUTH
-# forward auth logs from vm to hosting server ${S_SERVICE_LOG}
-#auth.* @${S_SERVICE_LOG}
-auth.* action(type=\"omfwd\" target=\"${S_SERVICE_LOG}\" port=\"${S_RSYSLOG_PORT}\" protocol=\"${S_RSYSLOG_PTC}\")" > "${file}"
+# tcp
+if [ "$S_RSYSLOG_PTC" = tcp ]; then
+	sed -i "s|^#\(\$ModLoad imtcp\)$|\1|" "${file}"
+	sed -i "s|^#\?\(\$InputTCPServerRun\).*$|\1 ${S_RSYSLOG_PORT}|" "${file}"
 fi
 
 
@@ -266,14 +232,14 @@ _service restart rsyslog
 
 _echoT "----------  logrotate server conf"
 
-! [ -d $S_PATH_LOG_SERVER ] && mkdir $S_PATH_LOG_SERVER
+! [ -d ${S_PATH_LOG_SERVER} ] && mkdir ${S_PATH_LOG_SERVER}
 
 # logrotate
 echo "# Logrotate file for server functions logs
-#$S_PATH_LOG_INSTALL/*.log
-$S_PATH_LOG_SERVER/*.log
-$S_PATH_LOG_SERVER/*.err
-$S_PATH_LOG_SERVER/*.debug
+#${S_PATH_LOG_INSTALL}/*.log
+${S_PATH_LOG_SERVER}/*.log
+${S_PATH_LOG_SERVER}/*.err
+${S_PATH_LOG_SERVER}/*.debug
 {
     missingok
     compress
@@ -289,42 +255,28 @@ str='5'
 [ -f "${file}" ] && sed -i "s/\(\t\+rotate\) 4/\1 $str/" "${file}"
 
 
-if [[ " home ovh " = *" $S_SERVER_TYPE "* ]]; then
+_echoT "----------  logrotate rsyslog conf"
 
-	_echoT "----------  logrotate rsyslog conf"
+file=/etc/logrotate.d/rsyslog
+sed -i "\|${S_PATH_LOG}/auth.log|d" "${file}"
+sed -i "1i${S_PATH_LOG}/auth.log" "${file}"
 
-	file=/etc/logrotate.d/rsyslog
-	sed -i "\|$S_PATH_LOG/auth.log|d" "${file}"
-	sed -i "1i$S_PATH_LOG/auth.log" "${file}"
-
-	sed -i "\|$S_PATH_LOG/cron.log|d" "${file}"
-	sed -i "1i$S_PATH_LOG/cron.log" "${file}"
+sed -i "\|${S_PATH_LOG}/cron.log|d" "${file}"
+sed -i "1i${S_PATH_LOG}/cron.log" "${file}"
 
 
-	_echoT "----------  bind conf -IPV6"
+_echoT "----------  install ntp"
 
-	file=/etc/default/bind9
-	sch="OPTIONS="; str="\"-u bind -4\""; sed -i "s|^\($sch\).*|\1$str|" "${file}"
-
-	_service restart bind9
-fi
+_eval "apt-get install -y ntp"
 
 
-if [[ " home ovh kvm " = *" $S_SERVER_TYPE "* ]]; then
+_echoT "----------  conf ntp"
 
-	_echoT "----------  install ntp"
+file=/etc/ntp.conf
+_keepcpts "${file}"
 
-	_eval "apt-get install -y ntp"
-
-
-	_echoT "----------  conf ntp"
-
-	file=/etc/ntp.conf
-	_keepcpts "${file}"
-
-	str='.fr.pool.ntp.org'; sed -i "s/^\(server .\).*/\1$str/" "${file}"
-	_eval "systemctl start ntp"
-fi
+str='.fr.pool.ntp.org'; sed -i "s/^\(server .\).*/\1$str/" "${file}"
+_eval "systemctl start ntp"
 
 
 ######################  CERTIFICATE
@@ -332,7 +284,7 @@ fi
 #_echoT "----------  certbot install"
 #_eval "apt install -y certbot"
 #_echoT "----------  generate certificates for mail. imap. smtp. "
-#_eval "certbot certonly --standalone --rsa-key-size 4096 -d mail.$S_DOMAIN_FQDN -d imap.$S_DOMAIN_FQDN -d smtp.$S_DOMAIN_FQDN"
+#_eval "certbot certonly --standalone --rsa-key-size 4096 -d mail.${S_DOMAIN_FQDN} -d imap.${S_DOMAIN_FQDN} -d smtp.${S_DOMAIN_FQDN}"
 
 
 _echoT "----------  openssl conf multi-domains"

@@ -3,23 +3,18 @@
 # write by Aguy
 
 
-_echoT "\n==========================================  $S_RELEASE $_PART"
+_echoT "\n==========================================  ${S_RELEASE} ${_PART}"
 
 
 ####################################  MAIN
 
-_SSH_PORT=$(sed -n 's|.*port=\([^ ]\+\).*|\1|p' <<<${S_CLUSTER[$HOSTNAME]})
+ssh_port=$(sed -n 's|.*port=\([^ ]\+\).*|\1|p' <<<${S_CLUSTER[$HOSTNAME]})
 
 _echoT "----------  ssh-keygen"
 
 _askyn "Do you wante to generate new keys for ssh"
 [ "$_ANSWER" = y ] && _eval "ssh-keygen -t rsa"
 
-
-_echoT "----------  ssh configure"
-
-_askno "Give an port for SSH connection (${_SSH_PORT}) "
-[ "$_ANSWER" ] && _SSH_PORT="$_ANSWER" && _confset _SSH_PORT ${_SSH_PORT} ${S_GLOBAL_CONF}
 
 # client
 file='/etc/ssh/ssh_config'
@@ -31,7 +26,7 @@ file='/etc/ssh/sshd_config'
 _keepcpts "${file}"
 
 sed -i "s|^#\?\(PermitRootLogin\) .*$|\1 without-password|" $file
-sed -i "s|^#\?\(Port\).*$|\1 ${_SSH_PORT}|" $file
+sed -i "s|^#\?\(Port\).*$|\1 ${ssh_port}|" $file
 sed -i "s|^#\?\(GSSAPIAuthentication\) .*$|\1 no|" $file
 sed -i "s|^#\?\(UseDNS\) .*$|\1 no|" $file
 sed -i "s|^#\?\(PasswordAuthentication\) .*$|\1 no|" $file
@@ -53,7 +48,7 @@ str=" home ovh "; if [ "${str/ "$S_SERVER_TYPE" /}" != "$str" ]; then
 	if [ -f "${S_PATH_INSTALL_CONF}/ssh/${file}" ]; then
 		_askyn "Would you replace ssh keys with backuped ones in\n'${S_PATH_INSTALL_XTRA}/${file}'"
 		if [ "$_ANSWER" == y ]; then
-			_evalq cd "$S_PATH_INSTALL_XTRA"
+			_evalq cd "${S_PATH_INSTALL_XTRA}"
 			_evalq tar xzf "${file}"
 			_evalq mv .ssh/id_rsa* ~/.ssh
 			_evalq rm -fR .ssh

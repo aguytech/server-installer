@@ -2,7 +2,6 @@
 #
 # write by Aguy
 
-
 ####################################  global configuration
 
 ! [ "$S_GLOBAL_CONF" ] && . "$(dirname "$(readlink -e "$0")")/init.install"
@@ -87,7 +86,7 @@ done
 _exit
 
 
-<<keep
+<<KEEP
 
 # wipe free disk space
 
@@ -106,10 +105,10 @@ sh $file
 
 #watch -dn10 df
 
-keep
+KEEP
 
 
-<<keep
+<<KEEP
 
 # rescue
 
@@ -160,10 +159,10 @@ umount /mnt/save
 
 reboot
 
-keep
+KEEP
 
 
-<<keep
+<<KEEP
 
 # restore rescue
 
@@ -179,4 +178,78 @@ dcfldd bs=512 count=1 if=ns398616-debian7-20160306-mbrpt.iso of=/dev/sda
 gzip -c ns398616-debian7-20160306-sda1.iso.gz | bs=4096 of=/dev/sda1
 gzip -c ns398616-debian7-20160306-mapper_vg-lvvar.iso.gz | bs=4096 of=/dev/mapper/vg-lvvar
 
-keep
+KEEP
+
+<<OPENVZ
+yum -y update && yum -y upgrade
+yum install -y wget vi
+yum localinstall -y https://download.openvz.org/virtuozzo/releases/openvz-7.0.11-235/x86_64/os/Packages/p/python-subprocess32-3.2.7-1.vz7.5.x86_64.rpm
+yum localinstall -y https://download.openvz.org/virtuozzo/releases/openvz-7.0.11-235/x86_64/os/Packages/o/openvz-release-7.0.11-3.vz7.x86_64.rpm
+yum install -y epel-release
+
+yum install -y python3
+rpm -Uvh http://repo.virtuozzo.com/vzlinux/7/x86_64/os/Packages/r/readykernel-scan-0.11-1.vl7.noarch.rpm
+rpm -Uvh http://repo.virtuozzo.com/vzlinux/7/x86_64/os/Packages/z/zstd-1.4.4-1.vl7.x86_64.rpm
+rpm -Uvh http://repo.virtuozzo.com/vzlinux/7/x86_64/os/Packages/v/vzlinux-release-7-1.vl7.91.x86_64.rpm
+
+mv /etc/yum.repos.d/CentOS-* /root/
+rpm -e --nodeps --justdb json-c
+yum erase -y jansson
+yum localinstall -y http://repo.virtuozzo.com/vzlinux/7.7/x86_64/os/Packages/j/jansson-2.10-1.vl7.1.x86_64.rpm
+yum localinstall -y http://repo.virtuozzo.com/vzlinux/7.7/x86_64/os/Packages/j/json-c-0.11-13.vl7.1.x86_64.rpm
+
+yum install -y prlctl prl-disp-service vzkernel *ploop*
+yum update -y
+
+awk -F\' '$1=="menuentry " {print i++ " : " $2}' /etc/grub2.cfg
+grub2-set-default 1
+grub2-mkconfig -o /boot/grub2/grub.cfg
+grub2-mkconfig -o /boot/efi/EFI/virtuozzo/grub.cfg
+
+reboot
+
+modprobe ploop
+modprobe pfmt_ploop1
+modprobe pfmt_raw
+modprobe pio_direct
+
+grep -q net.ipv4.ip_forward /etc/sysctl.conf || echo "
+# On Hardware Node we generally need
+# packet forwarding enabled and proxy arp disabled
+net.ipv4.ip_forward = 1
+net.ipv6.conf.default.forwarding = 1
+net.ipv6.conf.all.forwarding = 1
+net.ipv4.conf.default.proxy_arp = 0
+
+#Enables source route verification
+net.ipv4.conf.all.rp_filter = 1
+
+#Enables the magic-sysrq key
+kernel.sysrq = 1
+
+#We do not want all our interfaces to send redirects
+net.ipv4.conf.default.send_redirects = 1
+net.ipv4.conf.all.send_redirects = 0
+
+#only use these if you build a NAT VPS
+#otherwise, do not copy these lines
+net.ipv4.icmp_echo_ignore_broadcasts = 1
+net.ipv4.conf.default.forwarding= 1" >> /etc/sysctl.conf
+
+sysctl -p
+
+sed -i 's|^\(SELINUX=\).*$|\1=disabled|' /etc/sysconfig/selinux
+
+yum -y install vzctl ploop # vzquota
+
+grep -q NEIGHBOUR_DEVS /etc/vz/vz.conf || echo "NEIGHBOUR_DEVS=all" >> /etc/vz/vz.conf
+
+reboot
+
+# CT
+vzpkg list --available
+vzpkg install template debian-9.0-x86_64
+vzpkg create cache debian-9.0
+vzctl create 101 --ostemplate debian-9.0-x86_64
+OPENVZ
+

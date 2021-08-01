@@ -2,7 +2,7 @@
 #
 # write by Aguy
 
-_echoT "\n==========================================  $S_RELEASE $_PART"
+_echoT "\n==========================================  ${S_RELEASE} ${_PART}"
 
 
 ####################################  MAIN
@@ -34,7 +34,7 @@ _eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"
 
 <<KEEP
 color_root="\\e[1;91m"
-case "$S_SERVER_TYPE" in
+case "${S_SERVER_TYPE}" in
 	home)	color="\\e[1;34m" ;;
 	ovh)	color="\\e[1;32m" ;;
 	docker)	color="\\e[1;33m" ;;
