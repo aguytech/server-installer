@@ -4,7 +4,7 @@
 
 <<MANUALY
 # HOME
-server=node2 && ssh_port=2002
+server=node1 && ssh_port=2002
 
 cmds="sudo apt update
 sudo apt -y dist-upgrade

@@ -25,12 +25,11 @@ fi
 
 ####################################  RIGHTS
 
-path="${S_HOST_PATH}/common/lxd"
+path="/var/snap/lxd/common/lxd"
 _echoT "----------  link ${path} to /vm"
 
 link="/lxd"
-[ -h ${link} ] && rm ${link}
-_eval ln -s "${path}" ${link}
+[ -h ${link} ] || _eval ln -s ${path} ${link}
 
 path="${S_HOST_PATH_SHARE}"
 _echoT "----------  rights ${path}"
@@ -56,24 +55,24 @@ name="stock"
 _echoT "----------  storage ${name}"
 
 if ! [ "`lxc storage list -f json|jq -r '.[] | select(.name == "'${name}'").name'`" ]; then
-	lxc storage create ${name} zfs source=root/vm/sp/${name}
+	_eval lxc storage create ${name} zfs source=root/vm/sp/${name}
 fi
 
 ####################################  NETWORK
 
 _echoT "----------  network 'default'"
 
-# get : inet cidr base
+# get : s_inet s_cidr s_base
 eval ${S_HOST_VM_ETH[default]}
 
-_echoT "----------  network ${inet}"
+_echoT "----------  network ${s_inet}"
 
-if ! [ "`lxc network list -f json|jq -r '.[] | select(.name == "'${inet}'").name'`" ]; then
-	lxc network create "${inet}"
+if ! [ "`lxc network list -f json|jq -r '.[] | select(.name == "'${s_inet}'").name'`" ]; then
+	_eval lxc network create "${s_inet}"
 fi
-lxc network set "${inet}" ipv4.address="${cidr}" ipv4.dhcp.ranges="${cidr%.*}"."${S_HOST_DHCP_MIN}"-"${cidr%.*}"."${S_HOST_DHCP_MIN}" ipv4.nat=true dns.mode=managed dns.domain="${inet}"
+_eval lxc network set "${s_inet}" ipv4.address="${s_cidr}" ipv4.dhcp.ranges="${s_cidr%.*}"."${S_HOST_DHCP_MIN}"-"${s_cidr%.*}"."${S_HOST_DHCP_MAX}" ipv4.nat=true dns.mode=managed dns.domain="${s_inet}"
 
-_echoT "----------  systemd-resolved for ${inet}"
+_echoT "----------  systemd-resolved for ${s_inet}"
 
 # for selected interface
 # dynamically
@@ -82,13 +81,14 @@ _echoT "----------  systemd-resolved for ${inet}"
 #resolvectl domain lxdbr0 '~lxd'
 
 # persistence
-path="/etc/systemd/resolved.conf.d/"
+path=/etc/systemd/resolved.conf.d/
 [ -d "${path}" ] || mkdir -p "${path}"
+file=${path}/${s_inet}.conf
 echo "# Configuration file for lxdbr0
 [Resolve]
-DNS=${cidr%/*}
-Domains=${inet}
-DNSSEC=no" > "${path}/${inet}.conf"
+DNS=${s_cidr%/*}
+Domains=${s_inet}
+DNSSEC=no" > ${file}
 
 # enable systemd-resolved.service
 [ "$(systemctl is-enabled systemd-resolved.service)" ] && _eval systemctl enable systemd-resolved.service
@@ -100,15 +100,15 @@ fi
 
 _echoT "----------  network 'stock'"
 
-# get : inet cidr base
+# get : s_inet s_cidr s_base
 eval ${S_HOST_VM_ETH[stock]}
 
-_echoT "----------  network ${inet}"
+_echoT "----------  network ${s_inet}"
 
-if ! [ "`lxc network list -f json|jq -r '.[] | select(.name == "'${inet}'").name'`" ]; then
-	lxc network create "${inet}"
+if ! [ "`lxc network list -f json|jq -r '.[] | select(.name == "'${s_inet}'").name'`" ]; then
+	_eval lxc network create "${s_inet}"
 fi
-lxc network set "${inet}" ipv4.address="${cidr}" ipv4.dhcp.ranges="${cidr%.*}"."${S_HOST_DHCP_MIN}"-"${cidr%.*}"."${S_HOST_DHCP_MIN}" ipv4.nat=true dns.mode=managed dns.domain="${inet}"
+_eval lxc network set "${s_inet}" ipv4.address="${s_cidr}" ipv4.dhcp.ranges="${s_cidr%.*}"."${S_HOST_DHCP_MIN}"-"${s_cidr%.*}"."${S_HOST_DHCP_MAX}" ipv4.nat=true dns.mode=managed dns.domain="${s_inet}"
 
 
 ####################################  PROFILE
@@ -118,9 +118,9 @@ profile="stock"
 _echoT "----------  profiles ${profile}"
 
 if ! [ "`lxc profile list --format=json | jq -r '.[] | select(.name == "'${profile}'").name'`" ]; then
-	lxc profile create ${profile}
-	lxc profile device add ${profile} root disk pool=stock path=/
-	lxc network attach-profile lxdbr1 ${profile} eth0
+	_eval lxc profile create ${profile}
+	_eval lxc profile device add ${profile} root disk pool=stock path=/
+	_eval lxc network attach-profile lxdbr1 ${profile} eth0
 fi
 
 profile="global"
@@ -128,11 +128,11 @@ _echoT "----------  profiles ${profile}"
 
 path="${S_HOST_PATH_SHARE}/global"
 path_ct="/var/share/global"
-! [ -d "${path}" ] && mkdir -p "${path}"
+! [ -d "${path}" ] && _eval mkdir -p "${path}"
 
 if ! [ "`lxc profile list --format=json | jq -r '.[] | select(.name == "'${profile}'").name'`" ]; then
-	lxc profile create ${profile}
-	lxc profile device add ${profile} ${profile} disk source="${path}" path="${path_ct}"
+	_eval lxc profile create ${profile}
+	_eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
 fi
 
 profile="www"
@@ -140,11 +140,11 @@ _echoT "----------  profiles ${profile}"
 
 path="${S_HOST_PATH_SHARE}/www/global"
 path_ct="/var/share/www/global"
-! [ -d "${path}" ] && mkdir -p "${path}"
+! [ -d "${path}" ] && _eval mkdir -p "${path}"
 
 if ! [ "`lxc profile list --format=json | jq -r '.[] | select(.name == "'${profile}'").name'`" ]; then
-	lxc profile create ${profile}
-	lxc profile device add ${profile} ${profile} disk source="${path}" path="${path_ct}"
+	_eval lxc profile create ${profile}
+	_eval lxc profile device add ${profile} ${profile} disk source="${path}" path="${path_ct}"
 fi
 
 profile="sgbd"
@@ -152,11 +152,11 @@ _echoT "----------  profiles ${profile}"
 
 path="${S_HOST_PATH_SHARE}/sgbd/global"
 path_ct="/var/share/sgbd"
-! [ -d "${path}" ] && mkdir -p "${path}"
+! [ -d "${path}" ] && _eval mkdir -p "${path}"
 
 if ! [ "`lxc profile list --format=json | jq -r '.[] | select(.name == "'${profile}'").name'`" ]; then
-	lxc profile create ${profile}
-	lxc profile device add ${profile} ${profile} disk source="${path}" path="${path_ct}"
+	_eval lxc profile create ${profile}
+	_eval lxc profile device add ${profile} ${profile} disk source="${path}" path="${path_ct}"
 fi
 
 

@@ -18,12 +18,13 @@ file_bash_aliases="${S_PATH_SCRIPT_CONF}/.bash_aliases"
 file_bash_functions="${S_PATH_SCRIPT_CONF}/.bash_functions"
 path_install_bash_completion="${S_PATH_INSTALL_CONF}/bash_completion"
 
+file_rsyslog="${S_PATH_INSTALL_CONF}/rsyslog/host-auth.conf"
 file_vim="${S_PATH_SCRIPT_CONF}/.vimrc"
 file_tmux="${S_PATH_SCRIPT_CONF}/.tmux.conf"
 
 _echoT "----------  required files"
 
-_require "${file_env}" "${file_bash_aliases}" "${file_bash_functions}" "${file_vim}" "${file_tmux}"
+_require ${file_env} ${file_bash_aliases} ${file_bash_functions} ${file_rsyslog} ${file_vim} ${file_tmux}
 
 
 ####################################  MAIN
@@ -48,14 +49,14 @@ _evalq chown root:1000 /home && _evalq chmod g+rwx /home
 _echoT "----------  .bashrc"
 
 file=~/.bashrc
-_keepcpts "${file}"
+_keepcpts ${file}
 
-sed -i '/^HISTSIZE/ s/=.*/=2000/' "${file}"
-sed -i '/^HISTFILESIZE/ s/=.*/=6000/' "${file}"
-sed -i '/^#force_color_prompt/ s/^#//' "${file}"
+_eval "sed -i '/^HISTSIZE/ s/=.*/=2000/' ${file}"
+_eval "sed -i '/^HISTFILESIZE/ s/=.*/=6000/' ${file}"
+_eval "sed -i '/^#force_color_prompt/ s/^#//' ${file}"
 
 color_root="\033[01;31m"
-case "$S_SERVER_TYPE" in
+case "${S_SERVER_TYPE}" in
 	home)	color='\\[\\033[01;34m\\]' ;;
 	ovh)	color='\\[\\033[01;32m\\]' ;;
 	docker)	color='\\[\\033[01;33m\\]' ;;
@@ -80,36 +81,44 @@ sed -i "\|if \[ \"\$color_prompt\" = yes \]|{n;s|=.*|='$ps1'|}" "${file}"
 
 # functions
 [ -f ~/.bash_functions ] && . ~/.bash_functions
-" >> "${file}"
+" >> ${file}
 
-_source "${file}"
+_source ${file}
 
 _echoT "----------  .bash_aliases"
 
 file=~/.bash_aliases
-_keepmvts "${file}"
-_evalq ln -s "${file_bash_aliases}" "${file}"
+[ -e ${file} ] || _evalq ln -s ${file_bash_aliases} ${file}
 
+# user
+if [ "${USER}" != root ]; then
+	file=${HOME}/.bash_aliases
+	[ -e ${file} ] || _evalq ln -s ${file_bash_aliases} ${file}
+fi
 
 _echoT "----------  .bash_functions"
 
 file=~/.bash_functions
-_keepmvts "${file}"
-_evalq ln -s "${file_bash_functions}" "${file}"
+[ -e ${file} ] || _evalq ln -s ${file_bash_functions} ${file}
+
+# user
+if [ "${USER}" != root ]; then
+	file=${HOME}/.bash_functions
+	[ -e ${file} ] || _evalq ln -s ${file_bash_aliases} ${file}
+fi
 
 
 _echoT "----------  mariadb repos"
 
 #apt-key adv --recv-keys --keyserver hkp://keyserver.ubuntu.com:80 0xF1656F24C74CD1D8
+#apt-key adv --recv-keys --keyserver keyserver.ubuntu.com 0xF1656F24C74CD1D8
 apt-key adv --fetch-keys "https://mariadb.org/mariadb_release_signing_key.asc"
 
-#add-apt-repository -y 'deb [arch=amd64,arm64,ppc64el] http://mirror.mva-n.net/mariadb/repo/10.4/ubuntu bionic main'
 file=/etc/apt/sources.list.d/mariadb.list
 echo "# MariaDB 10.6
 # http://downloads.mariadb.org/mariadb/repositories/
 deb [arch=amd64] http://mariadb.mirrors.ovh.net/MariaDB/repo/10.6/ubuntu ${S_RELEASE_NAME} main
-deb-src http://mariadb.mirrors.ovh.net/MariaDB/repo/10.6/ubuntu ${S_RELEASE_NAME} main
-" > "${file}"
+deb-src http://mariadb.mirrors.ovh.net/MariaDB/repo/10.6/ubuntu ${S_RELEASE_NAME} main" > "${file}"
 
 _echoT "----------  pgsql repos"
 
@@ -127,48 +136,66 @@ _eval "upgrade"
 
 _echoT "----------  install base"
 
-_eval "apt install -y apt-utils bsdmainutils cron curl htop iotop logrotate man openssh-server tree" # vim acpid apt-file apt-utils dstat hdparm iputils-tracepath jwhois mlocate mtop p7zip p7zip-plugins pciutils wget telnet yq zfsutils-linux rsync netcat lsb-release
+_eval "apt install -y bsdmainutils cron curl less logrotate man"
 
 
-_echoT "----------  bash completion"
+str=" ovh home "
+if [ "${str/ ${S_SERVER_TYPE} /}" != "${str}" ]; then
+
+	_echoT "----------  install tools"
+
+	_eval "apt-get install -y openssh-server gnupg vim rsync apt-utils bash-completion htop iotop lnav multitail mariadb-client postgresql-client tree git" # acpid apt-file apt-utils dstat hdparm iputils-tracepath jwhois mlocate mtop p7zip p7zip-plugins netcat lsb-release pciutils rcconf sysstat wget telnet dirmngr
+
+fi
+
+
+_echoT "----------  bash_completion"
 
 _evalq cp -a "${path_install_bash_completion}"/* "/usr/share/bash-completion/completions/"
 
 
-_echoT "----------  conf tmux"
+####################################  CONF
 
-file="$HOME/.tmux.conf"
-_keepmvts "${file}"
-_eval ln -s "${file_tmux}" "${file}"
+str=" ovh home "
+if [ "${str/ ${S_SERVER_TYPE} /}" != "${str}" ]; then
 
-# colorscheme
-_eval cp ${S_PATH_INSTALL_CONF}/vim/*.vim /usr/share/vim/vim*/colors/
+	_echoT "----------  conf tmux"
 
-_echoT "----------  conf vim"
+	file="${HOME}/.tmux.conf"
+	_keepmvts "${file}"
+	_eval ln -s "${file_tmux}" "${file}"
 
-_eval update-alternatives --set editor /usr/bin/vim.basic
+	# colorscheme
+	_eval cp ${S_PATH_INSTALL_CONF}/vim/*.vim /usr/share/vim/vim*/colors/
 
-file="$HOME/.vimrc"
-_keepmvts "${file}"
-_eval ln -s "${file_vim}" "${file}"
+	_echoT "----------  conf vim"
 
-# colorscheme
-_eval cp ${S_PATH_INSTALL_CONF}/vim/*.vim /usr/share/vim/vim*/colors/
+	_eval update-alternatives --set editor /usr/bin/vim.basic
 
-_echoT "------------------ nano"
+	file="${HOME}/.vimrc"
+	_keepmvts "${file}"
+	_eval ln -s "${file_vim}" "${file}"
+
+	# colorscheme
+	_eval cp ${S_PATH_INSTALL_CONF}/vim/*.vim /usr/share/vim/vim*/colors/
+
+fi
+
+
+_echoT "----------  conf nano"
 
 for str in conf install; do
-	cp -a /usr/share/nano/sh.nanorc /usr/share/nano/$str.nanorc
-	sed -i 's|^\(syntax \).*|\1"'$str'" "\.'$str'$"|' /usr/share/nano/$str.nanorc
+	cp -a /usr/share/nano/sh.nanorc /usr/share/nano/${str}.nanorc
+	sed -i 's|^\(syntax \).*|\1"'${str}'" "\.'${str}'$"|' /usr/share/nano/${str}.nanorc
 done
 
 file=/etc/nanorc
 _keepcpts "${file}"
 
-sed -i 's|^.*\(set tabsize\).*|\1 4|' "${file}"
-sed -i 's|^\(set cut.*\)$|# \1|' "${file}"
-sed -i 's|^\(set linenumbers.*\)$|# \1|' "${file}"
-sed -i '/^# *include/ s/^# //' "${file}"
+_eval "sed -i 's|^.*\(set tabsize\).*|\1 4|' ${file}"
+_eval "sed -i 's|^\(set cut.*\)$|# \1|' ${file}"
+_eval "sed -i 's|^\(set linenumbers.*\)$|# \1|' ${file}"
+_eval "sed -i '/^# *include/ s/^# //' ${file}"
 
 # various
 opts="constantshow historylog matchbrackets multibuffer nohelp softwrap"
@@ -176,107 +203,36 @@ opts="constantshow historylog matchbrackets multibuffer nohelp softwrap"
 opts+=" errorcolor functioncolor keycolor numbercolor selectedcolor statuscolor stripecolor titlecolor"
 # uncomment
 for opt in $opts; do
-	sed -i "s|^.*\(set $opt .*\)$|\1|" "${file}"
+	_eval "sed -i 's|^.*\(set ${opt}.*\)$|\1|' ${file}"
 done
 
 
 _echoT "----------  cron conf"
 
-file="/etc/crontab"
+file=/etc/crontab
+_keepcpts $file
 str="MAILTO=${S_DOMAIN_EMAIL_TECH}"
-! grep -q '^MAILTO' "${file}" && sed -i "/^PATH=.*/ a $str" "${file}"
+! grep -q '^MAILTO' "${file}" && _eval "sed -i '/^PATH=.*/ a ${str}' ${file}"
 
 
-_echoT "----------  rsyslog cron conf"
-
-file=/etc/rsyslog.d/cron.conf
-echo "#  CRON
-# rsyslog filter to separate cron log
-cron.* action(type=\"omfile\" dirCreateMode=\"0700\" FileCreateMode=\"0644\" File=\"${S_PATH_LOG}/cron.log\")
-& stop" > "${file}"
+####################################  NTP
 
 
-<<KEEP
-_echoT "----------  rsyslog mail conf"
+str=" ovh home "
+if [ "${str/ "${S_SERVER_TYPE}" /}" != "${str}" ]; then
 
-file="/etc/rsyslog.conf"
-# remove mail logs for mail.log
-#sed -i 's|^\(mail\.\*.*\)$|#\1|' "${file}"
-# remove mail logs for syslog
-! grep -q "mail\.\* *stop" "${file}" && sed -i 's|^\(mail\.err.*\)$|\1\nmail.*              stop|' "${file}"
-KEEP
+	_echoT "----------  install ntp"
 
+	_eval "apt-get install -y ntp"
 
-_echoT "----------  rsyslog hosting conf"
+	_echoT "----------  conf ntp"
 
-file=/etc/rsyslog.conf
-_keepcpts "${file}"
+	file=/etc/ntp.conf
+	_keepcpts "${file}"
 
-# udp
-if [ "${S_RSYSLOG_PTC}" = udp ]; then
-	sed -i "s|^#\(\$ModLoad imudp\)$|\1|" "${file}"
-	sed -i "s|^#\?\(\$UDPServerRun\).*$|\1 ${S_RSYSLOG_PORT}|" "${file}"
+	str='.fr.pool.ntp.org'; sed -i "s/^\(server .\).*/\1${str}/" "${file}"
+	_service start ntp
 fi
-
-# tcp
-if [ "$S_RSYSLOG_PTC" = tcp ]; then
-	sed -i "s|^#\(\$ModLoad imtcp\)$|\1|" "${file}"
-	sed -i "s|^#\?\(\$InputTCPServerRun\).*$|\1 ${S_RSYSLOG_PORT}|" "${file}"
-fi
-
-
-_echoT "----------  rsyslog restart"
-
-_service restart rsyslog
-
-
-_echoT "----------  logrotate server conf"
-
-! [ -d ${S_PATH_LOG_SERVER} ] && mkdir ${S_PATH_LOG_SERVER}
-
-# logrotate
-echo "# Logrotate file for server functions logs
-#${S_PATH_LOG_INSTALL}/*.log
-${S_PATH_LOG_SERVER}/*.log
-${S_PATH_LOG_SERVER}/*.err
-${S_PATH_LOG_SERVER}/*.debug
-{
-    missingok
-    compress
-    delaycompress
-    notifempty
-    weekly
-    rotate 8
-}
-" > /etc/logrotate.d/server
-
-file=/etc/logrotate.d/rsyslog
-str='5'
-[ -f "${file}" ] && sed -i "s/\(\t\+rotate\) 4/\1 $str/" "${file}"
-
-
-_echoT "----------  logrotate rsyslog conf"
-
-file=/etc/logrotate.d/rsyslog
-sed -i "\|${S_PATH_LOG}/auth.log|d" "${file}"
-sed -i "1i${S_PATH_LOG}/auth.log" "${file}"
-
-sed -i "\|${S_PATH_LOG}/cron.log|d" "${file}"
-sed -i "1i${S_PATH_LOG}/cron.log" "${file}"
-
-
-_echoT "----------  install ntp"
-
-_eval "apt-get install -y ntp"
-
-
-_echoT "----------  conf ntp"
-
-file=/etc/ntp.conf
-_keepcpts "${file}"
-
-str='.fr.pool.ntp.org'; sed -i "s/^\(server .\).*/\1$str/" "${file}"
-_eval "systemctl start ntp"
 
 
 ######################  CERTIFICATE
@@ -302,6 +258,148 @@ sed -i "/localityName\s*= Locality Name/ a localityName_default\t\t= Nantes" "${
 sed -i "/commonName\s*= Common Name/ a commonName_default\t\t= ${S_DOMAIN_FQDN}" "${file}"
 sed -i "/emailAddress\s*= Email Address/ a emailAddress_default\t\t= ${S_DOMAIN_EMAIL_ADMIN}" "${file}"
 
+
+####################################  RSYSLOG
+
+_echoT "----------  rsyslog conf"
+
+file="/etc/rsyslog.conf"
+_keepcpts "${file}"
+
+# udp
+if [ "${S_RSYSLOG_PTC}" = udp ]; then
+	_eval "sed -i 's|^#\?\(module(load=\"imudp.*\)$|\1|' ${file}"
+	_eval "sed -i 's|^#\?\(input(type=\"imudp\"\).*$|\1 port=\"${S_RSYSLOG_PORT}\")|' ${file}"
+# tcp
+elif [ "${S_RSYSLOG_PTC}" = tcp ]; then
+	_eval "sed -i 's|^#\?\(module(load=\"imtcp.*\)$|\1|' ${file}"
+	_eval "sed -i 's|^#\?\(input(type=\"imtcp\"\).*$|\1 port=\"${S_RSYSLOG_PORT}\")|' ${file}"
+fi
+
+
+_echoT "----------  rsyslog cron"
+
+file=/etc/rsyslog.d/90-cron.conf
+echo "#  CRON
+# rsyslog filter to separate cron log
+cron.* action(type=\"omfile\" dirCreateMode=\"0700\" FileCreateMode=\"0644\" File=\"${S_PATH_LOG}/cron.log\")
+& stop" > ${file}
+
+
+str=" ovh home "
+if [ "${str/ "${S_SERVER_TYPE}" /}" != "${str}" ]; then
+
+	_echoT "----------  rsyslog host-auth"
+
+	file=/etc/rsyslog.d/host-auth.conf
+	_keepcpts ${file}
+
+	_evalq cp -a ${file_rsyslog} ${file}
+	_lxd_var_replace ${file} S_HOST_PATH_LOG
+	_evalq chown 0:0 ${file} && _evalq chmod -x ${file}
+
+fi
+
+str=" docker kvm lxd "
+if [ "${str/ ${S_SERVER_TYPE} /}" != "${str}" ]; then
+
+	_echoT "----------  rsyslog vm-auth"
+
+	file=/etc/rsyslog.d/vm-auth.conf
+	echo "##############################  AUTH
+# forward auth logs from vm to hosting server ${S_SERVICE_LOG}
+#auth.* @${S_SERVICE[log]}
+auth.* action(type=\"omfwd\" target=\"${S_SERVICE[log]}\" port=\"${S_RSYSLOG_PORT}\" protocol=\"${S_RSYSLOG_PTC}\")" > ${file}
+
+fi
+
+
+<<KEEP
+_echoT "----------  rsyslog mail conf"
+
+file="/etc/rsyslog.d/50-default.conf"
+# stop mail logs for syslog
+! grep -q "mail\.\*\s*stop" "${file}" && sed -i '/^mail\.err/ amail.*              stop' "${file}"
+KEEP
+
+
+_echoT "----------  rsyslog restart"
+
+_service restart rsyslog
+
+
+####################################  LOGROTATE
+
+
+_echoT "----------  logrotate server"
+
+file=/etc/logrotate.d/server
+echo "# Logrotate file for server functions logs
+#${S_PATH_LOG_INSTALL}/*.log
+${S_PATH_LOG_SERVER}/*.info
+${S_PATH_LOG_SERVER}/*.err
+${S_PATH_LOG_SERVER}/*.debug
+{
+    missingok
+    compress
+    delaycompress
+    notifempty
+    weekly
+    rotate 7
+}
+" > ${file}
+
+file=/etc/logrotate.d/exim4-base
+str='7'
+[ -f "${file}" ] && _eval "sed -i 's/\(\t\+rotate\).*/\1 ${str}/' ${file}"
+
+file=/etc/logrotate.d/munin-node
+str='7'
+[ -f "${file}" ] && _eval "sed -i 's/\(\t\+rotate\).*/\1 ${str}/' ${file}"
+
+file=/etc/logrotate.d/rsyslog
+
+<<KEEP
+_echoT "----------  logrotate rsyslog"
+
+file=/etc/logrotate.d/rsyslog
+_keepcpts $file
+ [ -f "${file}" ] && _eval "sed -i 's/\(\t\+rotate\) 4/\1 5/' ${file}"
+
+ rotate weekly to daily
+_eval "sed -i '\|${S_PATH_LOG}/auth.log|d' ${file}"
+_eval "sed -i '1i${S_PATH_LOG}/auth.log' ${file}"
+_eval "sed -i '\|${S_PATH_LOG}/cron.log|d' ${file}"
+_eval "sed -i '1i${S_PATH_LOG}/cron.log' ${file}"
+KEEP
+
+
+str=" ovh home "
+if [ "${str/ "${S_SERVER_TYPE}" /}" != "${str}" ]; then
+
+	_echoT "----------  logrotate host"
+
+	file=/etc/logrotate.d/host
+	_keepcpts ${file}
+
+	echo -e "${S_HOST_PATH_LOG}/*.err
+${S_HOST_PATH_LOG}/*.error
+${S_HOST_PATH_LOG}/*.warn
+${S_HOST_PATH_LOG}/*.notice
+${S_HOST_PATH_LOG}/*.info
+${S_HOST_PATH_LOG}/*.log {
+    daily
+    missingok
+    rotate 14
+    compress
+    delaycompress
+    notifempty
+}" > ${file}
+
+fi
+
+
+######################  END
 
 _echoT "----------  clean"
 
