@@ -482,7 +482,7 @@ _add_rules() {
 _vm_ssh() {
 	_echo "--------------------------- VM SSH"
 
-	if [ "$S_HOST_TYPE" == vz ] && [ "$_VM_SSH" == "ON" ] && ctids=$(vzlist -aHo ctid); then
+	if [ "$S_HOST_TYPE" == vz ] && [ "$_VM_SSH" == "y" ] && ctids=$(vzlist -aHo ctid); then
 		for ctid in $ctids
 		do
 			ctip=${_VM_IP_BASE}.${ctid}
