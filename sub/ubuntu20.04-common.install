@@ -299,7 +299,7 @@ if [ "${str/ "${S_SERVER_TYPE}" /}" != "${str}" ]; then
 	_keepcpts ${file}
 
 	_evalq cp -a ${file_rsyslog} ${file}
-	_var_replace ${file} S_HOST_PATH_LOG
+	_var_replace ${file} rsyslog
 	_evalq chown 0:0 ${file} && _evalq chmod -x ${file}
 
 fi

@@ -189,7 +189,7 @@ _echoT "----------  rsyslog conf apache"
 
 file=/etc/rsyslog.d/vm-apache.conf
 _eval lxc file push ${file_rsyslog} ${_CT_NAME}${file}
-_lxc_var_replace ${_CT_NAME} ${file}
+_lxc_var_replace ${_CT_NAME} ${file} rsyslog
 
 
 _echoT "----------  restart rsyslog"

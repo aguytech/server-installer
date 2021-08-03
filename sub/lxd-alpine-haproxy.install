@@ -119,6 +119,12 @@ for port in ${_IPTABLES_PORTS}; do
 	iptables -S -t nat | grep -qi "${cmd}" || iptables -t nat -I ${cmd}
 done
 
+
+
+
+
+echo exit && exit
+
 _echoT "----------  iptables persistent"
 
 file="/etc/iptables/iptables.rules"
@@ -126,11 +132,6 @@ sudo systemctl stop lxd.*
 sudo iptables-save -f ${file}
 sudo sed -i 's|^\(.* ACCEPT\) .*$|\1|' ${file}
 sudo systemctl start lxd.service
-
-
-
-
-echo exit && exit
 
 
 ####################################  CERTBOT
