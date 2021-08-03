@@ -16,10 +16,10 @@ _echoT "----------  ${_RELEASE_ID} data"
 
 _echoT "----------  apk profile.d"
 
-lxc exec ${_CT_NAME} -- sh -c "! [ -e /etc/profile.d/bash-lxc-aliases.sh ] && ln -sv /usr/local/bs/conf/bash-lxc-aliases.sh /etc/profile.d/bash-lxc-aliases.sh"
-lxc exec ${_CT_NAME} -- sh -c "! [ -e /etc/profile.d/bash-lxc-alpine.sh ] && ln -sv /usr/local/bs/conf/bash-lxc-alpine.sh /etc/profile.d/bash-lxc-alpine.sh"
-lxc exec ${_CT_NAME} -- sh -c "! [ -e /etc/profile.d/bash_functions.sh ] && ln -sv /usr/local/bs/conf/.bash_functions /etc/profile.d/bash_functions.sh"
-lxc exec ${_CT_NAME} -- sh -c "! [ -e /etc/profile.d/env.sh ] && ln -sv /usr/local/bs/conf/env.conf /etc/profile.d/env.sh"
+_lxc_exec ${_CT_NAME} "! [ -e /etc/profile.d/bash-lxc-aliases.sh ] && ln -sv /usr/local/bs/conf/bash-lxc-aliases.sh /etc/profile.d/bash-lxc-aliases.sh"
+_lxc_exec ${_CT_NAME} "! [ -e /etc/profile.d/bash-lxc-alpine.sh ] && ln -sv /usr/local/bs/conf/bash-lxc-alpine.sh /etc/profile.d/bash-lxc-alpine.sh"
+_lxc_exec ${_CT_NAME} "! [ -e /etc/profile.d/bash_functions.sh ] && ln -sv /usr/local/bs/conf/.bash_functions /etc/profile.d/bash_functions.sh"
+_lxc_exec ${_CT_NAME} "! [ -e /etc/profile.d/env.sh ] && ln -sv /usr/local/bs/conf/env.conf /etc/profile.d/env.sh"
 
 file="/tmp/server.conf"
 cp -a ${S_PATH_INSTALL_CONF}/server.conf ${file}
@@ -38,11 +38,11 @@ lxc file push ${file} ${_CT_NAME}${S_PATH_CONF}/server.conf
 #_echoT "----------  hosts"
 
 #file=" /etc/hosts"
-#if ! [ "$(lxc exec ${_CT_NAME} -- sh -c "grep '\ssvc-' ${file}")" ]; then
-#	lxc exec ${_CT_NAME} -- sh -c "echo >> ${file}"
-#	lxc exec ${_CT_NAME} -- sh -c "echo \"# DNS for services\" >> ${file}"
+#if ! [ "$(_lxc_exec ${_CT_NAME} "grep '\ssvc-' ${file}")" ]; then
+#	_lxc_exec ${_CT_NAME} "echo >> ${file}"
+#	_lxc_exec ${_CT_NAME} "echo \"# DNS for services\" >> ${file}"
 #	for str in ${!S_SERVICE[*]}; do
-#		echo lxc exec ${_CT_NAME} -- sh -c "echo \"${S_SERVICE[$str]}	${str}\" >> ${file}"
+#		echo _lxc_exec ${_CT_NAME} "echo \"${S_SERVICE[$str]}	${str}\" >> ${file}"
 #	done
 #fi
 
@@ -51,47 +51,47 @@ lxc file push ${file} ${_CT_NAME}${S_PATH_CONF}/server.conf
 
 _echoT "----------  syslog remove"
 
-lxc exec ${_CT_NAME} -- sh -c "rc-service syslog stop"
-lxc exec ${_CT_NAME} -- sh -c "rc-status boot|grep -q '^\s*syslog\s' && rc-update del syslog boot"
+_lxc_exec ${_CT_NAME} "rc-service syslog stop"
+_lxc_exec ${_CT_NAME} "rc-status boot|grep -q '^\s*syslog\s' && rc-update del syslog boot"
 
 
 ####################################  RSYSLOG
 
 _echoT "----------  rsyslog install"
 
-lxc exec ${_CT_NAME} -- sh -c "apk list -I|grep -q ^rsyslog || apk add rsyslog"
+_lxc_exec ${_CT_NAME} "apk list -I|grep -q ^rsyslog || apk add rsyslog"
 path="/etc/rsyslog.d"
-lxc exec ${_CT_NAME} -- sh -c "[ -d ${path} ] || mkdir ${path}"
+_lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir ${path}"
 
 service="rsyslog"
-lxc exec ${_CT_NAME} -- sh -c "rc-update add ${service}"
+_lxc_exec ${_CT_NAME} "rc-update add ${service}"
 
 
 _echoT "----------  rsyslog conf"
 
 file="/etc/rsyslog.conf"
-lxc exec ${_CT_NAME} -- sh -c "[ ! -f '${file}.${_SDDATE}' ] && cp -a '${file}' '${file}.${_SDDATE}'"
+_lxc_exec ${_CT_NAME} "[ ! -f '${file}.${_SDDATE}' ] && cp -a '${file}' '${file}.${_SDDATE}'"
 
 cmds="sed -i 's|^.\?\(module(load=\"immark\")\)$|#\1|' $file
 sed -i 's|^.\?\(module(load=\"imklog\")\)$|#\1|' $file"
-lxc exec ${_CT_NAME} -- sh -c "$cmds"
+_lxc_exec ${_CT_NAME} "$cmds"
 
 
 _echoT "----------  rsyslog cron"
 
-lxc exec ${_CT_NAME} -- sh -c 'echo -e "# rsyslog filter to separate cron log\ncron.* action(type=\"omfile\" dirCreateMode=\"0700\" FileCreateMode=\"0644\" File=\"/var/log/cron.log\")\n& stop" > /etc/rsyslog.d/cron.conf'
+_lxc_exec ${_CT_NAME} 'echo -e "# rsyslog filter to separate cron log\ncron.* action(type=\"omfile\" dirCreateMode=\"0700\" FileCreateMode=\"0644\" File=\"/var/log/cron.log\")\n& stop" > /etc/rsyslog.d/cron.conf'
 
 
 _echoT "----------  rsyslog start"
 
-lxc exec ${_CT_NAME} -- sh -c "rc-service ${service} start"
+_lxc_exec ${_CT_NAME} "rc-service ${service} start"
 
 
 ####################################  LOGROTATE
 
 _echoT "----------  logrotate install"
 
-lxc exec ${_CT_NAME} -- sh -c "! apk list -I |grep -q ^logrotate && apk add logrotate"
+_lxc_exec ${_CT_NAME} "! apk list -I |grep -q ^logrotate && apk add logrotate"
 
 
 ####################################  CRON
@@ -99,16 +99,16 @@ lxc exec ${_CT_NAME} -- sh -c "! apk list -I |grep -q ^logrotate && apk add logr
 _echoT "----------  cron"
 
 file="/etc/crontabs/root"
-lxc exec ${_CT_NAME} -- sh -c "sed -i '/^\*\/15/ s|^|#|' ${file}"
-lxc exec ${_CT_NAME} -- sh -c "rc-service crond restart"
+_lxc_exec ${_CT_NAME} "sed -i '/^\*\/15/ s|^|#|' ${file}"
+_lxc_exec ${_CT_NAME} "rc-service crond restart"
 
 
 ####################################  PUBLISH
 
 _echoT "----------  publish ${_CT_NAME}"
 
-lxc image list --format=json | jq -r '.[].aliases[].name' | grep -q ^${_CT_NAME_COM}$ && lxc image alias rename ${_CT_NAME_COM} ${_CT_NAME_COM}-$(date +%s)
-lxc publish ${_CT_NAME} --alias ${_CT_NAME_COM} --force
+_eval lxc image list --format=json | jq -r '.[].aliases[].name' | grep -q ^${_CT_NAME_COM}$ && lxc image alias rename ${_CT_NAME_COM} ${_CT_NAME_COM}-$(date +%s)
+_eval lxc publish ${_CT_NAME} --alias ${_CT_NAME_COM} --force
 
 
 ####################################  END

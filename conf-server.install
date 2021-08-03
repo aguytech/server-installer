@@ -171,10 +171,10 @@ if [[ " ${str} " = *" ${S_SERVER_TYPE} "* ]]; then
 	fi
 
 
-	_echoT "----------  S_HOST_VM_ETH"
+	#_echoT "----------  S_HOST_VM_ETH"
 
-	_echo "Here is the network actually declared : \n${!S_HOST_VM_ETH[*]}"
-	_askyn "If network are wrong, answer 'n', modify file '${S_GLOBAL_CONF}', and restart installation script"
+	#_echo "Here is the network actually declared : \n${!S_HOST_VM_ETH[*]}"
+	#_askyn "If network are wrong, answer 'n', modify file '${S_GLOBAL_CONF}', and restart installation script"
 
 	_echoT "----------  S_HOST_VM_SSH_NAT"
 

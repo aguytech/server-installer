@@ -72,31 +72,31 @@ net.ipv4.tcp_KEEPALIVE_TIME = ${_KEEPALIVE_TIME}
 net.ipv4.tcp_KEEPALIVE_PROBES = ${_KEEPALIVE_PROBES}
 net.ipv4.tcp_KEEPALIVE_INTVL = ${_KEEPALIVE_INTVL}"
 
-lxc exec ${_CT_NAME} -- sh -c "echo '$txt' > $file"
+_lxc_exec ${_CT_NAME} "echo '$txt' > $file"
 
 
 ####################################  INSTALL
 
 _echoT "----------  install"
 
-lxc exec ${_CT_NAME} -- sh -c "apk add apache2-proxy"
+_lxc_exec ${_CT_NAME} "apk add apache2-proxy"
 
 service="apache2"
-lxc exec ${_CT_NAME} -- sh -c "rc-update add ${service}"
-lxc exec ${_CT_NAME} -- sh -c "rc-service ${service} start"
+_lxc_exec ${_CT_NAME} "rc-update add ${service}"
+_lxc_exec ${_CT_NAME} "rc-service ${service} start"
 
 
 _echoT "----------  paths"
 
-lxc exec ${_CT_NAME} -- sh -c "! [ -d "${PATH_SITE}" ] && mkdir -p ${PATH_SITE}"
+_lxc_exec ${_CT_NAME} "! [ -d "${PATH_SITE}" ] && mkdir -p ${PATH_SITE}"
 path="/var/www/localhost/htdocs"
-lxc exec ${_CT_NAME} -- sh -c "[ -d /var/www/localhost/htdocs ] && mv /var/www/localhost/htdocs ${PATH_WWW}"
-#lxc exec ${_CT_NAME} -- sh -c "chown -R apache/apache ${PATH_SITE}"
+_lxc_exec ${_CT_NAME} "[ -d /var/www/localhost/htdocs ] && mv /var/www/localhost/htdocs ${PATH_WWW}"
+#_lxc_exec ${_CT_NAME} "chown -R apache/apache ${PATH_SITE}"
 
 
 _echoT "----------  conf httpd module"
 
-lxc exec ${_CT_NAME} -- sh -c "[ -f \"${FILE_CONF_HTTP}\" ] && cp -a ${FILE_CONF_HTTP} ${FILE_CONF_HTTP}.${_SDDATE}"
+_lxc_exec ${_CT_NAME} "[ -f \"${FILE_CONF_HTTP}\" ] && cp -a ${FILE_CONF_HTTP} ${FILE_CONF_HTTP}.${_SDDATE}"
 
 cmds="sed -i 's|^.\?\(LoadModule mpm_event_module.*\)$|\1|' ${FILE_CONF_HTTP}
 sed -i 's|^.\?\(LoadModule mpm_prefork_module.*\)$|#\1|' ${FILE_CONF_HTTP}
@@ -104,41 +104,41 @@ sed -i 's|^.\?\(LoadModule mpm_worker_module.*\)$|#\1|' ${FILE_CONF_HTTP}
 sed -i 's|^.\?\(LoadModule vhost_alias_module.*\)$|\1|' ${FILE_CONF_HTTP}
 sed -i 's|^.\?\(LoadModule info_module.*\)$|\1|' ${FILE_CONF_HTTP}
 sed -i 's|^.\?\(LoadModule rewrite_module.*\)$|\1|' ${FILE_CONF_HTTP}"
-lxc exec ${_CT_NAME} -- sh -c "$cmds"
+_lxc_exec ${_CT_NAME} "$cmds"
 
 
 _echoT "----------  conf httpd"
 
 # IncludeOptional
 cmds="grep -q ${PATH_SITE} ${FILE_CONF_HTTP} || echo 'IncludeOptional ${PATH_SITE}/*.conf' >>  ${FILE_CONF_HTTP}"
-lxc exec ${_CT_NAME} -- sh -c "$cmds"
+_lxc_exec ${_CT_NAME} "$cmds"
 
 # ServerName
-lxc exec ${_CT_NAME} -- sh -c "sed -i 's|^.\?\(ServerName\).*$|\1 localhost|' ${FILE_CONF_HTTP}"
+_lxc_exec ${_CT_NAME} "sed -i 's|^.\?\(ServerName\).*$|\1 localhost|' ${FILE_CONF_HTTP}"
 # ServerAdmin
-lxc exec ${_CT_NAME} -- sh -c "sed -i 's|^.\?\(ServerAdmin\).*$|\1 ${S_DOMAIN_EMAIL_TECH}|' ${FILE_CONF_HTTP}"
+_lxc_exec ${_CT_NAME} "sed -i 's|^.\?\(ServerAdmin\).*$|\1 ${S_DOMAIN_EMAIL_TECH}|' ${FILE_CONF_HTTP}"
 # ServerSignature Off
-lxc exec ${_CT_NAME} -- sh -c "sed -i 's|^\(ServerSignature\).*$|\1 Off|' ${FILE_CONF_HTTP}"
+_lxc_exec ${_CT_NAME} "sed -i 's|^\(ServerSignature\).*$|\1 Off|' ${FILE_CONF_HTTP}"
 # TraceEnable Off
-lxc exec ${_CT_NAME} -- sh -c "sed -i 's|^\(ServerTokens\).*$|\1 Prod|' ${FILE_CONF_HTTP}"
+_lxc_exec ${_CT_NAME} "sed -i 's|^\(ServerTokens\).*$|\1 Prod|' ${FILE_CONF_HTTP}"
 
 # htdocs
-lxc exec ${_CT_NAME} -- sh -c "sed -i 's|/var/www/localhost/htdocs|${PATH_WWW}|' ${FILE_CONF_HTTP}"
+_lxc_exec ${_CT_NAME} "sed -i 's|/var/www/localhost/htdocs|${PATH_WWW}|' ${FILE_CONF_HTTP}"
 # Options
-lxc exec ${_CT_NAME} -- sh -c "sed -i '/^<Directory \"\/var\/www\/localhost\/html\">/,/<\/Directory>/ {s|^\(\s*Options\) .*|\1 -Indexes -MultiViews +FollowSymLinks|}' ${FILE_CONF_HTTP}"
+_lxc_exec ${_CT_NAME} "sed -i '/^<Directory \"\/var\/www\/localhost\/html\">/,/<\/Directory>/ {s|^\(\s*Options\) .*|\1 -Indexes -MultiViews +FollowSymLinks|}' ${FILE_CONF_HTTP}"
 
 # LogLevel
-lxc exec ${_CT_NAME} -- sh -c "sed -i 's|^\(LogLevel\).*$|\1 warn|' ${FILE_CONF_HTTP}"
+_lxc_exec ${_CT_NAME} "sed -i 's|^\(LogLevel\).*$|\1 warn|' ${FILE_CONF_HTTP}"
 # ErrorLog
-lxc exec ${_CT_NAME} -- sh -c "sed -i 's|^\(ErrorLog\).*$|\1 \"\|/usr/bin/logger -p local7.err -t localhost/apache\"|' ${FILE_CONF_HTTP}"
+_lxc_exec ${_CT_NAME} "sed -i 's|^\(ErrorLog\).*$|\1 \"\|/usr/bin/logger -p local7.err -t localhost/apache\"|' ${FILE_CONF_HTTP}"
 # CustomLog
-lxc exec ${_CT_NAME} -- sh -c "grep -q CustomLog.*/usr/bin/logger ${FILE_CONF_HTTP} || sed -i 's|^\(\s*\)\(CustomLog.*\)$|\1#\2\n    SetEnvIf X-Forwarded-For \".+\" forwarded\n    CustomLog \"\|/usr/bin/logger -p local7.info -t localhost/apache\" combined\n    CustomLog \"\|/usr/bin/logger -p local7.info -t localhost/apache\" combined env=forwarded|' ${FILE_CONF_HTTP}"
+_lxc_exec ${_CT_NAME} "grep -q CustomLog.*/usr/bin/logger ${FILE_CONF_HTTP} || sed -i 's|^\(\s*\)\(CustomLog.*\)$|\1#\2\n    SetEnvIf X-Forwarded-For \".+\" forwarded\n    CustomLog \"\|/usr/bin/logger -p local7.info -t localhost/apache\" combined\n    CustomLog \"\|/usr/bin/logger -p local7.info -t localhost/apache\" combined env=forwarded|' ${FILE_CONF_HTTP}"
 
 
 _echoT "----------  conf mpm"
 
 file=${PATH_CONF}/mpm.conf
-lxc exec ${_CT_NAME} -- sh -c "[ ! -f '${file}.${_SDDATE}' ] && cp -a '${file}' '${file}.${_SDDATE}'"
+_lxc_exec ${_CT_NAME} "[ ! -f '${file}.${_SDDATE}' ] && cp -a '${file}' '${file}.${_SDDATE}'"
 
 cmds="sch=StartServers; str=\"\t\t3\"
 sed -i \"/<IfModule mpm_event_module>/,/<\/IfModule>/ s|^\s*\(\$sch\)\s*.*|\t\1\$str|\" ${file}
@@ -152,30 +152,30 @@ sch=MaxRequestWorkers; str=\"\t400\"
 sed -i \"/<IfModule mpm_event_module>/,/<\/IfModule>/ s|^\s*\(\$sch\)\s*.*|\t\1\$str|\" ${file}
 sch=MaxConnectionsPerChild; str=\"\t0\"
 sed -i \"/<IfModule mpm_event_module>/,/<\/IfModule>/ s|^\s*\(\$sch\)\s*.*|\t\1\$str|\" ${file}"
-lxc exec ${_CT_NAME} -- sh -c "${cmds}"
+_lxc_exec ${_CT_NAME} "${cmds}"
 
 
 _echoT "----------  conf info & status"
 
 file=${PATH_CONF}/info.conf
-lxc exec ${_CT_NAME} -- sh -c "[ ! -f '${file}.${_SDDATE}' ] && cp -a '${file}' '${file}.${_SDDATE}'"
+_lxc_exec ${_CT_NAME} "[ ! -f '${file}.${_SDDATE}' ] && cp -a '${file}' '${file}.${_SDDATE}'"
 # optimize require for info
-lxc exec ${_CT_NAME} -- sh -c "sed -i '/<Location \/server-status>/,/<\/Location>/ {s|^\(\s*\)\(Require host\).*|\1\2 ${S_DOMAIN_FQDN}\n\1Require ip ${_IPS_AUTH}|}' ${file}"
+_lxc_exec ${_CT_NAME} "sed -i '/<Location \/server-status>/,/<\/Location>/ {s|^\(\s*\)\(Require host\).*|\1\2 ${S_DOMAIN_FQDN}\n\1Require ip ${_IPS_AUTH}|}' ${file}"
 # optimize require for status
-lxc exec ${_CT_NAME} -- sh -c "sed -i '/<Location \/server-info>/,/<\/Location>/ {s|^\(\s*\)\(Require host\).*|\1\2 ${S_DOMAIN_FQDN}\n\1Require ip ${_IPS_AUTH}|}' ${file}"
+_lxc_exec ${_CT_NAME} "sed -i '/<Location \/server-info>/,/<\/Location>/ {s|^\(\s*\)\(Require host\).*|\1\2 ${S_DOMAIN_FQDN}\n\1Require ip ${_IPS_AUTH}|}' ${file}"
 
 
 _echoT "----------  service restart"
 
 service="apache2"
-lxc exec ${_CT_NAME} -- sh -c "rc-service ${service} restart"
+_lxc_exec ${_CT_NAME} "rc-service ${service} restart"
 
 
 ########################################  PING
 
 _echoT "----------  ping-monitor"
 
-lxc exec ${_CT_NAME} -- sh -c "echo 'pong' > ${PATH_WWW}/ping-monitor.html"
+_lxc_exec ${_CT_NAME} "echo 'pong' > ${PATH_WWW}/ping-monitor.html"
 
 
 ########################################  RSYSLOG
@@ -184,12 +184,12 @@ _echoT "----------  rsyslog conf apache"
 
 file="/etc/rsyslog.d/vm-apache.conf"
 lxc file push ${file_rsyslog} ${_CT_NAME}${file}
-_lxd_var_replace ${_CT_NAME}${file}
+_lxc_var_replace ${_CT_NAME}${file}
 
 
 _echoT "----------  restart rsyslog"
 
-systemctl restart rsyslog.service
+_lxc_exec ${_CT_NAME} "systemctl restart rsyslog.service"
 
 
 ########################################  LOGROTATE
@@ -197,18 +197,18 @@ systemctl restart rsyslog.service
 _echoT "----------  logrotate conf"
 
 file=/etc/logrotate.d/apache2
-lxc exec ${_CT_NAME} -- sh -c "grep -q /var/log/apache2/\*.info ${file} || sed -i '1i/var/log/apache2/*.info' ${file}"
-lxc exec ${_CT_NAME} -- sh -c "grep -q /var/log/apache2/\*.info ${file} || sed -i '1i/var/log/apache2/*.err' ${file}"
-lxc exec ${_CT_NAME} -- sh -c "grep -q daily ${file} || sed -i 's|^\(\s*missingok\)|    daily\n\1|' ${file}"
-lxc exec ${_CT_NAME} -- sh -c "grep -q ^\s*rotate ${file} || sed -i 's|^\(\s*missingok\)|\1\n    rotate 14|' ${file}"
+_lxc_exec ${_CT_NAME} "grep -q /var/log/apache2/\*.info ${file} || sed -i '1i/var/log/apache2/*.info' ${file}"
+_lxc_exec ${_CT_NAME} "grep -q /var/log/apache2/\*.info ${file} || sed -i '1i/var/log/apache2/*.err' ${file}"
+_lxc_exec ${_CT_NAME} "grep -q daily ${file} || sed -i 's|^\(\s*missingok\)|    daily\n\1|' ${file}"
+_lxc_exec ${_CT_NAME} "grep -q ^\s*rotate ${file} || sed -i 's|^\(\s*missingok\)|\1\n    rotate 14|' ${file}"
 
 
 ########################################  PUBLISH
 
 _echoT "----------  publish ${_CT_NAME}"
 
-lxc image list --format=json | jq -r '.[].aliases[].name' | grep -q ^${_CT_NAME}$ && lxc image alias rename ${_CT_NAME} ${_CT_NAME}-$(date +%s)
-lxc publish ${_CT_NAME} --alias ${_CT_NAME} --force
+_eval lxc image list --format=json | jq -r '.[].aliases[].name' | grep -q ^${_CT_NAME}$ && lxc image alias rename ${_CT_NAME} ${_CT_NAME}-$(date +%s)
+_eval lxc publish ${_CT_NAME} --alias ${_CT_NAME} --force
 
 
 ####################################  END

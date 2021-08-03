@@ -79,13 +79,13 @@ lxc start ${_CT_NAME}
 
 _echoT "----------  install"
 
-lxc exec ${_CT_NAME} -- sh -c "apk add haproxy bash"
+_lxc_exec ${_CT_NAME} "apk add haproxy bash"
 
 
 _echoT "----------  service set"
 
-lxc exec ${_CT_NAME} -- sh -c "rc-update add haproxy"
-lxc exec ${_CT_NAME} -- sh -c "rc-service haproxy start"
+_lxc_exec ${_CT_NAME} "rc-update add haproxy"
+_lxc_exec ${_CT_NAME} "rc-service haproxy start"
 
 
 ####################################  CONF
@@ -93,21 +93,21 @@ lxc exec ${_CT_NAME} -- sh -c "rc-service haproxy start"
 _echoT "----------  conf"
 
 path="/etc/haproxy"
-lxc exec ${_CT_NAME} -- sh -c "[ -d ${path} ] && mv ${path} ${path}.${_SDDATE}"
-lxc file push --recursive ${S_PATH_INSTALL_CONF}/haproxy ${_CT_NAME}/etc
+_lxc_exec ${_CT_NAME} "[ -d ${path} ] && mv ${path} ${path}.${_SDDATE}"
+_eval lxc file push --recursive ${S_PATH_INSTALL_CONF}/haproxy ${_CT_NAME}/etc
 
 if [ "${S_DOMAIN_FQDN_FQDN}" != "ambau.ovh" ]; then
-	lxc exec ${_CT_NAME} -- sh -c "grep ambau.ovh -rl ${path} |xargs sed -i 's|ambau.ovh|${S_DOMAIN_FQDN_FQDN}|g'"
-	lxc exec ${_CT_NAME} -- sh -c "grep ambau -rl ${path} |xargs sed -i 's|ambau|${S_DOMAIN_FQDN_NAME}|g'"
+	_lxc_exec ${_CT_NAME} "grep ambau.ovh -rl ${path} |xargs sed -i 's|ambau.ovh|${S_DOMAIN_FQDN_FQDN}|g'"
+	_lxc_exec ${_CT_NAME} "grep ambau -rl ${path} |xargs sed -i 's|ambau|${S_DOMAIN_FQDN_NAME}|g'"
 fi
 
 
 _echoT "----------  init.d"
 
 file="/etc/init.d/haproxy"
-lxc exec ${_CT_NAME} -- sh -c "[ -f ${file} ] && mv ${file} ${file}.${_SDDATE} && chmod -x ${file}.${_SDDATE}"
-lxc file push ${S_PATH_INSTALL_CONF}/init.d/haproxy ${_CT_NAME}/etc/init.d/
-lxc exec ${_CT_NAME} -- sh -c "chmod +x ${file}"
+_lxc_exec ${_CT_NAME} "[ -f ${file} ] && mv ${file} ${file}.${_SDDATE} && chmod -x ${file}.${_SDDATE}"
+_eval lxc file push ${S_PATH_INSTALL_CONF}/init.d/haproxy ${_CT_NAME}/etc/init.d/
+_lxc_exec ${_CT_NAME} "chmod +x ${file}"
 
 
 ####################################  SSL
@@ -115,13 +115,13 @@ lxc exec ${_CT_NAME} -- sh -c "chmod +x ${file}"
 _echoT "----------  ssl path"
 
 path="${S_PATH_CONF_SSL}/certs"
-lxc exec ${_CT_NAME} -- sh -c "[ -d ${path} ] || mkdir -p ${path}"
+_lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
 path="${S_PATH_CONF_SSL}/private"
-lxc exec ${_CT_NAME} -- sh -c "[ -d ${path} ] || mkdir -p ${path}"
+_lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
 
-lxc exec ${_CT_NAME} -- sh -c "chown -R 0:0 ${S_PATH_CONF_SSL} && chmod -R 750 ${S_PATH_CONF_SSL}"
+_lxc_exec ${_CT_NAME} "chown -R 0:0 ${S_PATH_CONF_SSL} && chmod -R 750 ${S_PATH_CONF_SSL}"
 path="${S_PATH_CONF_SSL}/private"
-lxc exec ${_CT_NAME} -- sh -c "chmod -R 700 ${path}"
+_lxc_exec ${_CT_NAME} "chmod -R 700 ${path}"
 
 
 echo exit && exit
@@ -150,15 +150,15 @@ sudo systemctl start lxd.service
 
 _echoT "----------  certbot install"
 
-lxc exec ${_CT_NAME} -- sh -c "apk add certbot"
+_lxc_exec ${_CT_NAME} "apk add certbot"
 
 
 ########################################  PUBLISH
 
 _echoT "----------  publish ${_CT_NAME}"
 
-lxc image list --format=json | jq -r '.[].aliases[].name' | grep -q ^${_CT_NAME}$ && lxc image alias rename ${_CT_NAME} ${_CT_NAME}-$(date +%s)
-lxc publish ${_CT_NAME} --alias ${_CT_NAME} --force
+_eval lxc image list --format=json | jq -r '.[].aliases[].name' | grep -q ^${_CT_NAME}$ && lxc image alias rename ${_CT_NAME} ${_CT_NAME}-$(date +%s)
+_eval lxc publish ${_CT_NAME} --alias ${_CT_NAME} --force
 
 
 ####################################  END
