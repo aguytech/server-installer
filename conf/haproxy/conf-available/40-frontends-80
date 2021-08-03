@@ -1,4 +1,3 @@
-# AMBAU
 # included file for haproxy configuration
 
 frontend	S_DOMAIN_FQDN_FQDN:80

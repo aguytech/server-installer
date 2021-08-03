@@ -1,8 +1,7 @@
-# AMBAU
 # included file for haproxy configuration
 
 listen stats
-	bind			*:1777
+	bind			*:S_HAPROXY_STATS_PORT
 
 	log				global
 	mode			http
@@ -15,5 +14,5 @@ listen stats
 	stats			hide-version
 	stats			refresh 5s
 	stats			show-node
-	stats			auth admin:ANVo87zj0m-HQ5
-	stats			uri /haproxy-stats
+	stats			auth _ACCESS_USER:_ACCESS_PWD
+	stats			uri _ACCESS_URI

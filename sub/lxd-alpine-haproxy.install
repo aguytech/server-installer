@@ -5,21 +5,23 @@
 
 _echoT "\n==========================================  ${_RELEASE}${_PART}"
 
-_echoT "------------------ file required"
-#FILE_SITE="${S_PATH_INSTALL_CONF}/apache2/000-default.conf"
+file_haproxy_initd=${S_PATH_INSTALL_CONF}/init.d/haproxy
+path_haproxy=${S_PATH_INSTALL_CONF}/haproxy
 
-#FILES="$FILE_SITE"
-#for FILE in $FILES; do ! [ -f "$FILE" ] && _exite "Unable to find file: '$FILE'"; done
+_echoT "------------------ required files"
+_require "${file_haproxy_initd}"
 
+_echoT "------------------ required paths"
+_required "${path_haproxy}"
 
 ####################################  DATA
-
-_echoT "----------  data"
 
 _CT_NAME=${S_SERVICE[proxy]}
 
 eval ${S_HOST_VM_ETH[default]}
-ct_ip_proxy=${s_base}.${S_SERVICE_BITS[proxy]}
+_CT_IP=${s_base}.${S_SERVICE_BITS[proxy]}
+
+_echoT "----------  data"
 
 [ -z ${_IPTABLES_PORTS+x} ] && anstmp="80 443" && _askno "IPs to redirect to haproxy container ($anstmp)" && _IPTABLES_PORTS=${_ANSWER:-$anstmp} && _confset _IPTABLES_PORTS "$_IPTABLES_PORTS"
 
@@ -58,7 +60,7 @@ _echoT "----------  network fixed ip"
 if ! lxc list --format=json | jq -r '.[] | select(.name == "'${_CT_NAME}'").devices[].name' | grep -q eth0; then
 	lxc network attach ${s_inet} ${_CT_NAME} eth0 eth0
 fi
-_eval lxc config device set ${_CT_NAME} eth0 ipv4.address ${ct_ip_proxy}
+_eval lxc config device set ${_CT_NAME} eth0 ipv4.address ${_CT_IP}
 
 
 _echoT "----------  ct start"
@@ -89,19 +91,19 @@ _echoT "----------  conf"
 
 path="/etc/haproxy"
 _lxc_exec ${_CT_NAME} "[ -d ${path} ] && mv ${path} ${path}.${_SDDATE}"
-_eval lxc file push -rq ${S_PATH_INSTALL_CONF}/haproxy ${_CT_NAME}/etc
+_eval lxc file push -rq ${path_haproxy} ${_CT_NAME}/etc
 
-if [ "${S_DOMAIN_FQDN_FQDN}" != "ambau.ovh" ]; then
-	_lxc_exec ${_CT_NAME} "grep ambau.ovh -rl ${path} |xargs sed -i 's|ambau.ovh|${S_DOMAIN_FQDN_FQDN}|g'"
-	_lxc_exec ${_CT_NAME} "grep ambau -rl ${path} |xargs sed -i 's|ambau|${S_DOMAIN_FQDN_NAME}|g'"
-fi
+vars="S_PATH_CONF_SSL _ACCESS_USER _ACCESS_PWD _ACCESS_URI S_HAPROXY_STATS_PORT S_RSYSLOG_PORT "
+for var in ${vars}; do
+	_lxc_exec ${_CT_NAME} "find ${path} -type f|while read file; do sed -i 's|${var}|${!var}|g' ${file}; done"
+done
 
 
 _echoT "----------  init.d"
 
 file="/etc/init.d/haproxy"
 _lxc_exec ${_CT_NAME} "[ -f ${file} ] && mv ${file} ${file}.${_SDDATE} && chmod -x ${file}.${_SDDATE}"
-_eval lxc file push ${S_PATH_INSTALL_CONF}/init.d/haproxy ${_CT_NAME}/etc/init.d/
+_eval lxc file push ${file_haproxy_initd} ${_CT_NAME}/etc/init.d/
 _lxc_exec ${_CT_NAME} "chmod +x ${file}"
 
 
@@ -109,10 +111,12 @@ _lxc_exec ${_CT_NAME} "chmod +x ${file}"
 
 _echoT "----------  iptables rules"
 
+eval ${S_CLUSTER[$HOSTNAME]}
+
 for port in ${_IPTABLES_PORTS}; do
-	#cmd="PREROUTING -d ${S_NODE_IPV4}/32 -i ${S_ETH} -p tcp -m tcp --dport ${port} -j DNAT --to-destination ${ct_ip_proxy}:${port}"
-	cmd="PREROUTING -d ${S_NODE_IPV4}/32 -p tcp -m tcp --dport ${port} -j DNAT --to-destination ${ct_ip_proxy}:${port}"
-	sudo iptables -S -t nat | grep -qi "${cmd}" || sudo iptables -t nat -I $cmd
+	#cmd="PREROUTING -d ${S_NODE_IPV4}/32 -i ${S_ETH} -p tcp -m tcp --dport ${port} -j DNAT --to-destination ${_CT_IP}:${port}"
+	cmd="PREROUTING -d ${s_ip}/32 -p tcp -m tcp --dport ${port} -j DNAT --to-destination ${_CT_IP}:${port}"
+	iptables -S -t nat | grep -qi "${cmd}" || iptables -t nat -I ${cmd}
 done
 
 _echoT "----------  iptables persistent"

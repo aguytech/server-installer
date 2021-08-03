@@ -11,9 +11,9 @@ defaults
 	option			http-server-close
 	maxconn		1000
 
-	timeout		connect 	60s
-	timeout		client		600s
-	timeout		server		600s
+	timeout		connect				60s
+	timeout		client					600s
+	timeout		server					600s
 	#timeout		queue					600s
 	#timeout		http-request		60s
 	#timeout		http-keep-alive	60s

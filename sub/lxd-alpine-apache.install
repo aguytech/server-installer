@@ -5,21 +5,18 @@
 
 _echoT "\n==========================================  ${_RELEASE}${_PART}"
 
-_echoT "------------------ file required"
-
 file_rsyslog="${S_PATH_INSTALL_CONF}/rsyslog/vm-apache.conf"
 
-files="${file_rsyslog}"
-for file in $files; do ! [ -f ${file} ] && _exite "Unable to find file: '${file}'"; done
+_echoT "------------------ required files"
+_require "${file_rsyslog}"
 
 
-####################################  MAIN
+####################################  DATA
 
-_echoT "----------  data"
+_CT_NAME=${S_SERVICE[proxy]}
 
-[ -z ${_CT_NAME_APACHE+x} ] && anstmp="${_RELEASE/./}-apache" && _askno "container NAME for 'apache' ($anstmp)" && _CT_NAME_APACHE=${_ANSWER:-$anstmp} && _confset _CT_NAME_APACHE "${_CT_NAME_APACHE}"
-
-_CT_NAME=${_CT_NAME_APACHE}
+eval ${S_HOST_VM_ETH[default]}
+_CT_IP=${s_base}.${S_SERVICE_BITS[http]}
 
 _echoT "----------  data sysctl.conf"
 
@@ -36,7 +33,7 @@ PATH_CONF=/etc/apache2/conf.d
 FILE_CONF_HTTP="/etc/apache2/httpd.conf"
 
 
-####################################  CONTAINER
+####################################  INIT
 
 _echoT "----------  init"
 
@@ -52,7 +49,15 @@ if lxc list -f json |jq -r '.[].name' | grep -q ^${_CT_NAME}$; then
 
 fi
 
-lxc init ${_CT_NAME_COM} ${_CT_NAME} -p stock -p global
+lxc init ${_CT_NAME_COM} ${_CT_NAME} -p default -p global
+
+
+_echoT "----------  network fixed ip"
+
+if ! lxc list --format=json | jq -r '.[] | select(.name == "'${_CT_NAME}'").devices[].name' | grep -q eth0; then
+	lxc network attach ${s_inet} ${_CT_NAME} eth0 eth0
+fi
+_eval lxc config device set ${_CT_NAME} eth0 ipv4.address ${_CT_IP}
 
 
 _echoT "----------  ${_CT_NAME} start"

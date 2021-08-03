@@ -48,7 +48,7 @@ if [ "${str/ ${S_SERVER_TYPE} /}" != "${str}" ]; then
 		_echoT "----------  hosts S_SERVICE_BITS"
 
 		# set s_base
-		eval $(echo ${S_HOST_VM_ETH[default]}|grep -o 's_base=[^ ]*')
+		eval ${S_HOST_VM_ETH[default]}
 
 		_keepcpts $file
 		echo -e "\n# services" >> ${file}

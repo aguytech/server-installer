@@ -291,6 +291,14 @@ if [ -z "${S_SERVICE[cache]}" ]; then
 	S_SERVICE[cache]=${_ANSWER:-${anstmp}} && _confset_array "S_SERVICE" "cache" "${S_SERVICE[cache]}" "${S_GLOBAL_CONF}"
 fi
 
+_echoT "----------  S_SERVICE http"
+
+if [ -z "${S_SERVICE[http]}" ]; then
+	anstmp="svc-http"
+	_askno "service name for http (${anstmp})"
+	S_SERVICE[http]=${_ANSWER:-${anstmp}} && _confset_array "S_SERVICE" "http" "${S_SERVICE[http]}" "${S_GLOBAL_CONF}"
+fi
+
 _echoT "----------  S_SERVICE mail"
 
 if [ -z "${S_SERVICE[mail]}" ]; then

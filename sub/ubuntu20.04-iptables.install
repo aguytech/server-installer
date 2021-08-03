@@ -23,9 +23,9 @@ file_xtra_script="${S_PATH_INSTALL_XTRA}/firewall"
 file_xtra_conf="${S_PATH_INSTALL_CONF}/firewall.conf"
 file_xtra_log="${S_PATH_INSTALL_CONF}/rsyslog/iptables.conf"
 
-_echoT "------------------ file required"
+_echoT "------------------ required files"
 
-_require "$file_xtra_script" "$file_xtra_conf" "$file_xtra_log"
+_require "${file_xtra_script}" "${file_xtra_conf}" "${file_xtra_log}"
 
 
 ####################################  MAIN
