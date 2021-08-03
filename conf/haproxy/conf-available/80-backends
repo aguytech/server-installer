@@ -1,12 +1,12 @@
 # AMBAU
 # included file for haproxy configuration
 
-backend S_DOMAIN_FQDN_NAME
+backend S_DOMAIN_NAME
 	#balance	roundrobin
 	# retries x times before to redispatch to other server
 	#retries	3
 	#option		redispatch
-	#option						httpchk GET /ping-monitor "HTTP/1.1\r\nHost: S_DOMAIN_FQDN_FQDN"
+	#option						httpchk GET /ping-monitor "HTTP/1.1\r\nHost: S_DOMAIN_FQDN"
 	option						httpchk GET /ping-monitor
 	http-check	            expect string pong
 	default-server			inter 3s fall 4 rise 2
@@ -14,10 +14,10 @@ backend S_DOMAIN_FQDN_NAME
 	# 16000000 seconds: a bit more than 6 months
 	http-response			set-header Strict-Transport-Security "max-age=16000000; includeSubDomains; preload;"
 
-	#server		S_DOMAIN_FQDN_NAME1					10.0.0.101:80 weight 10 maxconn 64 check inter 2s
-	#server		S_DOMAIN_FQDN_NAME2					10.0.0.102:80 weight 10 maxconn 64 check inter 2s
-	server			S_DOMAIN_FQDN_NAME1					10.0.0.101:80 check
-	server			S_DOMAIN_FQDN_NAME2					10.0.0.102:80 check backup
+	#server		S_DOMAIN_NAME1					10.0.0.101:80 weight 10 maxconn 64 check inter 2s
+	#server		S_DOMAIN_NAME2					10.0.0.102:80 weight 10 maxconn 64 check inter 2s
+	server			S_DOMAIN_NAME1					10.0.0.101:80 check
+	server			S_DOMAIN_NAME2					10.0.0.102:80 check backup
 
 backend 17112018
 	option						httpchk GET /ping-monitor
@@ -44,8 +44,8 @@ backend	wigwam
 #backend		17112018-dev
 #	server		17112018-dev	10.0.0.105:80 maxconn 128 check
 
-backend	S_DOMAIN_FQDN_NAME-admin
-	#option					httpchk GET /ping-www HTTP/1.1\r\nHost:\ admin.S_DOMAIN_FQDN_FQDN
+backend	S_DOMAIN_NAME-admin
+	#option					httpchk GET /ping-www HTTP/1.1\r\nHost:\ admin.S_DOMAIN_FQDN
 	option						httpchk GET /ping-monitor
 	http-check				expect string admin
 	default-server			inter 3s fall 4 rise 2
@@ -54,8 +54,8 @@ backend	S_DOMAIN_FQDN_NAME-admin
 	# 16000000 seconds: a bit more than 6 months
 	http-response set-header Strict-Transport-Security "max-age=16000000; includeSubDomains; preload;"
 
-	server			S_DOMAIN_FQDN_NAME-admin		10.0.0.190:80  check maxconn 16
-	server			S_DOMAIN_FQDN_NAME-admin2		10.0.0.191:80  check maxconn 16 backup
+	server			S_DOMAIN_NAME-admin		10.0.0.190:80  check maxconn 16
+	server			S_DOMAIN_NAME-admin2		10.0.0.191:80  check maxconn 16 backup
 
 #backend		letsencrypt
 	#server		letsencrypt 127.0.0.1:50000

@@ -1,23 +1,23 @@
 # included file for haproxy configuration
 
-frontend	S_DOMAIN_FQDN_FQDN:80
-	bind	S_DOMAIN_FQDN_FQDN:80
+frontend	S_DOMAIN_FQDN:80
+	bind	S_DOMAIN_FQDN:80
 
 	default_backend		default
 
 	http-request				set-header X-Forwarded-Protocol http
 
-	acl S_DOMAIN_FQDN_NAME					hdr_end(host) -i S_DOMAIN_FQDN_FQDN
-	#acl S_DOMAIN_FQDN_NAME-check		path_dir /server-status /server-info /status-www /ping-www /ping-monitor
-	acl S_DOMAIN_FQDN_NAME-check		path_reg ^/(server-status|server-info|status-www|ping-www|ping-monitor)
-	#acl S_DOMAIN_FQDN_NAME-check		path_beg /server-status /server-info /status-www /ping-www /ping-monitor
+	acl S_DOMAIN_NAME					hdr_end(host) -i S_DOMAIN_FQDN
+	#acl S_DOMAIN_NAME-check		path_dir /server-status /server-info /status-www /ping-www /ping-monitor
+	acl S_DOMAIN_NAME-check		path_reg ^/(server-status|server-info|status-www|ping-www|ping-monitor)
+	#acl S_DOMAIN_NAME-check		path_beg /server-status /server-info /status-www /ping-www /ping-monitor
 
 	# 17112018.fr
 	#acl 17112018				hdr_end(host) -i 17112018.fr
 
-	#redirect						scheme https code 301 if S_DOMAIN_FQDN_NAME !S_DOMAIN_FQDN_NAME-check !{ ssl_fc }
-	redirect						scheme https code 301 if !S_DOMAIN_FQDN_NAME-check !{ ssl_fc }
+	#redirect						scheme https code 301 if S_DOMAIN_NAME !S_DOMAIN_NAME-check !{ ssl_fc }
+	redirect						scheme https code 301 if !S_DOMAIN_NAME-check !{ ssl_fc }
 
-	#use_backend	S_DOMAIN_FQDN_NAME-admin if S_DOMAIN_FQDN_NAME-admin
-	use_backend				S_DOMAIN_FQDN_NAME if S_DOMAIN_FQDN_NAME
-	use_backend				S_DOMAIN_FQDN_NAME if S_DOMAIN_FQDN_NAME-check
+	#use_backend	S_DOMAIN_NAME-admin if S_DOMAIN_NAME-admin
+	use_backend				S_DOMAIN_NAME if S_DOMAIN_NAME
+	use_backend				S_DOMAIN_NAME if S_DOMAIN_NAME-check

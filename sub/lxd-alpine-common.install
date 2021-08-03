@@ -2,7 +2,7 @@
 #
 # write by Aguy
 
-_echoT "\n==========================================  ${_RELEASE}${_PART}"
+_echoT "\n==========================================  ${_RELEASE} ${_PART}"
 
 
 ####################################  DATA
@@ -18,10 +18,10 @@ _CT_NAME="${_RELEASE/./}"
 
 _echoT "----------  apk profile.d"
 
-_lxc_exec ${_CT_NAME} "[ -e /etc/profile.d/bash-lxc-aliases.sh ] || ln -sv /usr/local/bs/conf/bash-lxc-aliases.sh /etc/profile.d/bash-lxc-aliases.sh"
-_lxc_exec ${_CT_NAME} "[ -e /etc/profile.d/bash-lxc-alpine.sh ] || ln -sv /usr/local/bs/conf/bash-lxc-alpine.sh /etc/profile.d/bash-lxc-alpine.sh"
-_lxc_exec ${_CT_NAME} "[ -e /etc/profile.d/bash_functions.sh ] || ln -sv /usr/local/bs/conf/.bash_functions /etc/profile.d/bash_functions.sh"
-_lxc_exec ${_CT_NAME} "[ -e /etc/profile.d/env.sh ] || ln -sv /usr/local/bs/conf/env.conf /etc/profile.d/env.sh"
+_lxc_exec ${_CT_NAME} "[ -e /etc/profile.d/bash-lxc-aliases.sh ] || ln -s /usr/local/bs/conf/bash-lxc-aliases.sh /etc/profile.d/bash-lxc-aliases.sh"
+_lxc_exec ${_CT_NAME} "[ -e /etc/profile.d/bash-lxc-alpine.sh ] || ln -s /usr/local/bs/conf/bash-lxc-alpine.sh /etc/profile.d/bash-lxc-alpine.sh"
+_lxc_exec ${_CT_NAME} "[ -e /etc/profile.d/bash_functions.sh ] || ln -s /usr/local/bs/conf/.bash_functions /etc/profile.d/bash_functions.sh"
+_lxc_exec ${_CT_NAME} "[ -e /etc/profile.d/env.sh ] || ln -s /usr/local/bs/conf/env.conf /etc/profile.d/env.sh"
 
 file="/tmp/server.conf"
 _evalq [ -f ${file} ] && rm ${file}

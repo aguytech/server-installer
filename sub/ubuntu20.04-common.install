@@ -175,8 +175,6 @@ if [ "${str/ ${S_SERVER_TYPE} /}" != "${str}" ]; then
 
 	_echoT "----------  conf vim"
 
-	#_eval update-alternatives --set editor /usr/bin/vim.basic
-
 	file="${HOME}/.vimrc"
 	_keepmvts "${file}"
 	_eval ln -s "${file_vim}" "${file}"

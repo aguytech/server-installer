@@ -3,7 +3,7 @@
 # write by Aguy
 
 
-_echoT "\n==========================================  ${_RELEASE}${_PART}"
+_echoT "\n==========================================  ${_RELEASE} ${_PART}"
 
 file_haproxy_initd=${S_PATH_INSTALL_CONF}/init.d/haproxy
 path_haproxy=${S_PATH_INSTALL_CONF}/haproxy
@@ -26,8 +26,8 @@ _echoT "----------  data"
 [ -z ${_IPTABLES_PORTS+x} ] && anstmp="80 443" && _askno "IPs to redirect to haproxy container ($anstmp)" && _IPTABLES_PORTS=${_ANSWER:-$anstmp} && _confset _IPTABLES_PORTS "$_IPTABLES_PORTS"
 
 
-[ -z ${S_DOMAIN_FQDN_FQDN+x} ] && anstmp="$S_DOMAIN_FQDN" && _askno "Enter a fqdn domain name ($anstmp)" && S_DOMAIN_FQDN_FQDN="${_ANSWER:-$anstmp}" && _confset S_DOMAIN_FQDN_FQDN "$S_DOMAIN_FQDN_FQDN"
-S_DOMAIN_FQDN_NAME="${S_DOMAIN_FQDN_FQDN%.*}" && _confset S_DOMAIN_FQDN_NAME "$S_DOMAIN_FQDN_NAME"
+[ -z ${S_DOMAIN_FQDN+x} ] && anstmp="$S_DOMAIN_FQDN" && _askno "Enter a fqdn domain name ($anstmp)" && S_DOMAIN_FQDN="${_ANSWER:-$anstmp}" && _confset S_DOMAIN_FQDN "$S_DOMAIN_FQDN"
+S_DOMAIN_NAME="${S_DOMAIN_FQDN%.*}" && _confset S_DOMAIN_NAME "$S_DOMAIN_NAME"
 
 [ -z ${_ACCESS_USER+x} ] && anstmp="admin" && _askno "Enter a name for stats access ($anstmp)" && _ACCESS_USER="${_ANSWER:-$anstmp}" && _confset _ACCESS_USER "$_ACCESS_USER"
 
@@ -93,11 +93,10 @@ path="/etc/haproxy"
 _lxc_exec ${_CT_NAME} "[ -d ${path} ] && mv ${path} ${path}.${_SDDATE}"
 _eval lxc file push -rq ${path_haproxy} ${_CT_NAME}/etc
 
-vars="S_PATH_CONF_SSL _ACCESS_USER _ACCESS_PWD _ACCESS_URI S_HAPROXY_STATS_PORT S_RSYSLOG_PORT "
+vars="S_PATH_CONF_SSL _ACCESS_USER _ACCESS_PWD _ACCESS_URI S_HAPROXY_STATS_PORT S_RSYSLOG_PORT S_DOMAIN_FQDN S_DOMAIN_NAME"
 for var in ${vars}; do
-	_lxc_exec ${_CT_NAME} "find ${path} -type f|while read file; do sed -i 's|${var}|${!var}|g' ${file}; done"
+	_lxc_exec ${_CT_NAME} "find ${path} -type f|while read file; do sed -i 's|${var}|${!var}|g' \${file}; done"
 done
-
 
 _echoT "----------  init.d"
 
@@ -105,6 +104,10 @@ file="/etc/init.d/haproxy"
 _lxc_exec ${_CT_NAME} "[ -f ${file} ] && mv ${file} ${file}.${_SDDATE} && chmod -x ${file}.${_SDDATE}"
 _eval lxc file push ${file_haproxy_initd} ${_CT_NAME}/etc/init.d/
 _lxc_exec ${_CT_NAME} "chmod +x ${file}"
+
+_echoT "----------  restart"
+
+_lxc_exec ${_CT_NAME} "rc-service haproxy restart"
 
 
 ####################################  IPTABLES
