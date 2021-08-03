@@ -3,7 +3,7 @@
 # write by Aguy
 
 ################################ global functions
-#S_TRACE=debug
+S_TRACE=debug
 
 if [[ -z "$S_GLOBAL_FUNCTIONS" || -f $S_GLOBAL_FUNCTIONS ]]; then
 	file="/usr/local/bs/inc-functions.sh"

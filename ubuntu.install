@@ -3,19 +3,11 @@
 # write by Aguy
 
 <<MANUALY
-#[ -e /home/ubuntu/.bash_aliases ] || sudo ln -sv /usr/local/bs/conf/.bash_aliases /home/ubuntu/.bash_aliases
-#[ -e /root/.bash_aliases ] || sudo ln -sv /usr/local/bs/conf/.bash_aliases /root/.bash_aliases
-
-rm ~/.ssh/known_hosts
-
 # HOME
+rm ~/.ssh/known_hosts
 server=node1 && ssh_port=2002
 
-cmds="echo '-------------- update' && sudo apt update
-echo '-------------- upgrade' && sudo apt -y dist-upgrade
-echo '-------------- clean' && sudo apt -y autoremove
-echo '-------------- install' && sudo apt install -y rsync zfsutils-linux
-echo '-------------- conf ssh' && sudo  cp -a /root/.ssh/authorized_keys /root/.ssh/authorized_keys.$(date +%s)
+cmds="sudo  cp -a /root/.ssh/authorized_keys /root/.ssh/authorized_keys.$(date +%s)
 sudo sed -i 's|^no-port-forwarding.* \(ssh-rsa .*\)$|\1|' /root/.ssh/authorized_keys
 sudo sed -i 's|^#\?\(PermitRootLogin\) .*$|\1 without-password|' /etc/ssh/sshd_config
 sudo sed -i 's|^#\?\(Port\) .*$|\1 ${ssh_port}|' /etc/ssh/sshd_config
@@ -32,6 +24,7 @@ blkid|grep -v squashfs
 fdisk /dev/sda # m p F n w | extend with lxd:+50G / save:available
 blkid|grep -v squashfs
 
+apt update && apt -y dist-upgrade
 /usr/local/install/ubuntu.install
 # cp /usr/local/install/conf/server.conf-ovh /etc/server/server.conf
 # rsync -e "ssh -p${ssh_port}" /home/nikita/dev/install/conf/server.conf-ovh root@${server}:/etc/server/server.conf -av

@@ -454,6 +454,11 @@ if [[ " ${str} " = *" ${S_SERVER_TYPE} "* ]]; then
 	if [ "${S_STORAGE_DRIVER}" = "zfs" ]; then
 
 
+		_echoT "----------  zfs install"
+
+		_eval apt update
+		_eval apt install -y zfsutils-linux
+
 		path="/zroot"
 		_echoT "----------  zfs zpool ${path}"
 

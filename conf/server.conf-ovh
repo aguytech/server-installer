@@ -21,7 +21,7 @@ S_STORAGE_ROOT="/dev/sda5"
 # path for global server configuration
 S_PATH_CONF="/etc/server"
 # path for global server configuration
-S_PATH_CONF_SSL="${S_PATH_CONF}/ssl"
+S_PATH_CONF_SSL="/etc/server/ssl"
 # path for global scripts
 S_PATH_SCRIPT="/usr/local/bs"
 # path for extra conf for installation

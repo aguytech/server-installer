@@ -57,7 +57,9 @@ echo -e "${blueb}----------  server.conf${cclear}"
 _keepmvts ${S_GLOBAL_CONF}
 cp -a "${file_install_server}" "${S_GLOBAL_CONF}"
 
-echo "If you want to use a specific 'server.conf' , put this file to '${S_GLOBAL_CONF}' and valid to continue : " && read _ANSWER
+echo "If you want to use a specific 'server.conf' , put this file to '${S_GLOBAL_CONF}'"
+echo "cp /usr/local/install/conf/server.conf-ovh /etc/server/server.conf"
+echo -n "and valid to continue : " && read _ANSWER
 . "$S_GLOBAL_CONF"
 
 echo -e "${blueb}----------  install files${cclear}"

@@ -16,11 +16,10 @@ _echoT "------------------ file required"
 
 _echoT "----------  data"
 
-[ -z ${_CT_NAME_HAPROXY+x} ] && anstmp="${_RELEASE/./}-haproxy" && _askno "container NAME for 'haproxy' ($anstmp)" && _CT_NAME_HAPROXY=${_ANSWER:-$anstmp} && _confset _CT_NAME_HAPROXY "$_CT_NAME_HAPROXY"
+_CT_NAME=${S_SERVICE[proxy]}
 
-_CT_NAME=${_CT_NAME_HAPROXY}
-
-[ -z ${_CT_IP_PROXY+x} ] && anstmp="10.0.1.2" && _askno "container IP for 'haproxy' ($anstmp)" && _CT_IP_PROXY=${_ANSWER:-$anstmp} && _confset _CT_IP_PROXY "$_CT_IP_PROXY"
+eval ${S_HOST_VM_ETH[default]}
+ct_ip_proxy=${s_base}.${S_SERVICE_BITS[proxy]}
 
 [ -z ${_IPTABLES_PORTS+x} ] && anstmp="80 443" && _askno "IPs to redirect to haproxy container ($anstmp)" && _IPTABLES_PORTS=${_ANSWER:-$anstmp} && _confset _IPTABLES_PORTS "$_IPTABLES_PORTS"
 
@@ -35,44 +34,36 @@ S_DOMAIN_FQDN_NAME="${S_DOMAIN_FQDN_FQDN%.*}" && _confset S_DOMAIN_FQDN_NAME "$S
 [ -z ${_ACCESS_URI+x} ] && anstmp="/haproxy-stats" && _askno "Enter the URI to access to admin site ($anstmp)" && _ACCESS_URI="${_ANSWER:-$anstmp}" && _confset _ACCESS_URI "$_ACCESS_URI"
 
 
-####################################  CONTAINER
+####################################  INIT
 
 _echoT "----------  init"
 
 ! lxc image list -f json |jq -r '.[].aliases[].name' | grep -q ^${_CT_NAME_COM}$ && _exite "Unable to find image container '${_CT_NAME_COM}'"
 if lxc list -f json |jq -r '.[].name' | grep -q ^${_CT_NAME}$; then
 	if lxc list --format=json | jq -r '.[] | select(.status == "Running").name' | grep -q ^${_CT_NAME}$; then
-		lxc stop ${_CT_NAME}
-		lxc rename ${_CT_NAME} ${_CT_NAME}.${_SDDATE}
-		lxc start ${_CT_NAME}
+		_eval lxc stop ${_CT_NAME}
+		_eval lxc rename ${_CT_NAME} ${_CT_NAME}.${_SDDATE}
+		_eval lxc start ${_CT_NAME}
 	else
-		lxc rename ${_CT_NAME} ${_CT_NAME}.${_SDDATE}
+		_eval lxc rename ${_CT_NAME} ${_CT_NAME}.${_SDDATE}
 	fi
 
 fi
 
-lxc init ${_CT_NAME_COM} ${_CT_NAME} -p stock -p global
-
-
-_echoT "----------  profile www-${S_DOMAIN_FQDN_FQDN}"
-
-if ! lxc list --format=json | jq -r '.[] | select(.name == "'${_CT_NAME}'").devices[].name' | grep -q eth0; then
-	lxc network attach lxdbr1 ${_CT_NAME} eth0 eth0
-fi
-lxc config device set ${_CT_NAME} eth0 ipv4.address ${_CT_IP_PROXY}
+_eval lxc init ${_CT_NAME_COM} ${_CT_NAME} -p default -p global
 
 
 _echoT "----------  network fixed ip"
 
 if ! lxc list --format=json | jq -r '.[] | select(.name == "'${_CT_NAME}'").devices[].name' | grep -q eth0; then
-	lxc network attach lxdbr1 ${_CT_NAME} eth0 eth0
+	lxc network attach ${s_inet} ${_CT_NAME} eth0 eth0
 fi
-lxc config device set ${_CT_NAME} eth0 ipv4.address ${_CT_IP_PROXY}
+_eval lxc config device set ${_CT_NAME} eth0 ipv4.address ${ct_ip_proxy}
 
 
 _echoT "----------  ct start"
 
-lxc start ${_CT_NAME}
+_eval lxc start ${_CT_NAME}
 
 
 ####################################  INSTALL
@@ -90,11 +81,15 @@ _lxc_exec ${_CT_NAME} "rc-service haproxy start"
 
 ####################################  CONF
 
+_echoT "----------  conf bash"
+
+_lxc_exec ${_CT_NAME} "sed -i 's|^\(root.*\):/bin/ash$|\1:/bin/bash|' /etc/passwd"
+
 _echoT "----------  conf"
 
 path="/etc/haproxy"
 _lxc_exec ${_CT_NAME} "[ -d ${path} ] && mv ${path} ${path}.${_SDDATE}"
-_eval lxc file push --recursive ${S_PATH_INSTALL_CONF}/haproxy ${_CT_NAME}/etc
+_eval lxc file push -rq ${S_PATH_INSTALL_CONF}/haproxy ${_CT_NAME}/etc
 
 if [ "${S_DOMAIN_FQDN_FQDN}" != "ambau.ovh" ]; then
 	_lxc_exec ${_CT_NAME} "grep ambau.ovh -rl ${path} |xargs sed -i 's|ambau.ovh|${S_DOMAIN_FQDN_FQDN}|g'"
@@ -110,30 +105,13 @@ _eval lxc file push ${S_PATH_INSTALL_CONF}/init.d/haproxy ${_CT_NAME}/etc/init.d
 _lxc_exec ${_CT_NAME} "chmod +x ${file}"
 
 
-####################################  SSL
-
-_echoT "----------  ssl path"
-
-path="${S_PATH_CONF_SSL}/certs"
-_lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
-path="${S_PATH_CONF_SSL}/private"
-_lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
-
-_lxc_exec ${_CT_NAME} "chown -R 0:0 ${S_PATH_CONF_SSL} && chmod -R 750 ${S_PATH_CONF_SSL}"
-path="${S_PATH_CONF_SSL}/private"
-_lxc_exec ${_CT_NAME} "chmod -R 700 ${path}"
-
-
-echo exit && exit
-
-
 ####################################  IPTABLES
 
 _echoT "----------  iptables rules"
 
 for port in ${_IPTABLES_PORTS}; do
-	#cmd="PREROUTING -d ${S_NODE_IPV4}/32 -i ${S_ETH} -p tcp -m tcp --dport ${port} -j DNAT --to-destination ${_CT_IP_PROXY}:${port}"
-	cmd="PREROUTING -d ${S_NODE_IPV4}/32 -p tcp -m tcp --dport ${port} -j DNAT --to-destination ${_CT_IP_PROXY}:${port}"
+	#cmd="PREROUTING -d ${S_NODE_IPV4}/32 -i ${S_ETH} -p tcp -m tcp --dport ${port} -j DNAT --to-destination ${ct_ip_proxy}:${port}"
+	cmd="PREROUTING -d ${S_NODE_IPV4}/32 -p tcp -m tcp --dport ${port} -j DNAT --to-destination ${ct_ip_proxy}:${port}"
 	sudo iptables -S -t nat | grep -qi "${cmd}" || sudo iptables -t nat -I $cmd
 done
 
@@ -144,6 +122,11 @@ sudo systemctl stop lxd.*
 sudo iptables-save -f ${file}
 sudo sed -i 's|^\(.* ACCEPT\) .*$|\1|' ${file}
 sudo systemctl start lxd.service
+
+
+
+
+echo exit && exit
 
 
 ####################################  CERTBOT

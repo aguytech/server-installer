@@ -84,7 +84,7 @@ for path in ${paths}; do
 	_lxc_exec ${_CT_NAME} "chown 0:0 -R ${path}"
 done
 
-_lxc_exec ${_CT_NAME} "chmod 770 -R ${S_PATH_CONF_SSL}"
+_lxc_exec ${_CT_NAME} "chown -R 0:0 ${S_PATH_CONF_SSL} && chmod -R 750 ${S_PATH_CONF_SSL}"
 _lxc_exec ${_CT_NAME} "chmod 700 -R ${S_PATH_CONF_SSL}/private"
 
 

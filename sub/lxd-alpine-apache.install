@@ -182,14 +182,14 @@ _lxc_exec ${_CT_NAME} "echo 'pong' > ${PATH_WWW}/ping-monitor.html"
 
 _echoT "----------  rsyslog conf apache"
 
-file="/etc/rsyslog.d/vm-apache.conf"
-lxc file push ${file_rsyslog} ${_CT_NAME}${file}
-_lxc_var_replace ${_CT_NAME}${file}
+file=/etc/rsyslog.d/vm-apache.conf
+_eval lxc file push ${file_rsyslog} ${_CT_NAME}${file}
+_lxc_var_replace ${_CT_NAME} ${file}
 
 
 _echoT "----------  restart rsyslog"
 
-_lxc_exec ${_CT_NAME} "systemctl restart rsyslog.service"
+_lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
 
 
 ########################################  LOGROTATE
