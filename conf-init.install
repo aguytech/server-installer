@@ -11,12 +11,6 @@ echo -e "${blueb}==========================================  ${_PART}${cclear}"
 S_PATH_INSTALL=`dirname "$(readlink -e "${BASH_SOURCE[0]}")"`
 S_PATH_INSTALL_CONF="${S_PATH_INSTALL}/conf"
 
-S_PATH_CONF="/etc/server"
-S_GLOBAL_CONF="${S_PATH_CONF}/server.conf"
-
-S_FILE_INSTALL_CONF="${S_PATH_CONF}/install.conf"
-S_FILE_INSTALL_DONE="${S_PATH_CONF}/install.done"
-
 file_conf_server="${S_PATH_INSTALL}/conf-server.install"
 file_install_server="${S_PATH_INSTALL_CONF}/server.conf"
 
@@ -35,8 +29,8 @@ read answer
 
 echo -e "${blueb}----------  required files${cclear}"
 
-for file in "$file_conf_server" "$file_install_server"; do
-	! [ -f "$file" ] && echo -e "${redb}error - unable to find file: '$file'${cclear}" && exit 1
+for file in "${file_conf_server}" "${file_install_server}"; do
+	! [ -f ${file} ] && echo -e "${redb}error - unable to find file: '${file}'${cclear}" && exit 1
 done
 
 
@@ -60,20 +54,20 @@ find "${S_PATH_CONF}/ssl/private" -type f -exec chmod 600 -R "{}" \;
 
 echo -e "${blueb}----------  server.conf${cclear}"
 
-file="${S_PATH_CONF}/server.conf"
-[ -e "${file}" ] && cp -a "${file}" "${file}.keep${_SDDATE}"
-cp -a "$file_install_server" "${file}"
-. "$file"
+_keepmvts ${S_GLOBAL_CONF}
+cp -a "${file_install_server}" "${S_GLOBAL_CONF}"
 
+echo "If you want to use a specific 'server.conf' , put this file to '${S_GLOBAL_CONF}' and valid to continue : " && read _ANSWER
+. "$S_GLOBAL_CONF"
 
 echo -e "${blueb}----------  install files${cclear}"
 
-file="${S_PATH_CONF}/install.conf"
-! [ -f "$file" ] && touch "$file"
-. "$file"
+files="${S_FILE_INSTALL_CONF} ${S_FILE_INSTALL_DONE}"
+for file in ${files}; do
+	! [ -f "${file}" ] && touch "${file}"
+done
 
-file="${S_PATH_CONF}/install.done"
-! [ -f "$file" ] && touch "$file"
+. ${S_FILE_INSTALL_CONF}
 
 
 echo -e "${blueb}----------  fd open${cclear}"

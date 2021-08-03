@@ -154,6 +154,11 @@ _echoT "----------  bash_completion"
 _evalq cp -a "${path_install_bash_completion}"/* "/usr/share/bash-completion/completions/"
 
 
+####################################  MAIL
+
+_echoI "MAIL part ha	ve to be implemented"
+
+
 ####################################  CONF
 
 str=" ovh home "
@@ -170,7 +175,7 @@ if [ "${str/ ${S_SERVER_TYPE} /}" != "${str}" ]; then
 
 	_echoT "----------  conf vim"
 
-	_eval update-alternatives --set editor /usr/bin/vim.basic
+	#_eval update-alternatives --set editor /usr/bin/vim.basic
 
 	file="${HOME}/.vimrc"
 	_keepmvts "${file}"
@@ -210,13 +215,12 @@ done
 _echoT "----------  cron conf"
 
 file=/etc/crontab
-_keepcpts $file
+_keepcpts ${file}
 str="MAILTO=${S_DOMAIN_EMAIL_TECH}"
 ! grep -q '^MAILTO' "${file}" && _eval "sed -i '/^PATH=.*/ a ${str}' ${file}"
 
 
 ####################################  NTP
-
 
 str=" ovh home "
 if [ "${str/ "${S_SERVER_TYPE}" /}" != "${str}" ]; then
@@ -329,7 +333,6 @@ _service restart rsyslog
 
 
 ####################################  LOGROTATE
-
 
 _echoT "----------  logrotate server"
 
