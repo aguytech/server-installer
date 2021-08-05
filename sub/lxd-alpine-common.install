@@ -73,7 +73,7 @@ _lxc_exec ${_CT_NAME} "rc-update add ${service}"
 _echoT "----------  rsyslog conf"
 
 file="/etc/rsyslog.conf"
-_lxc_exec ${_CT_NAME} "[ ! -f '${file}.${_SDDATE}' ] && cp -a '${file}' '${file}.${_SDDATE}'"
+_lxc_exec ${_CT_NAME} "[ ! -f '${file}.${_SDATE}' ] && cp -a '${file}' '${file}.${_SDATE}'"
 
 cmds="sed -i 's|^.\?\(module(load=\"immark\")\)$|#\1|' $file
 sed -i 's|^.\?\(module(load=\"imklog\")\)$|#\1|' $file"

@@ -107,6 +107,16 @@ if [ "${USER}" != root ]; then
 	[ -e ${file} ] || _evalq ln -s ${file_bash_aliases} ${file}
 fi
 
+_echoT "----------  debian repos"
+
+file=/etc/apt/sources.list
+_keepcpts ${file}
+grep -q "${S_RELEASE_NAME} main contrib non-free" ${file} || echo "#contrib
+deb http://http.us.debian.org/debian ${S_RELEASE_NAME} main contrib non-free
+deb http://security.debian.org ${S_RELEASE_NAME}/updates main contrib non-free" >> ${file}
+
+grep -q "${S_RELEASE_NAME}-backports main contrib non-free" ${file} || echo "#backports
+#deb http://deb.debian.org/debian ${S_RELEASE_NAME}-backports main contrib non-free" >> ${file}
 
 _echoT "----------  mariadb repos"
 
@@ -166,7 +176,7 @@ if [[ " ${str} " = *" ${S_SERVER_TYPE} "* ]]; then
 
 		_echoT "----------  zfs install"
 
-		_eval apt install -y zfsutils-linux
+		_eval apt install -y zfs-dkms zfsutils-linux
 
 				path="/zroot"
 		_echoT "----------  zfs zpool ${path}"

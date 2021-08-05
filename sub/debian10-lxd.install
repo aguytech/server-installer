@@ -8,7 +8,8 @@ _echoT "\n==========================================  ${S_RELEASE} ${_PART}"
 
 _echoT "----------  install"
 
-_eval apt install -y jq acl # criu lxd-tools
+_eval apt install -y jq acl snapd # criu lxd-tools
+
 
 _echoT "----------  snap"
 
@@ -21,6 +22,7 @@ if snap list|grep -q '^lxd '; then
 	fi
 fi
 _eval snap refresh
+_eval snap install core
 _eval snap install lxd
 
 
@@ -84,7 +86,7 @@ _echoT "----------  network ${s_inet}"
 if ! [ "`lxc network list -f json|jq -r '.[] | select(.name == "'${s_inet}'").name'`" ]; then
 	_eval lxc network create "${s_inet}"
 fi
-_eval lxc network set ${s_inet} ipv4.address=${s_cidr} ipv4.dhcp.ranges=${s_cidr%.*}.${S_HOST_DHCP_MIN}-${s_cidr%.*}.${S_HOST_DHCP_MAX} ipv4.nat=true dns.mode=managed dns.domain=lxd dns.mode=managed
+_eval lxc network set ${s_inet} ipv4.address=${s_cidr} ipv4.dhcp.ranges=${s_cidr%.*}.${S_HOST_DHCP_MIN}-${s_cidr%.*}.${S_HOST_DHCP_MAX} ipv4.nat=true dns.mode=managed dns.domain=lxd1 dns.mode=managed
 
 
 ####################################  PROFILE
@@ -157,29 +159,11 @@ if [ "${S_SERVER_TYPE}" = ovh ]; then
 	file=/etc/systemd/network/${s_inet}.network
 	echo -e "[Match]\nName=${s_inet}\n\n[Network]\nDNS=${s_cidr%/*}\nDomains=~lxd" > ${file}
 
-	_eval systemctl restart systemd-networkd.service
-
 elif [ "${S_SERVER_TYPE}" = home ]; then
 
 	_echoT "----------  dns home"
 
-	service=lxd-dns-${s_inet}
-	file=/etc/systemd/system/${service}.service
-	echo"[Unit]
-Description=LXD per-link DNS configuration for ${s_inet}
-BindsTo=sys-subsystem-net-devices-${s_inet}.device
-After=sys-subsystem-net-devices-${s_inet}.device
-
-[Service]
-Type=oneshot
-ExecStart=/usr/bin/resolvectl dns ${s_inet} ${s_cidr%/*}
-ExecStart=/usr/bin/resolvectl domain ${s_inet} '~lxd'
-
-[Install]
-WantedBy=sys-subsystem-net-devices-${s_inet}.device" >> ${file}
-
-_eval systemctl daemon-reload
-_eval systemctl enable --now ${service}
+	_echoI "----------  This part have to be implemented"
 
 fi
 
@@ -193,20 +177,17 @@ https://blog.simos.info/how-to-use-lxd-container-hostnames-on-the-host-in-ubuntu
 
 _echoT "----------  systemd-resolved for ${s_inet}"
 
-# get : s_inet s_cidr s_base
-eval ${S_HOST_VM_ETH[default]}
-
 # for selected interface
 # dynamically
-#resolvectl --interface ${s_inet} dnssec set no
-#resolvectl dns ${s_inet} "$(lxc network show ${s_inet} | sed -n 's|.*ipv4\.address: \(.*\)/.*|\1|p')"
-#resolvectl domain ${s_inet} '~lxd'
+#resolvectl --interface lxdbr0 dnssec set no
+#resolvectl dns lxdbr0 "$(lxc network show lxdbr0 | sed -n 's|.*ipv4\.address: \(.*\)/.*|\1|p')"
+#resolvectl domain lxdbr0 '~lxd'
 
 # persistence
 path=/etc/systemd/resolved.conf.d/
 [ -d "${path}" ] || mkdir -p "${path}"
 file=${path}/${s_inet}.conf
-echo "# Configuration file for ${s_inet}
+echo "# Configuration file for lxdbr0
 [Resolve]
 #DNS=${s_cidr%/*}
 #Domains=${s_inet}

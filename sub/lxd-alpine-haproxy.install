@@ -6,13 +6,14 @@
 _echoT "\n==========================================  ${_RELEASE} ${_PART}"
 
 file_haproxy_initd=${S_PATH_INSTALL_CONF}/init.d/haproxy
+file_vim=${S_PATH_SCRIPT_CONF}/.vimrc
 path_haproxy=${S_PATH_INSTALL_CONF}/haproxy
 
 _echoT "------------------ required files"
-_require "${file_haproxy_initd}"
+_require ${file_haproxy_initd} ${file_vim}
 
 _echoT "------------------ required paths"
-_required "${path_haproxy}"
+_required ${path_haproxy}
 
 ####################################  DATA
 
@@ -44,10 +45,10 @@ _echoT "----------  init"
 if lxc list -f json |jq -r '.[].name' | grep -q ^${_CT_NAME}$; then
 	if lxc list --format=json | jq -r '.[] | select(.status == "Running").name' | grep -q ^${_CT_NAME}$; then
 		_eval lxc stop ${_CT_NAME}
-		_eval lxc rename ${_CT_NAME} ${_CT_NAME}.${_SDDATE}
+		_eval lxc rename ${_CT_NAME} ${_CT_NAME}.${_SDATE}
 		_eval lxc start ${_CT_NAME}
 	else
-		_eval lxc rename ${_CT_NAME} ${_CT_NAME}.${_SDDATE}
+		_eval lxc rename ${_CT_NAME} ${_CT_NAME}.${_SDATE}
 	fi
 
 fi
@@ -72,7 +73,7 @@ _eval lxc start ${_CT_NAME}
 
 _echoT "----------  install"
 
-_lxc_exec ${_CT_NAME} "apk add haproxy bash"
+_lxc_exec ${_CT_NAME} "apk add haproxy bash bash-completion"
 
 
 _echoT "----------  service set"
@@ -85,12 +86,20 @@ _lxc_exec ${_CT_NAME} "rc-service haproxy start"
 
 _echoT "----------  conf bash"
 
-_lxc_exec ${_CT_NAME} "sed -i 's|^\(root.*\):/bin/ash$|\1:/bin/bash|' /etc/passwd"
+_lxc_exec ${_CT_NAME} "sed -i 's|^\(root.*\):[^:]*$|\1:/bin/bash|' /etc/passwd"
+_eval lxc file push -q ${S_PATH_INSTALL_CONF}/bash-completion/haconf ${_CT_NAME}/usr/share/bash-completion/completions/
+
+_echoD "path=\$(lxc exec ${_CT_NAME} -- sh -c  \"readlink -f /usr/share/vim/vim*/colors\")"
+path=$(lxc exec ${_CT_NAME} -- sh -c  "readlink -f /usr/share/vim/vim*/colors")
+_eval "lxc file push -q ${S_PATH_INSTALL_CONF}/vim/* ${_CT_NAME}${path}/"
+
+file=/root/.vimrc
+_lxc_exec ${_CT_NAME} "[ -e ${file} ] || ln -s ${file_vim} ${file}"
 
 _echoT "----------  conf"
 
-path="/etc/haproxy"
-_lxc_exec ${_CT_NAME} "[ -d ${path} ] && mv ${path} ${path}.${_SDDATE}"
+path=/etc/haproxy
+_lxc_exec ${_CT_NAME} "[ -d ${path} ] && mv ${path} ${path}.${_SDATE}"
 _eval lxc file push -rq ${path_haproxy} ${_CT_NAME}/etc
 
 vars="S_PATH_CONF_SSL _ACCESS_USER _ACCESS_PWD _ACCESS_URI S_HAPROXY_STATS_PORT S_RSYSLOG_PORT S_DOMAIN_FQDN S_DOMAIN_NAME"
@@ -100,8 +109,8 @@ done
 
 _echoT "----------  init.d"
 
-file="/etc/init.d/haproxy"
-_lxc_exec ${_CT_NAME} "[ -f ${file} ] && mv ${file} ${file}.${_SDDATE} && chmod -x ${file}.${_SDDATE}"
+file=/etc/init.d/haproxy
+_lxc_exec ${_CT_NAME} "[ -f ${file} ] && mv ${file} ${file}.${_SDATE} && chmod -x ${file}.${_SDATE}"
 _eval lxc file push ${file_haproxy_initd} ${_CT_NAME}/etc/init.d/
 _lxc_exec ${_CT_NAME} "chmod +x ${file}"
 
@@ -130,7 +139,7 @@ echo exit && exit
 
 _echoT "----------  iptables persistent"
 
-file="/etc/iptables/iptables.rules"
+file=/etc/iptables/iptables.rules
 sudo systemctl stop lxd.*
 sudo iptables-save -f ${file}
 sudo sed -i 's|^\(.* ACCEPT\) .*$|\1|' ${file}

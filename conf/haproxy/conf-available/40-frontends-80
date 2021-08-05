@@ -1,7 +1,7 @@
 # included file for haproxy configuration
 
-frontend	S_DOMAIN_FQDN:80
-	bind	S_DOMAIN_FQDN:80
+frontend	http
+	bind	*:80
 
 	default_backend		default
 

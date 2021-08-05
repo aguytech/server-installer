@@ -1,6 +1,13 @@
 # AMBAU
 # included file for haproxy configuration
 
+
+backend	default
+	server 		default						10.0.0.109:80 maxconn 16 check
+
+#backend		letsencrypt
+#	server		letsencrypt 127.0.0.1:50000
+
 backend S_DOMAIN_NAME
 	#balance	roundrobin
 	# retries x times before to redispatch to other server
@@ -56,9 +63,3 @@ backend	S_DOMAIN_NAME-admin
 
 	server			S_DOMAIN_NAME-admin		10.0.0.190:80  check maxconn 16
 	server			S_DOMAIN_NAME-admin2		10.0.0.191:80  check maxconn 16 backup
-
-#backend		letsencrypt
-	#server		letsencrypt 127.0.0.1:50000
-
-backend	default
-	server 		default						10.0.0.109:80 maxconn 16 check

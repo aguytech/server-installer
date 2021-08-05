@@ -1,8 +1,8 @@
 # AMBAU
 # included file for haproxy configuration
 
-frontend	S_DOMAIN_FQDN:443
-	bind	S_DOMAIN_FQDN:443 ssl crt-list /etc/server/ssl/private/letsencrypt.pem.lst
+frontend	https
+	bind	*:443 ssl crt-list /etc/server/ssl/private/letsencrypt.pem.lst
 
 	default_backend		default
 

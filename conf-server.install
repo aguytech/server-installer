@@ -294,7 +294,7 @@ fi
 _echoT "----------  S_SERVICE http"
 
 if [ -z "${S_SERVICE[http]}" ]; then
-	anstmp="svc-http"
+	anstmp="svc-apache"
 	_askno "service name for http (${anstmp})"
 	S_SERVICE[http]=${_ANSWER:-${anstmp}} && _confset_array "S_SERVICE" "http" "${S_SERVICE[http]}" "${S_GLOBAL_CONF}"
 fi
@@ -451,82 +451,6 @@ if [ -z "${S_DB_PGSQL_PORT}" ]; then
 	_askno "connections ports for rsddn2
 	postgre (${anstmp})"
 	S_DB_PGSQL_PORT=${_ANSWER:-${anstmp}} && _confset "S_DB_PGSQL_PORT" "${S_DB_PGSQL_PORT}" "${S_GLOBAL_CONF}"
-fi
-
-
-####################################  ZFS
-
-str="ovh home"
-if [[ " ${str} " = *" ${S_SERVER_TYPE} "* ]]; then
-
-	if [ "${S_STORAGE_DRIVER}" = "zfs" ]; then
-
-
-		_echoT "----------  zfs install"
-
-		_eval apt update
-		_eval apt install -y zfsutils-linux
-
-		path="/zroot"
-		_echoT "----------  zfs zpool ${path}"
-
-		[ -d "${path}" ] && rm -fR "${path}"
-		_evalq zpool create root "${S_STORAGE_ROOT}" -m "${path}"
-
-		path="${S_PATH_SAVE}"
-		_echoT "----------  zfs ${path}"
-
-		[ -d "${path}" ] && rm -fR "${path}"
-		_eval zfs create -o mountpoint="${path}" -o compression=lz4 root/save
-
-
-		path="${S_HOST_PATH}"
-		_echoT "----------  zfs ${path}"
-
-		[ -d "${path}" ] && rm -fR "${path}"
-		_eval zfs create -o mountpoint="${path}" -o compression=lz4 root/vm
-
-		path="${S_HOST_PATH_SP}"
-		_echoT "----------  zfs ${path}"
-
-		[ -d "${path}" ] && rm -fR "${path}"
-		_eval zfs create -o mountpoint="${path}" -o compression=lz4 root/vm/sp
-
-		path="${S_HOST_PATH_SHARE}"
-		_echoT "----------  zfs ${path}"
-
-		[ -d "${path}" ] && rm -fR "${path}"
-		_eval zfs create -o mountpoint="${path}" -o compression=lz4 root/vm/share
-		_eval zfs set acltype=posixacl root/vm/share
-
-		path="${S_HOST_PATH_SAVE}"
-		_echoT "----------  zfs ${path}"
-
-		[ -d "${path}" ] && rm -fR "${path}"
-		_eval zfs create -o mountpoint="${path}" -o compression=lz4 root/vm/save
-
-
-		_echoT "----------  zfs zpool list"
-
-		zpool list -v
-
-		_echoT "----------  zfs list"
-
-		zfs list
-
-	elif [ "${S_STORAGE_DRIVER}" = "btrfs" ]; then
-
-		_echoT "----------  btrfs"
-
-		_exite "You need to implemente this part"
-
-		#storage="stock"
-		#if ! [ "`lxc storage list -f json|jq -r '.[] | select(.name == "'${storage}'").name'`" ]; then
-		#	[ "${S_STORAGE_DRIVER}" = btrfs ] && lxc storage create ${storage} ${S_STORAGE_DRIVER} source=/var/lib/lxd/storage-pools/stock
-		#fi
-
-	fi
-
 fi
 
 

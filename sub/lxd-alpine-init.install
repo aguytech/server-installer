@@ -30,7 +30,7 @@ _echoT "----------  ${_CT_NAME} init"
 
 if [ "`lxc list --format=json | jq -r '.[] | select(.name == "'${_CT_NAME}'").name'`" ]; then
 	[ "`lxc list --format=json | jq -r '.[] | select(.status == "Running") | select(.name == "'${_CT_NAME}'").name'`" ] && lxc stop ${_CT_NAME}
-	_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDDATE}
+	_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
 fi
 _eval lxc init ${_CT_NAME} ${_CT_NAME} -p stock -p global
 
@@ -71,7 +71,7 @@ path="/tmp/bs"
 ! [ -d ${path} ] && rm -fR ${path}
 cp -a ${S_PATH_INSTALL%/*}/bs ${path}
 rm -fR ${path}/.git
-_lxc_exec ${_CT_NAME} "[ -d /usr/local/bs ] && mv /usr/local/bs /usr/local/bs.${_SDDATE}"
+_lxc_exec ${_CT_NAME} "[ -d /usr/local/bs ] && mv /usr/local/bs /usr/local/bs.${_SDATE}"
 _eval lxc file push --recursive ${path} ${_CT_NAME}/usr/local/
 [ -d ${path} ] && rm -fR ${path}
 
