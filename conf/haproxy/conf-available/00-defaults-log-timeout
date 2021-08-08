@@ -9,7 +9,7 @@ defaults
 	option			log-health-checks
 	option			forwardfor except 127.0.0.0/8
 	option			http-server-close
-	maxconn		1000
+	maxconn		30
 
 	timeout		connect				60s
 	timeout		client					600s

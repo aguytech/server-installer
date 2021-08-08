@@ -2,24 +2,25 @@
 #
 # write by Aguy
 
-<<commands
+<<MANUALLY
 # iptables-save / iptables-restore
 
 iptables -L
-iptables -S -t nat
+iptables -t nat -S
+iptables -t nat -D
 
 iptables -nvL
-iptables -nvL -t nat
-iptables -nvL -t mangle
+iptables -t nat -nvL
+iptables -t mangle -nvL
 
 iptables -nvL --line-number; iptables -nvL -t nat --line-number
-commands
+MANUALLY
 
 
 _echoT "\n==========================================  $S_RELEASE $_PART"
 
-file_script=/usr/local/bin/firewall
-file_xtra_script=${S_PATH_INSTALL_XTRA}/firewall
+file_script=/usr/local/bin/firewall.sh
+file_xtra_script=${S_PATH_INSTALL_XTRA}/firewall.sh
 file_xtra_conf=${S_PATH_INSTALL_CONF}/firewall.conf
 file_xtra_log=${S_PATH_INSTALL_CONF}/rsyslog/iptables.conf
 

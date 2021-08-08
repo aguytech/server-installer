@@ -25,7 +25,9 @@ S_PATH_INSTALL_CONF="${S_PATH_INSTALL}/conf"
 S_FILE_INSTALL_CONF="${S_PATH_CONF}/lxd.conf"
 S_FILE_INSTALL_DONE="${S_PATH_CONF}/lxd.done"
 
-[ -f "${S_FILE_INSTALL_CONF}" ] && . "${S_FILE_INSTALL_CONF}"
+[ -f "${S_FILE_INSTALL_CONF}" ] && . ${S_FILE_INSTALL_CONF}
+# load configuration file from host installation
+[ -f "${S_PATH_CONF}/install.conf" ] && . ${S_PATH_CONF}/install.conf
 
 #don't mix with S_* variables
 [ -z ${_RELEASE_ID+x} ] && _RELEASE_ID="alpine" && _confset _RELEASE_ID "${_RELEASE_ID}"

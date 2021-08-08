@@ -84,7 +84,7 @@ _echoT "----------  network ${s_inet}"
 if ! [ "`lxc network list -f json|jq -r '.[] | select(.name == "'${s_inet}'").name'`" ]; then
 	_eval lxc network create "${s_inet}"
 fi
-_eval lxc network set ${s_inet} ipv4.address=${s_cidr} ipv4.dhcp.ranges=${s_cidr%.*}.${S_HOST_DHCP_MIN}-${s_cidr%.*}.${S_HOST_DHCP_MAX} ipv4.nat=true dns.mode=managed dns.domain=lxd dns.mode=managed
+_eval lxc network set ${s_inet} ipv4.address=${s_cidr} ipv4.dhcp.ranges=${s_cidr%.*}.${S_HOST_DHCP_MIN}-${s_cidr%.*}.${S_HOST_DHCP_MAX} ipv4.nat=true dns.mode=managed dns.domain=lxd1 dns.mode=managed
 
 
 ####################################  PROFILE
@@ -152,12 +152,15 @@ if [ "${S_SERVER_TYPE}" = ovh ]; then
 	_echoT "----------  dns ovh"
 
 	file=/etc/resolv.conf
-	grep -q ${s_inet} ${file} || sed -i "1i nameserver 127.0.0.53\noptions edns0 trust-ad\nsearch lxd" ${file}
+	if ! grep -q ${s_inet} ${file}; then
+		_eval "sed -i 's|^|#|' ${file}"
+	 	_eval "echo -e 'nameserver 127.0.0.53\noptions edns0 trust-ad\nsearch lxd' >> ${file}"
+	 fi
 
-	file=/etc/systemd/network/${s_inet}.network
-	echo -e "[Match]\nName=${s_inet}\n\n[Network]\nDNS=${s_cidr%/*}\nDomains=~lxd" > ${file}
+	#file=/etc/systemd/network/${s_inet}.network
+	#echo -e "[Match]\nName=${s_inet}\n\n[Network]\nDNS=${s_cidr%/*}\nDomains=~lxd" > ${file}
 
-	_eval systemctl restart systemd-networkd.service
+	#_eval systemctl restart systemd-networkd.service
 
 elif [ "${S_SERVER_TYPE}" = home ]; then
 
@@ -165,7 +168,8 @@ elif [ "${S_SERVER_TYPE}" = home ]; then
 
 	service=lxd-dns-${s_inet}
 	file=/etc/systemd/system/${service}.service
-	echo"[Unit]
+	cat > ${file} <<EOF
+[Unit]
 Description=LXD per-link DNS configuration for ${s_inet}
 BindsTo=sys-subsystem-net-devices-${s_inet}.device
 After=sys-subsystem-net-devices-${s_inet}.device
@@ -176,14 +180,18 @@ ExecStart=/usr/bin/resolvectl dns ${s_inet} ${s_cidr%/*}
 ExecStart=/usr/bin/resolvectl domain ${s_inet} '~lxd'
 
 [Install]
-WantedBy=sys-subsystem-net-devices-${s_inet}.device" >> ${file}
+WantedBy=sys-subsystem-net-devices-${s_inet}.device
+EOF
 
-_eval systemctl daemon-reload
-_eval systemctl enable --now ${service}
+	_eval systemctl daemon-reload
+	_eval systemctl enable --now ${service}
 
 fi
 
 ####################################  END
+
+_echoT "---------- reboot"
+_echoI "You need to reboot computer to load network configuration"
 
 _echoT "---------- ${_PART} end"
 _eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"

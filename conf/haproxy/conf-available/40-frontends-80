@@ -7,17 +7,17 @@ frontend	http
 
 	http-request				set-header X-Forwarded-Protocol http
 
-	acl S_DOMAIN_NAME					hdr_end(host) -i S_DOMAIN_FQDN
-	#acl S_DOMAIN_NAME-check		path_dir /server-status /server-info /status-www /ping-www /ping-monitor
-	acl S_DOMAIN_NAME-check		path_reg ^/(server-status|server-info|status-www|ping-www|ping-monitor)
-	#acl S_DOMAIN_NAME-check		path_beg /server-status /server-info /status-www /ping-www /ping-monitor
+	acl _DOMAIN_NAME					hdr_end(host) -i _DOMAIN_FQDN
+	#acl _DOMAIN_NAME-check		path_dir /server-status /server-info /status-www /ping-www /ping-monitor
+	acl _DOMAIN_NAME-check		path_reg ^/(server-status|server-info|status-www|ping-www|ping-monitor)
+	#acl _DOMAIN_NAME-check		path_beg /server-status /server-info /status-www /ping-www /ping-monitor
 
 	# 17112018.fr
 	#acl 17112018				hdr_end(host) -i 17112018.fr
 
-	#redirect						scheme https code 301 if S_DOMAIN_NAME !S_DOMAIN_NAME-check !{ ssl_fc }
-	redirect						scheme https code 301 if !S_DOMAIN_NAME-check !{ ssl_fc }
+	#redirect						scheme https code 301 if _DOMAIN_NAME !_DOMAIN_NAME-check !{ ssl_fc }
+	#redirect						scheme https code 301 if !_DOMAIN_NAME-check !{ ssl_fc }
 
-	#use_backend	S_DOMAIN_NAME-admin if S_DOMAIN_NAME-admin
-	use_backend				S_DOMAIN_NAME if S_DOMAIN_NAME
-	use_backend				S_DOMAIN_NAME if S_DOMAIN_NAME-check
+	#use_backend	admin if admin
+	use_backend				_DOMAIN_NAME if _DOMAIN_NAME
+	use_backend				_DOMAIN_NAME if _DOMAIN_NAME-check

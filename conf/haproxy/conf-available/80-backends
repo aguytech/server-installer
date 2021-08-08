@@ -3,17 +3,17 @@
 
 
 backend	default
-	server 		default						10.0.0.109:80 maxconn 16 check
+	server 		default						S_SERVICE[http]:80 maxconn 20 check
 
 #backend		letsencrypt
 #	server		letsencrypt 127.0.0.1:50000
 
-backend S_DOMAIN_NAME
+backend _DOMAIN_NAME
 	#balance	roundrobin
 	# retries x times before to redispatch to other server
 	#retries	3
 	#option		redispatch
-	#option						httpchk GET /ping-monitor "HTTP/1.1\r\nHost: S_DOMAIN_FQDN"
+	#option						httpchk GET /ping-monitor "HTTP/1.1\r\nHost: _DOMAIN_FQDN"
 	option						httpchk GET /ping-monitor
 	http-check	            expect string pong
 	default-server			inter 3s fall 4 rise 2
@@ -21,12 +21,12 @@ backend S_DOMAIN_NAME
 	# 16000000 seconds: a bit more than 6 months
 	http-response			set-header Strict-Transport-Security "max-age=16000000; includeSubDomains; preload;"
 
-	#server		S_DOMAIN_NAME1					10.0.0.101:80 weight 10 maxconn 64 check inter 2s
-	#server		S_DOMAIN_NAME2					10.0.0.102:80 weight 10 maxconn 64 check inter 2s
-	server			S_DOMAIN_NAME1					10.0.0.101:80 check
-	server			S_DOMAIN_NAME2					10.0.0.102:80 check backup
+	#server			_DOMAIN_NAME1					_DOMAIN_FQDN-1:80 weight 10 maxconn 60 check inter 2s
+	#server			_DOMAIN_NAME2					_DOMAIN_FQDN-2:80 weight 10 maxconn 60 check inter 2s backup
+	#server			_DOMAIN_NAME1					_DOMAIN_FQDN-1:80 weight 10 check inter 2s
+	#server			_DOMAIN_NAME2					_DOMAIN_FQDN-2:80 weight 10 check inter 2s backup
 
-backend 17112018
+backend _DOMAIN_2_NAME
 	option						httpchk GET /ping-monitor
 	http-check				expect string pong
 	default-server 		inter 3s fall 4 rise 2
@@ -34,25 +34,11 @@ backend 17112018
 	# 16000000 seconds: a bit more than 6 months
 	http-response set-header Strict-Transport-Security "max-age=16000000; includeSubDomains; preload;"
 
-	server			171120181				10.0.0.103:80 maxconn 16  check
-	server			171120182				10.0.0.104:80 maxconn 16  check backup
+	#server			_DOMAIN_2_NAME1				_DOMAIN_2_FQDN-1:80 weight 10 maxconn 60 check inter 2s
+	#server			_DOMAIN_2_NAME2				_DOMAIN_2_FQDN-2:80 weight 10 maxconn 60 check inter 2s backup
 
-backend	wigwam
-	option						httpchk GET /ping-monitor
-	http-check				expect string pong
-	default-server			inter 3s fall 4 rise 2
-
-	# 16000000 seconds: a bit more than 6 months
-	http-response set-header Strict-Transport-Security "max-age=16000000; includeSubDomains; preload;"
-
-	server			wigwam					10.0.0.105:80 check maxconn 16
-	#server		171120182	10.0.0.104:80  check inter 2s backup
-
-#backend		17112018-dev
-#	server		17112018-dev	10.0.0.105:80 maxconn 128 check
-
-backend	S_DOMAIN_NAME-admin
-	#option					httpchk GET /ping-www HTTP/1.1\r\nHost:\ admin.S_DOMAIN_FQDN
+backend	admin
+	#option					httpchk GET /ping-www HTTP/1.1\r\nHost:\ admin._DOMAIN_FQDN
 	option						httpchk GET /ping-monitor
 	http-check				expect string admin
 	default-server			inter 3s fall 4 rise 2
@@ -61,5 +47,5 @@ backend	S_DOMAIN_NAME-admin
 	# 16000000 seconds: a bit more than 6 months
 	http-response set-header Strict-Transport-Security "max-age=16000000; includeSubDomains; preload;"
 
-	server			S_DOMAIN_NAME-admin		10.0.0.190:80  check maxconn 16
-	server			S_DOMAIN_NAME-admin2		10.0.0.191:80  check maxconn 16 backup
+	#server			admin		S_SERVICE[admin]:80  weight 10 maxconn 10 check inter 2s
+	#server			admin2		S_SERVICE[admin]:80  weight 10 maxconn 10 check inter 2s backup

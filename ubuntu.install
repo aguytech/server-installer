@@ -2,9 +2,9 @@
 #
 # write by Aguy
 
-<<MANUALY
+<<MANUALLY
 # HOME
-server=node1; ssh_port=2002
+server=node1; ssh_port=2002 # server=node2; ssh_port=2002
 ssh-keygen -R ${server} # rm ~/.ssh/known_hosts
 
 cmds="sudo apt install rsync
@@ -24,8 +24,8 @@ blkid|grep -v squashfs
 fdisk /dev/sda # m p F n w | extend with lxd:+50G / save:available
 blkid|grep -v squashfs
 
-/usr/local/install/ubuntu.install
-MANUALY
+/usr/local/install/ubuntu.install # sed -i 's|ambau|otokoz|g' /etc/server/server.conf && grep otokoz /etc/server/server.conf
+MANUALLY
 
 ################################ CONF
 S_TRACE=debug
