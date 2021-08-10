@@ -15,6 +15,7 @@ _require ${file_haproxy_initd} ${file_vim}
 _echoT "------------------ required paths"
 _requirep ${path_haproxy}
 
+
 ####################################  DATA
 
 _CT_NAME=${S_SERVICE[proxy]}
@@ -26,11 +27,10 @@ _echoT "----------  data"
 
 [ -z ${_IPTABLES_PORTS+x} ] && anstmp="80 443" && _askno "IPs to redirect to haproxy container ($anstmp)" && _IPTABLES_PORTS=${_ANSWER:-$anstmp} && _confset _IPTABLES_PORTS "$_IPTABLES_PORTS"
 
-
 [ -z ${_DOMAIN_FQDN+x} ] && anstmp="$S_DOMAIN_FQDN" && _askno "Enter a fqdn domain name ($anstmp)" && _DOMAIN_FQDN="${_ANSWER:-$anstmp}" && _confset _DOMAIN_FQDN "$_DOMAIN_FQDN"
 _DOMAIN_NAME="${_DOMAIN_FQDN%.*}" && _confset _DOMAIN_NAME "$_DOMAIN_NAME"
 
-[ -z ${_DOMAIN_2_FQDN+x} ] && anstmp="otokoz.ovh" && _askno "Enter a fqdn second domain name ($anstmp)" && _DOMAIN_2_FQDN="${_ANSWER:-$anstmp}" && _confset _DOMAIN_2_FQDN "$_DOMAIN_2_FQDN"
+[ -z ${_DOMAIN_2_FQDN+x} ] && anstmp="ggj.ovh" && _askno "Enter a fqdn second domain name ($anstmp)" && _DOMAIN_2_FQDN="${_ANSWER:-$anstmp}" && _confset _DOMAIN_2_FQDN "$_DOMAIN_2_FQDN"
 _DOMAIN_2_NAME="${_DOMAIN_2_FQDN%.*}" && _confset _DOMAIN_2_NAME "$_DOMAIN_2_NAME"
 
 [ -z ${_ACCESS_USER+x} ] && anstmp="admin" && _askno "Enter a name for stats access ($anstmp)" && _ACCESS_USER="${_ANSWER:-$anstmp}" && _confset _ACCESS_USER "$_ACCESS_USER"

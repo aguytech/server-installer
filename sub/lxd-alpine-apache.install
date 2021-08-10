@@ -43,10 +43,9 @@ path=${S_HOST_PATH_SHARE}/www/${profile}
 path_ct=${S_VM_PATH_SHARE}/www/${profile}
 ! [ -d "${path}" ] && _eval mkdir -p "${path}"
 
-if ! [ "`lxc profile list --format=json | jq -r '.[] | select(.name == "'${profile}'").name'`" ]; then
-	_eval lxc profile create ${profile}
-	_eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
-fi
+[ "`lxc profile list --format=json | jq -r '.[] | select(.name == "'${profile}'").name'`" ]; then
+_eval lxc profile create ${profile}
+_eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
 
 
 _echoT "----------  init"

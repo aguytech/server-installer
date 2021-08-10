@@ -292,7 +292,7 @@ _eval "sed -i '/^# *include/ s/^# //' ${file}"
 # various
 opts="constantshow historylog matchbrackets multibuffer nohelp softwrap"
 # color
-opts+=" errorcolor functioncolor keycolor numbercolor selectedcolor statuscolor stripecolor titlecolor"
+opts+="errorcolor functioncolor keycolor numbercolor selectedcolor statuscolor stripecolor titlecolor"
 # uncomment
 for opt in $opts; do
 	_eval "sed -i 's|^.*\(set ${opt}.*\)$|\1|' ${file}"

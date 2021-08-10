@@ -60,7 +60,7 @@ cp -a "${file_install_server}" "${S_GLOBAL_CONF}"
 echo "If you want to use a specific 'server.conf' , put this file to '${S_GLOBAL_CONF}'"
 echo "cp /usr/local/install/conf/server.conf-ovh /etc/server/server.conf"
 echo -n "and valid to continue : " && read _ANSWER
-. "$S_GLOBAL_CONF"
+. "${S_GLOBAL_CONF}"
 
 echo -e "${blueb}----------  install files${cclear}"
 
@@ -79,10 +79,6 @@ _redirect
 
 _echoT "----------  server settings"
 
-if ! [ -f "${file_conf_server}" ]; then
-	_echoe "unable to find file '${file_conf_server}' from ${BASH_SOURCE[0]}"
-	exit 1
-fi
 . "${file_conf_server}"
 
 

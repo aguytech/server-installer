@@ -43,12 +43,53 @@ setfacl -R -m d:u:100000:rwx "${path}"
 
 _echoT "----------  lxd init"
 
-_echoi "use this settings :
+_echoI "use this settings :
 Create a new ZFS pool: no
 Name of the existing ZFS pool or dataset: root/vm/sp/default"
 
 _eval lxd init
 
+
+####################################  DNS
+
+str=" ovh home "
+if [ "${str/ ${S_SERVER_TYPE} /}" != "${str}" ]; then
+
+	# get : s_inet s_cidr s_base
+	eval ${S_HOST_VM_ETH[default]}
+
+	_echoT "----------  dns ovh"
+
+	file=/etc/resolv.conf
+	_keepcpts ${file}
+	if ! grep -q ${s_inet} ${file}; then
+		_eval "sed -i 's|^|#|' ${file}"
+	 	_eval "echo -e 'nameserver 127.0.0.53\noptions edns0 trust-ad\nsearch lxd' >> ${file}"
+	 fi
+
+	_echoT "----------  dns home"
+
+	service=lxd-dns-${s_inet}
+	file=/etc/systemd/system/${service}.service
+	cat > ${file} <<EOF
+[Unit]
+Description=LXD per-link DNS configuration for ${s_inet}
+BindsTo=sys-subsystem-net-devices-${s_inet}.device
+After=sys-subsystem-net-devices-${s_inet}.device
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/resolvectl dns ${s_inet} ${s_cidr%/*}
+ExecStart=/usr/bin/resolvectl domain ${s_inet} '~lxd'
+
+[Install]
+WantedBy=sys-subsystem-net-devices-${s_inet}.device
+EOF
+
+	_eval systemctl daemon-reload
+	_eval systemctl enable --now ${service}
+
+fi
 
 ####################################  STORAGE LXD
 
@@ -93,11 +134,10 @@ _eval lxc network set ${s_inet} ipv4.address=${s_cidr} ipv4.dhcp.ranges=${s_cidr
 profile="stock"
 _echoT "----------  profiles ${profile}"
 
-if ! [ "`lxc profile list --format=json | jq -r '.[] | select(.name == "'${profile}'").name'`" ]; then
-	_eval lxc profile create ${profile}
-	_eval lxc profile device add ${profile} root disk pool=stock path=/
-	_eval lxc network attach-profile lxdbr1 ${profile} eth0
-fi
+[ "`lxc profile list --format=json | jq -r '.[] | select(.name == "'${profile}'").name'`" ] && lxc profile rename ${profile} ${profile}.${_SDATE}
+_eval lxc profile create ${profile}
+_eval lxc profile device add ${profile} root disk pool=stock path=/
+_eval lxc network attach-profile lxdbr1 ${profile} eth0
 
 profile="global"
 _echoT "----------  profiles ${profile}"
@@ -106,10 +146,9 @@ path="${S_HOST_PATH_SHARE}/global"
 path_ct="${S_VM_PATH_SHARE}/global"
 ! [ -d "${path}" ] && _eval mkdir -p "${path}"
 
-if ! [ "`lxc profile list --format=json | jq -r '.[] | select(.name == "'${profile}'").name'`" ]; then
-	_eval lxc profile create ${profile}
-	_eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
-fi
+[ "`lxc profile list --format=json | jq -r '.[] | select(.name == "'${profile}'").name'`" ] && lxc profile rename ${profile} ${profile}.${_SDATE}
+_eval lxc profile create ${profile}
+_eval lxc profile device add ${profile} global disk source=${path} path=${path_ct}
 
 profile="www"
 _echoT "----------  profiles ${profile}"
@@ -118,10 +157,9 @@ path="${S_HOST_PATH_SHARE}/www/global"
 path_ct="${S_VM_PATH_SHARE}/www/global"
 ! [ -d "${path}" ] && _eval mkdir -p "${path}"
 
-if ! [ "`lxc profile list --format=json | jq -r '.[] | select(.name == "'${profile}'").name'`" ]; then
-	_eval lxc profile create ${profile}
-	_eval lxc profile device add ${profile} ${profile} disk source="${path}" path="${path_ct}"
-fi
+[ "`lxc profile list --format=json | jq -r '.[] | select(.name == "'${profile}'").name'`" ] && lxc profile rename ${profile} ${profile}.${_SDATE}
+_eval lxc profile create ${profile}
+_eval lxc profile device add ${profile} ${profile} disk source="${path}" path="${path_ct}"
 
 profile="sgbd"
 _echoT "----------  profiles ${profile}"
@@ -130,68 +168,18 @@ path="${S_HOST_PATH_SHARE}/sgbd/global"
 path_ct="${S_VM_PATH_SHARE}/sgbd"
 ! [ -d "${path}" ] && _eval mkdir -p "${path}"
 
-if ! [ "`lxc profile list --format=json | jq -r '.[] | select(.name == "'${profile}'").name'`" ]; then
-	_eval lxc profile create ${profile}
-	_eval lxc profile device add ${profile} ${profile} disk source="${path}" path="${path_ct}"
-fi
+[ "`lxc profile list --format=json | jq -r '.[] | select(.name == "'${profile}'").name'`" ] && lxc profile rename ${profile} ${profile}.${_SDATE}
+_eval lxc profile create ${profile}
+_eval lxc profile device add ${profile} ${profile} disk source="${path}" path="${path_ct}"
 
 
 _echoT "----------  lxc container"
 
-_echoi "To install and configure container use:"
-_echoi "$(ls -1 ${S_PATH_INSTALL/-desktop/}/lxd-*)"
+_echoI "To install and configure container use:"
+_echoI "$(ls -1 ${S_PATH_INSTALL/-desktop/}/lxd-*)"
 
-
-####################################  DNS
-
-if [ "${S_SERVER_TYPE}" = ovh ]; then
-
-	# get : s_inet s_cidr s_base
-	eval ${S_HOST_VM_ETH[default]}
-
-	_echoT "----------  dns ovh"
-
-	file=/etc/resolv.conf
-	if ! grep -q ${s_inet} ${file}; then
-		_eval "sed -i 's|^|#|' ${file}"
-	 	_eval "echo -e 'nameserver 127.0.0.53\noptions edns0 trust-ad\nsearch lxd' >> ${file}"
-	 fi
-
-	#file=/etc/systemd/network/${s_inet}.network
-	#echo -e "[Match]\nName=${s_inet}\n\n[Network]\nDNS=${s_cidr%/*}\nDomains=~lxd" > ${file}
-
-	#_eval systemctl restart systemd-networkd.service
-
-elif [ "${S_SERVER_TYPE}" = home ]; then
-
-	_echoT "----------  dns home"
-
-	service=lxd-dns-${s_inet}
-	file=/etc/systemd/system/${service}.service
-	cat > ${file} <<EOF
-[Unit]
-Description=LXD per-link DNS configuration for ${s_inet}
-BindsTo=sys-subsystem-net-devices-${s_inet}.device
-After=sys-subsystem-net-devices-${s_inet}.device
-
-[Service]
-Type=oneshot
-ExecStart=/usr/bin/resolvectl dns ${s_inet} ${s_cidr%/*}
-ExecStart=/usr/bin/resolvectl domain ${s_inet} '~lxd'
-
-[Install]
-WantedBy=sys-subsystem-net-devices-${s_inet}.device
-EOF
-
-	_eval systemctl daemon-reload
-	_eval systemctl enable --now ${service}
-
-fi
 
 ####################################  END
-
-_echoT "---------- reboot"
-_echoI "You need to reboot computer to load network configuration"
 
 _echoT "---------- ${_PART} end"
 _eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"

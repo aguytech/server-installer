@@ -41,7 +41,7 @@ _eval lxc file push ${file} ${_CT_NAME}${S_PATH_CONF}/server.conf
 #_echoT "----------  hosts"
 
 #file=" /etc/hosts"
-#if ! [ "$(_lxc_exec ${_CT_NAME} "grep '\ssvc-' ${file}")" ]; then
+#if ! [ "$(_lxc_exec ${_CT_NAME} "grep '\ssrv-' ${file}")" ]; then
 #	_lxc_exec ${_CT_NAME} "echo >> ${file}"
 #	_lxc_exec ${_CT_NAME} "echo \"# DNS for services\" >> ${file}"
 #	for str in ${!S_SERVICE[*]}; do

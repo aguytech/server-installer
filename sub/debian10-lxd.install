@@ -45,7 +45,7 @@ setfacl -R -m d:u:100000:rwx "${path}"
 
 _echoT "----------  lxd init"
 
-_echoi "use this settings :
+_echoI "use this settings :
 Create a new ZFS pool: no
 Name of the existing ZFS pool or dataset: root/vm/sp/default"
 
@@ -140,8 +140,8 @@ fi
 
 _echoT "----------  lxc container"
 
-_echoi "To install and configure container use:"
-_echoi "$(ls -1 ${S_PATH_INSTALL/-desktop/}/lxd-*)"
+_echoI "To install and configure container use:"
+_echoI "$(ls -1 ${S_PATH_INSTALL/-desktop/}/lxd-*)"
 
 
 ####################################  DNS
