@@ -1,7 +1,7 @@
 # included file for haproxy configuration
 
 listen stats-_DOMAIN_NAME
-	bind			*:S_HAPROXY_STATS_PORT
+	bind			*:1778
 
 	log				global
 	mode			http

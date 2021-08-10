@@ -31,14 +31,14 @@ fi
 # mandatory GLOBAL
 partsmandatory="global-conf"
 for _PART in $partsmandatory; do
-	_echoD "_PART='$_PART'"
+	_echod "_PART='$_PART'"
 	! _parthave "$_PART" "$S_FILE_INSTALL_DONE" && _source "${_PATH_BASE}/${_PART}.install"
 done
 
 # mandatory _RELEASE
 partsmandatory="conf common ssh"
 for _PART in $partsmandatory; do
-	_echoD "_PART='$_PART'"
+	_echod "_PART='$_PART'"
 	! _parthave "$_PART" "$S_FILE_INSTALL_DONE" && _source "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
 done
 
@@ -55,9 +55,9 @@ while [ "$_PART" != quit ]; do
 		[ "${partsmade/ $part /}" == "$partsmade" ] && [ "${partsrelease/ $part /}" != "$partsrelease" ] && parts2do+="$part "
 	done
 
-	_echoD "partsall='$partsall'"
-	_echoD "partsmade='$partsmade'"
-	_echoD "parts2do='$parts2do'"
+	_echod "partsall='$partsall'"
+	_echod "partsmade='$partsmade'"
+	_echod "parts2do='$parts2do'"
 
 	_echo "Part already made :"
 	_echoT "$partsmade"
