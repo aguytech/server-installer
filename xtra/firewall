@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# scrip to manage host firewal with iptables
-# for configuration see
+# script to manage host firewal with iptables
+# for configuration see /etc/server/firewall.conf
 
 ################################ GLOBAL FUNCTIONS
 
@@ -37,25 +37,22 @@ __add_chain() {
 	for value in ${values}; do
 		#cmd="${chain//XX/$value}  -m comment --comment \"firewalled\""
 		cmd="${chain//XX/$value}"
-		#${DRYRUN} && _echoi ${cmd} || _evalq ${cmd}
-		${DRYRUN} && _echoi ${cmd} || _echoi ${cmd}
+		${DRYRUN} && _echoi ${cmd} || _evalq ${cmd}
 	done
 }
 
 __ipt() {
 	cmd="iptables $*"
-	#${DRYRUN} && _echoi ${cmd} || _evalq ${cmd}
-	${DRYRUN} && _echoi ${cmd} || _echoi ${cmd}
+	${DRYRUN} && _echoi ${cmd} || _evalq ${cmd}
 }
 
 __ipt6() {
 	cmd="ip6tables $*"
-	#${DRYRUN} && _echoi ${cmd} || _evalq ${cmd}
-	${DRYRUN} && _echoi ${cmd} || _echoi ${cmd}
+	${DRYRUN} && _echoi ${cmd} || _evalq ${cmd}
 }
 
 __allow() {
-	_echo "-------------------------- DEFAULT POLICIES"
+	_echo "\n-------------------------- DEFAULT POLICIES"
 
 	_echo "- Allow all INPUT/FORWARD/OUTPUT"
 	__ipt -P INPUT ACCEPT
@@ -96,6 +93,8 @@ __clear() {
 
 __init() {
 	_echo "\n-------------------------- INIT IPv4"
+
+	#TODO put initial declaration to _init_end()
 
 	# Drop all connections in filter table
 	_echo "- Drop all INPUT/FORWARD/OUTPUT in Filter table"
@@ -317,28 +316,28 @@ __nat() {
 	_echo "\n-------------------------- NAT"
 
 	message="- Allow PREROUTING HTTP to proxy VM / port ${_PORTS_HTTP} to ${_IP_SRV[proxy]} for port:"
-	chain="iptables -t nat -A PREROUTING -p tcp --dport XX --to-destination ${_IP_SRV[proxy]}:XX -j DNAT"
+	chain="iptables -t nat -A PREROUTING -i ${_ETH} -p tcp --dport XX -j DNAT --to-destination ${_IP_SRV[proxy]}:XX"
 	__add_chain -c "${chain}" -v "${_PORTS_HTTP}" -m "${message}"
 
 	message="- Allow PREROUTING Stats proxy to proxy VM / port ${_PORT_HAPROXY} to ${_IP_SRV[proxy]} for port:"
-	chain="iptables -t nat -A PREROUTING -p tcp --dport XX --to-destination ${_IP_SRV[proxy]}:XX -j DNAT"
+	chain="iptables -t nat -A PREROUTING -i ${_ETH} -p tcp --dport XX -j DNAT --to-destination ${_IP_SRV[proxy]}:XX"
 	__add_chain -c "${chain}" -v "${_PORT_HAPROXY}" -m "${message}"
 
 	message="- Allow PREROUTING Log ${_PTC_RSYSLOG} to log VM / port ${_PORT_RSYSLOG} to ${_IP_SRV[log]} for protocol:"
-	chain="iptables -t nat -A PREROUTING -p XX --dport ${_PORT_RSYSLOG} --to-destination ${_IP_SRV[log]}:${_PORT_RSYSLOG} -j DNAT"
+	chain="iptables -t nat -A PREROUTING -i ${_ETH} -p XX --dport ${_PORT_RSYSLOG} -j DNAT --to-destination ${_IP_SRV[log]}:${_PORT_RSYSLOG}"
 	__add_chain -c "${chain}" -v "${_PTC_RSYSLOG}" -m "${message}"
 
 	${_NAT_SGBD} && ips="${_PORT_MARIADB:-_PORT_PGSQL}"  || ips=
 	message="- Allow PREROUTING SGBD to sgbd VM ${_ETH} to ${_IP_SRV[sgbd]} for port:"
-	chain="iptables -t nat -A PREROUTING -p tcp --dport XX --to-destination ${_IP_SRV[sgbd]}:XX -j DNAT"
+	chain="iptables -t nat -A PREROUTING -i ${_ETH} -p tcp --dport XX -j DNAT --to-destination ${_IP_SRV[sgbd]}:XX"
 	__add_chain -c "${chain}" -v "${ips}" -m "${message}"
 
 	message="- Allow PREROUTING Mail to mail VM ${_ETH} to ${_IP_SRV[mail]} for port:"
-	chain="iptables -t nat -A PREROUTING -p tcp --dport XX --to-destination ${_IP_SRV[mail]}:XX -j DNAT"
+	chain="iptables -t nat -A PREROUTING -i ${_ETH} -p tcp --dport XX -j DNAT --to-destination ${_IP_SRV[mail]}:XX"
 	__add_chain -c "${chain}" -v "${_PORTS_MAIL}" -m "${message}"
 
 	message="- Allow PREROUTING Stats rspamd to mail VM ${_ETH} to ${_IP_SRV[mail]} for port:"
-	chain="iptables -t nat -A PREROUTING -p tcp --dport XX --to-destination ${_IP_SRV[mail]}:XX -j DNAT"
+	chain="iptables -t nat -A PREROUTING -i ${_ETH} -p tcp --dport XX -j DNAT --to-destination ${_IP_SRV[mail]}:XX"
 	__add_chain -c "${chain}" -v "${_PORTS_RSPAMD}" -m "${message}"
 }
 
@@ -360,6 +359,7 @@ __vm_init() {
 }
 
 __vm_nat_ips() {
+	local ctid ctip ports ip_admin
 	_echo "\n-------------------------- VM NAT IPS"
 
 	_echo "- Allow PREROUTING ${_ETH} to VM for IP: ${_IPS_ADMIN}"
@@ -367,20 +367,21 @@ __vm_nat_ips() {
 		for ctid in ${!_VM_NAT_IPS[*]}; do
 			ctip=${_VM_IP_BASE}.${ctid}
 			for ports in ${_VM_NAT_IPS[$ctid]}; do
-				__ipt -t nat -A PREROUTING -i ${_ETH} -s ${ip_admin} -p tcp -d ${_IPTHIS} --dport ${ports%-*} --to-destination ${ctip}:${ports#*-} -j DNAT
+				__ipt -t nat -A PREROUTING -i ${_ETH} -s ${ip_admin} -p tcp -d ${_IPTHIS} --dport ${ports%-*} -j DNAT --to-destination ${ctip}:${ports#*-}
 			done
 		done
 	done
 }
 
 __vm_nat() {
+	local ctid ctip ports
 	_echo "\n-------------------------- VM NAT"
 
 	_echo "- Allow PREROUTING to VM for IP: ALL"
 	for ctid in ${!_VM_NAT[*]}; do
 		ctip=${_VM_IP_BASE}.${ctid}
 		for ports in ${_VM_NAT[$ctid]}; do
-			__ipt -t nat -A PREROUTING -i ${_ETH} -p tcp -d ${_IPTHIS} --dport ${ports%-*} --to-destination ${ctip}:${ports#*-} -j DNAT
+			__ipt -t nat -A PREROUTING -i ${_ETH} -p tcp -d ${_IPTHIS} --dport ${ports%-*} -j DNAT --to-destination ${ctip}:${ports#*-}
 		done
 	done
 }
@@ -454,13 +455,41 @@ __scan2() {
 	__ipt -A DROP-SCAN2 -j DROP
 }
 
+# 1 action
+__fail2ban() {
+	local action cmd
+
+	if [ "$1" = start ]; then
+		! ${DRYRUN} && cmd="_service start fail2ban" || cmd="_echoi _service start fail2ban"
+		action=STARTED
+	elif [ "$1" = stop ]; then
+		! ${DRYRUN} && cmd="_service stop fail2ban" || cmd="_echoi _service stop fail2ban"
+		action=STOPPED
+	fi
+
+	${IS_FAIL2BAN} && ${_FAIL2BAN} && ${cmd}
+	_echo "\n-------------------------- fail2ban ${action}"
+}
+
+# 1 action
+__lxd() {
+	local action cmd
+
+	if [ "$1" = reload ]; then
+		! ${DRYRUN} && cmd="_service reload snap.lxd.daemon" || cmd="_echoi _service reload snap.lxd.daemon"
+		action=RELOAD
+	fi
+
+	${IS_FAIL2BAN} && ${_FAIL2BAN} && ${cmd}
+	_echo "\n-------------------------- lxd ${action}"
+}
 
 __start() {
 	_echo "\n========================== firewall STARTING"
 
 	__init
 	__ovh
-	${IS_FAIL2BAN} && ${_FAIL2BAN} && _service fail2ban start && _echo "\n-------------------------- fail2ban STARTED"
+	__fail2ban start
 	__input
 	__nat
 	${IS_LXD} && __vm_init && __vm_rules
@@ -474,9 +503,10 @@ __start() {
 __stop() {
 	_echo "\n========================== firewall STOPING"
 
-	${IS_FAIL2BAN} && ${_FAIL2BAN} && _service fail2ban stop && _echo "\n-------------------------- fail2ban STOPPED"
+	__fail2ban stop
 	__allow
 	__clear
+	__lxd reload
 
 	_echo "\n========================== firewall STOPED"
 }
@@ -490,10 +520,11 @@ start)
 	__start  ;;
 stop)
 	__stop  ;;
-restart)
-	__stop
-	__start
-	;;
+#TODO remove this
+#restart)
+#	__stop
+#	__start
+#	;;
 *)
 	_echo "Usage: ${_SCRIPT} {start|stop|restart}"
 	_exit 3
