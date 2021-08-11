@@ -183,8 +183,8 @@ S_DNS_SERVER[ovh]="127.0.0.1 213.186.33.99"
 S_DNS_SERVER[google]="8.8.8.8 8.8.4.4"
 
 ########################  FUNCTIONS
-# logging verbosity / quiet info verbose debug
-S_TRACEOPT="info"
+# options: quiet  info verbose debug
+S_TRACEOPT="verbose"
 
 <<KEEP
 
