@@ -1,0 +1,12 @@
+S_HOST_PATH_LOG/apache2/*.err
+S_HOST_PATH_LOG/apache2/*.warn
+S_HOST_PATH_LOG/apache2/*.notice
+S_HOST_PATH_LOG/apache2/*.info {
+    daily
+    missingok
+    rotate 14
+    compress
+    delaycompress
+    notifempty
+    create 640 root adm
+}
