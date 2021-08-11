@@ -4,7 +4,7 @@
 
 _echoT "\n==========================================  ${S_RELEASE} ${_PART}"
 
-####################################  MAIN
+########################  MAIN
 
 _echoT "----------  timezone"
 
@@ -40,25 +40,22 @@ done
 _eval "sed -i 's|^\(${_IPTHIS}.*\)$|#\1|' ${file}"
 
 
-str=" ovh home "
-if [ "${str/ ${S_SERVER_TYPE} /}" != "${str}" ]; then
+file=/etc/hosts
+if ! grep -q '^# services' ${file}; then
+	_echoT "----------  hosts S_SERVICE_BITS"
 
-	file=/etc/hosts
-	if ! grep -q '^# services' ${file}; then
-		_echoT "----------  hosts S_SERVICE_BITS"
+	# set s_base
+	eval ${S_HOST_VM_ETH[default]}
 
-		# set s_base
-		eval ${S_HOST_VM_ETH[default]}
-
-		_keepcpts $file
-		echo -e "\n# services" >> ${file}
-		for str in ${!S_SERVICE_BITS[*]}; do
-			echo -e "#${s_base}.${S_SERVICE_BITS[$str]}\t${S_SERVICE[$str]}" >> ${file}
-		done
-	fi
-
+	_keepcpts $file
+	echo -e "\n# services" >> ${file}
+	for str in ${!S_SERVICE_BITS[*]}; do
+		echo -e "#${s_base}.${S_SERVICE_BITS[$str]}\t${S_SERVICE[$str]}" >> ${file}
+	done
 fi
 
+
+########################  END
 
 _echoT "---------- ${_PART} end"
 

@@ -1,7 +1,7 @@
 #!/usr/bin/perl
-##########################################################################
+########################
 # $Id: http,v 1.40 2008/06/30 20:47:20 kirk Exp $
-##########################################################################
+########################
 # $Log: http,v $
 # Revision 1.40  2008/06/30 20:47:20  kirk
 # fixed copyright holders for files where I know who they should be
@@ -103,9 +103,9 @@
 # Revision 1.3  2004/07/10 01:54:34  mgt
 # sync with kirk -mgt
 #
-##########################################################################
+########################
 
-#####################################################
+########################
 # Copyright (c) 2008 Michael Romeo <michaelromeo@mromeo.com>
 # Covered under the included MIT/X-Consortium License:
 #    http://www.opensource.org/licenses/mit-license.php
@@ -119,7 +119,7 @@
 # contributions.  If you have made significant
 # contributions to this script and want to claim
 # copyright please contact logwatch-devel@lists.sourceforge.net.
-########################################################
+########################
 
 #use diagnostics;
 use strict;
@@ -636,7 +636,7 @@ while (my $line = <STDIN>) {
 
 } ## End of while loop
 
-#############################################
+########################
 ##   output the results
 ##
 

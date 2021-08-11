@@ -3,14 +3,14 @@
 # script to manage host firewal with iptables
 # for configuration see /etc/server/firewall.conf
 
-################################ GLOBAL FUNCTIONS
+######################## GLOBAL FUNCTIONS
 
 # configuration file
 file=/etc/server/firewall.conf
 ! [ -f ${file} ] && echo -e "\e[1;31m[error] unable to load file: ${file}\e[0;0m" | tee -a /var/log/server/firewall.err && exit 1
 . "${file}"
 
-################################ FUNCTIONS
+######################## FUNCTIONS
 
 __add_chain() {
 	local chain values message value cmd opts
@@ -517,7 +517,7 @@ __stop() {
 	_echo "\n========================== firewall STOPED"
 }
 
-################################ MAIN
+######################## MAIN
 
 _echo "\n================================================= Firewall"
 

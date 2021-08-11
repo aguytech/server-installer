@@ -1,7 +1,7 @@
 #!/usr/bin/perl
-###############################################################################
+########################
 # $Id: php 182 2014-01-26 12:46:02Z stefjakobs $
-###############################################################################
+########################
 # $Log: php,v $
 # Revision 1.2  2008/03/24 23:31:26  kirk
 # added copyright/license notice to each script
@@ -9,14 +9,14 @@
 # Revision 1.1  2006/11/12 18:28:31  bjorn
 # New php service, by Jeremias Reith.
 #
-###############################################################################
+########################
 #
 # Logwatch service for php error logs
 #
 # Processes all messages and summarizes them
 # Each message is given with a timestamp and RMS
 
-#######################################################
+########################
 ## Copyright (C) 2006 by Jeremias Reith <jr@terragate.net>
 ## Covered under the included MIT/X-Consortium License:
 ##    http://www.opensource.org/licenses/mit-license.php
@@ -30,7 +30,7 @@
 ## contributions.  If you have made significant
 ## contributions to this script and want to claim
 ## copyright please contact logwatch-devel@lists.sourceforge.net.
-#########################################################
+########################
 
 use strict;
 use Logwatch ':dates';

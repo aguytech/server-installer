@@ -1,10 +1,10 @@
 #!/usr/bin/perl
 #
-##########################################################################
+########################
 # $Id:
-##########################################################################
+########################
 # $Log:
-##########################################################################
+########################
 ## Copyright (c) 2016 Logwatch
 ## Covered under the included MIT/X-Consortium License:
 ##    http://www.opensource.org/licenses/mit-license.php
@@ -18,7 +18,7 @@
 ## contributions.  If you have made significant
 ## contributions to this script and want to claim
 ## copyright please contact logwatch-devel@lists.sourceforge.net.
-##########################################################################
+########################
 
 use diagnostics;
 use strict;

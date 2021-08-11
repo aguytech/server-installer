@@ -3,31 +3,30 @@
 # write by Aguy
 
 <<TODO
-
 USE FALLBACK RELAY to 181
 relayhost = [admin1.hl.local]
 fallback_relay = [admin2.hl.local]
-
 TODO
-
 
 _echoT "\n==========================================  $S_RELEASE $_PART"
 
-file_env="${S_PATH_SCRIPT_CONF}/env"
-file_bash_aliases="${S_PATH_SCRIPT_CONF}/.bash_aliases"
-file_bash_functions="${S_PATH_SCRIPT_CONF}/.bash_functions"
-path_install_bash_completion="${S_PATH_INSTALL_CONF}/bash-completion"
+file_env=${S_PATH_SCRIPT_CONF}/env
+file_bash_aliases=${S_PATH_SCRIPT_CONF}/.bash_aliases
+file_bash_functions=${S_PATH_SCRIPT_CONF}/.bash_functions
+path_install_bash_completion=${S_PATH_INSTALL_CONF}/bash-completion
 
-file_rsyslog="${S_PATH_INSTALL_CONF}/rsyslog/host-auth.conf"
-file_vim="${S_PATH_SCRIPT_CONF}/.vimrc"
-file_tmux="${S_PATH_SCRIPT_CONF}/.tmux.conf"
+file_rsyslog_cron=${S_PATH_INSTALL_CONF}/rsyslog/cron.conf
+file_rsyslog_client_auth=${S_PATH_INSTALL_CONF}/rsyslog/client-auth.conf
+file_logrotate_host_server=${S_PATH_INSTALL_CONF}/logrotate/host-server
+file_vim=${S_PATH_SCRIPT_CONF}/.vimrc
+file_tmux=${S_PATH_SCRIPT_CONF}/.tmux.conf
 
 _echoT "----------  required files"
 
-_require ${file_env} ${file_bash_aliases} ${file_bash_functions} ${file_rsyslog} ${file_vim} ${file_tmux}
+_require ${file_env} ${file_bash_aliases} ${file_bash_functions} ${file_rsyslog_cron} ${file_rsyslog_client_auth} ${file_logrotate_host_server} ${file_vim} ${file_tmux}
 
 
-####################################  DATA
+########################  DATA
 
 _echoT "----------  data sysctl.conf"
 
@@ -47,7 +46,7 @@ _echoT "----------  data sysctl.conf"
 # sysctl net.ipv4.tcp_max_syn_backlog net.ipv4.tcp_max_tw_buckets
 # sysctl net.ipv4.tcp_fin_timeout net.ipv4.tcp_keepalive_time net.ipv4.tcp_keepalive_intvl net.ipv4.tcp_keepalive_probes
 
-####################################  MAIN
+########################  MAIN
 
 _echoT "----------  sysctl conf"
 
@@ -66,7 +65,7 @@ net.ipv4.tcp_keepalive_probes = ${_KEEPALIVE_PROBES}" > ${file}
 
 _echoT "----------  sysctl restart"
 
-_service restart systemd-sysctl.service
+_service restart systemd-sysctl
 
 _echoT "----------  root password change"
 
@@ -110,7 +109,8 @@ ps1='${debian_chroot:+($debian_chroot)}'${color}'\\h\\[\\033[00m\\]\\w\\[\\033[0
 #ps1='${debian_chroot:+($debian_chroot)}\\[\\033[01;31m\\]\\u\\[\\033[00m\\]@\\[\\033[01;32m\\]\\h\\[\\033[00m\\]:\\w\\[\\033[01;31m\\]\\$\\[\\033[00m\\]'
 sed -i "\|if \[ \"\$color_prompt\" = yes \]|{n;s|=.*|='$ps1'|}" ${file}
 
-! grep -q "${file_env}" "${file}" && echo "
+# env
+grep -q "${file_env}" ${file} || echo "
 
 # source global variables
 [ -f ${file_env} ] && . ${file_env}
@@ -168,7 +168,7 @@ deb http://apt.postgresql.org/pub/repos/apt/ ${S_RELEASE_NAME}-pgdg main" > "${f
 wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
 
 
-####################################  INSTALL
+########################  INSTALL
 
 _echoT "----------  upgrade"
 
@@ -195,7 +195,7 @@ _echoT "----------  bash-completion"
 _evalq cp -a "${path_install_bash_completion}"/* "/usr/share/bash-completion/completions/"
 
 
-####################################  ZFS
+########################  ZFS
 
 str="ovh home"
 if [[ " ${str} " = *" ${S_SERVER_TYPE} "* ]]; then
@@ -270,14 +270,14 @@ if [[ " ${str} " = *" ${S_SERVER_TYPE} "* ]]; then
 fi
 
 
-####################################  MAIL
+########################  MAIL
 
 _echoT "----------  mail"
 
 _echoI "MAIL part ha	ve to be implemented"
 
 
-####################################  CONF
+########################  CONF
 
 str=" ovh home "
 if [ "${str/ ${S_SERVER_TYPE} /}" != "${str}" ]; then
@@ -336,9 +336,9 @@ str="MAILTO=${S_DOMAIN_EMAIL_TECH}"
 ! grep -q '^MAILTO' "${file}" && _eval "sed -i '/^PATH=.*/ a ${str}' ${file}"
 
 
-####################################  NTP
+########################  NTP
 
-str=" ovh home "
+str=" ovh "
 if [ "${str/ "${S_SERVER_TYPE}" /}" != "${str}" ]; then
 
 	_echoT "----------  install ntp"
@@ -355,7 +355,7 @@ if [ "${str/ "${S_SERVER_TYPE}" /}" != "${str}" ]; then
 fi
 
 
-######################  CERTIFICATE
+########################  CERTIFICATE
 
 #_echoT "----------  certbot install"
 #_eval "apt install -y certbot"
@@ -379,7 +379,7 @@ sed -i "/commonName\s*= Common Name/ a commonName_default\t\t= ${S_DOMAIN_FQDN}"
 sed -i "/emailAddress\s*= Email Address/ a emailAddress_default\t\t= ${S_DOMAIN_EMAIL_ADMIN}" "${file}"
 
 
-####################################  RSYSLOG
+########################  RSYSLOG
 
 _echoT "----------  rsyslog conf"
 
@@ -399,41 +399,19 @@ fi
 
 _echoT "----------  rsyslog cron"
 
-file=/etc/rsyslog.d/90-cron.conf
-echo "#  CRON
-# rsyslog filter to separate cron log
-cron.* action(type=\"omfile\" dirCreateMode=\"0700\" FileCreateMode=\"0644\" File=\"${S_PATH_LOG}/cron.log\")
-& stop" > ${file}
+file=/etc/rsyslog.d/${file_rsyslog_cron##*/}
+_evalq cp -a ${file_rsyslog_cron} ${file}
+_var_replace ${file} rsyslog
 
 
-str=" ovh home "
-if [ "${str/ "${S_SERVER_TYPE}" /}" != "${str}" ]; then
+_echoT "----------  rsyslog client-auth"
 
-	_echoT "----------  rsyslog host-auth"
-
-	file=/etc/rsyslog.d/host-auth.conf
-	_keepcpts ${file}
-
-	_evalq cp -a ${file_rsyslog} ${file}
-	_var_replace ${file} rsyslog
-	_evalq chown 0:0 ${file} && _evalq chmod -x ${file}
-
-fi
-
-str=" docker kvm lxd "
-if [ "${str/ ${S_SERVER_TYPE} /}" != "${str}" ]; then
-
-	_echoT "----------  rsyslog vm-auth"
-
-	file=/etc/rsyslog.d/vm-auth.conf
-	echo "##############################  AUTH
-# forward auth logs from vm to hosting server ${S_SERVICE_LOG}
-#auth.* @${S_SERVICE[log]}
-auth.* action(type=\"omfwd\" target=\"${S_SERVICE[log]}\" port=\"${S_RSYSLOG_PORT}\" protocol=\"${S_RSYSLOG_PTC}\")" > ${file}
-
-fi
+file=/etc/rsyslog.d/${file_rsyslog_client_auth##*/}
+_evalq cp -a ${file_rsyslog_client_auth} ${file}
+_var_replace ${file} rsyslog
 
 
+#TODO add rsyslog mail
 <<KEEP
 _echoT "----------  rsyslog mail conf"
 
@@ -448,35 +426,14 @@ _echoT "----------  rsyslog restart"
 _service restart rsyslog
 
 
-####################################  LOGROTATE
+########################  LOGROTATE
 
 _echoT "----------  logrotate server"
 
-file=/etc/logrotate.d/server
-echo "# Logrotate file for server functions logs
-#${S_PATH_LOG_INSTALL}/*.log
-${S_PATH_LOG_SERVER}/*.info
-${S_PATH_LOG_SERVER}/*.err
-${S_PATH_LOG_SERVER}/*.debug
-{
-    missingok
-    compress
-    delaycompress
-    notifempty
-    weekly
-    rotate 7
-}
-" > ${file}
+file=/etc/logrotate.d/${file_logrotate_host_server##*/}
+_eval cp -a ${file_logrotate_host_server} ${file}
+_var_replace ${file} logrotate
 
-file=/etc/logrotate.d/exim4-base
-str='7'
-[ -f "${file}" ] && _eval "sed -i 's/\(\t\+rotate\).*/\1 ${str}/' ${file}"
-
-file=/etc/logrotate.d/munin-node
-str='7'
-[ -f "${file}" ] && _eval "sed -i 's/\(\t\+rotate\).*/\1 ${str}/' ${file}"
-
-file=/etc/logrotate.d/rsyslog
 
 <<KEEP
 _echoT "----------  logrotate rsyslog"
@@ -493,37 +450,14 @@ _eval "sed -i '1i${S_PATH_LOG}/cron.log' ${file}"
 KEEP
 
 
-str=" ovh home "
-if [ "${str/ "${S_SERVER_TYPE}" /}" != "${str}" ]; then
-
-	_echoT "----------  logrotate host"
-
-	file=/etc/logrotate.d/host
-	_keepcpts ${file}
-
-	echo -e "${S_HOST_PATH_LOG}/*.err
-${S_HOST_PATH_LOG}/*.error
-${S_HOST_PATH_LOG}/*.warn
-${S_HOST_PATH_LOG}/*.notice
-${S_HOST_PATH_LOG}/*.info
-${S_HOST_PATH_LOG}/*.log {
-    daily
-    missingok
-    rotate 14
-    compress
-    delaycompress
-    notifempty
-}" > ${file}
-
-fi
-
-
-######################  END
+########################  CLEAN
 
 _echoT "----------  clean"
 
 _evalq "apt-get -y autoremove; apt-get clean; apt-get autoclean"
 
+
+########################  END
 
 _echoT "---------- ${_PART} end"
 _eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"

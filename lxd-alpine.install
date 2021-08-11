@@ -2,7 +2,7 @@
 #
 # write by Aguy
 
-################################ global functions
+######################## global functions
 S_TRACE=debug
 
 # allow conf-init
@@ -13,7 +13,7 @@ S_GLOBAL_FUNCTIONS=${S_GLOBAL_FUNCTIONS:-/usr/local/bs/inc-functions.sh}
 . ${S_GLOBAL_FUNCTIONS}
 
 
-################################  conf
+########################  conf
 
 _echoT "------------------ conf && data"
 
@@ -33,7 +33,7 @@ S_FILE_INSTALL_DONE="${S_PATH_CONF}/lxd.done"
 [ -z ${_RELEASE_ID+x} ] && _RELEASE_ID="alpine" && _confset _RELEASE_ID "${_RELEASE_ID}"
 
 
-################################  mandatory parts
+########################  mandatory parts
 
 
 # init common
@@ -43,7 +43,7 @@ for _PART in $parts; do
 done
 
 
-################################  MENU
+########################  MENU
 
 while [ "$_PART" != "quit" ]; do
 
@@ -66,10 +66,16 @@ while [ "$_PART" != "quit" ]; do
 			quit)
 				break
 				;;
+			rsyslog) # ovh home
+				_source "${_PATH_BASE_SUB}/lxd-${_RELEASE_ID}-${_PART}.install"
+				;;
 			haproxy) # ovh home
 				_source "${_PATH_BASE_SUB}/lxd-${_RELEASE_ID}-${_PART}.install"
 				;;
 			apache) # ovh home
+				_source "${_PATH_BASE_SUB}/lxd-${_RELEASE_ID}-${_PART}.install"
+				;;
+			redis) # ovh home
 				_source "${_PATH_BASE_SUB}/lxd-${_RELEASE_ID}-${_PART}.install"
 				;;
 			*)

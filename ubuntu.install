@@ -4,8 +4,8 @@
 
 <<MANUALLY
 # HOME
-server=node1; ssh_port=2002 # server=node2; ssh_port=2002
-ssh-keygen -R ${server} # rm ~/.ssh/known_hosts
+server=node1; host=ns388803; ssh_port=2002 # server=node2; host=ns364584; ssh_port=2002
+sed -i "/${server}/d" ~/.ssh/known_hosts && sed -i "/${host}/d" ~/.ssh/known_hosts # rm ~/.ssh/known_hosts
 
 cmds="sudo apt install rsync
 sudo  cp -a /root/.ssh/authorized_keys /root/.ssh/authorized_keys.$(date +%s)
@@ -15,7 +15,7 @@ sudo sed -i 's|^#\?\(Port\) .*$|\1 ${ssh_port}|' /etc/ssh/sshd_config
 echo '-------------- restart ssh' && sudo systemctl restart ssh.service"
 ssh ubuntu@${server} -p22 "${cmds}"
 
-rsync -e "ssh -p${ssh_port}" /home/shared/dev/bs/ root@${server}:/usr/local/bs/ --exclude=/.git* --delete -av && rsync -e "ssh -p${ssh_port}" /home/shared/dev/install/ root@${server}:/usr/local/install/ --exclude=/.git* --delete -av
+rsync -e "ssh -p${ssh_port}" /home/shared/dev/bs/ root@${server}:/usr/local/bs/ --exclude=/.git* --delete -rlptv && rsync -e "ssh -p${ssh_port}" /home/shared/dev/install/ root@${server}:/usr/local/install/ --exclude=/.git* --delete -rlptv
 
 # HOST
 ssh root@${server} -p${ssh_port}
@@ -24,10 +24,11 @@ blkid|grep -v squashfs
 fdisk /dev/sda # m p F n w | extend with lxd:+50G / save:available
 blkid|grep -v squashfs
 
+apt update && apt -y dist-upgrade
 /usr/local/install/ubuntu.install # sed -i 's|ambau|otokoz|g' /etc/server/server.conf && grep otokoz /etc/server/server.conf
 MANUALLY
 
-################################ CONF
+######################## CONF
 S_TRACE=debug
 
 # allow conf-init
@@ -40,7 +41,7 @@ S_GLOBAL_FUNCTIONS=${S_GLOBAL_FUNCTIONS:-/usr/local/bs/inc-functions.sh}
 [ -f "${S_FILE_INSTALL_CONF}" ] && . "${S_FILE_INSTALL_CONF}"
 
 
-################################  MANDATORY
+########################  MANDATORY
 
 # common + ssh
 parts="init common ssh"
@@ -49,7 +50,7 @@ for _PART in $parts; do
 done
 
 
-################################  MENU
+########################  MENU
 
 while [ "${_PART}" != "quit" ]; do
 

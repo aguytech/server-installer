@@ -6,7 +6,7 @@
 _echoT "\n==========================================  ${S_RELEASE} ${_PART}"
 
 
-####################################  MAIN
+########################  MAIN
 
 # set s_port
 eval ${S_CLUSTER[$HOSTNAME]}
@@ -15,7 +15,7 @@ if ! [ -f ${HOME}/.ssh/id_rsa ]; then
 
 	_echoT "----------  ssh-keygen"
 
-	_askyn "Do you wante to generate new keys for ssh"
+	_askyn "Do you want to generate new keys for ssh"
 	[ "$_ANSWER" = y ] && _eval "ssh-keygen -t rsa"
 fi
 
@@ -28,7 +28,8 @@ _eval "sed -i 's/^\( *GSSAPIAuthentication\).*/\1 no/' ${file}"
 file='/etc/ssh/sshd_config'
 _keepcpts "${file}"
 
-_eval "sed -i 's|^#\?\(PermitRootLogin\) .*$|\1 without-password|' $file"
+#_eval "sed -i 's|^#\?\(PermitRootLogin\) .*$|\1 without-password|' $file"
+_eval "sed -i 's|^#\?\(PermitRootLogin\) .*$|\1 prohibit-password|' $file"
 _eval "sed -i 's|^#\?\(Port\).*$|\1 ${s_port}|' $file"
 _eval "sed -i 's|^#\?\(GSSAPIAuthentication\) .*$|\1 no|' $file"
 _eval "sed -i 's|^#\?\(UseDNS\) .*$|\1 no|' $file"

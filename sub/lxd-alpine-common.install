@@ -5,16 +5,27 @@
 _echoT "\n==========================================  ${_RELEASE} ${_PART}"
 
 
-####################################  DATA
+########################  REQUIRED
+
+file_rsyslog_cron=${S_PATH_INSTALL_CONF}/rsyslog/cron.conf
+file_rsyslog_vm_auth=${S_PATH_INSTALL_CONF}/rsyslog/client-auth.conf
+
+_echoT "----------  required files"
+
+_require ${file_rsyslog_cron} ${file_rsyslog_vm_auth}
+
+
+########################  DATA
+
+_CT_NAME="${_RELEASE/./}"
 
 _echoT "----------  ${_RELEASE_ID} data"
 
 [ -z ${_CT_NAME_COM+x} ] && anstmp="${_CT_NAME}-com" && _askno "Give a name for common publishing image container for ${_RELEASE_ID} release ($anstmp)" && _CT_NAME_COM=${_ANSWER:-$anstmp} && _confset _CT_NAME_COM "${_CT_NAME_COM}"
 
-_CT_NAME="${_RELEASE/./}"
 
 
-####################################  CONF
+########################  CONF
 
 _echoT "----------  apk profile.d"
 
@@ -24,7 +35,6 @@ _lxc_exec ${_CT_NAME} "[ -e /etc/profile.d/bash_functions.sh ] || ln -s /usr/loc
 _lxc_exec ${_CT_NAME} "[ -e /etc/profile.d/env.sh ] || ln -s /usr/local/bs/conf/env.conf /etc/profile.d/env.sh"
 
 file="/tmp/server.conf"
-_evalq [ -f ${file} ] && rm ${file}
 _evalq cp ${S_GLOBAL_CONF} ${file}
 _evalq "sed -i 's|^\(S_RELEASE\)=.*$|\1=\"${_RELEASE}\"|' ${file}"
 _evalq "sed -i 's|^\(S_RELEASE_ID\)=.*$|\1=\"${_RELEASE_ID}\"|' ${file}"
@@ -36,7 +46,7 @@ _evalq "sed -i 's|^\(S_PATH_INSTALL\)=.*$|\1=\"/usr/local/install\"|' ${file}"
 _eval lxc file push ${file} ${_CT_NAME}${S_PATH_CONF}/server.conf
 
 
-####################################  HOSTS
+########################  HOSTS
 
 #_echoT "----------  hosts"
 
@@ -50,7 +60,7 @@ _eval lxc file push ${file} ${_CT_NAME}${S_PATH_CONF}/server.conf
 #fi
 
 
-####################################  SYSLOG
+########################  SYSLOG
 
 _echoT "----------  syslog remove"
 
@@ -58,7 +68,7 @@ _lxc_exec ${_CT_NAME} "rc-service syslog stop"
 _lxc_exec ${_CT_NAME} "rc-status boot|grep -q '^\s*syslog\s' && rc-update del syslog boot"
 
 
-####################################  RSYSLOG
+########################  RSYSLOG
 
 _echoT "----------  rsyslog install"
 
@@ -66,38 +76,54 @@ _lxc_exec ${_CT_NAME} "apk list -I|grep -q ^rsyslog || apk add rsyslog"
 path="/etc/rsyslog.d"
 _lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir ${path}"
 
+
+_echoT "----------  rsyslog vm enable & start"
+
 service="rsyslog"
 _lxc_exec ${_CT_NAME} "rc-update add ${service}"
+_lxc_exec ${_CT_NAME} "rc-service ${service} start"
 
 
 _echoT "----------  rsyslog conf"
 
 file="/etc/rsyslog.conf"
-_lxc_exec ${_CT_NAME} "[ ! -f '${file}.${_SDATE}' ] && cp -a '${file}' '${file}.${_SDATE}'"
+_lxc_exec ${_CT_NAME} "[ -f ${file} ] && cp -a ${file} ${file}.${_SDATE}"
 
-cmds="sed -i 's|^.\?\(module(load=\"immark\")\)$|#\1|' $file
-sed -i 's|^.\?\(module(load=\"imklog\")\)$|#\1|' $file"
-_lxc_exec ${_CT_NAME} "$cmds"
-
-
-_echoT "----------  rsyslog cron"
-
-_lxc_exec ${_CT_NAME} 'echo -e "# rsyslog filter to separate cron log\ncron.* action(type=\"omfile\" dirCreateMode=\"0700\" FileCreateMode=\"0644\" File=\"/var/log/cron.log\")\n& stop" > /etc/rsyslog.d/cron.conf'
+cmds="sed -i 's|^.\?\(module(load=\"immark\")\)$|#\1|' ${file}
+sed -i 's|^.\?\(module(load=\"imklog\")\)$|#\1|' ${file}"
+_lxc_exec ${_CT_NAME} "${cmds}"
 
 
-_echoT "----------  rsyslog start"
+_echoT "----------  rsyslog conf cron"
 
-_lxc_exec ${_CT_NAME} "rc-service ${service} start"
+file=/etc/rsyslog.conf
+_lxc_exec ${_CT_NAME} "sed -i '/^cron.*/ s|^|#|'"
+
+file=/etc/rsyslog.d/${file_rsyslog_cron##*/}
+_eval lxc file push ${file_rsyslog_cron} ${_CT_NAME}${file}
+_lxc_var_replace ${_CT_NAME} ${file} rsyslog
 
 
-####################################  LOGROTATE
+_echoT "----------  rsyslog conf vm-auth"
+
+file=/etc/rsyslog.d/${file_rsyslog_vm_auth##*/}
+_eval lxc file push ${file_rsyslog_vm_auth} ${_CT_NAME}${file}
+_lxc_var_replace ${_CT_NAME} ${file} rsyslog
+
+
+_echoT "----------  rsyslog vm restart"
+
+_lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
+
+
+########################  LOGROTATE
 
 _echoT "----------  logrotate install"
 
-_lxc_exec ${_CT_NAME} "! apk list -I |grep -q ^logrotate && apk add logrotate"
+_lxc_exec ${_CT_NAME} "apk list -I | grep -q ^logrotate || apk add logrotate"
 
 
-####################################  CRON
+########################  CRON
 
 _echoT "----------  cron"
 
@@ -106,7 +132,7 @@ _lxc_exec ${_CT_NAME} "sed -i '/^\*\/15/ s|^|#|' ${file}"
 _lxc_exec ${_CT_NAME} "rc-service crond restart"
 
 
-####################################  PUBLISH
+########################  PUBLISH
 
 _echoT "----------  publish ${_CT_NAME}"
 
@@ -114,7 +140,7 @@ _eval lxc image list --format=json | jq -r '.[].aliases[].name' | grep -q ^${_CT
 _eval lxc publish ${_CT_NAME} --alias ${_CT_NAME_COM} --force
 
 
-####################################  END
+########################  END
 
 _echoT "---------- ${_PART} end"
 _eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"

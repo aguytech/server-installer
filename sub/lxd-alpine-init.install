@@ -5,7 +5,7 @@
 _echoT "\n==========================================  ${_RELEASE_ID} ${_PART}"
 
 
-####################################  DATA
+########################  DATA
 
 _echoT "----------  ${_RELEASE_ID} data"
 
@@ -16,7 +16,7 @@ _echoT "----------  ${_RELEASE_ID} data"
 _CT_NAME="${_RELEASE/./}"
 
 
-####################################  INIT
+########################  INIT
 
 _echoT "----------  ${_RELEASE} copy"
 
@@ -50,7 +50,7 @@ if ! [ "`lxc list --format=json | jq -r '.[] | select(.status == "Running") | se
 fi
 
 
-####################################  CONF
+########################  CONF
 
 _echoT "----------  apk update"
 
@@ -63,7 +63,7 @@ _lxc_exec ${_CT_NAME} "cp /usr/share/zoneinfo/Europe/Paris /etc/localtime && ech
 _lxc_exec ${_CT_NAME} "apk del tzdata"
 
 
-####################################  PATHS
+########################  PATHS
 
 _echoT "----------  path bs"
 
@@ -88,7 +88,7 @@ _lxc_exec ${_CT_NAME} "chown -R 0:0 ${S_PATH_CONF_SSL} && chmod -R 750 ${S_PATH_
 _lxc_exec ${_CT_NAME} "chmod 700 -R ${S_PATH_CONF_SSL}/private"
 
 
-####################################  END
+########################  END
 
 _echoT "---------- ${_PART} end"
 _eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"

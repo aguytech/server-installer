@@ -2,26 +2,21 @@
 #
 # write by Aguy
 
-<<MANUALLY
-# iptables-save / iptables-restore
-
-iptables -L
-iptables -t nat -S
-iptables -t nat -D
-
-iptables -nvL
-iptables -t nat -nvL
-iptables -t mangle -nvL
-
-iptables -nvL --line-number; iptables -nvL -t nat --line-number
-MANUALLY
-
-
 _echoT "\n==========================================  $S_RELEASE $_PART"
+
+
+########################  REQUIRED
+
+_echoT "------------------ required vm image"
+lxc image list -f json |jq -r '.[].aliases[].name' | grep -q ^${_CT_NAME_COM}$ || _exite "Unable to find image container: '${_CT_NAME_COM}'"
+
+_echoT "------------------ required vm"
+lxc list -f json |jq -r '.[].name'| grep -q ^${S_SERVICE[log]}$ || _exite "Unable to find image container: '${S_SERVICE[log]}'"
+
 
 file_xtra_script=${S_PATH_INSTALL_XTRA}/firewall
 file_xtra_conf=${S_PATH_INSTALL_CONF}/firewall.conf
-file_xtra_log=${S_PATH_INSTALL_CONF}/rsyslog/iptables.conf
+file_xtra_log=${S_PATH_INSTALL_CONF}/rsyslog/host-iptables.conf
 file_script=/usr/sbin/${file_xtra_script##*/}
 
 _echoT "------------------ required files"
@@ -29,7 +24,7 @@ _echoT "------------------ required files"
 _require ${file_xtra_script} ${file_xtra_conf} ${file_xtra_log}
 
 
-####################################  SYSCTL
+########################  SYSCTL
 
 _echoT "----------  sysctl conf"
 
@@ -63,7 +58,7 @@ _eval sysctl net.ipv4.ip_forward=1
 file=/etc/sysctl.conf
 _eval "sed -i 's|^#\?\(net.ipv4.ip_forward\)=.*|\1=1|' ${file}"
 
-####################################  FIREWALL
+########################  FIREWALL
 
 _echoT "----------  firewall conf"
 
@@ -131,118 +126,93 @@ _echoI "You have 2 minutes after to verify iptables rules"
 
 _echoT "----------  systemd iptables-firewall"
 
-_askno "To start the service: iptables-firewall, valid"
+_askno "To START the service: iptables-firewall, valid"
 
-_eval systemctl start iptables-firewall
+_service start iptables-firewall
 
-_askno "To enable the service: iptables-firewall, valid"
+_askno "To ENABLE the service: iptables-firewall, valid"
 
-_eval systemctl enable iptables-firewall
+_service enable iptables-firewall
 
+
+########################  RSYSLOG
+
+_echoT "----------  rsyslog conf vm-apache"
+
+file=/etc/rsyslog.d/${file_rsyslog_vm_apache##*/}
+_eval lxc file push ${file_rsyslog_vm_apache} ${_CT_NAME}${file}
+_lxc_var_replace ${_CT_NAME} ${file} rsyslog
+
+_echoT "----------  restart rsyslog ${_CT_NAME}"
+
+_lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
+
+
+_echoT "----------  rsyslog conf host-apache"
+
+file=/etc/rsyslog.d/${file_rsyslog_host_apache##*/}
+_eval lxc file push ${file_rsyslog_host_apache} ${S_SERVICE[log]}${file}
+_lxc_var_replace ${S_SERVICE[log]} ${file} rsyslog
+
+_echoT "----------  restart rsyslog ${S_SERVICE[log]}"
+
+_lxc_exec ${S_SERVICE[log]} "rc-service rsyslog restart"
+
+
+########################  RSYSLOG
 
 _echoT "----------  rsyslog conf"
 
-_evalq cp -a ${file_xtra_log} /etc/rsyslog.d/
+file=/etc/rsyslog.d/${file_xtra_log##*/}
+_evalq cp -a ${file_xtra_log} ${file}
+
+_var_replace ${file} rsyslog
+
+path=${S_PATH_LOG}/iptables
+[ -d ${path} ] || mkdir -p ${path}
 
 
 _echoT "----------  rsyslog restart"
 
-_evalq service rsyslog restart
+_service restart rsyslog
 
+
+########################  LOGROTATE
 
 _echoT "----------  logrotate conf"
 
 echo -e "# Logrotate file for iptables logs
-$S_PATH_LOG/iptables/*.log {
+${path}/*.log {
 \tmissingok
 \tcompress
 \tdelaycompress
 \tnotifempty
 \tweekly
-\trotate 5
+\trotate 4
 }
 " > /etc/logrotate.d/iptables
 
+_echoT "----------  logrotate restart"
 
-_echoT "----------  firewall test"
+_service restart logrotate
 
-_eval "service firewall stop"
-_askyn "Verify iptables rules with 'iptl' & 'iptln'"
-[ $_ANSWER == n ] && _exit 1
 
-_eval "service firewall start"
-_askyn "Verify iptables rules with 'iptl' & 'iptln'"
-[ $_ANSWER == n ] && _exit 1
-
+########################  END
 
 _echoT "---------- ${_PART} end"
-
 _eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"
 
 
-<<keep
--------------------------------------------------------
-logging()
+<<MANUALLY
+# iptables-save / iptables-restore
 
-# to logging
-iptables -N LOGGING
-iptables -A LOGGING -m limit --limit 240/min -j LOG --log-prefix "iptables-tmp-"
-#iptables -A INPUT -i eth0 -p icmp -j DROP # drop ping before
-iptables -A INPUT -p tcp -j LOGGING # catch all TCP INPUT for all interfaces after all previous rules
-iptables -A FORWARD -j LOGGING # catch all FORWARD (tcp,udp,icmp) for all interfaces after all previous rules
-iptables -A OUTPUT -p tcp -j LOGGING # catch all TCP OUTPUT for all interfaces after all previous rules
+iptables -L
+iptables -t nat -S
+iptables -t nat -D
 
-
-sed "s|.*SRC=\([0-9\.]*\).*|\1|" $S_PATH_LOG/iptables/general.log | sort | uniq -c # count number of occurences
-
-
--------------------------------------------------------
-iptables_persistent()
-
-#apt-get install iptables-persistent
-
-#service iptables save
-
-#iptables-save > /etc/iptables/rules.v4 # ip6tables-save > /etc/iptables/rules.v6
-#iptables-restore < /etc/iptables/rules.v4
-
-
--------------------------------------------------------
-test()
-
-service firewall stop
-
-service firewall start
-
-service firewall restart
+iptables -nvL
+iptables -t nat -nvL
+iptables -t mangle -nvL
 
 iptables -nvL --line-number; iptables -nvL -t nat --line-number
-
-iptables -nvL FORWARD --line-number
-
-
--------------------------------------------------------
-w00tw00t()
-
-# création de notre chaîne w00t :
-#iptables -N w00t
-# redirige les paquets TCP sur notre chaîne :
-#iptables -A INPUT -p tcp -j w00t
-# recherche du premier SYN et création de la liste :
-#iptables -A w00t -m recent -p tcp --syn --dport 80 --set
-# recherche du paquet SYN,ACK et mise à jour la liste :
-#iptables -A w00t -m recent -p tcp --tcp-flags PSH,SYN,ACK SYN,ACK --sport 80 --update
-# recherche du paquet ACK et mise à jour la liste
-#iptables -A w00t -m recent -p tcp --tcp-flags PSH,SYN,ACK ACK --dport 80 --update
-# recherche de la signature de DFind dans le prenier PSH+ACK. Si elle est présente, on DROP. On supprime la liste pour ne pas filtrer les paquets suivants
-#iptables -A w00t -m recent -p tcp --tcp-flags PSH,ACK PSH,ACK --dport 80 --remove -m string --to 50 --algo bm --string "GET /w00tw00t.at.ISC.SANS." -j DROP
-#EchoIO "Drop chaine contenant 'GET /w00tw00t.at.ISC.SANS.' :80"
-
-#iptables -A INPUT -p tcp --dport 80 -m string --to 50 --algo bm --string 'GET /w00tw00t.at.ISC.SANS.' -j DROP
-#EchoIO "Drop chaine contenant 'GET /w00tw00t.at.ISC.SANS.' :80"
-
-# w00tw00t
-#iptables -I INPUT -d $IpThis -p tcp --dport 80 -m string --to 70 --algo bm --string 'GET /w00tw00t.at.ISC.SANS.' -j DROP
-#EchoIO "Stop w00tw00t"
-
-keep
+MANUALLY

@@ -2,8 +2,17 @@
 #
 # write by Aguy
 
-
 _echoT "\n==========================================  ${_RELEASE} ${_PART}"
+
+
+########################  REQUIRED
+
+_echoT "------------------ required vm image"
+lxc image list -f json |jq -r '.[].aliases[].name' | grep -q ^${_CT_NAME_COM}$ || _exite "Unable to find image container: '${_CT_NAME_COM}'"
+
+_echoT "------------------ required vm"
+lxc list -f json |jq -r '.[].name'| grep -q ^${S_SERVICE[log]}$ || _exite "Unable to find image container: '${S_SERVICE[log]}'"
+
 
 file_haproxy_initd=${S_PATH_INSTALL_XTRA}/haproxy
 file_vim=${S_PATH_SCRIPT_CONF}/.vimrc
@@ -16,7 +25,7 @@ _echoT "------------------ required paths"
 _requirep ${path_haproxy}
 
 
-####################################  DATA
+########################  DATA
 
 _CT_NAME=${S_SERVICE[proxy]}
 
@@ -25,26 +34,23 @@ _CT_IP=${s_base}.${S_SERVICE_BITS[proxy]}
 
 _echoT "----------  data"
 
-[ -z ${_IPTABLES_PORTS+x} ] && anstmp="80 443" && _askno "IPs to redirect to haproxy container ($anstmp)" && _IPTABLES_PORTS=${_ANSWER:-$anstmp} && _confset _IPTABLES_PORTS "$_IPTABLES_PORTS"
+[ -z ${_HP_DOMAIN_FQDN+x} ] && anstmp="$S_HP_DOMAIN_FQDN" && _askno "Enter a fqdn domain name ($anstmp)" && _HP_DOMAIN_FQDN="${_ANSWER:-$anstmp}" && _confset _HP_DOMAIN_FQDN "$_HP_DOMAIN_FQDN"
+_HP_DOMAIN_NAME="${_HP_DOMAIN_FQDN%.*}" && _confset _HP_DOMAIN_NAME "${_HP_DOMAIN_NAME}"
 
-[ -z ${_DOMAIN_FQDN+x} ] && anstmp="$S_DOMAIN_FQDN" && _askno "Enter a fqdn domain name ($anstmp)" && _DOMAIN_FQDN="${_ANSWER:-$anstmp}" && _confset _DOMAIN_FQDN "$_DOMAIN_FQDN"
-_DOMAIN_NAME="${_DOMAIN_FQDN%.*}" && _confset _DOMAIN_NAME "$_DOMAIN_NAME"
+[ -z ${_HP_DOMAIN_2_FQDN+x} ] && anstmp="ggj.ovh" && _askno "Enter a fqdn second domain name ($anstmp)" && _HP_DOMAIN_2_FQDN="${_ANSWER:-$anstmp}" && _confset _HP_DOMAIN_2_FQDN "$_HP_DOMAIN_2_FQDN"
+_HP_DOMAIN_2_NAME="${_HP_DOMAIN_2_FQDN%.*}" && _confset _HP_DOMAIN_2_NAME "${_HP_DOMAIN_2_NAME}"
 
-[ -z ${_DOMAIN_2_FQDN+x} ] && anstmp="ggj.ovh" && _askno "Enter a fqdn second domain name ($anstmp)" && _DOMAIN_2_FQDN="${_ANSWER:-$anstmp}" && _confset _DOMAIN_2_FQDN "$_DOMAIN_2_FQDN"
-_DOMAIN_2_NAME="${_DOMAIN_2_FQDN%.*}" && _confset _DOMAIN_2_NAME "$_DOMAIN_2_NAME"
+[ -z ${_HP_ACCESS_USER+x} ] && anstmp="admin" && _askno "Enter a name for stats access ($anstmp)" && _HP_ACCESS_USER="${_ANSWER:-$anstmp}" && _confset _HP_ACCESS_USER "${_HP_ACCESS_USER}"
 
-[ -z ${_ACCESS_USER+x} ] && anstmp="admin" && _askno "Enter a name for stats access ($anstmp)" && _ACCESS_USER="${_ANSWER:-$anstmp}" && _confset _ACCESS_USER "$_ACCESS_USER"
+[ -z ${_HP_ACCESS_PWD+x} ] && anstmp="$(_pwd)" && _askno "Enter a password to stats access ($anstmp)" && _HP_ACCESS_PWD="${_ANSWER:-$anstmp}" && _confset _HP_ACCESS_PWD "${_HP_ACCESS_PWD}"
 
-[ -z ${_ACCESS_PWD+x} ] && anstmp="$(_pwd)" && _askno "Enter a password to stats access ($anstmp)" && _ACCESS_PWD="${_ANSWER:-$anstmp}" && _confset _ACCESS_PWD "$_ACCESS_PWD"
-
-[ -z ${_ACCESS_URI+x} ] && anstmp="/haproxy-stats" && _askno "Enter the URI to access to admin site ($anstmp)" && _ACCESS_URI="${_ANSWER:-$anstmp}" && _confset _ACCESS_URI "$_ACCESS_URI"
+[ -z ${_HP_ACCESS_URI+x} ] && anstmp="/haproxy-stats" && _askno "Enter the URI to access to admin site ($anstmp)" && _HP_ACCESS_URI="${_ANSWER:-$anstmp}" && _confset _HP_ACCESS_URI "${_HP_ACCESS_URI}"
 
 
-####################################  INIT
+########################  INIT
 
 _echoT "----------  init"
 
-! lxc image list -f json |jq -r '.[].aliases[].name' | grep -q ^${_CT_NAME_COM}$ && _exite "Unable to find image container '${_CT_NAME_COM}'"
 if lxc list -f json |jq -r '.[].name' | grep -q ^${_CT_NAME}$; then
 	if lxc list --format=json | jq -r '.[] | select(.status == "Running").name' | grep -q ^${_CT_NAME}$; then
 		_eval lxc stop ${_CT_NAME}
@@ -53,7 +59,6 @@ if lxc list -f json |jq -r '.[].name' | grep -q ^${_CT_NAME}$; then
 	else
 		_eval lxc rename ${_CT_NAME} ${_CT_NAME}.${_SDATE}
 	fi
-
 fi
 
 _eval lxc init ${_CT_NAME_COM} ${_CT_NAME} -p default -p global
@@ -74,7 +79,7 @@ _eval lxc start ${_CT_NAME}
 _eval sleep 1
 
 
-####################################  SYSCTL
+########################  SYSCTL
 
 _echoT "----------  conf sysctl.conf"
 
@@ -91,10 +96,11 @@ net.ipv4.tcp_keepalive_probes = ${_KEEPALIVE_PROBES}"
 _lxc_exec ${_CT_NAME} "echo '${txt}' > ${file}"
 
 
-####################################  INSTALL
+########################  INSTALL
 
 _echoT "----------  install"
 
+_lxc_exec ${_CT_NAME} "apk update"
 _lxc_exec ${_CT_NAME} "apk add haproxy bash bash-completion vim"
 
 
@@ -105,7 +111,7 @@ _lxc_exec ${_CT_NAME} "rc-update add ${service}"
 _lxc_exec ${_CT_NAME} "rc-service ${service} start"
 
 
-####################################  CONF
+########################  CONF
 
 _echoT "----------  conf bash"
 
@@ -117,6 +123,7 @@ _eval "lxc file push -q ${S_PATH_INSTALL_CONF}/vim/* ${_CT_NAME}${path}/"
 
 file=/root/.vimrc
 _lxc_exec ${_CT_NAME} "[ -e ${file} ] || ln -s ${file_vim} ${file}"
+
 
 _echoT "----------  conf haproxy"
 
@@ -146,41 +153,19 @@ _echoT "----------  restart"
 _lxc_exec ${_CT_NAME} "rc-service haproxy restart"
 
 
-####################################  IPTABLES
-
-_echoT "----------  iptables rules"
-
-eval ${S_CLUSTER[$HOSTNAME]}
-
-for port in ${_IPTABLES_PORTS}; do
-	#cmd="PREROUTING -d ${S_NODE_IPV4}/32 -i ${S_ETH} -p tcp -m tcp --dport ${port} -j DNAT --to-destination ${_CT_IP}:${port}"
-	cmd="PREROUTING -d ${s_ip}/32 -p tcp -m tcp --dport ${port} -j DNAT --to-destination ${_CT_IP}:${port}"
-	iptables -S -t nat | grep -qi "${cmd}" || iptables -t nat -I ${cmd}
-done
-
-
-
 
 
 echo exit && exit
 
-_echoT "----------  iptables persistent"
 
-file=/etc/iptables/iptables.rules
-sudo systemctl stop lxd.*
-sudo iptables-save -f ${file}
-sudo sed -i 's|^\(.* ACCEPT\) .*$|\1|' ${file}
-sudo systemctl start lxd.service
-
-
-####################################  CERTBOT
+########################  CERTBOT
 
 _echoT "----------  certbot install"
 
 _lxc_exec ${_CT_NAME} "apk add certbot"
 
 
-########################################  PUBLISH
+########################  PUBLISH
 
 _echoT "----------  publish ${_CT_NAME}"
 
@@ -188,7 +173,7 @@ _eval lxc image list --format=json | jq -r '.[].aliases[].name' | grep -q ^${_CT
 _eval lxc publish ${_CT_NAME} --alias ${_CT_NAME} --force
 
 
-####################################  END
+########################  END
 
 _echoT "---------- ${_PART} end"
 _eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"

@@ -6,7 +6,7 @@ _PART=conf-init
 echo -e "${blueb}==========================================  ${_PART}${cclear}"
 
 
-####################################  DATA
+########################  DATA
 
 S_PATH_INSTALL=`dirname "$(readlink -e "${BASH_SOURCE[0]}")"`
 S_PATH_INSTALL_CONF="${S_PATH_INSTALL}/conf"
@@ -15,7 +15,7 @@ file_conf_server="${S_PATH_INSTALL}/conf-server.install"
 file_install_server="${S_PATH_INSTALL_CONF}/server.conf"
 
 
-####################################  PRE
+########################  PRE
 
 # exit
 [ "$USER" != root ] && echo -e "${redb}You have to run this script under root privileges${cclear}" && exit 1
@@ -34,7 +34,7 @@ for file in "${file_conf_server}" "${file_install_server}"; do
 done
 
 
-####################################  MAIN
+########################  MAIN
 
 echo -e "${blueb}----------  log path${cclear}"
 
@@ -82,7 +82,7 @@ _echoT "----------  server settings"
 . "${file_conf_server}"
 
 
-####################################  GLOBAL
+########################  GLOBAL
 
 _echoT "----------  source ${S_GLOBAL_CONF}"
 
@@ -95,7 +95,7 @@ _echoT "----------  source ${file_env}"
 . "${file_env}"
 
 
-####################################  END
+########################  END
 
 _PART=conf-init
 _echoT "---------- ${_PART} end"
