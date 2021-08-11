@@ -87,6 +87,8 @@ S_HOST_PORT_PRE_HTTPS="9"
 ########################  VM
 # VM sharing path
 S_VM_PATH_SHARE="/var/share"
+# VM shared path for logs
+S_VM_PATH_LOG="/var/share/log"
 # VM saving path
 S_VM_PATH_SAVE="/save"
 # VM backing up path

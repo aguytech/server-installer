@@ -32,11 +32,11 @@ tsa_policy1 = 1.2.3.4.1
 tsa_policy2 = 1.2.3.4.5.6
 tsa_policy3 = 1.2.3.4.5.7
 
-####################################################################
+########################
 [ ca ]
 default_ca	= CA_default		# The default ca section
 
-####################################################################
+########################
 [ CA_default ]
 
 dir		= ./demoCA		# Where everything is kept
@@ -101,7 +101,7 @@ organizationalUnitName	= optional
 commonName		= supplied
 emailAddress		= optional
 
-####################################################################
+########################
 [ req ]
 default_bits		= 2048
 default_keyfile 	= privkey.pem
@@ -320,7 +320,7 @@ authorityKeyIdentifier=keyid,issuer
 # This really needs to be in place for it to be a proxy certificate.
 proxyCertInfo=critical,language:id-ppl-anyLanguage,pathlen:3,policy:foo
 
-####################################################################
+########################
 [ tsa ]
 
 default_tsa = tsa_config1	# the default TSA section

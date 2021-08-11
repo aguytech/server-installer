@@ -1,6 +1,6 @@
 ###
 ### aktivated protocols
-#############################
+########################
 
 protocols = imap lmtp sieve
 
@@ -8,7 +8,7 @@ protocols = imap lmtp sieve
 
 ###
 ### TLS configuration
-#######################
+########################
 
 ssl = required
 ssl_cert = </etc/letsencrypt/live/mail.mysystems.tld/fullchain.pem
@@ -22,7 +22,7 @@ ssl_prefer_server_ciphers = yes
 
 ###
 ### Dovecot services
-################################
+########################
 
 service imap-login {
     inet_listener imap {
@@ -68,7 +68,7 @@ service auth {
 
 ###
 ###  Protocol settings
-#############################
+########################
 
 protocol imap {
     mail_plugins = $mail_plugins quota imap_quota imap_sieve
@@ -85,7 +85,7 @@ protocol lmtp {
 
 ###
 ### Client authentication
-#############################
+########################
 
 disable_plaintext_auth = yes
 auth_mechanisms = plain login
@@ -104,7 +104,7 @@ userdb {
 
 ###
 ### Mail location
-#######################
+########################
 
 mail_uid = vmail
 mail_gid = vmail
@@ -118,7 +118,7 @@ mail_location = maildir:~/mail:LAYOUT=fs
 
 ###
 ### Mailbox configuration
-########################################
+########################
 
 namespace inbox {
     inbox = yes
@@ -148,7 +148,7 @@ namespace inbox {
 
 ###
 ### Mail plugins
-############################
+########################
 
 
 plugin {

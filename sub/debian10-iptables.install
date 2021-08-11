@@ -28,7 +28,7 @@ _echoT "------------------ required files"
 _require ${file_xtra_script} ${file_xtra_conf} ${file_xtra_log}
 
 
-####################################  MAIN
+########################  MAIN
 
 _echoT "----------  firewall conf"
 

@@ -4,7 +4,7 @@
 
 _echoT "\n==========================================  ${S_RELEASE} ${_PART}"
 
-####################################  INSTALL
+########################  INSTALL
 
 _echoT "----------  install"
 
@@ -26,7 +26,7 @@ _eval snap install core
 _eval snap install lxd
 
 
-####################################  RIGHTS
+########################  RIGHTS
 
 path="/var/snap/lxd/common/lxd"
 _echoT "----------  link ${path} to /vm"
@@ -41,7 +41,7 @@ setfacl -R -m u:100000:rwx "${path}"
 setfacl -R -m d:u:100000:rwx "${path}"
 
 
-####################################  INIT
+########################  INIT
 
 _echoT "----------  lxd init"
 
@@ -52,7 +52,7 @@ Name of the existing ZFS pool or dataset: root/vm/sp/default"
 _eval lxd init
 
 
-####################################  STORAGE LXD
+########################  STORAGE LXD
 
 name="stock"
 _echoT "----------  storage ${name}"
@@ -61,7 +61,7 @@ if ! [ "`lxc storage list -f json|jq -r '.[] | select(.name == "'${name}'").name
 	_eval lxc storage create ${name} zfs source=root/vm/sp/${name}
 fi
 
-####################################  NETWORK
+########################  NETWORK
 
 _echoT "----------  network 'default'"
 
@@ -89,7 +89,7 @@ fi
 _eval lxc network set ${s_inet} ipv4.address=${s_cidr} ipv4.dhcp.ranges=${s_cidr%.*}.${S_HOST_DHCP_MIN}-${s_cidr%.*}.${S_HOST_DHCP_MAX} ipv4.nat=true dns.mode=managed dns.domain=lxd1 dns.mode=managed
 
 
-####################################  PROFILE
+########################  PROFILE
 
 
 profile="stock"
@@ -144,7 +144,7 @@ _echoI "To install and configure container use:"
 _echoI "$(ls -1 ${S_PATH_INSTALL/-desktop/}/lxd-*)"
 
 
-####################################  DNS
+########################  DNS
 
 if [ "${S_SERVER_TYPE}" = ovh ]; then
 
@@ -167,7 +167,7 @@ elif [ "${S_SERVER_TYPE}" = home ]; then
 
 fi
 
-####################################  END
+########################  END
 
 _echoT "---------- ${_PART} end"
 _eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"

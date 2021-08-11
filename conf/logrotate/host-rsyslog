@@ -1,0 +1,13 @@
+S_VM_PATH_LOG/*.err
+S_VM_PATH_LOG/*.error
+S_VM_PATH_LOG/*.warn
+S_VM_PATH_LOG/*.notice
+S_VM_PATH_LOG/*.info
+S_VM_PATH_LOG/*.log {
+    daily
+    missingok
+    rotate 31
+    compress
+    delaycompress
+    notifempty
+}

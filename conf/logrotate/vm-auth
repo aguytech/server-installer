@@ -1,0 +1,4 @@
+########################  AUTH
+# forward auth logs from vm to hosting server S_SERVICE_LOG
+#auth.* @S_SERVICE_LOG
+auth.* action(type=omfwd target=S_SERVICE[log] port=S_RSYSLOG_PORT protocol=S_RSYSLOG_PTC)

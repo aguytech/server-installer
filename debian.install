@@ -27,7 +27,7 @@ blkid|grep -v squashfs
 /usr/local/install/debian.install
 MANUALY
 
-################################ CONF
+######################## CONF
 S_TRACE=debug
 
 # allow conf-init
@@ -40,7 +40,7 @@ S_GLOBAL_FUNCTIONS=${S_GLOBAL_FUNCTIONS:-/usr/local/bs/inc-functions.sh}
 [ -f "${S_FILE_INSTALL_CONF}" ] && . "${S_FILE_INSTALL_CONF}"
 
 
-################################  MANDATORY
+########################  MANDATORY
 
 # common + ssh
 parts="init common ssh"
@@ -49,7 +49,7 @@ for _PART in $parts; do
 done
 
 
-################################  MENU
+########################  MENU
 
 while [ "${_PART}" != "quit" ]; do
 

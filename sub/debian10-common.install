@@ -27,7 +27,7 @@ _echoT "----------  required files"
 _require ${file_env} ${file_bash_aliases} ${file_bash_functions} ${file_rsyslog} ${file_vim} ${file_tmux}
 
 
-####################################  MAIN
+########################  MAIN
 
 _echoT "----------  root password change"
 
@@ -139,7 +139,7 @@ deb http://apt.postgresql.org/pub/repos/apt/ ${S_RELEASE_NAME}-pgdg main" > "${f
 wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
 
 
-####################################  INSTALL
+########################  INSTALL
 
 _echoT "----------  upgrade"
 
@@ -166,7 +166,7 @@ _echoT "----------  bash-completion"
 _evalq cp -a "${path_install_bash_completion}"/* "/usr/share/bash-completion/completions/"
 
 
-####################################  ZFS
+########################  ZFS
 
 str="ovh home"
 if [[ " ${str} " = *" ${S_SERVER_TYPE} "* ]]; then
@@ -241,14 +241,14 @@ if [[ " ${str} " = *" ${S_SERVER_TYPE} "* ]]; then
 fi
 
 
-####################################  MAIL
+########################  MAIL
 
 _echoT "----------  mail"
 
 _echoI "MAIL part ha	ve to be implemented"
 
 
-####################################  CONF
+########################  CONF
 
 str=" ovh home "
 if [ "${str/ ${S_SERVER_TYPE} /}" != "${str}" ]; then
@@ -307,7 +307,7 @@ str="MAILTO=${S_DOMAIN_EMAIL_TECH}"
 ! grep -q '^MAILTO' "${file}" && _eval "sed -i '/^PATH=.*/ a ${str}' ${file}"
 
 
-####################################  NTP
+########################  NTP
 
 str=" ovh home "
 if [ "${str/ "${S_SERVER_TYPE}" /}" != "${str}" ]; then
@@ -326,7 +326,7 @@ if [ "${str/ "${S_SERVER_TYPE}" /}" != "${str}" ]; then
 fi
 
 
-######################  CERTIFICATE
+########################  CERTIFICATE
 
 #_echoT "----------  certbot install"
 #_eval "apt install -y certbot"
@@ -350,7 +350,7 @@ sed -i "/commonName\s*= Common Name/ a commonName_default\t\t= ${S_DOMAIN_FQDN}"
 sed -i "/emailAddress\s*= Email Address/ a emailAddress_default\t\t= ${S_DOMAIN_EMAIL_ADMIN}" "${file}"
 
 
-####################################  RSYSLOG
+########################  RSYSLOG
 
 _echoT "----------  rsyslog conf"
 
@@ -397,7 +397,7 @@ if [ "${str/ ${S_SERVER_TYPE} /}" != "${str}" ]; then
 	_echoT "----------  rsyslog vm-auth"
 
 	file=/etc/rsyslog.d/vm-auth.conf
-	echo "##############################  AUTH
+	echo "########################  AUTH
 # forward auth logs from vm to hosting server ${S_SERVICE_LOG}
 #auth.* @${S_SERVICE[log]}
 auth.* action(type=\"omfwd\" target=\"${S_SERVICE[log]}\" port=\"${S_RSYSLOG_PORT}\" protocol=\"${S_RSYSLOG_PTC}\")" > ${file}
@@ -419,7 +419,7 @@ _echoT "----------  rsyslog restart"
 _service restart rsyslog
 
 
-####################################  LOGROTATE
+########################  LOGROTATE
 
 _echoT "----------  logrotate server"
 
@@ -489,7 +489,7 @@ ${S_HOST_PATH_LOG}/*.log {
 fi
 
 
-######################  END
+########################  END
 
 _echoT "----------  clean"
 
