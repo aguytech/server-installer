@@ -9,5 +9,5 @@ S_PATH_LOG_SERVER/*.debug
     delaycompress
     notifempty
     weekly
-    rotate 7
-} 
+    rotate 24
+}

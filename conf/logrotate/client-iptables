@@ -1,0 +1,8 @@
+# Logrotate file for iptables logs
+S_PATH_LOG/iptables/*.log {
+	missingok
+	compress
+	delaycompress
+	notifempty
+	weekly
+	rotate 8

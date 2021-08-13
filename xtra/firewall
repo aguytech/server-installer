@@ -357,11 +357,11 @@ __vm_init() {
 
 	# Output access
 	_echo "- Allow OUTPUT acces for all VM"
-	#__ipt -t nat -A POSTROUTING -s ${_VM_IP_BASE}.1/24 -o ${_ETH} -j SNAT --to ${_IPTHIS}
+	#__ipt -t nat -A POSTROUTING -s ${_IP_VM_BASE}.1/24 -o ${_ETH} -j SNAT --to ${_IPTHIS}
 	__ipt -t nat -A POSTROUTING -o ${_ETH} -j MASQUERADE
 
-	_echo "- Allow FORWARD to ${_VM_IP_BASE}.1/24 port all"
-	__ipt -A FORWARD -i ${_ETH} -p tcp -d ${_VM_IP_CIDR} -j ACCEPT
+	_echo "- Allow FORWARD to ${_IP_VM_BASE}.1/24 port all"
+	__ipt -A FORWARD -i ${_ETH} -p tcp -d ${_IP_VM_CIDR} -j ACCEPT
 }
 
 __vm_nat_ips() {
@@ -371,7 +371,7 @@ __vm_nat_ips() {
 	_echo "- Allow PREROUTING ${_ETH} to VM for IP: ${_IPS_ADMIN}"
 	for ip_admin in ${_IPS_ADMIN}; do
 		for ctid in ${!_VM_NAT_IPS[*]}; do
-			ctip=${_VM_IP_BASE}.${ctid}
+			ctip=${_IP_VM_BASE}.${ctid}
 			for ports in ${_VM_NAT_IPS[$ctid]}; do
 				__ipt -t nat -A PREROUTING -i ${_ETH} -s ${ip_admin} -p tcp --dport ${ports%-*} -j DNAT --to-destination ${ctip}:${ports#*-}
 			done
@@ -385,7 +385,7 @@ __vm_nat() {
 
 	_echo "- Allow PREROUTING to VM for IP: ALL"
 	for ctid in ${!_VM_NAT[*]}; do
-		ctip=${_VM_IP_BASE}.${ctid}
+		ctip=${_IP_VM_BASE}.${ctid}
 		for ports in ${_VM_NAT[$ctid]}; do
 			__ipt -t nat -A PREROUTING -i ${_ETH} -p tcp --dport ${ports%-*} -j DNAT --to-destination ${ctip}:${ports#*-}
 		done

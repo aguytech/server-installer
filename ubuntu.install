@@ -10,7 +10,7 @@ sed -i "/${server}/d" ~/.ssh/known_hosts && sed -i "/${host}/d" ~/.ssh/known_hos
 cmds="sudo apt install rsync
 sudo  cp -a /root/.ssh/authorized_keys /root/.ssh/authorized_keys.$(date +%s)
 sudo sed -i 's|^no-port-forwarding.* \(ssh-rsa .*\)$|\1|' /root/.ssh/authorized_keys
-sudo sed -i 's|^#\?\(PermitRootLogin\) .*$|\1 without-password|' /etc/ssh/sshd_config
+sudo sed -i 's|^#\?\(PermitRootLogin\) .*$|\1 prohibit-password|' /etc/ssh/sshd_config
 sudo sed -i 's|^#\?\(Port\) .*$|\1 ${ssh_port}|' /etc/ssh/sshd_config
 echo '-------------- restart ssh' && sudo systemctl restart ssh.service"
 ssh ubuntu@${server} -p22 "${cmds}"

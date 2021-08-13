@@ -54,13 +54,10 @@ if [ "${str/ ${S_SERVER_TYPE} /}" != "${str}" ]; then
 	if ! grep -q '^# services' ${file}; then
 		_echoT "----------  hosts S_SERVICE_BITS"
 
-		# set s_base
-		eval ${S_HOST_VM_ETH[default]}
-
 		_keepcpts $file
 		echo -e "\n# services" >> ${file}
 		for str in ${!S_SERVICE_BITS[*]}; do
-			echo -e "#${s_base}.${S_SERVICE_BITS[$str]}\t${S_SERVICE[$str]}" >> ${file}
+			echo -e "#${_CIDR_VM%.*}.${S_SERVICE_BITS[$str]}\t${S_SERVICE[$str]}" >> ${file}
 		done
 	fi
 

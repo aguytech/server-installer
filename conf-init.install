@@ -60,7 +60,7 @@ cp -a "${file_install_server}" "${S_GLOBAL_CONF}"
 echo "If you want to use a specific 'server.conf' , put this file to '${S_GLOBAL_CONF}'"
 echo "cp /usr/local/install/conf/server.conf-ovh /etc/server/server.conf"
 echo -n "and valid to continue : " && read _ANSWER
-. "${S_GLOBAL_CONF}"
+. ${S_GLOBAL_CONF}
 
 echo -e "${blueb}----------  install files${cclear}"
 
@@ -86,7 +86,7 @@ _echoT "----------  server settings"
 
 _echoT "----------  source ${S_GLOBAL_CONF}"
 
-. "${S_GLOBAL_CONF}"
+. ${S_GLOBAL_CONF}
 
 
 file_env="${S_PATH_SCRIPT_CONF}/env"

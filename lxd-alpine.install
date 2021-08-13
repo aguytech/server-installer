@@ -69,10 +69,10 @@ while [ "$_PART" != "quit" ]; do
 			rsyslog) # ovh home
 				_source "${_PATH_BASE_SUB}/lxd-${_RELEASE_ID}-${_PART}.install"
 				;;
-			haproxy) # ovh home
+			apache) # ovh home
 				_source "${_PATH_BASE_SUB}/lxd-${_RELEASE_ID}-${_PART}.install"
 				;;
-			apache) # ovh home
+			haproxy) # ovh home
 				_source "${_PATH_BASE_SUB}/lxd-${_RELEASE_ID}-${_PART}.install"
 				;;
 			redis) # ovh home

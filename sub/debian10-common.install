@@ -229,7 +229,7 @@ if [[ " ${str} " = *" ${S_SERVER_TYPE} "* ]]; then
 
 		_echoT "----------  btrfs"
 
-		_exite "You need to implemente this part"
+		_exite "This part have to be implemented"
 
 		#storage="stock"
 		#if ! [ "`lxc storage list -f json|jq -r '.[] | select(.name == "'${storage}'").name'`" ]; then
@@ -394,9 +394,9 @@ fi
 str=" docker kvm lxd "
 if [ "${str/ ${S_SERVER_TYPE} /}" != "${str}" ]; then
 
-	_echoT "----------  rsyslog vm-auth"
+	_echoT "----------  rsyslog client-auth"
 
-	file=/etc/rsyslog.d/vm-auth.conf
+	file=/etc/rsyslog.d/client-auth.conf
 	echo "########################  AUTH
 # forward auth logs from vm to hosting server ${S_SERVICE_LOG}
 #auth.* @${S_SERVICE[log]}

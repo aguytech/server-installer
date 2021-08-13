@@ -7,21 +7,17 @@ _echoT "\n==========================================  $S_RELEASE $_PART"
 
 ########################  REQUIRED
 
-_echoT "------------------ required vm image"
-lxc image list -f json |jq -r '.[].aliases[].name' | grep -q ^${_CT_NAME_COM}$ || _exite "Unable to find image container: '${_CT_NAME_COM}'"
-
-_echoT "------------------ required vm"
-lxc list -f json |jq -r '.[].name'| grep -q ^${S_SERVICE[log]}$ || _exite "Unable to find image container: '${S_SERVICE[log]}'"
-
-
 file_xtra_script=${S_PATH_INSTALL_XTRA}/firewall
 file_xtra_conf=${S_PATH_INSTALL_CONF}/firewall.conf
 file_xtra_log=${S_PATH_INSTALL_CONF}/rsyslog/host-iptables.conf
 file_script=/usr/sbin/${file_xtra_script##*/}
 
+file_rsyslog_client_iptables=${S_PATH_INSTALL_CONF}/rsyslog/client-iptables.conf
+file_logrotate_client_iptables=${S_PATH_INSTALL_CONF}/logrotate/client-iptables
+
 _echoT "------------------ required files"
 
-_require ${file_xtra_script} ${file_xtra_conf} ${file_xtra_log}
+_require ${file_xtra_script} ${file_xtra_conf} ${file_xtra_log} ${file_rsyslog_client_iptables} ${file_logrotate_client_iptables}
 
 
 ########################  SYSCTL
@@ -135,64 +131,35 @@ _askno "To ENABLE the service: iptables-firewall, valid"
 _service enable iptables-firewall
 
 
-########################  RSYSLOG
+########################  S_PATH_LOG
 
-_echoT "----------  rsyslog conf vm-apache"
-
-file=/etc/rsyslog.d/${file_rsyslog_vm_apache##*/}
-_eval lxc file push ${file_rsyslog_vm_apache} ${_CT_NAME}${file}
-_lxc_var_replace ${_CT_NAME} ${file} rsyslog
-
-_echoT "----------  restart rsyslog ${_CT_NAME}"
-
-_lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
-
-
-_echoT "----------  rsyslog conf host-apache"
-
-file=/etc/rsyslog.d/${file_rsyslog_host_apache##*/}
-_eval lxc file push ${file_rsyslog_host_apache} ${S_SERVICE[log]}${file}
-_lxc_var_replace ${S_SERVICE[log]} ${file} rsyslog
-
-_echoT "----------  restart rsyslog ${S_SERVICE[log]}"
-
-_lxc_exec ${S_SERVICE[log]} "rc-service rsyslog restart"
-
-
-########################  RSYSLOG
-
-_echoT "----------  rsyslog conf"
-
-file=/etc/rsyslog.d/${file_xtra_log##*/}
-_evalq cp -a ${file_xtra_log} ${file}
-
-_var_replace ${file} rsyslog
+_echoT "----------  rsyslog conf client-iptables"
 
 path=${S_PATH_LOG}/iptables
-[ -d ${path} ] || mkdir -p ${path}
+[ -d ${path} ] || _eval mkdir -p ${path}
 
+########################  RSYSLOG
 
-_echoT "----------  rsyslog restart"
+_echoT "----------  rsyslog conf client-iptables"
 
-_service restart rsyslog
+file=/etc/rsyslog.d/34-${file_rsyslog_client_iptables##*/}
+_eval cp -a ${file_rsyslog_client_iptables} ${file}
+_var_replace ${file} rsyslog
+
+# need vm S_SERVICE[log]
+#_echoT "----------  restart rsyslog ${_CT_NAME}"
+#_service restart rsyslog
 
 
 ########################  LOGROTATE
 
-_echoT "----------  logrotate conf"
+_echoT "----------  logrotate client-iptables"
 
-echo -e "# Logrotate file for iptables logs
-${path}/*.log {
-\tmissingok
-\tcompress
-\tdelaycompress
-\tnotifempty
-\tweekly
-\trotate 4
-}
-" > /etc/logrotate.d/iptables
+file=/etc/logrotate.d/${file_logrotate_client_iptables##*/}
+_eval cp -a ${file_logrotate_client_iptables} ${file}
+_var_replace ${file} logrotate
 
-_echoT "----------  logrotate restart"
+_echoT "----------  restart logrotate ${_CT_NAME}"
 
 _service restart logrotate
 

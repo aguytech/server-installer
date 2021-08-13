@@ -1,6 +1,6 @@
 # included file for haproxy configuration
 
-listen stats-_DOMAIN_NAME
+listen stats-S_DOMAIN_NAME
 	bind			*:1778
 
 	log				global
@@ -10,13 +10,13 @@ listen stats-_DOMAIN_NAME
 	option			contstats
 
 	#stats			scope . # . for only this section
-	stats			scope _DOMAIN_FQDN:80
-	stats			scope _DOMAIN_FQDN:443
-	stats			scope _DOMAIN_NAME
+	stats			scope S_DOMAIN_FQDN:80
+	stats			scope S_DOMAIN_FQDN:443
+	stats			scope S_DOMAIN_NAME
 	#stats			scope admin
 	stats			enable
 	stats			hide-version
 	stats			refresh 5s
 	stats			show-node
-	stats			auth _ACCESS_USER:_ACCESS_PWD
-	stats			uri _ACCESS_URI
+	stats			auth _HP_ACCESS_USER:_HP_ACCESS_PWD
+	stats			uri _HP_ACCESS_URI

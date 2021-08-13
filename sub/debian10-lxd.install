@@ -45,7 +45,7 @@ setfacl -R -m d:u:100000:rwx "${path}"
 
 _echoT "----------  lxd init"
 
-_echoI "use this settings :
+_echoI "Use this settings :
 Create a new ZFS pool: no
 Name of the existing ZFS pool or dataset: root/vm/sp/default"
 
@@ -185,7 +185,7 @@ _echoT "----------  systemd-resolved for ${s_inet}"
 
 # persistence
 path=/etc/systemd/resolved.conf.d/
-[ -d "${path}" ] || mkdir -p "${path}"
+[ -d "${path}" ] || _eval mkdir -p "${path}"
 file=${path}/${s_inet}.conf
 echo "# Configuration file for lxdbr0
 [Resolve]

@@ -485,22 +485,22 @@ fi
 paths="${S_PATH_INSTALL} ${S_PATH_SCRIPT}"
 _echoT "----------  rights ${paths}"
 
-for path in $paths; do
-	chown -R 0:0 ${path} && chmod 750 ${path}
+for path in ${paths}; do
+	_evalq chown -R 0:0 ${path} && _evalq chmod 750 ${path}
 done
 
 paths="${S_PATH_SAVE} ${S_PATH_BACKUP} ${S_PATH_LOG} ${S_PATH_LOG_SERVER} ${S_PATH_LOG_INSTALL}"
 _echoT "----------  create ${paths}"
 
-for path in $paths; do
-	! [ -d ${path} ] && mkdir -p ${path}
+for path in ${paths}; do
+	[ -d ${path} ] || _evalq mkdir -p ${path}
 done
 
 _echoT "----------  create save paths for cluster"
 
 servers_list=${!S_CLUSTER[*]}
 for host in ${servers_list/${HOSTNAME}/}; do
-	! [ -d "${S_PATH_SAVE}/${host}" ] && mkdir "${S_PATH_SAVE}/${host}"
+	[ -d "${S_PATH_SAVE}/${host}" ] || _evalq mkdir "${S_PATH_SAVE}/${host}"
 done
 
 str="ovh home"
@@ -509,8 +509,8 @@ if [[ " ${str} " = *" ${S_SERVER_TYPE} "* ]]; then
 	paths="${S_HOST_PATH} ${S_HOST_PATH_SHARE} ${S_HOST_PATH_LOG} ${S_HOST_PATH_SAVE}"
 	_echoT "----------  create ${paths}"
 
-	for path in $paths; do
-		! [ -d "${path}" ] && mkdir -p "${path}"
+	for path in ${paths}; do
+		[ -d "${path}" ] || _evalq mkdir -p "${path}"
 	done
 fi
 
@@ -520,8 +520,8 @@ if [[ " ${str} " = *" ${S_SERVER_TYPE} "* ]]; then
 	_echoT "----------  create shared paths for VMS"
 
 	paths="${S_VM_PATH_SHARE} ${S_VM_PATH_SAVE} ${S_VM_PATH_BACKUP}"
-	for path in $paths; do
-		[ ! -d "${path}" ] && mkdir -p "${path}"
+	for path in ${paths}; do
+		[ -d "${path}" ] || _evalq mkdir -p "${path}"
 	done
 fi
 

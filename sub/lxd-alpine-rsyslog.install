@@ -1,0 +1,145 @@
+#!/bin/bash
+#
+# write by Aguy
+
+_echoT "\n==========================================  ${_RELEASE} ${_PART}"
+
+
+########################  REQUIRED
+
+_echoT "------------------ required vm image"
+lxc image list -f json |jq -r '.[].aliases[].name' | grep -q ^${_CT_NAME_COM}$ || _exite "Unable to find image container: '${_CT_NAME_COM}'"
+
+
+file_rsyslog_host_auth=${S_PATH_INSTALL_CONF}/rsyslog/host-auth.conf
+file_rsyslog_host_iptables=${S_PATH_INSTALL_CONF}/rsyslog/host-iptables.conf
+file_logrotate_host_rsyslog=${S_PATH_INSTALL_CONF}/logrotate/host-rsyslog
+file_logrotate_host_iptables=${S_PATH_INSTALL_CONF}/logrotate/host-iptables
+
+_echoT "------------------ required files"
+_require ${file_rsyslog_host_auth} ${file_logrotate_host_rsyslog} ${file_rsyslog_host_iptables} ${file_logrotate_host_iptables}
+
+
+########################  DATA
+
+_CT_NAME=${S_SERVICE[log]}
+
+eval ${S_HOST_VM_ETH[default]}
+_CT_IP=${s_base}.${S_SERVICE_BITS[log]}
+
+
+########################  INIT
+
+_echoT "----------  init"
+
+if lxc list -f json |jq -r '.[].name' | grep -q ^${_CT_NAME}$; then
+	if lxc list --format=json | jq -r '.[] | select(.status == "Running").name' | grep -q ^${_CT_NAME}$; then
+		_eval lxc stop ${_CT_NAME}
+		_eval lxc rename ${_CT_NAME} ${_CT_NAME}.${_SDATE}
+		_eval lxc start ${_CT_NAME}
+	else
+		_eval lxc rename ${_CT_NAME} ${_CT_NAME}.${_SDATE}
+	fi
+fi
+
+_eval lxc init ${_CT_NAME_COM} ${_CT_NAME} -p default -p global -p log
+
+
+_echoT "----------  network fixed ip"
+
+if ! lxc list --format=json | jq -r '.[] | select(.name == "'${_CT_NAME}'").devices[].name' | grep -q eth0; then
+	_eval lxc network attach ${s_inet} ${_CT_NAME} eth0 eth0
+fi
+_eval lxc config device set ${_CT_NAME} eth0 ipv4.address ${_CT_IP}
+
+
+_echoT "----------  ${_CT_NAME} start"
+
+_eval lxc start ${_CT_NAME}
+
+_eval sleep 1
+
+
+########################  CONF
+
+if [ "${S_RSYSLOG_PTC}" = udp ]; then
+	_echoT "----------  conf udp"
+
+	file=/etc/rsyslog.conf
+	_lxc_exec ${_CT_NAME} "sed -i '/#module(load=.imudp/,/#)/ s|^#||' ${file}"
+	_lxc_exec ${_CT_NAME} "sed -i '/^\s*port=/ s|=.*|=\"${S_RSYSLOG_PORT}\"|' ${file}"
+
+	_echoT "----------  restart rsyslog ${_CT_NAME}"
+
+	_lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
+fi
+
+
+_echoT "----------  conf client-auth"
+
+file=/etc/rsyslog.d/client-auth.conf
+_lxc_exec ${_CT_NAME} "[ -f ${file} ] && rm ${file}"
+
+
+_echoT "----------  conf host-auth"
+
+file=/etc/rsyslog.d/${file_rsyslog_host_auth##*/}
+_eval lxc file push ${file_rsyslog_host_auth} ${_CT_NAME}${file}
+_lxc_var_replace ${_CT_NAME} ${file} rsyslog
+
+
+########################  IPTABLES
+
+path=${S_VM_PATH_LOG}/iptables
+_echoT "----------  path ${path}"
+
+_lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
+
+
+_echoT "----------  rsyslog conf host-iptables"
+
+file=/etc/rsyslog.d/${file_rsyslog_host_iptables##*/}
+_eval lxc file push ${file_rsyslog_host_iptables} ${_CT_NAME}${file}
+_lxc_var_replace ${_CT_NAME} ${file} rsyslog
+
+
+_echoT "----------  restart rsyslog ${_CT_NAME}"
+
+_lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
+
+
+########################  LOGROTATE
+
+_echoT "----------  logrotate host-rsyslog"
+
+file=/etc/logrotate.d/${file_logrotate_host_rsyslog##*/}
+_eval lxc file push ${file_logrotate_host_rsyslog} ${_CT_NAME}${file}
+_lxc_var_replace ${_CT_NAME} ${file} logrotate
+
+
+_echoT "----------  logrotate host_iptables"
+
+file=/etc/logrotate.d/${file_logrotate_host_iptables##*/}
+_eval lxc file push ${file_logrotate_host_iptables} ${_CT_NAME}${file}
+_lxc_var_replace ${_CT_NAME} ${file} logrotate
+
+
+########################  HOST
+
+_echoT "----------  rsyslog restart host"
+
+_service restart rsyslog
+
+
+########################  PUBLISH
+
+_echoT "----------  publish ${_CT_NAME}"
+
+_eval lxc image list --format=json | jq -r '.[].aliases[].name' | grep -q ^${_CT_NAME}$ && lxc image alias rename ${_CT_NAME} ${_CT_NAME}-$(date +%s)
+_eval lxc publish ${_CT_NAME} --alias ${_CT_NAME} --force
+
+
+########################  END
+
+_echoT "---------- ${_PART} end"
+_eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"

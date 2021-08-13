@@ -12,6 +12,7 @@ lxc image list -f json |jq -r '.[].aliases[].name' | grep -q ^${_CT_NAME_COM}$ |
 
 _echoT "------------------ required vm"
 lxc list -f json |jq -r '.[].name'| grep -q ^${S_SERVICE[log]}$ || _exite "Unable to find image container: '${S_SERVICE[log]}'"
+lxc list -f json |jq -r '.[].name'| grep -q ^${S_SERVICE[http]}$ || _exite "Unable to find image container: '${S_SERVICE[http]}'"
 
 
 file_haproxy_initd=${S_PATH_INSTALL_XTRA}/haproxy
@@ -34,10 +35,7 @@ _CT_IP=${s_base}.${S_SERVICE_BITS[proxy]}
 
 _echoT "----------  data"
 
-[ -z ${_HP_DOMAIN_FQDN+x} ] && anstmp="$S_HP_DOMAIN_FQDN" && _askno "Enter a fqdn domain name ($anstmp)" && _HP_DOMAIN_FQDN="${_ANSWER:-$anstmp}" && _confset _HP_DOMAIN_FQDN "$_HP_DOMAIN_FQDN"
-_HP_DOMAIN_NAME="${_HP_DOMAIN_FQDN%.*}" && _confset _HP_DOMAIN_NAME "${_HP_DOMAIN_NAME}"
-
-[ -z ${_HP_DOMAIN_2_FQDN+x} ] && anstmp="ggj.ovh" && _askno "Enter a fqdn second domain name ($anstmp)" && _HP_DOMAIN_2_FQDN="${_ANSWER:-$anstmp}" && _confset _HP_DOMAIN_2_FQDN "$_HP_DOMAIN_2_FQDN"
+[ -z ${_HP_DOMAIN_2_FQDN+x} ] && anstmp="ggj.ovh" && _askno "Give a second fqdn second domain name ($anstmp)" && _HP_DOMAIN_2_FQDN="${_ANSWER:-$anstmp}" && _confset _HP_DOMAIN_2_FQDN "$_HP_DOMAIN_2_FQDN"
 _HP_DOMAIN_2_NAME="${_HP_DOMAIN_2_FQDN%.*}" && _confset _HP_DOMAIN_2_NAME "${_HP_DOMAIN_2_NAME}"
 
 [ -z ${_HP_ACCESS_USER+x} ] && anstmp="admin" && _askno "Enter a name for stats access ($anstmp)" && _HP_ACCESS_USER="${_ANSWER:-$anstmp}" && _confset _HP_ACCESS_USER "${_HP_ACCESS_USER}"
@@ -130,18 +128,24 @@ _echoT "----------  conf haproxy"
 path=/etc/haproxy
 _lxc_exec ${_CT_NAME} "[ -d ${path} ] && mv ${path} ${path}.${_SDATE}"
 _eval lxc file push -rq ${path_haproxy} ${_CT_NAME}/etc
-for str in 00-defaults 20-listen-stats 40-frontends-80 80-backends; do
-	_lxc_exec ${_CT_NAME} "[ -e ${path}/conf-enabled/${str} ] || ln -s ${path}/conf-available/${str}  ${path}/conf-enabled/${str}"
-done
 
 # select alpine configuration
 _lxc_exec ${_CT_NAME} "sed -i 's|^\(\s*\)#\(.*\) # alpine$|\1\2|' ${path}/haproxy.cfg"
 
+_echoT "----------  conf variables"
+
 # replace variables
 _lxc_var_replace ${_CT_NAME} ${path} haproxy
 
+_echoT "----------  conf enable"
 
-_echoT "----------  init.d"
+_lxc_exec ${_CT_NAME} "[ -d ${path}/conf-enabled ] || mkdir -p ${path}/conf-enabled"
+for str in 00-defaults 20-listen-stats 40-frontends-80 80-backends; do
+	_lxc_exec ${_CT_NAME} "[ -e ${path}/conf-enabled/${str} ] || ln -s ${path}/conf-available/${str}  ${path}/conf-enabled/${str}"
+done
+
+
+_echoT "----------  conf init.d"
 
 file=/etc/init.d/haproxy
 _lxc_exec ${_CT_NAME} "[ -f ${file} ] && mv ${file} ${file}.${_SDATE} && chmod -x ${file}.${_SDATE}"
@@ -153,16 +157,13 @@ _echoT "----------  restart"
 _lxc_exec ${_CT_NAME} "rc-service haproxy restart"
 
 
-
-
-echo exit && exit
-
-
 ########################  CERTBOT
 
 _echoT "----------  certbot install"
 
-_lxc_exec ${_CT_NAME} "apk add certbot"
+_echoI "----------  This part have to be implemented"
+
+#_lxc_exec ${_CT_NAME} "apk add certbot"
 
 
 ########################  PUBLISH
@@ -171,6 +172,13 @@ _echoT "----------  publish ${_CT_NAME}"
 
 _eval lxc image list --format=json | jq -r '.[].aliases[].name' | grep -q ^${_CT_NAME}$ && lxc image alias rename ${_CT_NAME} ${_CT_NAME}-$(date +%s)
 _eval lxc publish ${_CT_NAME} --alias ${_CT_NAME} --force
+
+
+########################  TEST
+
+_echoT "----------  publish ${_CT_NAME}"
+
+_echoI "To test connection use: curl ${_CT_NAME}:80"
 
 
 ########################  END

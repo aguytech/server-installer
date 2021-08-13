@@ -15,7 +15,7 @@ lxc list -f json |jq -r '.[].name'| grep -q ^${S_SERVICE[log]}$ || _exite "Unabl
 
 
 file_rsyslog_host_apache=${S_PATH_INSTALL_CONF}/rsyslog/host-apache.conf
-file_rsyslog_vm_apache=${S_PATH_INSTALL_CONF}/rsyslog/vm-apache.conf
+file_rsyslog_client_apache=${S_PATH_INSTALL_CONF}/rsyslog/client-apache.conf
 file_logrotate_host_apache=${S_PATH_INSTALL_CONF}/logrotate/host-apache
 file_site=${S_PATH_INSTALL_CONF}/apache2/000-default.conf
 
@@ -25,7 +25,7 @@ path_conf=/etc/apache2/conf.d
 file_conf_http=/etc/apache2/httpd.conf
 
 _echoT "------------------ required files"
-_require ${file_rsyslog_host_apache} ${file_rsyslog_vm_apache} ${file_site}
+_require ${file_rsyslog_host_apache} ${file_rsyslog_client_apache} ${file_site}
 
 
 ########################  DATA
@@ -50,6 +50,17 @@ _echoT "----------  data sysctl.conf"
 [ -z ${_AP_KEEPALIVE_PROBES+x} ] && anstmp="9" && _askno "Set $(sysctl net.ipv4.tcp_keepalive_probes) - ($anstmp)" && _AP_KEEPALIVE_PROBES=${_ANSWER:-$anstmp} && _confset _AP_KEEPALIVE_PROBES "${_AP_KEEPALIVE_PROBES}"
 
 
+_echoT "----------  data apache"
+
+[ -z ${_AP_TIMEOUT+x} ] && anstmp="60" && _askno "Time before receives and sends time out ($anstmp)" && _AP_TIMEOUT=${_ANSWER:-$anstmp} && _confset _AP_TIMEOUT "${_AP_TIMEOUT}"
+
+[ -z ${_AP_KEEPALIVE+x} ] && anstmp="On" && _askno "Allow persistent connections On/Off ($anstmp)" && _AP_KEEPALIVE=${_ANSWER:-$anstmp} && _confset _AP_KEEPALIVE "${_AP_KEEPALIVE}"
+
+[ -z ${_AP_KEEPALIVE_REQUEST+x} ] && anstmp="100" && _askno "The maximum number of requests to allow during a persistent connection ($anstmp)" && _AP_KEEPALIVE_REQUEST=${_ANSWER:-$anstmp} && _confset _AP_KEEPALIVE_REQUEST "${_AP_KEEPALIVE_REQUEST}"
+
+ -z ${_AP_KEEPALIVE_TIMEOUT+x} ] && anstmp="5" && _askno "Number of seconds to wait for the next request ($anstmp)" && _AP_KEEPALIVE_TIMEOUT=${_ANSWER:-$anstmp} && _confset _AP_KEEPALIVE_TIMEOUT "${_AP_KEEPALIVE_TIMEOUT}"
+
+
 ########################  INIT
 
 profile=www-${S_DOMAIN_NAME}
@@ -57,11 +68,12 @@ _echoT "----------  profiles ${profile}"
 
 path=${S_HOST_PATH_SHARE}/www/${profile}
 path_ct=${S_VM_PATH_SHARE}/www/${profile}
-! [ -d "${path}" ] && _eval mkdir -p "${path}"
+[ -d "${path}" ] || _eval mkdir -p "${path}"
 
-[ "`lxc profile list --format=json | jq -r '.[] | select(.name == "'${profile}'").name'`" ]; then
-_eval lxc profile create ${profile}
-_eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
+if ! [ "`lxc profile list --format=json | jq -r '.[] | select(.name == "'${profile}'").name'`" ]; then
+	_eval lxc profile create ${profile}
+	_eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
+fi
 
 
 _echoT "----------  init"
@@ -84,7 +96,7 @@ _echoT "----------  network fixed ip"
 if ! lxc list --format=json | jq -r '.[] | select(.name == "'${_CT_NAME}'").devices[].name' | grep -q eth0; then
 	_eval lxc network attach ${s_inet} ${_CT_NAME} eth0 eth0
 fi
-_eval lxc config device set ${_CT_NAME} eth0 ipv4.address ${_CT_IP}
+_eval lxc config device set ${_CT_NAME} eth0 ipv4.address _AP_KEEPALIVE_TIMEOUT${_CT_IP}
 
 
 _echoT "----------  ${_CT_NAME} start"
@@ -93,7 +105,7 @@ _eval lxc start ${_CT_NAME}
 
 _eval sleep 1
 
-
+_AP_KEEPALIVE_TIMEOUT
 ########################  SYSCTL
 
 _echoT "----------  conf sysctl.conf"
@@ -102,7 +114,7 @@ file=/etc/sysctl.d/20-lxd.conf
 
 txt="# apache2 php-fpm
 net.ipv4.tcp_max_syn_backlog = ${_AP_MAX_SYN_BACKLOG}
-net.ipv4.tcp_max_tw_buckets = ${_AP_MAX_TW_BUCKETS}
+net.ipv4.tcp_max_tw_buckets = ${_AP_MAX_TW_BUCKETS}_AP_KEEPALIVE_TIMEOUT
 net.ipv4.tcp_fin_timeout= ${_AP_FIN_TIMEOUT}
 net.ipv4.tcp_keepalive_time= ${_AP_KEEPALIVE_TIME}
 net.ipv4.tcp_keepalive_intvl= ${_AP_KEEPALIVE_INTVL}
@@ -127,9 +139,9 @@ _lxc_exec ${_CT_NAME} "rc-service ${service} start"
 
 ########################  CONF
 
-_echoT "----------  conf"
+_echoT "----------  conf root directory"
 
-_lxc_exec ${_CT_NAME} "! [ -d "${path_sites}" ] && mkdir -p ${path_sites}"
+_lxc_exec ${_CT_NAME} "! [ -d "${path_sites}" ] &&mkdir -p ${path_sites}"
 path=/var/www/localhost/htdocs
 _lxc_exec ${_CT_NAME} "[ -d /var/www/localhost/htdocs ] && mv /var/www/localhost/htdocs ${path_www}"
 #_lxc_exec ${_CT_NAME} "chown -R apache/apache ${path_sites}"
@@ -139,41 +151,71 @@ _echoT "----------  conf httpd module"
 
 _lxc_exec ${_CT_NAME} "[ -f \"${file_conf_http}\" ] && cp -a ${file_conf_http} ${file_conf_http}.${_SDATE}"
 
+# conf.d/default
 cmds="sed -i 's|^.\?\(LoadModule mpm_event_module.*\)$|\1|' ${file_conf_http}
 sed -i 's|^.\?\(LoadModule mpm_prefork_module.*\)$|#\1|' ${file_conf_http}
 sed -i 's|^.\?\(LoadModule mpm_worker_module.*\)$|#\1|' ${file_conf_http}
 sed -i 's|^.\?\(LoadModule vhost_alias_module.*\)$|\1|' ${file_conf_http}
 sed -i 's|^.\?\(LoadModule info_module.*\)$|\1|' ${file_conf_http}
 sed -i 's|^.\?\(LoadModule rewrite_module.*\)$|\1|' ${file_conf_http}"
-_lxc_exec ${_CT_NAME} "$cmds"
+_lxc_exec ${_CT_NAME} "${cmds}"
 
+_echoT "----------  conf.d default"
+
+file=/etc/apache2/conf.d/default.conf
+cmds="sed -i 's|^.\?\(Timeout\) .*$|\1 ${_AP_TIMEOUT}|' ${file}
+sed -i 's|^.\?\(KeepAlive\) .*$|\1 ${_AP_KEEPALIVE}|' ${file}
+sed -i 's|^.\?\(MaxKeepAliveRequests\) .*$|\1 ${_AP_KEEPALIVE_REQUEST}|' ${file}
+sed -i 's|^.\?\(KeepAliveTimeout\) .*$|\1 ${_AP_KEEPALIVE_TIMEOUT}|' ${file}"
+_lxc_exec ${_CT_NAME} "${cmds}"
+
+_lxc_exec ${_CT_NAME} "sed -i 's|^.\?\(Timeout\) .*$|\1 ${_AP_TIMEOUT}|' ${file}"
+_lxc_exec ${_CT_NAME} "sed -i 's|^.\?\(KeepAlive\) .*$|\1 ${_AP_KEEPALIVE}|' ${file}"
+_lxc_exec ${_CT_NAME} "sed -i 's|^.\?\(MaxKeepAliveRequests\) .*$|\1 ${_AP_KEEPALIVE_REQUEST}|' ${file}"
+_lxc_exec ${_CT_NAME} "sed -i 's|^.\?\(KeepAliveTimeout\) .*$|\1 ${_AP_KEEPALIVE_TIMEOUT}|' ${file}"
 
 _echoT "----------  conf httpd"
 
 # IncludeOptional
-cmds="grep -q ${path_sites} ${file_conf_http} || echo 'IncludeOptional ${path_sites}/*.conf' >>  ${file_conf_http}"
-_lxc_exec ${_CT_NAME} "$cmds"
+_lxc_exec ${_CT_NAME} "grep -q ${path_sites} ${file_conf_http} || echo 'IncludeOptional ${path_sites}/*.conf' >>  ${file_conf_http}"
 
-# ServerName
-_lxc_exec ${_CT_NAME} "sed -i 's|^.\?\(ServerName\).*$|\1 localhost|' ${file_conf_http}"
-# ServerAdmin
-_lxc_exec ${_CT_NAME} "sed -i 's|^.\?\(ServerAdmin\).*$|\1 ${S_DOMAIN_EMAIL_TECH}|' ${file_conf_http}"
-# ServerSignature Off
-_lxc_exec ${_CT_NAME} "sed -i 's|^\(ServerSignature\).*$|\1 Off|' ${file_conf_http}"
-# TraceEnable Off
-_lxc_exec ${_CT_NAME} "sed -i 's|^\(ServerTokens\).*$|\1 Prod|' ${file_conf_http}"
+cmds="sed -i 's|^.\?\(ServerName\) .*$|\1 localhost|' ${file_conf_http}
+sed -i 's|^.\?\(ServerAdmin\) .*$|\1 ${S_DOMAIN_EMAIL_TECH}|' ${file_conf_http}
+sed -i 's|^\(ServerSignature\) .*$|\1 Off|' ${file_conf_http}
+sed -i 's|^\(ServerTokens\) .*$|\1 Prod|' ${file_conf_http}
+sed -i 's|/var/www/localhost/htdocs|${path_www}|' ${file_conf_http}"
+_lxc_exec ${_CT_NAME} "${cmds}"
 
-# htdocs
-_lxc_exec ${_CT_NAME} "sed -i 's|/var/www/localhost/htdocs|${path_www}|' ${file_conf_http}"
 # Options
 _lxc_exec ${_CT_NAME} "sed -i '/^<Directory \"\/var\/www\/localhost\/html\">/,/<\/Directory>/ {s|^\(\s*Options\) .*|\1 -Indexes -MultiViews +FollowSymLinks|}' ${file_conf_http}"
 
 # LogLevel
 _lxc_exec ${_CT_NAME} "sed -i 's|^\(LogLevel\).*$|\1 warn|' ${file_conf_http}"
+# ErrorLogFormat
+if _lxc_exec ${_CT_NAME} "grep -q ErrorLogFormat  ${file_conf_http}"; then
+	str=''
+	_lxc_exec ${_CT_NAME} "sed -i 's|^\(ErrorLogFormat\) .*$|\1 \"[%{u}t] [%-m:%l] [pid %P:tid %T] %7F: %E: [client\\\\ %{X-Forwarded-For}i-%a-%A] %M% ,\\\\ referer\\\\ %{Referer}i\"|' ${file_conf_http}"
+else
+	_lxc_exec ${_CT_NAME} "sed -i '/^ErrorLog/ iErrorLogFormat \"[%{u}t] [%-m:%l] [pid %P:tid %T] %7F: %E: [client\\\\ %{X-Forwarded-For}i-%a-%A] %M% ,\\\\ referer\\\\ %{Referer}i\"' ${file_conf_http}"
+fi
+
 # ErrorLog
-_lxc_exec ${_CT_NAME} "sed -i 's|^\(ErrorLog\).*$|\1 \"\|/usr/bin/logger -p local7.err -t localhost/apache\"|' ${file_conf_http}"
+_lxc_exec ${_CT_NAME} "sed -i 's|^\(ErrorLog\) .*$|\1 \"\|/usr/bin/logger -p local7.err -t localhost/apache\"|' ${file_conf_http}"
+
 # CustomLog
-_lxc_exec ${_CT_NAME} "grep -q CustomLog.*/usr/bin/logger ${file_conf_http} || sed -i 's|^\(\s*\)\(CustomLog.*\)$|\1#\2\n    SetEnvIf X-Forwarded-For \".+\" forwarded\n    CustomLog \"\|/usr/bin/logger -p local7.info -t localhost/apache\" combined\n    CustomLog \"\|/usr/bin/logger -p local7.info -t localhost/apache\" combined env=forwarded|' ${file_conf_http}"
+str='    SetEnvIf X-Forwarded-For \".+\" forwarded\n'
+str+='    #SetEnvIf Remote_Addr "127\.0\.0\.1" loglocal\n'
+str+='    #SetEnvIf Remote_Addr "'${_CIDR_VM}'" loglocal\n'
+str+='    #SetEnvIf Remote_Addr "'${_IPTHIS}'" loglocal\n'
+str+='    #SetEnvIf Remote_Addr "'${_IPTHISV6}'" loglocal\n'
+str+='    SetEnvIf Request_URI "^/ping-.*" nolog\n'
+str+='    SetEnvIf Request_Method OPTIONS nolog\n'
+str+='    LogFormat "%a %l %u %t \\"%r\\" %>s %O \\"%{Referer}i\\" \\"%{User-Agent}i\\"" combined\n'
+str+='    #CustomLog "\|/usr/bin/logger -p local7.info -t localhost/apache" combined\n'
+str+='    CustomLog "\|/usr/bin/logger -p local7.info -t localhost/apache" combined env=!nolog'
+_lxc_exec ${_CT_NAME} "grep -q CustomLog.*/usr/bin/logger ${file_conf_http} || sed -i 's|^\s*\(CustomLog.*\)$|    #\1\n${str}|' ${file_conf_http}"
+
+_lxc_exec ${_CT_NAME} "sed -i 's|^\s*\(CustomLog.*\)$|    #\2\n    SetEnvIf X-Forwarded-For \".+\" forwarded\n    CustomLog \"\|/usr/bin/logger -p local7.info -t localhost/apache\" combined\n    CustomLog \"\|/usr/bin/logger -p local7.info -t localhost/apache\" combined env=forwarded|' ${file_conf_http}"
 
 
 _echoT "----------  conf mpm"
@@ -181,18 +223,12 @@ _echoT "----------  conf mpm"
 file=${path_conf}/mpm.conf
 _lxc_exec ${_CT_NAME} "[ ! -f '${file}.${_SDATE}' ] && cp -a '${file}' '${file}.${_SDATE}'"
 
-cmds="sch=StartServers; str=\"\t\t3\"
-sed -i \"/<IfModule mpm_event_module>/,/<\/IfModule>/ s|^\s*\(\$sch\)\s*.*|\t\1\$str|\" ${file}
-sch=MinSpareThreads; str=\"\t\t50\"
-sed -i \"/<IfModule mpm_event_module>/,/<\/IfModule>/ s|^\s*\(\$sch\)\s*.*|\t\1\$str|\" ${file}
-sch=MaxSpareThreads; str=\"\t\t250\"
-sed -i \"/<IfModule mpm_event_module>/,/<\/IfModule>/ s|^\s*\(\$sch\)\s*.*|\t\1\$str|\" ${file}
-sch=ThreadsPerChild; str=\"\t\t25\"
-sed -i \"/<IfModule mpm_event_module>/,/<\/IfModule>/ s|^\s*\(\$sch\)\s*.*|\t\1\$str|\" ${file}
-sch=MaxRequestWorkers; str=\"\t400\"
-sed -i \"/<IfModule mpm_event_module>/,/<\/IfModule>/ s|^\s*\(\$sch\)\s*.*|\t\1\$str|\" ${file}
-sch=MaxConnectionsPerChild; str=\"\t0\"
-sed -i \"/<IfModule mpm_event_module>/,/<\/IfModule>/ s|^\s*\(\$sch\)\s*.*|\t\1\$str|\" ${file}"
+cmds="sed -i '/<IfModule mpm_event_module>/,/<\/IfModule>/ s|^\(\s*StartServers\s*\).*|\1 13|' ${file}
+sed -i '/<IfModule mpm_event_module>/,/<\/IfModule>/ s|^\(\s*MinSpareThreads\s*\).*|\1 50|' ${file}
+sed -i '/<IfModule mpm_event_module>/,/<\/IfModule>/ s|^\(\s*MaxSpareThreads\s*\).*|\1 250|' ${file}
+sed -i '/<IfModule mpm_event_module>/,/<\/IfModule>/ s|^\(\s*ThreadsPerChild\s*\).*|\1 25|' ${file}
+sed -i '/<IfModule mpm_event_module>/,/<\/IfModule>/ s|^\(\s*MaxRequestWorkers\s*\).*|\1 400|' ${file}
+sed -i '/<IfModule mpm_event_module>/,/<\/IfModule>/ s|^\(\s*MaxConnectionsPerChild\s*\).*|\1 0|' ${file}"
 _lxc_exec ${_CT_NAME} "${cmds}"
 
 
@@ -221,10 +257,16 @@ _lxc_exec ${_CT_NAME} "echo 'pong' > ${path_www}/ping-monitor.html"
 
 ########################  RSYSLOG
 
-_echoT "----------  rsyslog conf vm-apache"
+path=${S_VM_PATH_LOG}/apache2
+_echoT "----------  path ${path}"
 
-file=/etc/rsyslog.d/${file_rsyslog_vm_apache##*/}
-_eval lxc file push ${file_rsyslog_vm_apache} ${_CT_NAME}${file}
+_lxc_exec ${S_SERVICE[log]} "[ -d ${path} ] || mkdir -p ${path}"
+
+
+_echoT "----------  rsyslog conf client-apache"
+
+file=/etc/rsyslog.d/${file_rsyslog_client_apache##*/}
+_eval lxc file push ${file_rsyslog_client_apache} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} rsyslog
 
 _echoT "----------  restart rsyslog ${_CT_NAME}"
@@ -268,6 +310,12 @@ _echoT "----------  publish ${_CT_NAME}"
 _eval lxc image list --format=json | jq -r '.[].aliases[].name' | grep -q ^${_CT_NAME}$ && lxc image alias rename ${_CT_NAME} ${_CT_NAME}-$(date +%s)
 _eval lxc publish ${_CT_NAME} --alias ${_CT_NAME} --force
 
+
+########################  TEST
+
+_echoT "----------  publish ${_CT_NAME}"
+
+_echoI "To test connection use: curl ${_CT_NAME}:80"
 
 ########################  END
 
