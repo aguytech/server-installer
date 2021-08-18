@@ -195,13 +195,12 @@ _echoT "----------  bash-completion"
 _evalq cp -a "${path_install_bash_completion}"/* "/usr/share/bash-completion/completions/"
 
 
-########################  ZFS
+########################  STORAGE
 
 str="ovh home"
 if [[ " ${str} " = *" ${S_SERVER_TYPE} "* ]]; then
 
-	if [ "${S_STORAGE_DRIVER}" = "zfs" ]; then
-
+	if [ "${S_STORAGE_DRIVER}" = zfs ]; then
 
 		_echoT "----------  zfs install"
 
@@ -254,16 +253,28 @@ if [[ " ${str} " = *" ${S_SERVER_TYPE} "* ]]; then
 
 		zfs list
 
-	elif [ "${S_STORAGE_DRIVER}" = "btrfs" ]; then
+	elif [ "${S_STORAGE_DRIVER}" = btrfs ]; then
 
-		_echoT "----------  btrfs"
+		_echoT "----------  btrfs storage"
+
+		path=/vm
+		_echoI "Create a btrfs subvolume: /lxd-${S_RELEASE_NAME} and mount it in ${path}"
+		_echo "Continue after that: " && read str
+
+		[ -d ${path} ] || _exite "Unable to find path: ${path}"
+
+		btrfs subvolume list .
+
+		_echoT "----------  btrfs paths"
+
+		paths="sp share save"
+		for path in ${paths}; do
+			[ -d /vm/${path} ] || mkdir /vm/${path}
+		done
+
+	else
 
 		_exite "This part have to be implemented"
-
-		#storage="stock"
-		#if ! [ "`lxc storage list -f json|jq -r '.[] | select(.name == "'${storage}'").name'`" ]; then
-		#	[ "${S_STORAGE_DRIVER}" = btrfs ] && lxc storage create ${storage} ${S_STORAGE_DRIVER} source=/var/lib/lxd/storage-pools/stock
-		#fi
 
 	fi
 

@@ -43,9 +43,17 @@ _eval setfacl -Rm d:u:1000000:rwx "${path}"
 
 _echoT "----------  lxd init"
 
-_echoI "Use this settings :
-- Create a new ZFS pool: no
+	if [ "${S_STORAGE_DRIVER}" = zfs ]; then
+		_echoI "Use this settings :
+- Create a new ZFS pool ?: no
 - Name of the existing ZFS pool or dataset: root/vm/sp/default"
+	elif [ "${S_STORAGE_DRIVER}" = btrfs ]; then
+		_echoI "Use this settings :
+- Create a new BTRFS poo ?l: no
+- Name of the existing BTRFS pool or dataset: /vm/sp/default"
+	else
+		_exite "This part have to be implemented"
+	fi
 
 _eval lxd init
 
@@ -98,7 +106,13 @@ name="stock"
 _echoT "----------  storage ${name}"
 
 if ! [ "`lxc storage list -f json|jq -r '.[] | select(.name == "'${name}'").name'`" ]; then
-	_eval lxc storage create ${name} zfs source=root/vm/sp/${name}
+	if [ "${S_STORAGE_DRIVER}" = zfs ]; then
+		_eval lxc storage create ${name} zfs source=root/vm/sp/${name}
+	elif [ "${S_STORAGE_DRIVER}" = btrfs ]; then
+		_eval lxc storage create ${name} btrfs source=/vm/sp/${name}
+	else
+		_exite "This part have to be implemented"
+	fi
 fi
 
 ########################  NETWORK
