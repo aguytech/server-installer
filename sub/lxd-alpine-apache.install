@@ -12,6 +12,7 @@ lxc image list -f json |jq -r '.[].aliases[].name' | grep -q ^${_CT_NAME_COM}$ |
 
 _echoT "------------------ required vm"
 lxc list -f json |jq -r '.[].name'| grep -q ^${S_SERVICE[log]}$ || _exite "Unable to find image container: '${S_SERVICE[log]}'"
+lxc list -f json |jq -r '.[].name'| grep -q ^${S_SERVICE[cache]}$ || _exite "Unable to find image container: '${S_SERVICE[cache]}'"
 
 
 file_rsyslog_host=${S_PATH_INSTALL_CONF}/rsyslog/host-apache.conf
@@ -256,18 +257,18 @@ file=/etc/rsyslog.d/${file_rsyslog_host##*/}
 _eval lxc file push ${file_rsyslog_host} ${S_SERVICE[log]}${file}
 _lxc_var_replace ${S_SERVICE[log]} ${file} rsyslog
 
-_echoT "----------  restart rsyslog ${S_SERVICE[log]}"
+_echoT "----------  rsyslog restart ${S_SERVICE[log]}"
 
 _lxc_exec ${S_SERVICE[log]} "rc-service rsyslog restart"
 
 
-_echoT "----------  rsyslog client-apache"
+_echoT "----------  ${S_SERVICE[log]} client-apache"
 
 file=/etc/rsyslog.d/${file_rsyslog_client##*/}
 _eval lxc file push ${file_rsyslog_client} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} rsyslog
 
-_echoT "----------  restart rsyslog ${_CT_NAME}"
+_echoT "----------  rsyslog restart ${_CT_NAME}"
 
 _lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
 
@@ -281,7 +282,7 @@ _eval lxc file push ${file_logrotate_host} ${S_SERVICE[log]}${file}
 _lxc_var_replace ${S_SERVICE[log]} ${file} logrotate
 
 
-_echoT "----------  logrotate client"
+_echoT "----------  client logrotate"
 
 file=/etc/logrotate.d/apache2
 _lxc_exec ${_CT_NAME} "grep -q /var/log/apache2/\*.info ${file} || sed -i '1i/var/log/apache2/*.info' ${file}"
