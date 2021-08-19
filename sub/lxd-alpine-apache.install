@@ -14,9 +14,10 @@ _echoT "------------------ required vm"
 lxc list -f json |jq -r '.[].name'| grep -q ^${S_SERVICE[log]}$ || _exite "Unable to find image container: '${S_SERVICE[log]}'"
 
 
-file_rsyslog_host_apache=${S_PATH_INSTALL_CONF}/rsyslog/host-apache.conf
-file_rsyslog_client_apache=${S_PATH_INSTALL_CONF}/rsyslog/client-apache.conf
-file_logrotate_host_apache=${S_PATH_INSTALL_CONF}/logrotate/host-apache
+file_rsyslog_host=${S_PATH_INSTALL_CONF}/rsyslog/host-apache.conf
+file_rsyslog_client=${S_PATH_INSTALL_CONF}/rsyslog/client-apache.conf
+file_logrotate_host=${S_PATH_INSTALL_CONF}/logrotate/host-apache
+file_log=${S_PATH_INSTALL_CONF}/apache2/log.conf
 file_site=${S_PATH_INSTALL_CONF}/apache2/000-default.conf
 
 path_www=/var/www/localhost/html
@@ -25,7 +26,7 @@ path_conf=/etc/apache2/conf.d
 file_conf_http=/etc/apache2/httpd.conf
 
 _echoT "------------------ required files"
-_require ${file_rsyslog_host_apache} ${file_rsyslog_client_apache} ${file_site}
+_require ${file_rsyslog_host} ${file_rsyslog_client} ${file_logrotate_host} ${file_log} ${file_site}
 
 
 ########################  DATA
@@ -58,7 +59,7 @@ _echoT "----------  data apache"
 
 [ -z ${_AP_KEEPALIVE_REQUEST+x} ] && anstmp="100" && _askno "The maximum number of requests to allow during a persistent connection ($anstmp)" && _AP_KEEPALIVE_REQUEST=${_ANSWER:-$anstmp} && _confset _AP_KEEPALIVE_REQUEST "${_AP_KEEPALIVE_REQUEST}"
 
- -z ${_AP_KEEPALIVE_TIMEOUT+x} ] && anstmp="5" && _askno "Number of seconds to wait for the next request ($anstmp)" && _AP_KEEPALIVE_TIMEOUT=${_ANSWER:-$anstmp} && _confset _AP_KEEPALIVE_TIMEOUT "${_AP_KEEPALIVE_TIMEOUT}"
+ [ -z ${_AP_KEEPALIVE_TIMEOUT+x} ] && anstmp="5" && _askno "Number of seconds to wait for the next request ($anstmp)" && _AP_KEEPALIVE_TIMEOUT=${_ANSWER:-$anstmp} && _confset _AP_KEEPALIVE_TIMEOUT "${_AP_KEEPALIVE_TIMEOUT}"
 
 
 ########################  INIT
@@ -83,7 +84,17 @@ if lxc list -f json |jq -r '.[].name' | grep -q ^${_CT_NAME}$; then
 		_eval lxc stop ${_CT_NAME}
 		_eval lxc rename ${_CT_NAME} ${_CT_NAME}.${_SDATE}
 		_eval lxc start ${_CT_NAME}
-	else
+	elsefile_rsyslog_host=${S_PATH_INSTALL_CONF}/rsyslog/host-apache.conf
+file_rsyslog_client=${S_PATH_INSTALL_CONF}/rsyslog/client-apache.conf
+file_logrotate_host=${S_PATH_INSTALL_CONF}/logrotate/host-apache
+file_log=${S_PATH_INSTALL_CONF}/apache2/log.conf
+file_site=${S_PATH_INSTALL_CONF}/apache2/000-default.conf
+
+path_www=/var/www/localhost/html
+path_sites=/etc/apache2/sites
+path_conf=/etc/apache2/conf.d
+file_conf_http=/etc/apache2/httpd.conf
+
 		_eval lxc rename ${_CT_NAME} ${_CT_NAME}.${_SDATE}
 	fi
 fi
@@ -96,7 +107,7 @@ _echoT "----------  network fixed ip"
 if ! lxc list --format=json | jq -r '.[] | select(.name == "'${_CT_NAME}'").devices[].name' | grep -q eth0; then
 	_eval lxc network attach ${s_inet} ${_CT_NAME} eth0 eth0
 fi
-_eval lxc config device set ${_CT_NAME} eth0 ipv4.address _AP_KEEPALIVE_TIMEOUT${_CT_IP}
+_eval lxc config device set ${_CT_NAME} eth0 ipv4.address ${_CT_IP}
 
 
 _echoT "----------  ${_CT_NAME} start"
@@ -105,7 +116,7 @@ _eval lxc start ${_CT_NAME}
 
 _eval sleep 1
 
-_AP_KEEPALIVE_TIMEOUT
+
 ########################  SYSCTL
 
 _echoT "----------  conf sysctl.conf"
@@ -114,7 +125,7 @@ file=/etc/sysctl.d/20-lxd.conf
 
 txt="# apache2 php-fpm
 net.ipv4.tcp_max_syn_backlog = ${_AP_MAX_SYN_BACKLOG}
-net.ipv4.tcp_max_tw_buckets = ${_AP_MAX_TW_BUCKETS}_AP_KEEPALIVE_TIMEOUT
+net.ipv4.tcp_max_tw_buckets = ${_AP_MAX_TW_BUCKETS}
 net.ipv4.tcp_fin_timeout= ${_AP_FIN_TIMEOUT}
 net.ipv4.tcp_keepalive_time= ${_AP_KEEPALIVE_TIME}
 net.ipv4.tcp_keepalive_intvl= ${_AP_KEEPALIVE_INTVL}
@@ -130,7 +141,7 @@ _echoT "----------  install"
 _lxc_exec ${_CT_NAME} "apk update"
 _lxc_exec ${_CT_NAME} "apk add apache2-proxy"
 
-_echoT "----------  service set"
+_echoT "----------  service set & start"
 
 service=apache2
 _lxc_exec ${_CT_NAME} "rc-update add ${service}"
@@ -139,17 +150,28 @@ _lxc_exec ${_CT_NAME} "rc-service ${service} start"
 
 ########################  CONF
 
-_echoT "----------  conf root directory"
+_echoT "----------  conf.d default"
+
+file=/etc/apache2/conf.d/default.conf
+_lxc_exec ${_CT_NAME} "[ -f ${file} ] && cp -a ${file} ${file}.${_SDATE}"
+
+cmds="sed -i 's|^.\?\(Timeout\) .*$|\1 ${_AP_TIMEOUT}|' ${file}
+sed -i 's|^.\?\(KeepAlive\) .*$|\1 ${_AP_KEEPALIVE}|' ${file}
+sed -i 's|^.\?\(MaxKeepAliveRequests\) .*$|\1 ${_AP_KEEPALIVE_REQUEST}|' ${file}
+sed -i 's|^.\?\(KeepAliveTimeout\) .*$|\1 ${_AP_KEEPALIVE_TIMEOUT}|' ${file}"
+_lxc_exec ${_CT_NAME} "${cmds}"
+
+
+_echoT "----------  conf httpd module root"
 
 _lxc_exec ${_CT_NAME} "! [ -d "${path_sites}" ] &&mkdir -p ${path_sites}"
 path=/var/www/localhost/htdocs
 _lxc_exec ${_CT_NAME} "[ -d /var/www/localhost/htdocs ] && mv /var/www/localhost/htdocs ${path_www}"
 #_lxc_exec ${_CT_NAME} "chown -R apache/apache ${path_sites}"
 
-
 _echoT "----------  conf httpd module"
 
-_lxc_exec ${_CT_NAME} "[ -f \"${file_conf_http}\" ] && cp -a ${file_conf_http} ${file_conf_http}.${_SDATE}"
+_lxc_exec ${_CT_NAME} "[ -f ${file_conf_http} ] && cp -a ${file_conf_http} ${file_conf_http}.${_SDATE}"
 
 # conf.d/default
 cmds="sed -i 's|^.\?\(LoadModule mpm_event_module.*\)$|\1|' ${file_conf_http}
@@ -159,20 +181,6 @@ sed -i 's|^.\?\(LoadModule vhost_alias_module.*\)$|\1|' ${file_conf_http}
 sed -i 's|^.\?\(LoadModule info_module.*\)$|\1|' ${file_conf_http}
 sed -i 's|^.\?\(LoadModule rewrite_module.*\)$|\1|' ${file_conf_http}"
 _lxc_exec ${_CT_NAME} "${cmds}"
-
-_echoT "----------  conf.d default"
-
-file=/etc/apache2/conf.d/default.conf
-cmds="sed -i 's|^.\?\(Timeout\) .*$|\1 ${_AP_TIMEOUT}|' ${file}
-sed -i 's|^.\?\(KeepAlive\) .*$|\1 ${_AP_KEEPALIVE}|' ${file}
-sed -i 's|^.\?\(MaxKeepAliveRequests\) .*$|\1 ${_AP_KEEPALIVE_REQUEST}|' ${file}
-sed -i 's|^.\?\(KeepAliveTimeout\) .*$|\1 ${_AP_KEEPALIVE_TIMEOUT}|' ${file}"
-_lxc_exec ${_CT_NAME} "${cmds}"
-
-_lxc_exec ${_CT_NAME} "sed -i 's|^.\?\(Timeout\) .*$|\1 ${_AP_TIMEOUT}|' ${file}"
-_lxc_exec ${_CT_NAME} "sed -i 's|^.\?\(KeepAlive\) .*$|\1 ${_AP_KEEPALIVE}|' ${file}"
-_lxc_exec ${_CT_NAME} "sed -i 's|^.\?\(MaxKeepAliveRequests\) .*$|\1 ${_AP_KEEPALIVE_REQUEST}|' ${file}"
-_lxc_exec ${_CT_NAME} "sed -i 's|^.\?\(KeepAliveTimeout\) .*$|\1 ${_AP_KEEPALIVE_TIMEOUT}|' ${file}"
 
 _echoT "----------  conf httpd"
 
@@ -189,34 +197,12 @@ _lxc_exec ${_CT_NAME} "${cmds}"
 # Options
 _lxc_exec ${_CT_NAME} "sed -i '/^<Directory \"\/var\/www\/localhost\/html\">/,/<\/Directory>/ {s|^\(\s*Options\) .*|\1 -Indexes -MultiViews +FollowSymLinks|}' ${file_conf_http}"
 
-# LogLevel
-_lxc_exec ${_CT_NAME} "sed -i 's|^\(LogLevel\).*$|\1 warn|' ${file_conf_http}"
-# ErrorLogFormat
-if _lxc_exec ${_CT_NAME} "grep -q ErrorLogFormat  ${file_conf_http}"; then
-	str=''
-	_lxc_exec ${_CT_NAME} "sed -i 's|^\(ErrorLogFormat\) .*$|\1 \"[%{u}t] [%-m:%l] [pid %P:tid %T] %7F: %E: [client\\\\ %{X-Forwarded-For}i-%a-%A] %M% ,\\\\ referer\\\\ %{Referer}i\"|' ${file_conf_http}"
-else
-	_lxc_exec ${_CT_NAME} "sed -i '/^ErrorLog/ iErrorLogFormat \"[%{u}t] [%-m:%l] [pid %P:tid %T] %7F: %E: [client\\\\ %{X-Forwarded-For}i-%a-%A] %M% ,\\\\ referer\\\\ %{Referer}i\"' ${file_conf_http}"
-fi
+# Log options
+_lxc_exec ${_CT_NAME} "sed -i '/^LogLevel/ s|^|#|' ${file_conf_http}"
+_lxc_exec ${_CT_NAME} "sed -i '/^ErrorLog/ s|^|#|' ${file_conf_http}"
+_lxc_exec ${_CT_NAME} "sed -i '/^<IfModule log_config_module>/,/^<\/IfModule>/ s|^|#|' ${file_conf_http}"
 
-# ErrorLog
-_lxc_exec ${_CT_NAME} "sed -i 's|^\(ErrorLog\) .*$|\1 \"\|/usr/bin/logger -p local7.err -t localhost/apache\"|' ${file_conf_http}"
-
-# CustomLog
-str='    SetEnvIf X-Forwarded-For \".+\" forwarded\n'
-str+='    #SetEnvIf Remote_Addr "127\.0\.0\.1" loglocal\n'
-str+='    #SetEnvIf Remote_Addr "'${_CIDR_VM}'" loglocal\n'
-str+='    #SetEnvIf Remote_Addr "'${_IPTHIS}'" loglocal\n'
-str+='    #SetEnvIf Remote_Addr "'${_IPTHISV6}'" loglocal\n'
-str+='    SetEnvIf Request_URI "^/ping-.*" nolog\n'
-str+='    SetEnvIf Request_Method OPTIONS nolog\n'
-str+='    LogFormat "%a %l %u %t \\"%r\\" %>s %O \\"%{Referer}i\\" \\"%{User-Agent}i\\"" combined\n'
-str+='    #CustomLog "\|/usr/bin/logger -p local7.info -t localhost/apache" combined\n'
-str+='    CustomLog "\|/usr/bin/logger -p local7.info -t localhost/apache" combined env=!nolog'
-_lxc_exec ${_CT_NAME} "grep -q CustomLog.*/usr/bin/logger ${file_conf_http} || sed -i 's|^\s*\(CustomLog.*\)$|    #\1\n${str}|' ${file_conf_http}"
-
-_lxc_exec ${_CT_NAME} "sed -i 's|^\s*\(CustomLog.*\)$|    #\2\n    SetEnvIf X-Forwarded-For \".+\" forwarded\n    CustomLog \"\|/usr/bin/logger -p local7.info -t localhost/apache\" combined\n    CustomLog \"\|/usr/bin/logger -p local7.info -t localhost/apache\" combined env=forwarded|' ${file_conf_http}"
-
+_eval lxc file push ${file_log} ${_CT_NAME}/etc/apache2/conf.d/
 
 _echoT "----------  conf mpm"
 
@@ -253,31 +239,21 @@ _lxc_exec ${_CT_NAME} "rc-service ${service} restart"
 _echoT "----------  ping-monitor"
 
 _lxc_exec ${_CT_NAME} "echo 'pong' > ${path_www}/ping-monitor.html"
+_lxc_exec ${_CT_NAME} "echo 'Alias \"/ping-monitor\" \"/var/www/localhost/html/ping-monitor.html\"' > ${path_conf}/monitor.conf"
 
 
 ########################  RSYSLOG
 
-path=${S_VM_PATH_LOG}/apache2
-_echoT "----------  path ${path}"
+_echoT "----------  ${S_SERVICE[log]} path"
 
+path=${S_VM_PATH_LOG}/apache2
 _lxc_exec ${S_SERVICE[log]} "[ -d ${path} ] || mkdir -p ${path}"
 
 
-_echoT "----------  rsyslog conf client-apache"
+_echoT "----------  ${S_SERVICE[log]} host-apache"
 
-file=/etc/rsyslog.d/${file_rsyslog_client_apache##*/}
-_eval lxc file push ${file_rsyslog_client_apache} ${_CT_NAME}${file}
-_lxc_var_replace ${_CT_NAME} ${file} rsyslog
-
-_echoT "----------  restart rsyslog ${_CT_NAME}"
-
-_lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
-
-
-_echoT "----------  rsyslog conf host-apache"
-
-file=/etc/rsyslog.d/${file_rsyslog_host_apache##*/}
-_eval lxc file push ${file_rsyslog_host_apache} ${S_SERVICE[log]}${file}
+file=/etc/rsyslog.d/${file_rsyslog_host##*/}
+_eval lxc file push ${file_rsyslog_host} ${S_SERVICE[log]}${file}
 _lxc_var_replace ${S_SERVICE[log]} ${file} rsyslog
 
 _echoT "----------  restart rsyslog ${S_SERVICE[log]}"
@@ -285,22 +261,33 @@ _echoT "----------  restart rsyslog ${S_SERVICE[log]}"
 _lxc_exec ${S_SERVICE[log]} "rc-service rsyslog restart"
 
 
+_echoT "----------  rsyslog client-apache"
+
+file=/etc/rsyslog.d/${file_rsyslog_client##*/}
+_eval lxc file push ${file_rsyslog_client} ${_CT_NAME}${file}
+_lxc_var_replace ${_CT_NAME} ${file} rsyslog
+
+_echoT "----------  restart rsyslog ${_CT_NAME}"
+
+_lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
+
+
 ########################  LOGROTATE
 
-_echoT "----------  logrotate conf"
+_echoT "----------  ${S_SERVICE[log]} logrotate"
+
+file=/etc/logrotate.d/${file_logrotate_host##*/}
+_eval lxc file push ${file_logrotate_host} ${S_SERVICE[log]}${file}
+_lxc_var_replace ${S_SERVICE[log]} ${file} logrotate
+
+
+_echoT "----------  logrotate client"
 
 file=/etc/logrotate.d/apache2
 _lxc_exec ${_CT_NAME} "grep -q /var/log/apache2/\*.info ${file} || sed -i '1i/var/log/apache2/*.info' ${file}"
 _lxc_exec ${_CT_NAME} "grep -q /var/log/apache2/\*.info ${file} || sed -i '1i/var/log/apache2/*.err' ${file}"
 _lxc_exec ${_CT_NAME} "grep -q daily ${file} || sed -i 's|^\(\s*missingok\)|    daily\n\1|' ${file}"
 _lxc_exec ${_CT_NAME} "grep -q ^\s*rotate ${file} || sed -i 's|^\(\s*missingok\)|\1\n    rotate 14|' ${file}"
-
-
-_echoT "----------  host logrotate conf"
-
-file=/etc/logrotate.d/${file_logrotate_host_apache##*/}
-_eval lxc file push ${file_logrotate_host_apache} ${_CT_NAME}${file}
-_lxc_var_replace ${_CT_NAME} ${file} logrotate
 
 
 ########################  PUBLISH
@@ -321,3 +308,34 @@ _echoI "To test connection use: curl ${_CT_NAME}:80"
 
 _echoT "---------- ${_PART} end"
 _eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"
+
+
+<<KEEP
+# LogLevel
+_lxc_exec ${_CT_NAME} "sed -i 's|^\(LogLevel\).*$|\1 warn|' ${file_conf_http}"
+# ErrorLogFormat
+if _lxc_exec ${_CT_NAME} "grep -q ErrorLogFormat  ${file_conf_http}"; then
+	str=''
+	_lxc_exec ${_CT_NAME} "sed -i 's|^\(ErrorLogFormat\) .*$|\1 \"[%{u}t] [%-m:%l] [pid %P:tid %T] %7F: %E: [client\\\\ %{X-Forwarded-For}i-%a-%A] %M% ,\\\\ referer\\\\ %{Referer}i\"|' ${file_conf_http}"
+else
+	_lxc_exec ${_CT_NAME} "sed -i '/^ErrorLog/ iErrorLogFormat \"[%{u}t] [%-m:%l] [pid %P:tid %T] %7F: %E: [client\\\\ %{X-Forwarded-For}i-%a-%A] %M% ,\\\\ referer\\\\ %{Referer}i\"' ${file_conf_http}"
+fi
+
+# ErrorLog
+_lxc_exec ${_CT_NAME} "sed -i 's|^\(ErrorLog\) .*$|\1 \"\|/usr/bin/logger -p local7.err -t localhost/apache\"|' ${file_conf_http}"
+
+# CustomLog
+str='    SetEnvIf X-Forwarded-For \".+\" forwarded\n'
+str+='    #SetEnvIf Remote_Addr "127\.0\.0\.1" loglocal\n'
+str+='    #SetEnvIf Remote_Addr "'${_CIDR_VM}'" loglocal\n'
+str+='    #SetEnvIf Remote_Addr "'${_IPTHIS}'" loglocal\n'
+str+='    #SetEnvIf Remote_Addr "'${_IPTHISV6}'" loglocal\n'
+str+='    SetEnvIf Request_URI "^/ping-.*" nolog\n'
+str+='    SetEnvIf Request_Method OPTIONS nolog\n'
+str+='    LogFormat "%a %l %u %t \\"%r\\" %>s %O \\"%{Referer}i\\" \\"%{User-Agent}i\\"" combined\n'
+str+='    #CustomLog "\|/usr/bin/logger -p local7.info -t localhost/apache" combined\n'
+str+='    CustomLog "\|/usr/bin/logger -p local7.info -t localhost/apache" combined env=!nolog'
+_lxc_exec ${_CT_NAME} "grep -q CustomLog.*/usr/bin/logger ${file_conf_http} || sed -i 's|^\s*\(CustomLog.*\)$|    #\1\n${str}|' ${file_conf_http}"
+
+_lxc_exec ${_CT_NAME} "sed -i 's|^\s*\(CustomLog.*\)$|    #\2\n    SetEnvIf X-Forwarded-For \".+\" forwarded\n    CustomLog \"\|/usr/bin/logger -p local7.info -t localhost/apache\" combined\n    CustomLog \"\|/usr/bin/logger -p local7.info -t localhost/apache\" combined env=forwarded|' ${file_conf_http}"
+KEEP

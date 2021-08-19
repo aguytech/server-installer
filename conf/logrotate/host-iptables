@@ -1,5 +1,5 @@
 # Logrotate file for iptables logs
-S_VM_PATH_LOG/*.log {
+S_VM_PATH_LOG/iptables/*.log {
 	missingok
 	compress
 	delaycompress
