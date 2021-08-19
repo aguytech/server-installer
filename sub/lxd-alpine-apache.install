@@ -245,7 +245,7 @@ _lxc_exec ${_CT_NAME} "echo 'Alias \"/ping-monitor\" \"/var/www/localhost/html/p
 
 ########################  RSYSLOG
 
-_echoT "----------  ${S_SERVICE[log]} path"
+_echoT "----------  ${S_SERVICE[log]} host path"
 
 path=${S_VM_PATH_LOG}/apache2
 _lxc_exec ${S_SERVICE[log]} "[ -d ${path} ] || mkdir -p ${path}"

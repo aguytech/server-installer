@@ -25,7 +25,7 @@ file_logrotate_client=${S_PATH_INSTALL_CONF}/logrotate/client-haproxy
 
 
 _echoT "------------------ required files"
-_require ${file_haproxy_initd} ${file_vim} ${file_rsyslog_host} ${file_rsyslog_client} ${file_logrotate_host}
+_require ${file_haproxy_initd} ${file_vim} ${file_rsyslog_host} ${file_rsyslog_client} ${file_logrotate_host} ${file_logrotate_client}
 
 _echoT "------------------ required paths"
 _requirep ${path_haproxy}
@@ -188,7 +188,11 @@ if [ "${S_RSYSLOG_PTC}" = udp ]; then
 fi
 
 
+_echoT "----------  ${S_SERVICE[log]} host path"
+
 path=${S_VM_PATH_LOG}/haproxy
+_lxc_exec ${S_SERVICE[log]} "[ -d ${path} ] || mkdir -p ${path}"
+
 
 _echoT "----------  ${S_SERVICE[log]} host-haproxy"
 
@@ -199,6 +203,12 @@ _lxc_var_replace ${S_SERVICE[log]} ${file} rsyslog
 _echoT "----------  restart rsyslog ${S_SERVICE[log]}"
 
 _lxc_exec ${S_SERVICE[log]} "rc-service rsyslog restart"
+
+
+_echoT "----------  ${S_SERVICE[log]} client path"
+
+path=${S_PATH_LOG}/haproxy
+_lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
 
 
 _echoT "----------  ${S_SERVICE[log]} client-haproxy"
