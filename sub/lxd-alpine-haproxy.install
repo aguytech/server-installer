@@ -21,6 +21,7 @@ path_haproxy=${S_PATH_INSTALL_CONF}/haproxy
 file_rsyslog_host=${S_PATH_INSTALL_CONF}/rsyslog/host-haproxy.conf
 file_rsyslog_client=${S_PATH_INSTALL_CONF}/rsyslog/client-haproxy.conf
 file_logrotate_host=${S_PATH_INSTALL_CONF}/logrotate/host-haproxy
+file_logrotate_client=${S_PATH_INSTALL_CONF}/logrotate/client-haproxy
 
 
 _echoT "------------------ required files"
@@ -57,7 +58,7 @@ if lxc list -f json |jq -r '.[].name' | grep -q ^${_CT_NAME}$; then
 	if lxc list --format=json | jq -r '.[] | select(.status == "Running").name' | grep -q ^${_CT_NAME}$; then
 		_eval lxc stop ${_CT_NAME}
 		_eval lxc rename ${_CT_NAME} ${_CT_NAME}.${_SDATE}
-		_eval lxc start ${_CT_NAME}
+		_eval lxc start ${_CT_NAME}.${_SDATE}
 	else
 		_eval lxc rename ${_CT_NAME} ${_CT_NAME}.${_SDATE}
 	fi
@@ -156,6 +157,7 @@ _lxc_exec ${_CT_NAME} "[ -f ${file} ] && mv ${file} ${file}.${_SDATE} && chmod -
 _eval lxc file push ${file_haproxy_initd} ${_CT_NAME}/etc/init.d/haproxy
 _lxc_exec ${_CT_NAME} "chmod +x ${file}"
 
+
 _echoT "----------  restart"
 
 _lxc_exec ${_CT_NAME} "rc-service haproxy restart"
@@ -172,13 +174,23 @@ _echoI "----------  This part have to be implemented"
 
 ########################  RSYSLOG
 
-_echoT "----------  ${S_SERVICE[log]} path"
 
-path=${S_VM_PATH_LOG}/apache2
-_lxc_exec ${S_SERVICE[log]} "[ -d ${path} ] || mkdir -p ${path}"
+if [ "${S_RSYSLOG_PTC}" = udp ]; then
+	_echoT "----------  conf udp"
+
+	file=/etc/rsyslog.conf
+	_lxc_exec ${_CT_NAME} "sed -i '/#module(load=.imudp/,/#)/ s|^#||' ${file}"
+	_lxc_exec ${_CT_NAME} "sed -i '/^\s*port=/ s|=.*|=\"${S_RSYSLOG_PORT}\"|' ${file}"
+
+	_echoT "----------  restart rsyslog ${_CT_NAME}"
+
+	_lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
+fi
 
 
-_echoT "----------  ${S_SERVICE[log]} host-apache"
+path=${S_VM_PATH_LOG}/haproxy
+
+_echoT "----------  ${S_SERVICE[log]} host-haproxy"
 
 file=/etc/rsyslog.d/${file_rsyslog_host##*/}
 _eval lxc file push ${file_rsyslog_host} ${S_SERVICE[log]}${file}
@@ -189,13 +201,13 @@ _echoT "----------  restart rsyslog ${S_SERVICE[log]}"
 _lxc_exec ${S_SERVICE[log]} "rc-service rsyslog restart"
 
 
-_echoT "----------  rsyslog client-apache"
+_echoT "----------  ${S_SERVICE[log]} client-haproxy"
 
 file=/etc/rsyslog.d/${file_rsyslog_client##*/}
 _eval lxc file push ${file_rsyslog_client} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} rsyslog
 
-_echoT "----------  restart rsyslog ${_CT_NAME}"
+_echoT "----------  rsyslog restart ${_CT_NAME}"
 
 _lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
 
@@ -209,13 +221,11 @@ _eval lxc file push ${file_logrotate_host} ${S_SERVICE[log]}${file}
 _lxc_var_replace ${S_SERVICE[log]} ${file} logrotate
 
 
-_echoT "----------  logrotate client"
+_echoT "----------  client logrotate"
 
-file=/etc/logrotate.d/apache2
-_lxc_exec ${_CT_NAME} "grep -q /var/log/apache2/\*.info ${file} || sed -i '1i/var/log/apache2/*.info' ${file}"
-_lxc_exec ${_CT_NAME} "grep -q /var/log/apache2/\*.info ${file} || sed -i '1i/var/log/apache2/*.err' ${file}"
-_lxc_exec ${_CT_NAME} "grep -q daily ${file} || sed -i 's|^\(\s*missingok\)|    daily\n\1|' ${file}"
-_lxc_exec ${_CT_NAME} "grep -q ^\s*rotate ${file} || sed -i 's|^\(\s*missingok\)|\1\n    rotate 14|' ${file}"
+file=/etc/logrotate.d/${file_logrotate_client##*/}
+_eval lxc file push ${file_logrotate_client} ${S_SERVICE[log]}${file}
+_lxc_var_replace ${S_SERVICE[log]} ${file} logrotate
 
 
 ########################  PUBLISH
@@ -228,9 +238,9 @@ _eval lxc publish ${_CT_NAME} --alias ${_CT_NAME} --force
 
 ########################  TEST
 
-_echoT "----------  publish ${_CT_NAME}"
+_echoT "----------  test ${_CT_NAME}"
 
-_echoI "To test connection use: curl ${_CT_NAME}:80"
+_echoI "To test connection use: curl ${_IPTHIS}:80${_HP_ACCESS_URI}"
 
 
 ########################  END

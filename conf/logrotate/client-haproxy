@@ -1,0 +1,10 @@
+S_PATH_LOG/haproxy-status.info
+S_PATH_LOG/haproxy.info {
+    daily
+    missingok
+    rotate 14
+    compress
+    delaycompress
+    notifempty
+    create 640 root adm
+}
