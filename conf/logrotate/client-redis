@@ -1,5 +1,4 @@
-S_PATH_LOG/haproxy/haproxy-status.info
-S_PATH_LOG/haproxy/haproxy.info {
+S_PATH_LOG/redis/redis.info {
     daily
     missingok
     rotate 14

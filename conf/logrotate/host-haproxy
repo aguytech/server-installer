@@ -1,5 +1,5 @@
-S_VM_PATH_LOG/haproxy-status.info
-S_VM_PATH_LOG/haproxy.info {
+S_VM_PATH_LOG/haproxy/haproxy-status.info
+S_VM_PATH_LOG/haproxy/haproxy.info {
     daily
     missingok
     rotate 14

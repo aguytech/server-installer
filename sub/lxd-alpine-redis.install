@@ -12,12 +12,16 @@ lxc image list -f json |jq -r '.[].aliases[].name' | grep -q ^${_CT_NAME_COM}$ |
 
 _echoT "------------------ required vm"
 lxc list -f json | jq -r '.[].name' | grep -q ^${S_SERVICE[log]}$ || _exite "Unable to find image container: '${S_SERVICE[log]}'"
+lxc list -f json | jq -r '.[].name' | grep -q ^${S_SERVICE[http]}$ || _exite "Unable to find image container: '${S_SERVICE[http]}'"
 
+file_rsyslog_host=${S_PATH_INSTALL_CONF}/rsyslog/host-redis.conf
+file_rsyslog_client=${S_PATH_INSTALL_CONF}/rsyslog/client-redis.conf
+file_logrotate_host=${S_PATH_INSTALL_CONF}/logrotate/host-redis
+file_logrotate_client=${S_PATH_INSTALL_CONF}/logrotate/client-redis
 
-file_rsyslog=${S_PATH_INSTALL_CONF}/rsyslog/client-redis.conf
 
 _echoT "------------------ required files"
-_require ${file_rsyslog}
+_require ${file_rsyslog_host} ${file_rsyslog_client} ${file_logrotate_host} ${file_logrotate_client}
 
 
 ########################  DATA
@@ -45,17 +49,15 @@ _echoT "----------  data sysctl.conf"
 
 _echoT "----------  data redis"
 
-[ -z "${_RD_BACKLOG+x}" ] && anstmp="$(( ${_RD_BACKLOG} / 2 ))" && _askno "Give a value for 'tcp-backlog', if change adjust sysctl parameters... ($anstmp)" && _RD_BACKLOG=${_ANSWER:-$anstmp} && _confset _RD_BACKLOG "${_RD_BACKLOG}"
+[ -z "${_RD_BACKLOG+x}" ] && anstmp="$(( ${_RD_MAX_SYN_BACKLOG} / 2 ))" && _askno "Give a value for 'tcp-backlog', if change adjust sysctl parameters... ($anstmp)" && _RD_BACKLOG=${_ANSWER:-$anstmp} && _confset _RD_BACKLOG "${_RD_BACKLOG}"
 
-[ -z "${_RD_MAXCLIENTS+x}" ] && anstmp="$(( ${_RD_BACKLOG} - 32 ))" && _askno "Give a max client value (tcp-backlog - 32) for 'maxclients' ($anstmp)" && _RD_MAXCLIENTS=${_ANSWER:-$anstmp} && _confset _RD_MAXCLIENTS "${_RD_MAXCLIENTS}"
+[ -z "${_RD_KEEPALIVE+x}" ] && anstmp="$(( ${_AP_KEEPALIVE_TIME} + 60 ))" && _askno "Give time to keep alive (sends acks) 'tcp-keepalive' ($anstmp)s" && _RD_KEEPALIVE=${_ANSWER:-$anstmp} && _confset _RD_KEEPALIVE "${_RD_KEEPALIVE}"
 
-[ -z "${_RD_KEEPALIVE+x}" ] && anstmp="${_RD_KEEPALIVE_TIME}" && _askno "Give time to keep alive (sends acks) 'tcp-keepalive' ($anstmp)s" && _RD_KEEPALIVE=${_ANSWER:-$anstmp} && _confset _RD_KEEPALIVE "${_RD_KEEPALIVE}"
-
-[ -z "${_RD_TIMEOUT+x}" ] && anstmp="${_RD_FIN_TIMEOUT}" && _askno "Give time to idle connection 'timeout' ($anstmp)s" && _RD_TIMEOUT=${_ANSWER:-$anstmp} && _confset _RD_TIMEOUT "${_RD_TIMEOUT}"
+[ -z "${_RD_TIMEOUT+x}" ] && anstmp="3600" && _askno "Give time to idle connection 'timeout' ($anstmp)s" && _RD_TIMEOUT=${_ANSWER:-$anstmp} && _confset _RD_TIMEOUT "${_RD_TIMEOUT}"
 
 [ -z "${_RD_DATABASES+x}" ] && anstmp="16" && _askno "Give a number of max 'databases' ($anstmp)" && _RD_DATABASES=${_ANSWER:-$anstmp} && _confset _RD_DATABASES "${_RD_DATABASES}"
 
-[ -z "${_RD_LOGLEVEL+x}" ] && anstmp="notice" && _askno "Give the log level 'loglevel' ($anstmp)" && _RD_LOGLEVEL=${_ANSWER:-$anstmp} && _confset _RD_LOGLEVEL "${_RD_LOGLEVEL}"
+[ -z "${_RD_LOGLEVEL+x}" ] && anstmp="notice" && _askno "Give the log level 'loglevel': debug/verbose/notice/warning  ($anstmp)" && _RD_LOGLEVEL=${_ANSWER:-$anstmp} && _confset _RD_LOGLEVEL "${_RD_LOGLEVEL}"
 
 
 ########################  INIT
@@ -133,147 +135,77 @@ _lxc_exec ${_CT_NAME} "rc-service ${service} start"
 _echoT "----------  conf"
 
 file=/etc/redis.conf
-_lxc_exec ${_CT_NAME} "sed -i 's|^\(bind\) .*$|\1 127.0.0.1 ${_CT_IP}|'  ${file}"
-_lxc_exec ${_CT_NAME} "sed -i 's|^\(port\) .*$|\1 ${S_CACHE_PORT}|'  ${file}"
-_lxc_exec ${_CT_NAME} "sed -i 's|^\(tcp-backlog\) .*$|\1 ${_RD_BACKLOG}|'  ${file}"
-_lxc_exec ${_CT_NAME} "sed -i 's|^\(timeout\) .*$|\1 ${_RD_TIMEOUT}|'  ${file}"
-_lxc_exec ${_CT_NAME} "sed -i 's|^\(tcp-keepalive\) .*$|\1 ${_RD_KEEPALIVE}|'  ${file}"
-_lxc_exec ${_CT_NAME} "sed -i 's|^#\?\s*\(maxclients\) .*$|\1 ${_RD_MAXCLIENTS}|'  ${file}"
-_lxc_exec ${_CT_NAME} "sed -i 's|^\(databases\) .*$|\1 ${_RD_DATABASES}|'  ${file}"
+
+cmds="sed -i 's|^\(bind\) .*$|\1 127.0.0.1 ${_CT_IP}|'  ${file}
+sed -i 's|^\(port\) .*$|\1 ${S_CACHE_PORT}|'  ${file}
+sed -i 's|^\(tcp-backlog\) .*$|\1 ${_RD_BACKLOG}|'  ${file}
+sed -i 's|^\(timeout\) .*$|\1 ${_RD_TIMEOUT}|'  ${file}
+sed -i 's|^\(tcp-keepalive\) .*$|\1 ${_RD_KEEPALIVE}|'  ${file}
+sed -i 's|^\(databases\) .*$|\1 ${_RD_DATABASES}|'  ${file}"
+_lxc_exec ${_CT_NAME} "${cmds}"
+
 # log
-_lxc_exec ${_CT_NAME} "sed -i 's|^\(loglevel\) .*$|\1 ${_RD_LOGLEVEL}|'  ${file}"
-_lxc_exec ${_CT_NAME} "sed -i 's|^#\?\s*\(syslog-enabled\) .*$|\1 yes|'  ${file}"
-_lxc_exec ${_CT_NAME} "sed -i 's|^#\?\s*\(syslog-ident\) .*$|\1 redis|'  ${file}"
-_lxc_exec ${_CT_NAME} "sed -i 's|^#\?\s*\(syslog-facility\) .*$|\1 local7|'  ${file}"
-
-
-
-
-
-
-
-
-
-
-
-########################  CONF
-
-_echoT "----------  conf"
-
-_lxc_exec ${_CT_NAME} "[ -d "${path_sites}" ] || mkdir -p ${path_sites}"
-path=/var/www/localhost/htdocs
-_lxc_exec ${_CT_NAME} "[ -d /var/www/localhost/htdocs ] && mv /var/www/localhost/htdocs ${path_www}"
-#_lxc_exec ${_CT_NAME} "chown -R apache/apache ${path_sites}"
-
-
-_echoT "----------  conf httpd module"
-
-_lxc_exec ${_CT_NAME} "[ -f \"${file_conf_http}\" ] && cp -a ${file_conf_http} ${file_conf_http}.${_SDATE}"
-
-cmds="sed -i 's|^.\?\(LoadModule mpm_event_module.*\)$|\1|' ${file_conf_http}
-sed -i 's|^.\?\(LoadModule mpm_prefork_module.*\)$|#\1|' ${file_conf_http}
-sed -i 's|^.\?\(LoadModule mpm_worker_module.*\)$|#\1|' ${file_conf_http}
-sed -i 's|^.\?\(LoadModule vhost_alias_module.*\)$|\1|' ${file_conf_http}
-sed -i 's|^.\?\(LoadModule info_module.*\)$|\1|' ${file_conf_http}
-sed -i 's|^.\?\(LoadModule rewrite_module.*\)$|\1|' ${file_conf_http}"
-_lxc_exec ${_CT_NAME} "$cmds"
-
-
-_echoT "----------  conf httpd"
-
-# IncludeOptional
-cmds="grep -q ${path_sites} ${file_conf_http} || echo 'IncludeOptional ${path_sites}/*.conf' >>  ${file_conf_http}"
-_lxc_exec ${_CT_NAME} "$cmds"
-
-# ServerName
-_lxc_exec ${_CT_NAME} "sed -i 's|^.\?\(ServerName\).*$|\1 localhost|' ${file_conf_http}"
-# ServerAdmin
-_lxc_exec ${_CT_NAME} "sed -i 's|^.\?\(ServerAdmin\).*$|\1 ${S_DOMAIN_EMAIL_TECH}|' ${file_conf_http}"
-# ServerSignature Off
-_lxc_exec ${_CT_NAME} "sed -i 's|^\(ServerSignature\).*$|\1 Off|' ${file_conf_http}"
-# TraceEnable Off
-_lxc_exec ${_CT_NAME} "sed -i 's|^\(ServerTokens\).*$|\1 Prod|' ${file_conf_http}"
-
-# htdocs
-_lxc_exec ${_CT_NAME} "sed -i 's|/var/www/localhost/htdocs|${path_www}|' ${file_conf_http}"
-# Options
-_lxc_exec ${_CT_NAME} "sed -i '/^<Directory \"\/var\/www\/localhost\/html\">/,/<\/Directory>/ {s|^\(\s*Options\) .*|\1 -Indexes -MultiViews +FollowSymLinks|}' ${file_conf_http}"
-
-# LogLevel
-_lxc_exec ${_CT_NAME} "sed -i 's|^\(LogLevel\).*$|\1 warn|' ${file_conf_http}"
-# ErrorLog
-_lxc_exec ${_CT_NAME} "sed -i 's|^\(ErrorLog\).*$|\1 \"\|/usr/bin/logger -p local7.err -t localhost/apache\"|' ${file_conf_http}"
-# CustomLog
-_lxc_exec ${_CT_NAME} "grep -q CustomLog.*/usr/bin/logger ${file_conf_http} || sed -i 's|^\(\s*\)\(CustomLog.*\)$|\1#\2\n    SetEnvIf X-Forwarded-For \".+\" forwarded\n    CustomLog \"\|/usr/bin/logger -p local7.info -t localhost/apache\" combined\n    CustomLog \"\|/usr/bin/logger -p local7.info -t localhost/apache\" combined env=forwarded|' ${file_conf_http}"
-
-
-_echoT "----------  conf mpm"
-
-file=${path_conf}/mpm.conf
-_lxc_exec ${_CT_NAME} "[ ! -f '${file}.${_SDATE}' ] && cp -a '${file}' '${file}.${_SDATE}'"
-
-cmds="sch=StartServers; str=\"\t\t3\"
-sed -i \"/<IfModule mpm_event_module>/,/<\/IfModule>/ s|^\s*\(\$sch\)\s*.*|\t\1\$str|\" ${file}
-sch=MinSpareThreads; str=\"\t\t50\"
-sed -i \"/<IfModule mpm_event_module>/,/<\/IfModule>/ s|^\s*\(\$sch\)\s*.*|\t\1\$str|\" ${file}
-sch=MaxSpareThreads; str=\"\t\t250\"
-sed -i \"/<IfModule mpm_event_module>/,/<\/IfModule>/ s|^\s*\(\$sch\)\s*.*|\t\1\$str|\" ${file}
-sch=ThreadsPerChild; str=\"\t\t25\"
-sed -i \"/<IfModule mpm_event_module>/,/<\/IfModule>/ s|^\s*\(\$sch\)\s*.*|\t\1\$str|\" ${file}
-sch=MaxRequestWorkers; str=\"\t400\"
-sed -i \"/<IfModule mpm_event_module>/,/<\/IfModule>/ s|^\s*\(\$sch\)\s*.*|\t\1\$str|\" ${file}
-sch=MaxConnectionsPerChild; str=\"\t0\"
-sed -i \"/<IfModule mpm_event_module>/,/<\/IfModule>/ s|^\s*\(\$sch\)\s*.*|\t\1\$str|\" ${file}"
+cmds="sed -i 's|^\(loglevel\) .*$|\1 ${_RD_LOGLEVEL}|'  ${file}
+sed -i '/^logfile / s|^|#|'  ${file}
+sed -i 's|^#\?\s*\(syslog-enabled\) .*$|\1 yes|'  ${file}
+sed -i 's|^#\?\s*\(syslog-ident\) .*$|\1 redis|'  ${file}
+sed -i 's|^#\?\s*\(syslog-facility\) .*$|\1 local7|'  ${file}"
 _lxc_exec ${_CT_NAME} "${cmds}"
 
 
-_echoT "----------  conf info & status"
+_echoT "----------  restart redis"
 
-file=${path_conf}/info.conf
-_lxc_exec ${_CT_NAME} "[ ! -f '${file}.${_SDATE}' ] && cp -a '${file}' '${file}.${_SDATE}'"
-# optimize require for info
-_lxc_exec ${_CT_NAME} "sed -i '/<Location \/server-status>/,/<\/Location>/ {s|^\(\s*\)\(Require host\).*|\1\2 ${S_DOMAIN_FQDN}\n\1Require ip ${_IPS_AUTH}|}' ${file}"
-# optimize require for status
-_lxc_exec ${_CT_NAME} "sed -i '/<Location \/server-info>/,/<\/Location>/ {s|^\(\s*\)\(Require host\).*|\1\2 ${S_DOMAIN_FQDN}\n\1Require ip ${_IPS_AUTH}|}' ${file}"
-
-
-_echoT "----------  service restart"
-
-service=apache2
-_lxc_exec ${_CT_NAME} "rc-service ${service} restart"
-
-
-########################  PING
-
-_echoT "----------  ping-monitor"
-
-_lxc_exec ${_CT_NAME} "echo 'pong' > ${path_www}/ping-monitor.html"
+_lxc_exec ${_CT_NAME} "rc-service redis restart"
 
 
 ########################  RSYSLOG
 
-_echoT "----------  rsyslog conf apache"
+_echoT "----------  ${S_SERVICE[log]} host path"
 
-file=/etc/rsyslog.d/client-apache.conf
-_eval lxc file push ${file_rsyslog} ${_CT_NAME}${file}
+path=${S_VM_PATH_LOG}/redis
+_lxc_exec ${S_SERVICE[log]} "[ -d ${path} ] || mkdir -p ${path}"
+
+
+_echoT "----------  ${S_SERVICE[log]} host-redis"
+
+file=/etc/rsyslog.d/${file_rsyslog_host##*/}
+_eval lxc file push ${file_rsyslog_host} ${S_SERVICE[log]}${file}
+_lxc_var_replace ${S_SERVICE[log]} ${file} rsyslog
+
+_echoT "----------  restart rsyslog ${S_SERVICE[log]}"
+
+_lxc_exec ${S_SERVICE[log]} "rc-service rsyslog restart"
+
+
+_echoT "----------  ${S_SERVICE[log]} client path"
+
+path=${S_PATH_LOG}/redis
+_lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
+_lxc_exec ${_CT_NAME} "rm ${path}/redis.log 2>/dev/null"
+
+
+_echoT "----------  ${S_SERVICE[log]} client-redis"
+
+file=/etc/rsyslog.d/${file_rsyslog_client##*/}
+_eval lxc file push ${file_rsyslog_client} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} rsyslog
 
-
-_echoT "----------  restart rsyslog"
+_echoT "----------  rsyslog restart ${_CT_NAME}"
 
 _lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
 
 
-########################  LOGROTATE
+########################  TEST
 
-_echoT "----------  logrotate conf"
+_echoT "----------  redis test acces"
 
-file=/etc/logrotate.d/apache2
-_lxc_exec ${_CT_NAME} "grep -q /var/log/apache2/\*.info ${file} || sed -i '1i/var/log/apache2/*.info' ${file}"
-_lxc_exec ${_CT_NAME} "grep -q /var/log/apache2/\*.info ${file} || sed -i '1i/var/log/apache2/*.err' ${file}"
-_lxc_exec ${_CT_NAME} "grep -q daily ${file} || sed -i 's|^\(\s*missingok\)|    daily\n\1|' ${file}"
-_lxc_exec ${_CT_NAME} "grep -q ^\s*rotate ${file} || sed -i 's|^\(\s*missingok\)|\1\n    rotate 14|' ${file}"
+_echo "timeout 3 redis-cli -h ${_CT_IP} ping"
+_evalq "timeout 3 redis-cli -h ${_CT_IP} ping 2>/dev/null"
 
+
+_echoI "\nTo do a benchmark, just type:" && sleep 0.2
+_echo "redis-benchmark -h ${_CT_NAME} -p ${S_CACHE_PORT} -n 1000 -c 10 -k 1 -q"
+_echo "redis-benchmark -h ${_CT_NAME} -p ${S_CACHE_PORT} -n 10000 -c 10 -k 1"
 
 ########################  PUBLISH
 
