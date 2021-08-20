@@ -203,9 +203,11 @@ _echo "timeout 3 redis-cli -h ${_CT_IP} ping"
 _evalq "timeout 3 redis-cli -h ${_CT_IP} ping 2>/dev/null"
 
 
-_echoI "\nTo do a benchmark, just type:" && sleep 0.2
+_echoI "\nTo do a benchmark, just type:" && sleep 0.1
 _echo "redis-benchmark -h ${_CT_NAME} -p ${S_CACHE_PORT} -n 1000 -c 10 -k 1 -q"
 _echo "redis-benchmark -h ${_CT_NAME} -p ${S_CACHE_PORT} -n 10000 -c 10 -k 1"
+_echoI "\nTo see latency, just type:" && sleep 0.1
+_echo "redis-cli -h ${_CT_NAME} -p ${S_CACHE_PORT} --latency-dist"
 
 ########################  PUBLISH
 

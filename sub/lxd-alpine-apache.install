@@ -21,11 +21,6 @@ file_logrotate_host=${S_PATH_INSTALL_CONF}/logrotate/host-apache
 file_log=${S_PATH_INSTALL_CONF}/apache2/log.conf
 file_site=${S_PATH_INSTALL_CONF}/apache2/000-default.conf
 
-path_www=/var/www/localhost/html
-path_sites=/etc/apache2/sites
-path_conf=/etc/apache2/conf.d
-file_conf_http=/etc/apache2/httpd.conf
-
 _echoT "------------------ required files"
 _require ${file_rsyslog_host} ${file_rsyslog_client} ${file_logrotate_host} ${file_log} ${file_site}
 
@@ -63,13 +58,21 @@ _echoT "----------  data apache"
  [ -z ${_AP_KEEPALIVE_TIMEOUT+x} ] && anstmp="5" && _askno "Number of seconds to wait for the next request ($anstmp)" && _AP_KEEPALIVE_TIMEOUT=${_ANSWER:-$anstmp} && _confset _AP_KEEPALIVE_TIMEOUT "${_AP_KEEPALIVE_TIMEOUT}"
 
 
+_AP_PATH_WWW=/var/www/localhost/html &&  _confset _AP_PATH_WWW "${_AP_PATH_WWW}"
+_AP_PATH_DOMAIN="${S_VM_PATH_SHARE}/www/${S_DOMAIN_FQDN}" && _confset _AP_PATH_DOMAIN "${_AP_PATH_DOMAIN}"
+
+path_sites=/etc/apache2/sites
+path_conf=/etc/apache2/conf.d
+file_conf_http=/etc/apache2/httpd.conf
+
+
 ########################  INIT
 
 profile=www-${S_DOMAIN_NAME}
 _echoT "----------  profiles ${profile}"
 
-path=${S_HOST_PATH_SHARE}/www/${profile}
-path_ct=${S_VM_PATH_SHARE}/www/${profile}
+path=${S_HOST_PATH_SHARE}/www/${S_DOMAIN_FQDN}
+path_ct=${_AP_PATH_DOMAIN}
 [ -d "${path}" ] || _eval mkdir -p "${path}"
 
 if ! [ "`lxc profile list --format=json | jq -r '.[] | select(.name == "'${profile}'").name'`" ]; then
@@ -85,17 +88,7 @@ if lxc list -f json |jq -r '.[].name' | grep -q ^${_CT_NAME}$; then
 		_eval lxc stop ${_CT_NAME}
 		_eval lxc rename ${_CT_NAME} ${_CT_NAME}.${_SDATE}
 		_eval lxc start ${_CT_NAME}
-	elsefile_rsyslog_host=${S_PATH_INSTALL_CONF}/rsyslog/host-apache.conf
-file_rsyslog_client=${S_PATH_INSTALL_CONF}/rsyslog/client-apache.conf
-file_logrotate_host=${S_PATH_INSTALL_CONF}/logrotate/host-apache
-file_log=${S_PATH_INSTALL_CONF}/apache2/log.conf
-file_site=${S_PATH_INSTALL_CONF}/apache2/000-default.conf
-
-path_www=/var/www/localhost/html
-path_sites=/etc/apache2/sites
-path_conf=/etc/apache2/conf.d
-file_conf_http=/etc/apache2/httpd.conf
-
+	else
 		_eval lxc rename ${_CT_NAME} ${_CT_NAME}.${_SDATE}
 	fi
 fi
@@ -167,7 +160,7 @@ _echoT "----------  conf httpd module root"
 
 _lxc_exec ${_CT_NAME} "! [ -d "${path_sites}" ] &&mkdir -p ${path_sites}"
 path=/var/www/localhost/htdocs
-_lxc_exec ${_CT_NAME} "[ -d /var/www/localhost/htdocs ] && mv /var/www/localhost/htdocs ${path_www}"
+_lxc_exec ${_CT_NAME} "[ -d /var/www/localhost/htdocs ] && mv /var/www/localhost/htdocs ${_AP_PATH_WWW}"
 #_lxc_exec ${_CT_NAME} "chown -R apache/apache ${path_sites}"
 
 _echoT "----------  conf httpd module"
@@ -192,7 +185,7 @@ cmds="sed -i 's|^.\?\(ServerName\) .*$|\1 localhost|' ${file_conf_http}
 sed -i 's|^.\?\(ServerAdmin\) .*$|\1 ${S_DOMAIN_EMAIL_TECH}|' ${file_conf_http}
 sed -i 's|^\(ServerSignature\) .*$|\1 Off|' ${file_conf_http}
 sed -i 's|^\(ServerTokens\) .*$|\1 Prod|' ${file_conf_http}
-sed -i 's|/var/www/localhost/htdocs|${path_www}|' ${file_conf_http}"
+sed -i 's|/var/www/localhost/htdocs|${_AP_PATH_WWW}|' ${file_conf_http}"
 _lxc_exec ${_CT_NAME} "${cmds}"
 
 # Options
@@ -239,8 +232,19 @@ _lxc_exec ${_CT_NAME} "rc-service ${service} restart"
 
 _echoT "----------  ping-monitor"
 
-_lxc_exec ${_CT_NAME} "echo 'pong' > ${path_www}/ping-monitor.html"
-_lxc_exec ${_CT_NAME} "echo 'Alias \"/ping-monitor\" \"/var/www/localhost/html/ping-monitor.html\"' > ${path_conf}/monitor.conf"
+_lxc_exec ${_CT_NAME} "echo 'pong' > ${_AP_PATH_WWW}/ping-monitor.html"
+_lxc_exec ${_CT_NAME} "echo 'Alias \"/ping-monitor\" \"${_AP_PATH_WWW}/ping-monitor.html\"' > ${path_conf}/monitor.conf"
+
+
+########################  S_DOMAIN_FQDN
+
+_echoT "----------  ${S_DOMAIN_FQDN} conf"
+
+file=${path_sites}/${file_site##*/}
+_eval lxc file push ${file_site} ${_CT_NAME}/${file}
+_lxc_var_replace ${_CT_NAME} ${file} apache
+
+
 
 
 ########################  RSYSLOG
