@@ -298,6 +298,14 @@ if [ -z "${S_SERVICE[http]}" ]; then
 	S_SERVICE[http]=${_ANSWER:-${anstmp}} && _confset_array "S_SERVICE" "http" "${S_SERVICE[http]}" "${S_GLOBAL_CONF}"
 fi
 
+_echoT "----------  S_SERVICE php"
+
+if [ -z "${S_SERVICE[php]}" ]; then
+	anstmp="srv-php"
+	_askno "service name for php (${anstmp})"
+	S_SERVICE[php]=${_ANSWER:-${anstmp}} && _confset_array "S_SERVICE" "php" "${S_SERVICE[php]}" "${S_GLOBAL_CONF}"
+fi
+
 _echoT "----------  S_SERVICE sgbd"
 
 if [ -z "${S_SERVICE[sgbd]}" ]; then
