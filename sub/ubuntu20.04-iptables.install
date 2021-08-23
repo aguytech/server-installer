@@ -7,8 +7,8 @@ _echoT "\n==========================================  $S_RELEASE $_PART"
 
 ########################  REQUIRED
 
-file_xtra_script=${S_PATH_INSTALL_XTRA}/firewall
-file_xtra_conf=${S_PATH_INSTALL_CONF}/firewall.conf
+file_xtra_script=${S_PATH_INSTALL_XTRA}/iptables-firewall
+file_xtra_conf=${S_PATH_INSTALL_CONF}/iptables-firewall.conf
 file_xtra_log=${S_PATH_INSTALL_CONF}/rsyslog/host-iptables.conf
 file_script=/usr/sbin/${file_xtra_script##*/}
 
@@ -56,14 +56,14 @@ _eval "sed -i 's|^#\?\(net.ipv4.ip_forward\)=.*|\1=1|' ${file}"
 
 ########################  FIREWALL
 
-_echoT "----------  firewall conf"
+_echoT "----------  iptables-firewall conf"
 
 file=${S_PATH_CONF}/${file_xtra_conf##*/}
 _keepcpts ${file}
 _eval cp ${file_xtra_conf} ${file}
 
 
-_echoT "----------  firewall bin"
+_echoT "----------  iptables-firewall bin"
 
 file=${file_script}
 _keepcpts ${file}

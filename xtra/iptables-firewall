@@ -6,7 +6,7 @@
 ######################## GLOBAL FUNCTIONS
 
 # configuration file
-file=/etc/server/firewall.conf
+file=/etc/server/iptables-firewall.conf
 ! [ -f ${file} ] && echo -e "\e[1;31m[error] unable to load file: ${file}\e[0;0m" | tee -a /var/log/server/firewall.err && exit 1
 . "${file}"
 
@@ -254,6 +254,10 @@ __input() {
 	__add_chain -c "${chain}" -v "$_IPS_NTP" -m "${message}"
 
 	# HTTP
+	message="- Allow OUTPUT loopback to proxy for IP:"
+	chain="iptables -A OUTPUT -o lo -p tcp --dport XX -j DNAT --to-destination ${S_SERVICE[proxy]}"
+	__add_chain -c "${chain}" -v "${_PORTS_HTTP}" -m "${message}"
+
 	if [ "${_LIMIT_HTTP}" ]; then
 		message="- Allow INPUT all IPs Mails with LIMIT ${_LIMIT_HTTP} & Burst $_LIMIT_BURST_HTTP for port:"
 		chain="iptables -A INPUT -i ${_ETH} -p tcp --syn --dport XX -m limit --limit ${_LIMIT_HTTP} --limit-burst $_LIMIT_BURST_HTTP -j ACCEPT"
