@@ -1,0 +1,242 @@
+#!/bin/bash
+#
+# write by Aguy
+
+_echoT "\n==========================================  ${_RELEASE} ${_PART}"
+
+
+########################  REQUIRED
+
+_echoT "------------------ required vm image"
+lxc image list -f json |jq -r '.[].aliases[].name' | grep -q ^${_CT_NAME_COM}$ || _exite "Unable to find image container: '${_CT_NAME_COM}"
+
+_echoT "------------------ required vm"
+lxc list -f json |jq -r '.[].name'| grep -q ^${S_SERVICE[log]}$ || _exite "Unable to find image container: '${S_SERVICE[log]}'"
+
+
+file_rsyslog_client=${S_PATH_INSTALL_CONF}/rsyslog/client-mariadb.conf
+file_rsyslog_host=${S_PATH_INSTALL_CONF}/rsyslog/host-mariadb.conf
+file_logrotate_client=${S_PATH_INSTALL_CONF}/logrotate/host-mariadb
+file_logrotate_host=${S_PATH_INSTALL_CONF}/logrotate/host-mariadb
+
+_echoT "------------------ required files"
+_require ${file_rsyslog_client} ${file_rsyslog_host} ${file_logrotate_client} ${file_logrotate_host}
+
+
+########################  DATA
+
+_CT_NAME=${S_SERVICE[sgbd]}
+
+#eval ${S_HOST_VM_ETH[default]}
+#_CT_IP=${s_base}.${S_SERVICE_BITS[maria]}
+
+_echoT "----------  data pwd"
+
+[ -z ${_MA_PWD_LOCAL+x} ] && pwdtmp=`_pwd` && _askno "Enter a password for 'root@localhost ($pwdtmp)" && _MA_PWD_LOCAL=${_ANSWER:-$pwdtmp} && _confset _MA_PWD_LOCAL "${_MA_PWD_LOCAL}"
+
+[ -z ${_MA_PWD_REMOTE+x} ] && pwdtmp=`_pwd` && _askno "Enter a password for 'rootremote@${S_IPS_ADMIN}' ($pwdtmp)" && _MA_PWD_REMOTE=${_ANSWER:-$pwdtmp} && _confset _MA_PWD_REMOTE "$_MA_PWD_REMOTE"
+
+[ -z ${_MA_PWD_HOST+x} ] && pwdtmp=`_pwd` && _askno "Enter a password for 'roothost@${S_CLUSTER[*]}' ($pwdtmp)" && _MA_PWD_HOST=${_ANSWER:-$pwdtmp} && _confset _MA_PWD_HOST "${_MA_PWD_HOST}"
+
+[ -z ${_MA_PWD_ADMIN+x} ] && pwdtmp=`_pwd` && _askno "Enter a password for 'rootadmin@${S_SERVICE[admin]}' ($pwdtmp)" && _MA_PWD_ADMIN=${_ANSWER:-$pwdtmp} && _confset {_MA_PWD_ADMIN} "$_MA_PWD_ADMIN"
+
+[ -z ${_MA_PWD_DEV+x} ] && pwdtmp=`_pwd` && _askno "Enter a password for '${S_DB_USER_DEV}@${_VM_IP_BASE}.2% ${S_IPS_DEV}' ($pwdtmp)" && _MA_PWD_DEV=${_ANSWER:-$pwdtmp} && _confset {_MA_PWD_DEV} "$_MA_PWD_DEV"
+
+[ -z ${_MA_PWD_HTTP+x} ] && pwdtmp=`_pwd` && _askno "Enter a password for '${S_DB_USER_HTTP}@${_VM_IP_BASE}.1%' ($pwdtmp)" && _MA_PWD_HTTP=${_ANSWER:-$pwdtmp} && _confset {_MA_PWD_HTTP} "$_MA_PWD_HTTP"
+
+[ -z ${_MA_PWD_TOP+x} ] && pwdtmp=`_pwd` && _askno "Enter a password for 'innotop'@'localhost' ($pwdtmp)" && _MA_PWD_TOP=${_ANSWER:-$pwdtmp} && _confset _MA_PWD_TOP "${_MA_PWD_TOP}"
+
+
+_MA_SERVICE=mariadb && _confset _MA_SERVICE "${_MA_SERVICE}"
+_MA_PATH=/var/lib/mysql && _confset _MA_PATH "${_MA_PATH}"
+
+
+########################  PROFILE
+
+profile=maria-${S_DOMAIN_FQDN}
+_echoT "----------  profiles ${profile}"
+
+lxc profile list -f csv|grep -q "^${profile}," && _eval lxc profile rename ${profile} ${profile}.${_SDATE}
+_eval lxc profile create ${profile}
+
+path=${S_HOST_PATH_SHARE}/maria/${S_DOMAIN_FQDN}
+path_ct=${_MA_PATH}
+[ -d ${path} ] || _eval mkdir -p ${path}
+_eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
+
+
+########################  INIT
+
+_echoT "----------  init"
+
+if lxc list -f json |jq -r '.[].name' | grep -q ^${_CT_NAME}$; then
+	if lxc list -f json | jq -r '.[] | select(.status == "Running").name' | grep -q ^${_CT_NAME}$; then
+		_eval lxc stop ${_CT_NAME}
+		_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
+		_eval lxc start ${_CT_NAME}-${_SDATE}
+	else
+		_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
+	fi
+fi
+
+_eval lxc init ${_CT_NAME_COM} ${_CT_NAME} -p default -p global
+
+
+#_echoT "----------  network fixed ip"
+#
+#if ! lxc list -f json | jq -r '.[] | select(.name == "'${_CT_NAME}'").devices[].name' | grep -q eth0; then
+#	_eval lxc network attach ${s_inet} ${_CT_NAME} eth0 eth0
+#fi
+#_eval lxc config device set ${_CT_NAME} eth0 ipv4.address ${_CT_IP}
+
+
+_echoT "----------  ${_CT_NAME} start"
+
+_eval lxc start ${_CT_NAME}
+
+_eval sleep 1
+
+
+########################  INSTALL
+
+_echoT "----------  update"
+
+_lxc_exec ${_CT_NAME} "apk update"
+
+_echoT "----------  install mariadb"
+
+_lxc_exec ${_CT_NAME} "apk add mariadb mariadb-client mariadb-mytop"
+
+_echoT "----------  initialize mariadb"
+
+_lxc_exec ${_CT_NAME} "mysql_install_db --user=mysql --datadir=${_MA_PATH}"
+
+_echoT "----------  service set & start"
+
+service=mariadb
+_lxc_exec ${_CT_NAME} "rc-update add ${service}"
+_lxc_exec ${_CT_NAME} "rc-service ${service} start"
+
+
+########################  CONF
+
+_echoT "----------  root passwd"
+
+_lxc_exec ${_CT_NAME} "mysqladmin -u root password ${_MA_PWD_LOCAL}"
+
+_echoT "----------  secure"
+
+_echo "Give following password: ${_MA_PWD_LOCAL}"
+_lxc_exec ${_CT_NAME} "mysql_secure_installation"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+_echoI exit && exit
+
+
+########################  RESTART
+
+_echoT "----------  apache2 restart"
+_lxc_exec ${_CT_NAME} "rc-service apache2 restart"
+
+_echoT "----------  ${_PH_SERVICE} restart"
+_lxc_exec ${_CT_NAME} "rc-service ${_PH_SERVICE} restart"
+
+_echoT "----------  ${S_SERVICE[proxy]} reload"
+_lxc_exec ${S_SERVICE[proxy]} "rc-service haproxy reload"
+
+
+########################  RSYSLOG
+
+_echoT "----------  ${S_SERVICE[log]} host path"
+
+path=${S_VM_PATH_LOG}/maria7
+_lxc_exec ${S_SERVICE[log]} "[ -d ${path} ] || mkdir -p ${path}"
+
+
+_echoT "----------  ${S_SERVICE[log]} host-apache"
+
+file=/etc/rsyslog.d/${file_rsyslog_host##*/}
+_eval lxc file push ${file_rsyslog_host} ${S_SERVICE[log]}${file}
+_lxc_var_replace ${S_SERVICE[log]} ${file} rsyslog maria
+
+_echoT "----------  rsyslog restart ${S_SERVICE[log]}"
+
+_lxc_exec ${S_SERVICE[log]} "rc-service rsyslog restart"
+
+
+_echoT "----------  ${S_SERVICE[log]} client-apache"
+
+file=/etc/rsyslog.d/${file_rsyslog_client##*/}
+_eval lxc file push ${file_rsyslog_client} ${_CT_NAME}${file}
+_lxc_var_replace ${_CT_NAME} ${file} rsyslog maria
+
+_echoT "----------  rsyslog restart ${_CT_NAME}"
+
+_lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
+
+
+########################  LOGROTATE
+
+_echoT "----------  ${S_SERVICE[log]} logrotate"
+
+file=/etc/logrotate.d/${file_logrotate_host##*/}
+_eval lxc file push ${file_logrotate_host} ${S_SERVICE[log]}${file}
+_lxc_var_replace ${S_SERVICE[log]} ${file} logrotate
+
+
+_echoT "----------  client logrotate"
+
+file=/etc/logrotate.d/${file_logrotate_client##*/}
+_eval lxc file push ${file_logrotate_client} ${_CT_NAME}${file}
+_lxc_var_replace ${_CT_NAME} ${file} logrotate
+
+
+########################  PUBLISH
+
+_echoT "----------  publish ${_CT_NAME}"
+
+_eval lxc image list -f json | jq -r '.[].aliases[].name' | grep -q ^${_CT_NAME}$ && lxc image alias rename ${_CT_NAME} ${_CT_NAME}-$(date +%s)
+_eval lxc publish --force ${_CT_NAME} --alias ${_CT_NAME}
+
+
+########################  TEST
+
+_echoT "----------  maria test"
+
+_echoI "To verify maria configuration, type:"
+_echo "${_IPTHIS}/mariainf.maria"
+_echo "${_CT_NAME}/mariainf.maria"
+_echo "curl ${S_DOMAIN_FQDN}:80"
+
+_echoI "To verify ping response, type:"
+_echo "curl ${_CT_NAME}/ping-monitor"
+
+_echoI "To verify 'www' pool informations, type:"
+_echo "curl ${_CT_NAME}/status-www"
+_echo "curl ${_CT_NAME}/status-www?full"
+
+
+_echoI "To verify 'www-admin' pool informations, type:"
+_echo "curl ${_CT_NAME}/status-www-admin"
+_echo "curl ${_CT_NAME}/status-www-admin?full"
+
+
+########################  END
+
+_echoT "---------- ${_PART} end"
+_eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"
