@@ -362,11 +362,11 @@ _lxc_exec ${S_SERVICE[proxy]} "sed -i 's|^\(\s*server\s*${S_DOMAIN_NAME}1\s*\).*
 
 ########################  RESTART
 
-_echoT "----------  apache2 restart"
-_lxc_exec ${_CT_NAME} "rc-service apache2 restart"
-
 _echoT "----------  ${_PH_SERVICE} restart"
 _lxc_exec ${_CT_NAME} "rc-service ${_PH_SERVICE} restart"
+
+_echoT "----------  apache2 restart"
+_lxc_exec ${_CT_NAME} "rc-service apache2 restart"
 
 _echoT "----------  ${S_SERVICE[proxy]} reload"
 _lxc_exec ${S_SERVICE[proxy]} "rc-service haproxy reload"

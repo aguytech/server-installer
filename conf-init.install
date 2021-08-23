@@ -48,12 +48,12 @@ echo -e "${blueb}----------  paths rights${cclear}"
 # install path
 path=${_PATH_BASE}
 _eval chown root:root -R ${path}
-_eval chmod -grwx -R ${path}
+_eval chmod o-rwx -R ${path}
 
 # scripts path
 path=${S_PATH_SCRIPT}
 _eval chown root:root -R ${path}
-_eval chmod -grwx -R ${path}
+_eval chmod o-rwx -R ${path}
 
 
 echo -e "${blueb}----------  conf rights${cclear}"

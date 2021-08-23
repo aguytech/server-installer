@@ -490,13 +490,6 @@ fi
 
 ########################  PATHS
 
-paths="${S_PATH_INSTALL} ${S_PATH_SCRIPT}"
-_echoT "----------  rights ${paths}"
-
-for path in ${paths}; do
-	_evalq chown -R 0:0 ${path} && _evalq chmod 750 ${path}
-done
-
 paths="${S_PATH_SAVE} ${S_PATH_BACKUP} ${S_PATH_LOG} ${S_PATH_LOG_SERVER} ${S_PATH_LOG_INSTALL}"
 _echoT "----------  create ${paths}"
 

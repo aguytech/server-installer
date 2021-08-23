@@ -48,7 +48,38 @@ _echoT "----------  data pwd"
 
 
 _MA_SERVICE=mariadb && _confset _MA_SERVICE "${_MA_SERVICE}"
-_MA_PATH=/var/lib/mysql && _confset _MA_PATH "${_MA_PATH}"
+_MA_HOST_PATH=${_ZFS_ROOT}${S_HOST_PATH}/mariadb/mariadb-${S_DOMAIN_FQDN} && _confset _MA_HOST_PATH "${_MA_HOST_PATH}"
+_MA_VM_PATH=/var/lib/mysql && _confset _MA_VM_PATH "${_MA_VM_PATH}"
+
+
+########################  STORAGE MARIADB
+
+name=mariadb
+if [ "${S_STORAGE_DRIVER}" = zfs ]; then
+
+	_echoT "----------  storage ${name}"
+
+	path=${_ZFS_ROOT}${S_HOST_PATH}/mariadb
+	opts="-o mountpoint=/${S_HOST_PATH}/mariadb -o compression=lz4 -o recordsize=8K -o primarycache=metadata"
+	cmd="zfs create ${opts} ${path}"
+	zfs list ${path} >/dev/null 2>&1 || _eval ${cmd}
+
+else
+	_exite "This part have to be implemented"
+fi
+
+name=mariadb-${S_DOMAIN_FQDN}
+if [ "${S_STORAGE_DRIVER}" = zfs ]; then
+
+	_echoT "----------  storage ${name}"
+
+	path=${_MA_HOST_PATH}/${name}
+	cmd="zfs create ${opts} -o mountpoint=/${_MA_HOST_PATH#*/}/${name} ${path}"
+	zfs list ${path} >/dev/null 2>&1 || _eval ${cmd}
+
+else
+	_exite "This part have to be implemented"
+fi
 
 
 ########################  PROFILE
@@ -59,8 +90,8 @@ _echoT "----------  profiles ${profile}"
 lxc profile list -f csv|grep -q "^${profile}," && _eval lxc profile rename ${profile} ${profile}.${_SDATE}
 _eval lxc profile create ${profile}
 
-path=${S_HOST_PATH_SHARE}/maria/${S_DOMAIN_FQDN}
-path_ct=${_MA_PATH}
+path=${_MA_HOST_PATH}
+path_ct=${_MA_VM_PATH}
 [ -d ${path} ] || _eval mkdir -p ${path}
 _eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
 
@@ -79,7 +110,7 @@ if lxc list -f json |jq -r '.[].name' | grep -q ^${_CT_NAME}$; then
 	fi
 fi
 
-_eval lxc init ${_CT_NAME_COM} ${_CT_NAME} -p default -p global
+_eval lxc init ${_CT_NAME_COM} ${_CT_NAME} -p default -p global -p ${profile}
 
 
 #_echoT "----------  network fixed ip"
@@ -109,7 +140,7 @@ _lxc_exec ${_CT_NAME} "apk add mariadb mariadb-client mariadb-mytop"
 
 _echoT "----------  initialize mariadb"
 
-_lxc_exec ${_CT_NAME} "mysql_install_db --user=mysql --datadir=${_MA_PATH}"
+_lxc_exec ${_CT_NAME} "mysql_install_db --user=mysql --datadir=${_MA_VM_PATH}"
 
 _echoT "----------  service set & start"
 
@@ -144,9 +175,9 @@ _lxc_exec ${_CT_NAME} "mysql_secure_installation"
 
 
 
-
 _echoI exit && exit
 
+# SHOW VARIABLES LIKE 'character%';
 
 ########################  RESTART
 
@@ -240,3 +271,21 @@ _echo "curl ${_CT_NAME}/status-www-admin?full"
 
 _echoT "---------- ${_PART} end"
 _eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"
+
+
+<<KEEP
+
+# Restore root password
+rc-service mysql stop
+
+kill  `cat /run/mysqld/mysqld.pid`
+
+/usr/bin/mysqld --datadir=/var/lib/mysql --pid-file=/run/mysqld/mysqld.pid --skip-grant-tables --skip-networking &
+
+mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED BY 'MyNewPass';FLUSH PRIVILEGES;ALTER USER 'root'@'localhost' IDENTIFIED BY 'MyNewPass';FLUSH PRIVILEGES;set password = password('MyNewPass');"
+
+kill  `cat /run/mysqld/mysqld.pid`
+
+rc-service mariadb restart
+
+KEEP

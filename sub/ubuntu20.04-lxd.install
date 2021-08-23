@@ -4,6 +4,7 @@
 
 _echoT "\n==========================================  ${S_RELEASE} ${_PART}"
 
+
 ########################  INSTALL
 
 _echoT "----------  install"
@@ -46,11 +47,11 @@ _echoT "----------  lxd init"
 	if [ "${S_STORAGE_DRIVER}" = zfs ]; then
 		_echoI "Use this settings :
 - Create a new ZFS pool ?: no
-- Name of the existing ZFS pool or dataset: root/vm/sp/default"
+- Name of the existing ZFS pool or dataset: ${_ZFS_ROOT}${S_HOST_PATH_SP}/default"
 	elif [ "${S_STORAGE_DRIVER}" = btrfs ]; then
 		_echoI "Use this settings :
 - Create a new BTRFS poo ?l: no
-- Name of the existing BTRFS pool or dataset: /vm/sp/default"
+- Name of the existing BTRFS pool or dataset: ${S_HOST_PATH_SP}/default"
 	else
 		_exite "This part have to be implemented"
 	fi
@@ -107,9 +108,9 @@ _echoT "----------  storage ${name}"
 
 if ! [ "`lxc storage list -f json|jq -r '.[] | select(.name == "'${name}'").name'`" ]; then
 	if [ "${S_STORAGE_DRIVER}" = zfs ]; then
-		_eval lxc storage create ${name} zfs source=root/vm/sp/${name}
+		_eval lxc storage create ${name} zfs source=${_ZFS_ROOT}${S_HOST_PATH_SP}/${name}
 	elif [ "${S_STORAGE_DRIVER}" = btrfs ]; then
-		_eval lxc storage create ${name} btrfs source=/vm/sp/${name}
+		_eval lxc storage create ${name} btrfs source=${S_HOST_PATH_SP}/${name}
 	else
 		_exite "This part have to be implemented"
 	fi

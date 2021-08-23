@@ -46,6 +46,9 @@ _echoT "----------  data sysctl.conf"
 # sysctl net.ipv4.tcp_max_syn_backlog net.ipv4.tcp_max_tw_buckets
 # sysctl net.ipv4.tcp_fin_timeout net.ipv4.tcp_keepalive_time net.ipv4.tcp_keepalive_intvl net.ipv4.tcp_keepalive_probes
 
+
+_ZFS_ROOT=root &&  _confset _ZFS_ROOT "${_ZFS_ROOT}"
+
 ########################  MAIN
 
 _echoT "----------  sysctl conf"
@@ -206,43 +209,36 @@ if [[ " ${str} " = *" ${S_SERVER_TYPE} "* ]]; then
 
 		_eval apt install -y zfsutils-linux
 
-				path="/zroot"
+				path=/zroot
 		_echoT "----------  zfs zpool ${path}"
+		[ -d ${path} ] && rm -fR ${path}
+		_evalq zpool create root ${S_STORAGE_ROOT} -m ${path}
 
-		[ -d "${path}" ] && rm -fR "${path}"
-		_evalq zpool create root "${S_STORAGE_ROOT}" -m "${path}"
-
-		path="${S_PATH_SAVE}"
+		path=${S_PATH_SAVE}
 		_echoT "----------  zfs ${path}"
+		[ -d ${path} ] && rm -fR ${path}
+		_eval zfs create -o mountpoint=${path} -o compression=lz4 ${_ZFS_ROOT}${S_PATH_SAVE}
 
-		[ -d "${path}" ] && rm -fR "${path}"
-		_eval zfs create -o mountpoint="${path}" -o compression=lz4 root/save
 
-
-		path="${S_HOST_PATH}"
+		path=${S_HOST_PATH}
 		_echoT "----------  zfs ${path}"
+		[ -d ${path} ] && rm -fR ${path}
+		_eval zfs create -o mountpoint=${path} -o compression=lz4 ${_ZFS_ROOT}${S_HOST_PATH}
 
-		[ -d "${path}" ] && rm -fR "${path}"
-		_eval zfs create -o mountpoint="${path}" -o compression=lz4 root/vm
-
-		path="${S_HOST_PATH_SP}"
+		path=${S_HOST_PATH_SP}
 		_echoT "----------  zfs ${path}"
+		[ -d ${path} ] && rm -fR ${path}
+		_eval zfs create -o mountpoint=${path} -o compression=lz4 ${_ZFS_ROOT}${S_HOST_PATH_SP}
 
-		[ -d "${path}" ] && rm -fR "${path}"
-		_eval zfs create -o mountpoint="${path}" -o compression=lz4 root/vm/sp
-
-		path="${S_HOST_PATH_SHARE}"
+		path=${S_HOST_PATH_SHARE}
 		_echoT "----------  zfs ${path}"
+		[ -d ${path} ] && rm -fR ${path}
+		_eval zfs create -o mountpoint=${path} -o compression=lz4 -o  acltype=posixacl ${_ZFS_ROOT}${S_HOST_PATH_SHARE}
 
-		[ -d "${path}" ] && rm -fR "${path}"
-		_eval zfs create -o mountpoint="${path}" -o compression=lz4 root/vm/share
-		_eval zfs set acltype=posixacl root/vm/share
-
-		path="${S_HOST_PATH_SAVE}"
+		path=${S_HOST_PATH_SAVE}
 		_echoT "----------  zfs ${path}"
-
-		[ -d "${path}" ] && rm -fR "${path}"
-		_eval zfs create -o mountpoint="${path}" -o compression=lz4 root/vm/save
+		[ -d ${path} ] && rm -fR ${path}
+		_eval zfs create -o mountpoint=${path} -o compression=lz4 ${_ZFS_ROOT}${S_HOST_PATH_SAVE}
 
 
 		_echoT "----------  zfs zpool list"

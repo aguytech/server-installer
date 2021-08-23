@@ -58,7 +58,7 @@ _echoT "----------  data apache"
 
 
 _AP_PATH_WWW=/var/www/localhost/html &&  _confset _AP_PATH_WWW "${_AP_PATH_WWW}"
-_AP_PATH_DOMAIN="${S_VM_PATH_SHARE}/www/${S_DOMAIN_FQDN}" && _confset _AP_PATH_DOMAIN "${_AP_PATH_DOMAIN}"
+_AP_PATH_DOMAIN=${S_VM_PATH_SHARE}/www/${S_DOMAIN_FQDN} && _confset _AP_PATH_DOMAIN "${_AP_PATH_DOMAIN}"
 
 path_sites=/etc/apache2/sites
 path_conf=/etc/apache2/conf.d
