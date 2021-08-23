@@ -21,7 +21,7 @@ backend S_DOMAIN_NAME
 	# 16000000 seconds: a bit more than 6 months
 	http-response			set-header Strict-Transport-Security "max-age=16000000; includeSubDomains; preload;"
 
-	#server			S_DOMAIN_NAME1					S_DOMAIN_FQDN-1:80 weight 10 maxconn 60 check inter 2s
+	server			S_DOMAIN_NAME1					S_SERVICE[http]:80 weight 10 maxconn 60 check inter 2s
 	#server			S_DOMAIN_NAME2					S_DOMAIN_FQDN-2:80 weight 10 maxconn 60 check inter 2s backup
 	#server			S_DOMAIN_NAME1					S_DOMAIN_FQDN-1:80 weight 10 check inter 2s
 	#server			S_DOMAIN_NAME2					S_DOMAIN_FQDN-2:80 weight 10 check inter 2s backup
