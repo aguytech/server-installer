@@ -34,6 +34,10 @@ _CT_NAME=${S_SERVICE[php]}
 eval ${S_HOST_VM_ETH[default]}
 _CT_IP=${s_base}.${S_SERVICE_BITS[php]}
 
+_PH_SERVICE=php-fpm7 && _confset _PH_SERVICE "${_PH_SERVICE}"
+_PH_FPM_SOCK=/run/${_PH_SERVICE}/php-fpm.sock && _confset _PH_SERVICE "${_PH_SERVICE}"
+_PH_FPM_ADMIN_SOCK=/run/${_PH_SERVICE}/php-fpm-admin.sock && _confset _PH_SERVICE "${_PH_SERVICE}"
+
 #php_version=`_lxc_exec ${S_SERVICE[http]} "apk list php7-fpm | sed -n 's|php7-fpm-\([0-9\.]\+\)-.*|\1|p'"`
 php_modules="php7-bcmath php7-bz2 php7-ctype php7-curl php7-exif php7-fileinfo php7-dom php7-gd php7-gmp php7-iconv php7-imap php7-json php7-mbstring php7-openssl php7-pdo_mysql php7-pgsql php7-posix php7-session php7-simplexml php7-sqlite3 php7-xmlreader php7-xmlwriter php7-zip php7-xdebug php7-pecl-mcrypt php7-pecl-redis" #  php7-pecl-imagick php7-pear
 
@@ -87,10 +91,6 @@ path_fpm_pool=${path_php_share}/pools
 path_xdebug_profile=${path_php_share}/xdebug/profile
 path_xdebug_trace=${path_php_share}/xdebug/trace
 
-_PH_FPM_SERVICE=php-fpm7 && _confset _PH_FPM_SERVICE "${_PH_FPM_SERVICE}"
-_PHPFPM_SOCK=/run/${_PH_FPM_SERVICE}/php-fpm.sock && _confset _PH_FPM_SERVICE "${_PH_FPM_SERVICE}"
-_PHPFPM_ADMIN_SOCK=/run/${_PH_FPM_SERVICE}/php-fpm-admin.sock && _confset _PH_FPM_SERVICE "${_PH_FPM_SERVICE}"
-
 
 ########################  PROFILE
 
@@ -142,7 +142,7 @@ _eval sleep 1
 
 ########################  PATHS
 
-_echoT "----------  paths ${_PH_FPM_SERVICE}"
+_echoT "----------  paths ${_PH_SERVICE}"
 
 paths="${path_php_share}/tmp ${path_php_share}/sessions ${path_php_share}/soap ${path_xdebug_profile} ${path_xdebug_trace} ${path_fpm_pool}/www ${path_fpm_pool}/www-admin"
 cmd="for path in ${paths}; do [ -d \${path} ] || mkdir -p \${path}; done"
@@ -161,7 +161,7 @@ _echoT "----------  install php7 modules"
 _lxc_exec ${_CT_NAME} "apk add ${php_modules}"
 
 _echoT "----------  service set & start"
-service=${_PH_FPM_SERVICE}
+service=${_PH_SERVICE}
 _lxc_exec ${_CT_NAME} "rc-update add ${service}"
 _lxc_exec ${_CT_NAME} "rc-service ${service} start"
 
@@ -230,7 +230,7 @@ emergency_restart_interval  ${_PH_RESTART_INTERVAL}
 process_control_timeout  ${_PH_CONTROL_TIMEOUT}
 error_log  syslog
 syslog.facility  daemon
-syslog.ident  ${_PH_FPM_SERVICE}
+syslog.ident  ${_PH_SERVICE}
 log_level  notice
 log_limit  1024
 log_buffering  yes"
@@ -253,7 +253,7 @@ cmds=; while read str val; do
 "; done <<< "prefix  ${path_fpm_pool}/www
 user nobody
 group nobody
-listen  ${_PHPFPM_SOCK}
+listen  ${_PH_FPM_SOCK}
 listen.backlog  $(( ${_AP_MAX_SYN_BACKLOG} / 2 ))
 listen.owner  nobody
 listen.group  nobody
@@ -299,7 +299,7 @@ cmds=; while read str val; do
 "; done <<< "prefix  ${path_fpm_pool}/www-admin
 user nobody
 group nobody
-listen  ${_PHPFPM_ADMIN_SOCK}
+listen  ${_PH_FPM_ADMIN_SOCK}
 listen.backlog  $(( ${_AP_MAX_SYN_BACKLOG} / 2 ))
 listen.owner  nobody
 listen.group  nobody
@@ -367,8 +367,8 @@ _lxc_exec ${S_SERVICE[proxy]} "sed -i 's|^\(\s*server\s*${S_DOMAIN_NAME}1\s*\).*
 _echoT "----------  apache2 restart"
 _lxc_exec ${_CT_NAME} "rc-service apache2 restart"
 
-_echoT "----------  ${_PH_FPM_SERVICE} restart"
-_lxc_exec ${_CT_NAME} "rc-service ${_PH_FPM_SERVICE} restart"
+_echoT "----------  ${_PH_SERVICE} restart"
+_lxc_exec ${_CT_NAME} "rc-service ${_PH_SERVICE} restart"
 
 _echoT "----------  ${S_SERVICE[proxy]} reload"
 _lxc_exec ${S_SERVICE[proxy]} "rc-service haproxy reload"
