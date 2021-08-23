@@ -34,6 +34,9 @@ _lxc_exec ${_CT_NAME} "[ -e /etc/profile.d/bash-lxc-alpine.sh ] || ln -s /usr/lo
 _lxc_exec ${_CT_NAME} "[ -e /etc/profile.d/bash_functions.sh ] || ln -s /usr/local/bs/conf/.bash_functions /etc/profile.d/bash_functions.sh"
 _lxc_exec ${_CT_NAME} "[ -e /etc/profile.d/env.sh ] || ln -s /usr/local/bs/conf/env.conf /etc/profile.d/env.sh"
 
+# not for busybox
+#_lxc_exec ${_CT_NAME} "echo -e 'set showmatch\nset tabstop=4\nset shiftwidth=4' | tee -a /etc/vimrc /etc/exrc"
+
 file="/tmp/server.conf"
 _evalq cp ${S_GLOBAL_CONF} ${file}
 _evalq "sed -i 's|^\(S_RELEASE\)=.*$|\1=\"${_RELEASE}\"|' ${file}"
@@ -146,8 +149,8 @@ _lxc_exec ${_CT_NAME} "rc-service crond restart"
 
 _echoT "----------  publish ${_CT_NAME}"
 
-_eval lxc image list --format=json | jq -r '.[].aliases[].name' | grep -q ^${_CT_NAME_COM}$ && lxc image alias rename ${_CT_NAME_COM} ${_CT_NAME_COM}-$(date +%s)
-_eval lxc publish ${_CT_NAME} --alias ${_CT_NAME_COM} --force
+_eval lxc image list -f json | jq -r '.[].aliases[].name' | grep -q ^${_CT_NAME_COM}$ && lxc image alias rename ${_CT_NAME_COM} ${_CT_NAME_COM}-$(date +%s)
+_eval lxc publish --force ${_CT_NAME} --alias ${_CT_NAME_COM}
 
 
 ########################  END

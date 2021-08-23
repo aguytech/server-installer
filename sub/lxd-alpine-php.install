@@ -8,108 +8,129 @@ _echoT "\n==========================================  ${_RELEASE} ${_PART}"
 ########################  REQUIRED
 
 _echoT "------------------ required vm image"
-lxc image list -f json |jq -r '.[].aliases[].name' | grep -q ^${_CT_NAME_COM}$ || _exite "Unable to find image container: '${_CT_NAME_COM}'"
+lxc image list -f json |jq -r '.[].aliases[].name' | grep -q ^${S_SERVICE[http]}$ || _exite "Unable to find image container: '${S_SERVICE[http]}"
 
 _echoT "------------------ required vm"
 lxc list -f json |jq -r '.[].name'| grep -q ^${S_SERVICE[log]}$ || _exite "Unable to find image container: '${S_SERVICE[log]}'"
-lxc list -f json |jq -r '.[].name'| grep -q ^${S_SERVICE[http]}$ || _exite "Unable to find image container: '${S_SERVICE[http]}'"
 lxc list -f json |jq -r '.[].name'| grep -q ^${S_SERVICE[cache]}$ || _exite "Unable to find image container: '${S_SERVICE[cache]}'"
 
 
-file_rsyslog_host=${S_PATH_INSTALL_CONF}/rsyslog/host-apache.conf
-file_rsyslog_client=${S_PATH_INSTALL_CONF}/rsyslog/client-apache.conf
-file_logrotate_host=${S_PATH_INSTALL_CONF}/logrotate/host-apache
-file_log=${S_PATH_INSTALL_CONF}/apache2/log.conf
-file_site=${S_PATH_INSTALL_CONF}/apache2/000-default.conf
-
-path_www=/var/www/localhost/html
-path_sites=/etc/apache2/sites
-path_conf=/etc/apache2/conf.d
-file_conf_http=/etc/apache2/httpd.conf
+file_apache="${S_PATH_INSTALL_CONF}/apache2/php7-fpm.conf"
+file_monitor="${S_PATH_INSTALL_CONF}/apache2/monitor.conf"
+file_xdebug="${S_PATH_INSTALL_CONF}/php/xdebug.ini"
+file_rsyslog_client=${S_PATH_INSTALL_CONF}/rsyslog/client-phpfpm7.conf
+file_rsyslog_host=${S_PATH_INSTALL_CONF}/rsyslog/host-phpfpm7.conf
+file_logrotate_client=${S_PATH_INSTALL_CONF}/logrotate/host-phpfpm7
+file_logrotate_host=${S_PATH_INSTALL_CONF}/logrotate/host-phpfpm7
 
 _echoT "------------------ required files"
-_require ${file_rsyslog_host} ${file_rsyslog_client} ${file_logrotate_host} ${file_log} ${file_site}
+_require ${file_apache} ${file_monitor} ${file_xdebug} ${file_rsyslog_host} ${file_rsyslog_client} ${file_logrotate_host}
 
 
 ########################  DATA
 
-_CT_NAME=${S_SERVICE[http]}
+_CT_NAME=${S_SERVICE[php]}
 
 eval ${S_HOST_VM_ETH[default]}
-_CT_IP=${s_base}.${S_SERVICE_BITS[http]}
+_CT_IP=${s_base}.${S_SERVICE_BITS[php]}
 
-_echoT "----------  data sysctl.conf"
+#php_version=`_lxc_exec ${S_SERVICE[http]} "apk list php7-fpm | sed -n 's|php7-fpm-\([0-9\.]\+\)-.*|\1|p'"`
+php_modules="php7-bcmath php7-bz2 php7-ctype php7-curl php7-exif php7-fileinfo php7-dom php7-gd php7-gmp php7-iconv php7-imap php7-json php7-mbstring php7-openssl php7-pdo_mysql php7-pgsql php7-posix php7-session php7-simplexml php7-sqlite3 php7-xmlreader php7-xmlwriter php7-zip php7-xdebug php7-pecl-mcrypt php7-pecl-redis" #  php7-pecl-imagick php7-pear
 
-[ -z ${_AP_MAX_SYN_BACKLOG+x} ] && anstmp="${_MAX_SYN_BACKLOG}" && _askno "Set $(sysctl net.ipv4.tcp_max_syn_backlog) - ($anstmp)" && _AP_MAX_SYN_BACKLOG=${_ANSWER:-$anstmp} && _confset _AP_MAX_SYN_BACKLOG "${_AP_MAX_SYN_BACKLOG}"
+_echoT "----------  data php"
 
-[ -z ${_AP_MAX_TW_BUCKETS+x} ] && anstmp="${_MAX_TW_BUCKETS}" && _askno "Set $(sysctl net.ipv4.tcp_max_tw_buckets) - ($anstmp)" && _AP_MAX_TW_BUCKETS=${_ANSWER:-$anstmp} && _confset _AP_MAX_TW_BUCKETS "${_AP_MAX_TW_BUCKETS}"
+[ -z ${_PH_MAX_EXECUTION_TIME+x} ] && anstmp="20" && _askno "max_execution_time (${anstmp})s" && _PH_MAX_EXECUTION_TIME=${_ANSWER:-$anstmp} && _confset _PH_MAX_EXECUTION_TIME "${_PH_MAX_EXECUTION_TIME}"
 
-[ -z ${_AP_FIN_TIMEOUT+x} ] && anstmp="${_FIN_TIMEOUT}" && _askno "Set $(sysctl net.ipv4.tcp_fin_timeout) - ($anstmp)" && _AP_FIN_TIMEOUT=${_ANSWER:-$anstmp} && _confset _AP_FIN_TIMEOUT "${_AP_FIN_TIMEOUT}"
+[ -z ${_PH_MAX_INPUT_TIME+x} ] && anstmp="30" && _askno "max_input_time (${anstmp})s" && _PH_MAX_INPUT_TIME=${_ANSWER:-$anstmp} && _confset _PH_MAX_INPUT_TIME "${_PH_MAX_INPUT_TIME}"
 
-[ -z ${_AP_KEEPALIVE_TIME+x} ] && anstmp="240" && _askno "Set $(sysctl net.ipv4.tcp_keepalive_time) - ($anstmp)" && _AP_KEEPALIVE_TIME=${_ANSWER:-$anstmp} && _confset _AP_KEEPALIVE_TIME "${_AP_KEEPALIVE_TIME}"
+[ -z ${_PH_MEMORY_LIMIT+x} ] && anstmp="128M" && _askno "memory_limit (${anstmp})" && _PH_MEMORY_LIMIT=${_ANSWER:-$anstmp} && _confset _PH_MEMORY_LIMIT "${_PH_MEMORY_LIMIT}"
 
-[ -z ${_AP_KEEPALIVE_INTVL+x} ] && anstmp="30" && _askno "Set $(sysctl net.ipv4.tcp_keepalive_intvl) - ($anstmp)" && _AP_KEEPALIVE_INTVL=${_ANSWER:-$anstmp} && _confset _AP_KEEPALIVE_INTVL "${_AP_KEEPALIVE_INTVL}"
+[ -z ${_PH_POST_MAX_SIZE+x} ] && anstmp="8M" && _askno "post_max_size (${anstmp})" && _PH_POST_MAX_SIZE=${_ANSWER:-$anstmp} && _confset _PH_POST_MAX_SIZE "${_PH_POST_MAX_SIZE}"
 
-[ -z ${_AP_KEEPALIVE_PROBES+x} ] && anstmp="9" && _askno "Set $(sysctl net.ipv4.tcp_keepalive_probes) - ($anstmp)" && _AP_KEEPALIVE_PROBES=${_ANSWER:-$anstmp} && _confset _AP_KEEPALIVE_PROBES "${_AP_KEEPALIVE_PROBES}"
+[ -z ${_PH_UPLOAD_MAX_FILESIZE+x} ] && anstmp="8M" && _askno "upload_max_filesize (${anstmp})" && _PH_UPLOAD_MAX_FILESIZE=${_ANSWER:-$anstmp} && _confset _PH_UPLOAD_MAX_FILESIZE "${_PH_UPLOAD_MAX_FILESIZE}"
+
+[ -z ${_PH_SESSION_STRICT_MODE+x} ] && anstmp="1" && _askno "session.use_strict_mode (${anstmp})" && _PH_SESSION_STRICT_MODE=${_ANSWER:-$anstmp} && _confset _PH_SESSION_STRICT_MODE "${_PH_SESSION_STRICT_MODE}"
+
+[ -z ${_PH_MODULES+x} ] && anstmp="${php_modules}" && _askno "php modules to install: \n${anstmp}" && _PH_MODULES=${_ANSWER:-$anstmp} && _confset _PH_MODULES "${_PH_MODULES}"
+
+_echoT "----------  data php-fpm"
+
+[ -z ${_PH_RESTART_THRESHOLD+x} ] && anstmp='30' && _askno "Give value for 'emergency_restart_threshold' ($anstmp)" && _PH_RESTART_THRESHOLD=${_ANSWER:-$anstmp} && _confset _PH_RESTART_THRESHOLD "${_PH_RESTART_THRESHOLD}"
+
+[ -z ${_PH_RESTART_INTERVAL+x} ] && anstmp='60s' && _askno "Give value for 'emergency_restart_interval' ($anstmp)" && _PH_RESTART_INTERVAL=${_ANSWER:-$anstmp} && _confset _PH_RESTART_INTERVAL "${_PH_RESTART_INTERVAL}"
+
+[ -z ${_PH_CONTROL_TIMEOUT+x} ] && anstmp='0' && _askno "Give value for 'process_control_timeout' ($anstmp)s" && _PH_CONTROL_TIMEOUT=${_ANSWER:-$anstmp} && _confset _PH_CONTROL_TIMEOUT "${_PH_CONTROL_TIMEOUT}"
+
+_echoT "----------  data pool www"
+
+[ -z ${_PH_W_MAX_CHILDREN+x} ] && anstmp='10' && _askno "Give value for 'pm.max_children' ($anstmp)" && _PH_W_MAX_CHILDREN=${_ANSWER:-$anstmp} && _confset _PH_W_MAX_CHILDREN "${_PH_W_MAX_CHILDREN}"
+
+[ -z ${_PH_W_START_SERVERS+x} ] && anstmp='2' && _askno "Give value for 'pm.start_servers' ($anstmp)" && _PH_W_START_SERVERS=${_ANSWER:-$anstmp} && _confset _PH_W_START_SERVERS "${_PH_W_START_SERVERS}"
+
+[ -z ${_PH_W_MIN_SPARE_SERVERS+x} ] && anstmp='2' && _askno "Give value for 'pm.min_spare_servers' ($anstmp)" && _PH_W_MIN_SPARE_SERVERS=${_ANSWER:-$anstmp} && _confset _PH_W_MIN_SPARE_SERVERS "${_PH_W_MIN_SPARE_SERVERS}"
+
+[ -z ${_PH_W_MAX_SPARE_SERVERS+x} ] && anstmp='5' && _askno "Give value for 'pm.max_spare_servers' ($anstmp)" && _PH_W_MAX_SPARE_SERVERS=${_ANSWER:-$anstmp} && _confset _PH_W_MAX_SPARE_SERVERS "${_PH_W_MAX_SPARE_SERVERS}"
+
+[ -z ${_PH_W_MAX_REQUESTS+x} ] && anstmp='500' && _askno "Give value for 'pm.max_requests' ($anstmp)" && _PH_W_MAX_REQUESTS=${_ANSWER:-$anstmp} && _confset _PH_W_MAX_REQUESTS "${_PH_W_MAX_REQUESTS}"
+
+[ -z ${_PH_SLOWLOG_TIMEOUT+x} ] && anstmp='2' && _askno "Give value for 'request_SLOWLOG_TIMEOUT' ($anstmp)" && _PH_SLOWLOG_TIMEOUT=${_ANSWER:-$anstmp} && _confset _PH_SLOWLOG_TIMEOUT "${_PH_SLOWLOG_TIMEOUT}"
 
 
-_echoT "----------  data apache"
+file_php_conf=/etc/php7/php.ini
+file_fpm_conf=/etc/php7/php-fpm.conf
+path_php_conf=/etc/php7/conf.d
+path_fpm_conf=/etc/php7/php-fpm.d
+path_apache_conf=/etc/apache2/conf.d
+# shared
+path_php_share=${S_VM_PATH_SHARE}/php/${S_DOMAIN_FQDN}
+path_fpm_pool=${path_php_share}/pools
+path_xdebug_profile=${path_php_share}/xdebug/profile
+path_xdebug_trace=${path_php_share}/xdebug/trace
 
-[ -z ${_AP_TIMEOUT+x} ] && anstmp="60" && _askno "Time before receives and sends time out ($anstmp)" && _AP_TIMEOUT=${_ANSWER:-$anstmp} && _confset _AP_TIMEOUT "${_AP_TIMEOUT}"
+_PH_FPM_SERVICE=php-fpm7 && _confset _PH_FPM_SERVICE "${_PH_FPM_SERVICE}"
+_PHPFPM_SOCK=/run/${_PH_FPM_SERVICE}/php-fpm.sock && _confset _PH_FPM_SERVICE "${_PH_FPM_SERVICE}"
+_PHPFPM_ADMIN_SOCK=/run/${_PH_FPM_SERVICE}/php-fpm-admin.sock && _confset _PH_FPM_SERVICE "${_PH_FPM_SERVICE}"
 
-[ -z ${_AP_KEEPALIVE+x} ] && anstmp="On" && _askno "Allow persistent connections On/Off ($anstmp)" && _AP_KEEPALIVE=${_ANSWER:-$anstmp} && _confset _AP_KEEPALIVE "${_AP_KEEPALIVE}"
 
-[ -z ${_AP_KEEPALIVE_REQUEST+x} ] && anstmp="100" && _askno "The maximum number of requests to allow during a persistent connection ($anstmp)" && _AP_KEEPALIVE_REQUEST=${_ANSWER:-$anstmp} && _confset _AP_KEEPALIVE_REQUEST "${_AP_KEEPALIVE_REQUEST}"
+########################  PROFILE
 
- [ -z ${_AP_KEEPALIVE_TIMEOUT+x} ] && anstmp="5" && _askno "Number of seconds to wait for the next request ($anstmp)" && _AP_KEEPALIVE_TIMEOUT=${_ANSWER:-$anstmp} && _confset _AP_KEEPALIVE_TIMEOUT "${_AP_KEEPALIVE_TIMEOUT}"
+profile=php7-${S_DOMAIN_FQDN}
+_echoT "----------  profiles ${profile}"
+
+lxc profile list -f csv|grep -q "^${profile}," && lxc profile rename ${profile} ${profile}.${_SDATE}
+_eval lxc profile create ${profile}
+
+path=${S_HOST_PATH_SHARE}/php/${S_DOMAIN_FQDN}
+path_ct=${path_php_share}
+[ -d ${path} ] || _eval mkdir -p ${path}
+_eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
 
 
 ########################  INIT
 
-profile=www-${S_DOMAIN_NAME}
-_echoT "----------  profiles ${profile}"
-
-path=${S_HOST_PATH_SHARE}/www/${profile}
-path_ct=${S_VM_PATH_SHARE}/www/${profile}
-[ -d "${path}" ] || _eval mkdir -p "${path}"
-
-if ! [ "`lxc profile list --format=json | jq -r '.[] | select(.name == "'${profile}'").name'`" ]; then
-	_eval lxc profile create ${profile}
-	_eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
-fi
-
-
 _echoT "----------  init"
 
 if lxc list -f json |jq -r '.[].name' | grep -q ^${_CT_NAME}$; then
-	if lxc list --format=json | jq -r '.[] | select(.status == "Running").name' | grep -q ^${_CT_NAME}$; then
+	if lxc list -f json | jq -r '.[] | select(.status == "Running").name' | grep -q ^${_CT_NAME}$; then
 		_eval lxc stop ${_CT_NAME}
-		_eval lxc rename ${_CT_NAME} ${_CT_NAME}.${_SDATE}
-		_eval lxc start ${_CT_NAME}
-	elsefile_rsyslog_host=${S_PATH_INSTALL_CONF}/rsyslog/host-apache.conf
-file_rsyslog_client=${S_PATH_INSTALL_CONF}/rsyslog/client-apache.conf
-file_logrotate_host=${S_PATH_INSTALL_CONF}/logrotate/host-apache
-file_log=${S_PATH_INSTALL_CONF}/apache2/log.conf
-file_site=${S_PATH_INSTALL_CONF}/apache2/000-default.conf
-
-path_www=/var/www/localhost/html
-path_sites=/etc/apache2/sites
-path_conf=/etc/apache2/conf.d
-file_conf_http=/etc/apache2/httpd.conf
-
-		_eval lxc rename ${_CT_NAME} ${_CT_NAME}.${_SDATE}
+		_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
+		_eval lxc start ${_CT_NAME}-${_SDATE}
+	else
+		_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
 	fi
 fi
 
-_eval lxc init ${_CT_NAME_COM} ${_CT_NAME} -p default -p global -p ${profile}
+_eval lxc init ${S_SERVICE[http]} ${_CT_NAME} -p default -p global -p www-${S_DOMAIN_FQDN} -p ${profile}
 
 
+<<KEEP
 _echoT "----------  network fixed ip"
 
-if ! lxc list --format=json | jq -r '.[] | select(.name == "'${_CT_NAME}'").devices[].name' | grep -q eth0; then
+if ! lxc list -f json | jq -r '.[] | select(.name == "'${_CT_NAME}'").devices[].name' | grep -q eth0; then
 	_eval lxc network attach ${s_inet} ${_CT_NAME} eth0 eth0
 fi
 _eval lxc config device set ${_CT_NAME} eth0 ipv4.address ${_CT_IP}
+KEEP
 
 
 _echoT "----------  ${_CT_NAME} start"
@@ -119,136 +140,245 @@ _eval lxc start ${_CT_NAME}
 _eval sleep 1
 
 
-########################  SYSCTL
+########################  PATHS
 
-_echoT "----------  conf sysctl.conf"
+_echoT "----------  paths ${_PH_FPM_SERVICE}"
 
-file=/etc/sysctl.d/20-lxd.conf
-
-txt="# apache2 php-fpm
-net.ipv4.tcp_max_syn_backlog = ${_AP_MAX_SYN_BACKLOG}
-net.ipv4.tcp_max_tw_buckets = ${_AP_MAX_TW_BUCKETS}
-net.ipv4.tcp_fin_timeout= ${_AP_FIN_TIMEOUT}
-net.ipv4.tcp_keepalive_time= ${_AP_KEEPALIVE_TIME}
-net.ipv4.tcp_keepalive_intvl= ${_AP_KEEPALIVE_INTVL}
-net.ipv4.tcp_keepalive_probes = ${_AP_KEEPALIVE_PROBES}"
-
-_lxc_exec ${_CT_NAME} "echo '${txt}' > ${file}"
+paths="${path_php_share}/tmp ${path_php_share}/sessions ${path_php_share}/soap ${path_xdebug_profile} ${path_xdebug_trace} ${path_fpm_pool}/www ${path_fpm_pool}/www-admin"
+cmd="for path in ${paths}; do [ -d \${path} ] || mkdir -p \${path}; done"
+_lxc_exec ${_CT_NAME} "${cmd}"
 
 
 ########################  INSTALL
 
-_echoT "----------  install"
-
+_echoT "----------  update"
 _lxc_exec ${_CT_NAME} "apk update"
-_lxc_exec ${_CT_NAME} "apk add apache2-proxy"
+
+_echoT "----------  install php7-fpm"
+_lxc_exec ${_CT_NAME} "apk add php7-fpm"
+
+_echoT "----------  install php7 modules"
+_lxc_exec ${_CT_NAME} "apk add ${php_modules}"
 
 _echoT "----------  service set & start"
-
-service=apache2
+service=${_PH_FPM_SERVICE}
 _lxc_exec ${_CT_NAME} "rc-update add ${service}"
 _lxc_exec ${_CT_NAME} "rc-service ${service} start"
 
 
-########################  CONF
+########################  CONF PHP.INI
 
-_echoT "----------  conf.d default"
+_echoT "----------  conf php.ini global"
 
-file=/etc/apache2/conf.d/default.conf
+file=${file_php_conf}
 _lxc_exec ${_CT_NAME} "[ -f ${file} ] && cp -a ${file} ${file}.${_SDATE}"
 
-cmds="sed -i 's|^.\?\(Timeout\) .*$|\1 ${_AP_TIMEOUT}|' ${file}
-sed -i 's|^.\?\(KeepAlive\) .*$|\1 ${_AP_KEEPALIVE}|' ${file}
-sed -i 's|^.\?\(MaxKeepAliveRequests\) .*$|\1 ${_AP_KEEPALIVE_REQUEST}|' ${file}
-sed -i 's|^.\?\(KeepAliveTimeout\) .*$|\1 ${_AP_KEEPALIVE_TIMEOUT}|' ${file}"
+# global
+cmds=; while read str val; do
+	cmds+="sed -i 's|^;\?\(${str}\s*=\).*|\1 ${val}|' ${file}
+"; done <<< "track_errors Off
+max_execution_time  ${_PH_MAX_EXECUTION_TIME}
+max_input_time  ${_PH_MAX_INPUT_TIME}
+memory_limit  ${_PH_MEMORY_LIMIT}
+post_max_size  ${_PH_POST_MAX_SIZE}
+file_uploads  On
+upload_max_filesize  ${_PH_UPLOAD_MAX_FILESIZE}
+date.timezone  'Europe/Paris'
+session.use_strict_mode  ${_PH_SESSION_STRICT_MODE}
+session.save_handler  redis
+session.save_path  \"tcp://${S_SERVICE[cache]}:${S_CACHE_PORT}\"
+mail.log  syslog"
+#error_log  syslog
+#syslog.ident  php
+#syslog.facility  user
+_lxc_exec ${_CT_NAME} "${cmds}"
+
+_echoT "----------  conf php.ini opcache"
+
+cmds=; while read str val; do
+	cmds+="sed -i 's|^;\?\(${str}\s*=\).*|\1 ${val}|' ${file}
+"; done <<< "opcache.enable 1
+opcache.enable_cli  0
+opcache.memory_consumption  128
+opcache.interned_strings_buffer  8
+opcache.max_accelerated_files  10000
+opcache.revalidate_freq  4
+opcache.save_comments  1"
+_lxc_exec ${_CT_NAME} "${cmds}"
+
+_echoT "----------  conf php.ini paths"
+
+cmds=; while read str val; do
+	cmds+="sed -i 's|^;\?\(${str}\s*=\).*|\1 ${val}|' ${file}
+"; done <<< "upload_tmp_dir  ${path_php_share}/tmp
+sys_temp_dir  ${path_php_share}/tmp
+soap.wsdl_cache_dir  ${path_php_share}/soap"
 _lxc_exec ${_CT_NAME} "${cmds}"
 
 
-_echoT "----------  conf httpd module root"
+########################  CONF PHP-FPM
 
-_lxc_exec ${_CT_NAME} "! [ -d "${path_sites}" ] &&mkdir -p ${path_sites}"
-path=/var/www/localhost/htdocs
-_lxc_exec ${_CT_NAME} "[ -d /var/www/localhost/htdocs ] && mv /var/www/localhost/htdocs ${path_www}"
-#_lxc_exec ${_CT_NAME} "chown -R apache/apache ${path_sites}"
+file=${file_fpm_conf}
+_lxc_exec ${_CT_NAME} "[ -f ${file} ] && cp -a ${file} ${file}.${_SDATE}"
 
-_echoT "----------  conf httpd module"
+_echoT "----------  conf php.fpm global"
 
-_lxc_exec ${_CT_NAME} "[ -f ${file_conf_http} ] && cp -a ${file_conf_http} ${file_conf_http}.${_SDATE}"
-
-# conf.d/default
-cmds="sed -i 's|^.\?\(LoadModule mpm_event_module.*\)$|\1|' ${file_conf_http}
-sed -i 's|^.\?\(LoadModule mpm_prefork_module.*\)$|#\1|' ${file_conf_http}
-sed -i 's|^.\?\(LoadModule mpm_worker_module.*\)$|#\1|' ${file_conf_http}
-sed -i 's|^.\?\(LoadModule vhost_alias_module.*\)$|\1|' ${file_conf_http}
-sed -i 's|^.\?\(LoadModule info_module.*\)$|\1|' ${file_conf_http}
-sed -i 's|^.\?\(LoadModule rewrite_module.*\)$|\1|' ${file_conf_http}"
+cmds=; while read str val; do
+	cmds+="sed -i 's|^;\?\(${str}\s*=\).*|\1 ${val}|' ${file}
+"; done <<< "emergency_restart_threshold  ${_PH_RESTART_THRESHOLD}
+emergency_restart_interval  ${_PH_RESTART_INTERVAL}
+process_control_timeout  ${_PH_CONTROL_TIMEOUT}
+error_log  syslog
+syslog.facility  daemon
+syslog.ident  ${_PH_FPM_SERVICE}
+log_level  notice
+log_limit  1024
+log_buffering  yes"
 _lxc_exec ${_CT_NAME} "${cmds}"
 
-_echoT "----------  conf httpd"
+########################  POOL - WWW
 
-# IncludeOptional
-_lxc_exec ${_CT_NAME} "grep -q ${path_sites} ${file_conf_http} || echo 'IncludeOptional ${path_sites}/*.conf' >>  ${file_conf_http}"
+pool=www
 
-cmds="sed -i 's|^.\?\(ServerName\) .*$|\1 localhost|' ${file_conf_http}
-sed -i 's|^.\?\(ServerAdmin\) .*$|\1 ${S_DOMAIN_EMAIL_TECH}|' ${file_conf_http}
-sed -i 's|^\(ServerSignature\) .*$|\1 Off|' ${file_conf_http}
-sed -i 's|^\(ServerTokens\) .*$|\1 Prod|' ${file_conf_http}
-sed -i 's|/var/www/localhost/htdocs|${path_www}|' ${file_conf_http}"
+_echoT "----------  file pool ${pool}"
+
+file=${path_fpm_conf}/${pool}.conf
+
+_lxc_exec ${_CT_NAME} "[ -f ${file} ] && cp -a ${file} ${file}.${_SDATE}"
+
+_echoT "----------  conf pool ${pool}"
+
+cmds=; while read str val; do
+	cmds+="sed -i 's|^;\?\(${str}\s*=\).*|\1 ${val}|' ${file}
+"; done <<< "prefix  ${path_fpm_pool}/www
+user nobody
+group nobody
+listen  ${_PHPFPM_SOCK}
+listen.backlog  $(( ${_AP_MAX_SYN_BACKLOG} / 2 ))
+listen.owner  nobody
+listen.group  nobody
+listen.mode  0666
+process.priority  0
+process.dumpable  yes
+pm dynamic
+pm.max_children  ${_PH_W_MAX_CHILDREN}
+pm.start_servers  ${_PH_W_START_SERVERS}
+pm.min_spare_servers  ${_PH_W_MIN_SPARE_SERVERS}
+pm.max_spare_servers  ${_PH_W_MAX_SPARE_SERVERS}
+pm.max_requests  ${_PH_W_MAX_REQUESTS}
+pm.status_path  /status-www
+ping.path  /ping-www
+ping.response  pong
+access.log  ${S_PATH_LOG}/php7/\$pool.access.log
+slowlog  ${S_PATH_LOG}/php7/\$pool.slow.log
+request_slowlog_timeout  ${_PH_SLOWLOG_TIMEOUT}
+catch_workers_output  yes"
 _lxc_exec ${_CT_NAME} "${cmds}"
 
-# Options
-_lxc_exec ${_CT_NAME} "sed -i '/^<Directory \"\/var\/www\/localhost\/html\">/,/<\/Directory>/ {s|^\(\s*Options\) .*|\1 -Indexes -MultiViews +FollowSymLinks|}' ${file_conf_http}"
+_lxc_exec ${_CT_NAME} "sed -i 's|^;\?\(access.format\s*=\).*|\1  \"%R - %u %t \\\\\"%m %r%Q%q\\\\\" %s %f %{mili}d %{kilo}M %C%%\"|' ${file}"
 
-# Log options
-_lxc_exec ${_CT_NAME} "sed -i '/^LogLevel/ s|^|#|' ${file_conf_http}"
-_lxc_exec ${_CT_NAME} "sed -i '/^ErrorLog/ s|^|#|' ${file_conf_http}"
-_lxc_exec ${_CT_NAME} "sed -i '/^<IfModule log_config_module>/,/^<\/IfModule>/ s|^|#|' ${file_conf_http}"
 
-_eval lxc file push ${file_log} ${_CT_NAME}/etc/apache2/conf.d/
+########################  POOL - WWW-ADMIN
 
-_echoT "----------  conf mpm"
+pool=www-admin
 
-file=${path_conf}/mpm.conf
-_lxc_exec ${_CT_NAME} "[ ! -f '${file}.${_SDATE}' ] && cp -a '${file}' '${file}.${_SDATE}'"
+_echoT "----------  file pool ${pool}"
 
-cmds="sed -i '/<IfModule mpm_event_module>/,/<\/IfModule>/ s|^\(\s*StartServers\s*\).*|\1 13|' ${file}
-sed -i '/<IfModule mpm_event_module>/,/<\/IfModule>/ s|^\(\s*MinSpareThreads\s*\).*|\1 50|' ${file}
-sed -i '/<IfModule mpm_event_module>/,/<\/IfModule>/ s|^\(\s*MaxSpareThreads\s*\).*|\1 250|' ${file}
-sed -i '/<IfModule mpm_event_module>/,/<\/IfModule>/ s|^\(\s*ThreadsPerChild\s*\).*|\1 25|' ${file}
-sed -i '/<IfModule mpm_event_module>/,/<\/IfModule>/ s|^\(\s*MaxRequestWorkers\s*\).*|\1 400|' ${file}
-sed -i '/<IfModule mpm_event_module>/,/<\/IfModule>/ s|^\(\s*MaxConnectionsPerChild\s*\).*|\1 0|' ${file}"
+file=${path_fpm_conf}/${pool}.conf
+
+_lxc_exec ${_CT_NAME} "[ -f ${file} ] && cp -a ${file} ${file}.${_SDATE}"
+_lxc_exec ${_CT_NAME} "cp -a ${path_fpm_conf}/www.conf.${_SDATE} ${file}"
+
+
+_echoT "----------  conf pool ${pool}"
+
+_lxc_exec ${_CT_NAME} "sed -i 's|^\[.*\]$|[${pool}]|' ${file}"
+
+cmds=; while read str val; do
+	cmds+="sed -i 's|^;\?\(${str}\s*=\).*$|\1 ${val}|' ${file}
+"; done <<< "prefix  ${path_fpm_pool}/www-admin
+user nobody
+group nobody
+listen  ${_PHPFPM_ADMIN_SOCK}
+listen.backlog  $(( ${_AP_MAX_SYN_BACKLOG} / 2 ))
+listen.owner  nobody
+listen.group  nobody
+listen.mode  0666
+process.priority  0
+process.dumpable  yes
+pm static
+pm.max_children  1
+pm.max_requests  500
+pm.status_path  /status-www-admin
+ping.path  /ping-www-admin
+ping.response  pong"
 _lxc_exec ${_CT_NAME} "${cmds}"
 
 
-_echoT "----------  conf info & status"
+########################  APACHE
 
-file=${path_conf}/info.conf
-_lxc_exec ${_CT_NAME} "[ ! -f '${file}.${_SDATE}' ] && cp -a '${file}' '${file}.${_SDATE}'"
-# optimize require for info
-_lxc_exec ${_CT_NAME} "sed -i '/<Location \/server-status>/,/<\/Location>/ {s|^\(\s*\)\(Require host\).*|\1\2 ${S_DOMAIN_FQDN}\n\1Require ip ${_IPS_AUTH}|}' ${file}"
-# optimize require for status
-_lxc_exec ${_CT_NAME} "sed -i '/<Location \/server-info>/,/<\/Location>/ {s|^\(\s*\)\(Require host\).*|\1\2 ${S_DOMAIN_FQDN}\n\1Require ip ${_IPS_AUTH}|}' ${file}"
+_echoT "----------  apache php-fpm"
 
-
-_echoT "----------  service restart"
-
-service=apache2
-_lxc_exec ${_CT_NAME} "rc-service ${service} restart"
+file=${path_apache_conf}/${file_apache##*/}
+_eval lxc file push ${file_apache} ${_CT_NAME}/${file}
+_lxc_var_replace ${_CT_NAME} ${file} php apache
 
 
-########################  PING
+_echoT "----------  localhost files"
 
-_echoT "----------  ping-monitor"
+_lxc_exec ${_CT_NAME} "echo '<?php phpinfo() ?>' > ${_AP_PATH_WWW}/phpinf.php"
 
-_lxc_exec ${_CT_NAME} "echo 'pong' > ${path_www}/ping-monitor.html"
-_lxc_exec ${_CT_NAME} "echo 'Alias \"/ping-monitor\" \"/var/www/localhost/html/ping-monitor.html\"' > ${path_conf}/monitor.conf"
+file=${_AP_PATH_WWW}/index.php
+_lxc_exec ${_CT_NAME} "echo '<html><body><h1><?php echo \"php works!\" ?></h1></body></html>' > ${file}"
+
+
+_echoT "----------  ${S_DOMAIN_FQDN} files"
+
+_lxc_exec ${_CT_NAME} "echo '<?php phpinfo() ?>' > ${_AP_PATH_DOMAIN}/html/phpinf.php"
+
+file=${_AP_PATH_DOMAIN}/html/index.php
+_lxc_exec ${_CT_NAME} "echo '<html><body><h1>${S_DOMAIN_FQDN} php works!</h1></body></html>' > ${file}"
+
+
+########################  PING-MONITOR
+
+_echoT "----------  ping-monitor file"
+
+_lxc_exec ${_CT_NAME} "echo '<?php echo \"pong\"; ?>' > ${_AP_PATH_WWW}/ping-monitor.php"
+
+_echoT "----------  ping-monitor conf"
+
+file=${path_apache_conf}/${file_monitor##*/}
+_keepcpts ${file}
+_eval lxc file push ${file_monitor} ${_CT_NAME}/${file}
+_lxc_var_replace ${_CT_NAME} ${file} apache php
+
+
+########################  HAPROXY
+
+_echoT "----------  ${S_SERVICE[proxy]} ${S_DOMAIN_NAME}1 "
+
+file=/etc/haproxy/conf-available/80-backends
+_lxc_exec ${S_SERVICE[proxy]} "sed -i 's|^\(\s*server\s*${S_DOMAIN_NAME}1\s*\).*\(:80 .*\)$|\1${S_SERVICE[php]}\2|' ${file}"
+
+
+########################  RESTART
+
+_echoT "----------  apache2 restart"
+_lxc_exec ${_CT_NAME} "rc-service apache2 restart"
+
+_echoT "----------  ${_PH_FPM_SERVICE} restart"
+_lxc_exec ${_CT_NAME} "rc-service ${_PH_FPM_SERVICE} restart"
+
+_echoT "----------  ${S_SERVICE[proxy]} reload"
+_lxc_exec ${S_SERVICE[proxy]} "rc-service haproxy reload"
 
 
 ########################  RSYSLOG
 
 _echoT "----------  ${S_SERVICE[log]} host path"
 
-path=${S_VM_PATH_LOG}/apache2
+path=${S_VM_PATH_LOG}/php7
 _lxc_exec ${S_SERVICE[log]} "[ -d ${path} ] || mkdir -p ${path}"
 
 
@@ -256,7 +386,7 @@ _echoT "----------  ${S_SERVICE[log]} host-apache"
 
 file=/etc/rsyslog.d/${file_rsyslog_host##*/}
 _eval lxc file push ${file_rsyslog_host} ${S_SERVICE[log]}${file}
-_lxc_var_replace ${S_SERVICE[log]} ${file} rsyslog
+_lxc_var_replace ${S_SERVICE[log]} ${file} rsyslog php
 
 _echoT "----------  rsyslog restart ${S_SERVICE[log]}"
 
@@ -267,7 +397,7 @@ _echoT "----------  ${S_SERVICE[log]} client-apache"
 
 file=/etc/rsyslog.d/${file_rsyslog_client##*/}
 _eval lxc file push ${file_rsyslog_client} ${_CT_NAME}${file}
-_lxc_var_replace ${_CT_NAME} ${file} rsyslog
+_lxc_var_replace ${_CT_NAME} ${file} rsyslog php
 
 _echoT "----------  rsyslog restart ${_CT_NAME}"
 
@@ -285,59 +415,42 @@ _lxc_var_replace ${S_SERVICE[log]} ${file} logrotate
 
 _echoT "----------  client logrotate"
 
-file=/etc/logrotate.d/apache2
-_lxc_exec ${_CT_NAME} "grep -q /var/log/apache2/\*.info ${file} || sed -i '1i/var/log/apache2/*.info' ${file}"
-_lxc_exec ${_CT_NAME} "grep -q /var/log/apache2/\*.info ${file} || sed -i '1i/var/log/apache2/*.err' ${file}"
-_lxc_exec ${_CT_NAME} "grep -q daily ${file} || sed -i 's|^\(\s*missingok\)|    daily\n\1|' ${file}"
-_lxc_exec ${_CT_NAME} "grep -q ^\s*rotate ${file} || sed -i 's|^\(\s*missingok\)|\1\n    rotate 14|' ${file}"
+file=/etc/logrotate.d/${file_logrotate_client##*/}
+_eval lxc file push ${file_logrotate_client} ${_CT_NAME}${file}
+_lxc_var_replace ${_CT_NAME} ${file} logrotate
 
 
 ########################  PUBLISH
 
 _echoT "----------  publish ${_CT_NAME}"
 
-_eval lxc image list --format=json | jq -r '.[].aliases[].name' | grep -q ^${_CT_NAME}$ && lxc image alias rename ${_CT_NAME} ${_CT_NAME}-$(date +%s)
-_eval lxc publish ${_CT_NAME} --alias ${_CT_NAME} --force
+_eval lxc image list -f json | jq -r '.[].aliases[].name' | grep -q ^${_CT_NAME}$ && lxc image alias rename ${_CT_NAME} ${_CT_NAME}-$(date +%s)
+_eval lxc publish --force ${_CT_NAME} --alias ${_CT_NAME}
 
 
 ########################  TEST
 
-_echoT "----------  publish ${_CT_NAME}"
+_echoT "----------  php test"
 
-_echoI "To test connection use: curl ${_CT_NAME}:80"
+_echoI "To verify php configuration, type:"
+_echo "${_IPTHIS}/phpinf.php"
+_echo "${_CT_NAME}/phpinf.php"
+_echo "curl ${S_DOMAIN_FQDN}:80"
+
+_echoI "To verify ping response, type:"
+_echo "curl ${_CT_NAME}/ping-monitor"
+
+_echoI "To verify 'www' pool informations, type:"
+_echo "curl ${_CT_NAME}/status-www"
+_echo "curl ${_CT_NAME}/status-www?full"
+
+
+_echoI "To verify 'www-admin' pool informations, type:"
+_echo "curl ${_CT_NAME}/status-www-admin"
+_echo "curl ${_CT_NAME}/status-www-admin?full"
+
 
 ########################  END
 
 _echoT "---------- ${_PART} end"
 _eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"
-
-
-<<KEEP
-# LogLevel
-_lxc_exec ${_CT_NAME} "sed -i 's|^\(LogLevel\).*$|\1 warn|' ${file_conf_http}"
-# ErrorLogFormat
-if _lxc_exec ${_CT_NAME} "grep -q ErrorLogFormat  ${file_conf_http}"; then
-	str=''
-	_lxc_exec ${_CT_NAME} "sed -i 's|^\(ErrorLogFormat\) .*$|\1 \"[%{u}t] [%-m:%l] [pid %P:tid %T] %7F: %E: [client\\\\ %{X-Forwarded-For}i-%a-%A] %M% ,\\\\ referer\\\\ %{Referer}i\"|' ${file_conf_http}"
-else
-	_lxc_exec ${_CT_NAME} "sed -i '/^ErrorLog/ iErrorLogFormat \"[%{u}t] [%-m:%l] [pid %P:tid %T] %7F: %E: [client\\\\ %{X-Forwarded-For}i-%a-%A] %M% ,\\\\ referer\\\\ %{Referer}i\"' ${file_conf_http}"
-fi
-
-# ErrorLog
-_lxc_exec ${_CT_NAME} "sed -i 's|^\(ErrorLog\) .*$|\1 \"\|/usr/bin/logger -p local7.err -t localhost/apache\"|' ${file_conf_http}"
-
-# CustomLog
-str='    SetEnvIf X-Forwarded-For \".+\" forwarded\n'
-str+='    #SetEnvIf Remote_Addr "127\.0\.0\.1" loglocal\n'
-str+='    #SetEnvIf Remote_Addr "'${_CIDR_VM}'" loglocal\n'
-str+='    #SetEnvIf Remote_Addr "'${_IPTHIS}'" loglocal\n'
-str+='    #SetEnvIf Remote_Addr "'${_IPTHISV6}'" loglocal\n'
-str+='    SetEnvIf Request_URI "^/ping-.*" nolog\n'
-str+='    SetEnvIf Request_Method OPTIONS nolog\n'
-str+='    LogFormat "%a %l %u %t \\"%r\\" %>s %O \\"%{Referer}i\\" \\"%{User-Agent}i\\"" combined\n'
-str+='    #CustomLog "\|/usr/bin/logger -p local7.info -t localhost/apache" combined\n'
-str+='    CustomLog "\|/usr/bin/logger -p local7.info -t localhost/apache" combined env=!nolog'
-_lxc_exec ${_CT_NAME} "grep -q CustomLog.*/usr/bin/logger ${file_conf_http} || sed -i 's|^\s*\(CustomLog.*\)$|    #\1\n${str}|' ${file_conf_http}"
-
-_lxc_exec ${_CT_NAME} "sed -i 's|^\s*\(CustomLog.*\)$|    #\2\n    SetEnvIf X-Forwarded-For \".+\" forwarded\n    CustomLog \"\|/usr/bin/logger -p local7.info -t localhost/apache\" combined\n    CustomLog \"\|/usr/bin/logger -p local7.info -t localhost/apache\" combined env=forwarded|' ${file_conf_http}"
-KEEP

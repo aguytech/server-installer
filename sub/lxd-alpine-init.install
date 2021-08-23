@@ -16,20 +16,36 @@ _echoT "----------  ${_RELEASE_ID} data"
 _CT_NAME="${_RELEASE/./}"
 
 
-########################  INIT
+########################  COPY
 
 _echoT "----------  ${_RELEASE} copy"
 
-if ! [ "`lxc image list --format=json | jq -r '.[].aliases[].name | select(. | contains("'${_CT_NAME}'"))'`" ]; then
+if ! [ "`lxc image list -f json | jq -r '.[].aliases[].name | select(. | contains("'${_CT_NAME}'"))'`" ]; then
 	_echo "copy images ${_CT_NAME}"
-	_eval lxc image copy images:${_RELEASE_ID}/${_RELEASE_NAME} local: --alias ${_CT_NAME} --alias ${_RELEASE_ID}-${_RELEASE_NAME/./} --auto-update
+	_eval lxc image copy images:${_RELEASE_ID}/${_RELEASE_NAME} local: --alias ${_CT_NAME} --auto-update
 fi
 
 
+########################  PROFILE
+
+profile=global
+_echoT "----------  profiles ${profile}"
+
+lxc profile list -f csv|grep -q "^${profile}," && _eval lxc profile rename ${profile} ${profile}.${_SDATE}
+_eval lxc profile create ${profile}
+
+path="${S_HOST_PATH_SHARE}/global"
+path_ct="${S_VM_PATH_SHARE}/global"
+[ -d ${path} ] || _eval mkdir -p ${path}
+_eval lxc profile device add ${profile} global disk source=${path} path=${path_ct}
+
+
+########################  INIT
+
 _echoT "----------  ${_CT_NAME} init"
 
-if [ "`lxc list --format=json | jq -r '.[] | select(.name == "'${_CT_NAME}'").name'`" ]; then
-	[ "`lxc list --format=json | jq -r '.[] | select(.status == "Running") | select(.name == "'${_CT_NAME}'").name'`" ] && lxc stop ${_CT_NAME}
+if [ "`lxc list -f json | jq -r '.[] | select(.name == "'${_CT_NAME}'").name'`" ]; then
+	[ "`lxc list -f json | jq -r '.[] | select(.status == "Running") | select(.name == "'${_CT_NAME}'").name'`" ] && lxc stop ${_CT_NAME}
 	_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
 fi
 _eval lxc init ${_CT_NAME} ${_CT_NAME} -p stock -p global
@@ -37,12 +53,12 @@ _eval lxc init ${_CT_NAME} ${_CT_NAME} -p stock -p global
 
 #_echoT "----------  ${_CT_NAME} profile global"
 
-#if ! [ "`lxc list "${_CT_NAME}" --format=json | jq -r '.[] | select(.profiles | any(contains("global"))).name'`" ]; then
+#if ! [ "`lxc list "${_CT_NAME}" -f json | jq -r '.[] | select(.profiles | any(contains("global"))).name'`" ]; then
 #	lxc profile add "${_CT_NAME}" global
 #fi
 
 
-if ! [ "`lxc list --format=json | jq -r '.[] | select(.status == "Running") | select(.name == "'${_CT_NAME}'").name'`" ]; then
+if ! [ "`lxc list -f json | jq -r '.[] | select(.status == "Running") | select(.name == "'${_CT_NAME}'").name'`" ]; then
 	_echoT "----------  start ${_CT_NAME}"
 
 	_eval lxc start ${_CT_NAME}
@@ -69,8 +85,7 @@ _echoT "----------  path bs"
 
 path="/tmp/bs"
 ! [ -d ${path} ] && rm -fR ${path}
-cp -a ${S_PATH_INSTALL%/*}/bs ${path}
-rm -fR ${path}/.git
+cp -a ${S_PATH_INSTALL%/*}/bs ${path} && rm -fR ${path}/.git
 _lxc_exec ${_CT_NAME} "[ -d /usr/local/bs ] && mv /usr/local/bs /usr/local/bs.${_SDATE}"
 _eval lxc file push --recursive ${path} ${_CT_NAME}/usr/local/
 [ -d ${path} ] && rm -fR ${path}

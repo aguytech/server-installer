@@ -6,3 +6,4 @@ S_PATH_LOG/iptables/*.log {
 	notifempty
 	weekly
 	rotate 8
+}

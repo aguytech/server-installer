@@ -1,0 +1,12 @@
+# Host logrotate file for php7
+S_VM_PATH_LOG/apache2/*.err
+S_VM_PATH_LOG/apache2/*.warn
+S_VM_PATH_LOG/apache2/*.notice
+S_VM_PATH_LOG/apache2/*.info {
+    daily
+    missingok
+    rotate 14
+    compress
+    delaycompress
+    notifempty
+}

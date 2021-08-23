@@ -40,14 +40,14 @@ _CT_IP=${s_base}.${S_SERVICE_BITS[proxy]}
 
 _echoT "----------  data"
 
-[ -z ${_HP_DOMAIN_2_FQDN+x} ] && anstmp="ggj.ovh" && _askno "Give a second fqdn second domain name ($anstmp)" && _HP_DOMAIN_2_FQDN="${_ANSWER:-$anstmp}" && _confset _HP_DOMAIN_2_FQDN "$_HP_DOMAIN_2_FQDN"
+[ -z ${_HP_DOMAIN_2_FQDN+x} ] && anstmp="ggj.ovh" && _askno "Give a second fqdn second domain name (${anstmp})" && _HP_DOMAIN_2_FQDN="${_ANSWER:-$anstmp}" && _confset _HP_DOMAIN_2_FQDN "$_HP_DOMAIN_2_FQDN"
 _HP_DOMAIN_2_NAME="${_HP_DOMAIN_2_FQDN%.*}" && _confset _HP_DOMAIN_2_NAME "${_HP_DOMAIN_2_NAME}"
 
-[ -z ${_HP_ACCESS_USER+x} ] && anstmp="admin" && _askno "Enter a name for stats access ($anstmp)" && _HP_ACCESS_USER="${_ANSWER:-$anstmp}" && _confset _HP_ACCESS_USER "${_HP_ACCESS_USER}"
+[ -z ${_HP_ACCESS_USER+x} ] && anstmp="admin" && _askno "Enter a name for stats access (${anstmp})" && _HP_ACCESS_USER="${_ANSWER:-$anstmp}" && _confset _HP_ACCESS_USER "${_HP_ACCESS_USER}"
 
-[ -z ${_HP_ACCESS_PWD+x} ] && anstmp="$(_pwd)" && _askno "Enter a password to stats access ($anstmp)" && _HP_ACCESS_PWD="${_ANSWER:-$anstmp}" && _confset _HP_ACCESS_PWD "${_HP_ACCESS_PWD}"
+[ -z ${_HP_ACCESS_PWD+x} ] && anstmp="$(_pwd)" && _askno "Enter a password to stats access (${anstmp})" && _HP_ACCESS_PWD="${_ANSWER:-$anstmp}" && _confset _HP_ACCESS_PWD "${_HP_ACCESS_PWD}"
 
-[ -z ${_HP_ACCESS_URI+x} ] && anstmp="/haproxy-stats" && _askno "Enter the URI to access to admin site ($anstmp)" && _HP_ACCESS_URI="${_ANSWER:-$anstmp}" && _confset _HP_ACCESS_URI "${_HP_ACCESS_URI}"
+[ -z ${_HP_ACCESS_URI+x} ] && anstmp="/haproxy-stats" && _askno "Enter the URI to access to admin site (${anstmp})" && _HP_ACCESS_URI="${_ANSWER:-$anstmp}" && _confset _HP_ACCESS_URI "${_HP_ACCESS_URI}"
 
 
 ########################  INIT
@@ -55,12 +55,12 @@ _HP_DOMAIN_2_NAME="${_HP_DOMAIN_2_FQDN%.*}" && _confset _HP_DOMAIN_2_NAME "${_HP
 _echoT "----------  init"
 
 if lxc list -f json |jq -r '.[].name' | grep -q ^${_CT_NAME}$; then
-	if lxc list --format=json | jq -r '.[] | select(.status == "Running").name' | grep -q ^${_CT_NAME}$; then
+	if lxc list -f json | jq -r '.[] | select(.status == "Running").name' | grep -q ^${_CT_NAME}$; then
 		_eval lxc stop ${_CT_NAME}
-		_eval lxc rename ${_CT_NAME} ${_CT_NAME}.${_SDATE}
-		_eval lxc start ${_CT_NAME}.${_SDATE}
+		_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
+		_eval lxc start ${_CT_NAME}-${_SDATE}
 	else
-		_eval lxc rename ${_CT_NAME} ${_CT_NAME}.${_SDATE}
+		_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
 	fi
 fi
 
@@ -69,7 +69,7 @@ _eval lxc init ${_CT_NAME_COM} ${_CT_NAME} -p default -p global
 
 _echoT "----------  network fixed ip"
 
-if ! lxc list --format=json | jq -r '.[] | select(.name == "'${_CT_NAME}'").devices[].name' | grep -q eth0; then
+if ! lxc list -f json | jq -r '.[] | select(.name == "'${_CT_NAME}'").devices[].name' | grep -q eth0; then
 	_eval lxc network attach ${s_inet} ${_CT_NAME} eth0 eth0
 fi
 _eval lxc config device set ${_CT_NAME} eth0 ipv4.address ${_CT_IP}
@@ -104,7 +104,7 @@ _lxc_exec ${_CT_NAME} "echo '${txt}' > ${file}"
 _echoT "----------  install"
 
 _lxc_exec ${_CT_NAME} "apk update"
-_lxc_exec ${_CT_NAME} "apk add haproxy bash bash-completion vim" # lnav
+_lxc_exec ${_CT_NAME} "apk add haproxy bash bash-completion vim curl" # lnav
 
 
 _echoT "----------  service set"
@@ -242,8 +242,8 @@ _lxc_var_replace ${S_SERVICE[log]} ${file} logrotate
 
 _echoT "----------  publish ${_CT_NAME}"
 
-_eval lxc image list --format=json | jq -r '.[].aliases[].name' | grep -q ^${_CT_NAME}$ && lxc image alias rename ${_CT_NAME} ${_CT_NAME}-$(date +%s)
-_eval lxc publish ${_CT_NAME} --alias ${_CT_NAME} --force
+_eval lxc image list -f json | jq -r '.[].aliases[].name' | grep -q ^${_CT_NAME}$ && lxc image alias rename ${_CT_NAME} ${_CT_NAME}-$(date +%s)
+_eval lxc publish --force ${_CT_NAME} --alias ${_CT_NAME}
 
 
 ########################  TEST

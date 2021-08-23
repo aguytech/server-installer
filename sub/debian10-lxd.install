@@ -95,7 +95,7 @@ _eval lxc network set ${s_inet} ipv4.address=${s_cidr} ipv4.dhcp.ranges=${s_cidr
 profile="stock"
 _echoT "----------  profiles ${profile}"
 
-if ! [ "`lxc profile list --format=json | jq -r '.[] | select(.name == "'${profile}'").name'`" ]; then
+if ! [ "`lxc profile list -f json | jq -r '.[] | select(.name == "'${profile}'").name'`" ]; then
 	_eval lxc profile create ${profile}
 	_eval lxc profile device add ${profile} root disk pool=stock path=/
 	_eval lxc network attach-profile lxdbr1 ${profile} eth0
@@ -108,7 +108,7 @@ path="${S_HOST_PATH_SHARE}/global"
 path_ct="${S_VM_PATH_SHARE}/global"
 ! [ -d "${path}" ] && _eval mkdir -p "${path}"
 
-if ! [ "`lxc profile list --format=json | jq -r '.[] | select(.name == "'${profile}'").name'`" ]; then
+if ! [ "`lxc profile list -f json | jq -r '.[] | select(.name == "'${profile}'").name'`" ]; then
 	_eval lxc profile create ${profile}
 	_eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
 fi
@@ -120,7 +120,7 @@ path="${S_HOST_PATH_SHARE}/www/global"
 path_ct="${S_VM_PATH_SHARE}/www/global"
 ! [ -d "${path}" ] && _eval mkdir -p "${path}"
 
-if ! [ "`lxc profile list --format=json | jq -r '.[] | select(.name == "'${profile}'").name'`" ]; then
+if ! [ "`lxc profile list -f json | jq -r '.[] | select(.name == "'${profile}'").name'`" ]; then
 	_eval lxc profile create ${profile}
 	_eval lxc profile device add ${profile} ${profile} disk source="${path}" path="${path_ct}"
 fi
@@ -132,7 +132,7 @@ path="${S_HOST_PATH_SHARE}/sgbd/global"
 path_ct="${S_VM_PATH_SHARE}/sgbd"
 ! [ -d "${path}" ] && _eval mkdir -p "${path}"
 
-if ! [ "`lxc profile list --format=json | jq -r '.[] | select(.name == "'${profile}'").name'`" ]; then
+if ! [ "`lxc profile list -f json | jq -r '.[] | select(.name == "'${profile}'").name'`" ]; then
 	_eval lxc profile create ${profile}
 	_eval lxc profile device add ${profile} ${profile} disk source="${path}" path="${path_ct}"
 fi
