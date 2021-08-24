@@ -33,32 +33,32 @@ _CT_IP=${s_base}.${S_SERVICE_BITS[http]}
 
 _echoT "----------  data sysctl.conf"
 
-[ -z ${_AP_MAX_SYN_BACKLOG+x} ] && anstmp="${_MAX_SYN_BACKLOG}" && _askno "Set $(sysctl net.ipv4.tcp_max_syn_backlog) - (${anstmp})" && _AP_MAX_SYN_BACKLOG=${_ANSWER:-$anstmp} && _confset _AP_MAX_SYN_BACKLOG "${_AP_MAX_SYN_BACKLOG}"
+[ -z ${_APA_MAX_SYN_BACKLOG+x} ] && anstmp="${_MAX_SYN_BACKLOG}" && _askno "Set $(sysctl net.ipv4.tcp_max_syn_backlog) - (${anstmp})" && _APA_MAX_SYN_BACKLOG=${_ANSWER:-$anstmp} && _confset _APA_MAX_SYN_BACKLOG "${_APA_MAX_SYN_BACKLOG}"
 
-[ -z ${_AP_MAX_TW_BUCKETS+x} ] && anstmp="${_MAX_TW_BUCKETS}" && _askno "Set $(sysctl net.ipv4.tcp_max_tw_buckets) - (${anstmp})" && _AP_MAX_TW_BUCKETS=${_ANSWER:-$anstmp} && _confset _AP_MAX_TW_BUCKETS "${_AP_MAX_TW_BUCKETS}"
+[ -z ${_APA_MAX_TW_BUCKETS+x} ] && anstmp="${_MAX_TW_BUCKETS}" && _askno "Set $(sysctl net.ipv4.tcp_max_tw_buckets) - (${anstmp})" && _APA_MAX_TW_BUCKETS=${_ANSWER:-$anstmp} && _confset _APA_MAX_TW_BUCKETS "${_APA_MAX_TW_BUCKETS}"
 
-[ -z ${_AP_FIN_TIMEOUT+x} ] && anstmp="${_FIN_TIMEOUT}" && _askno "Set $(sysctl net.ipv4.tcp_fin_timeout) - (${anstmp})" && _AP_FIN_TIMEOUT=${_ANSWER:-$anstmp} && _confset _AP_FIN_TIMEOUT "${_AP_FIN_TIMEOUT}"
+[ -z ${_APA_FIN_TIMEOUT+x} ] && anstmp="${_FIN_TIMEOUT}" && _askno "Set $(sysctl net.ipv4.tcp_fin_timeout) - (${anstmp})" && _APA_FIN_TIMEOUT=${_ANSWER:-$anstmp} && _confset _APA_FIN_TIMEOUT "${_APA_FIN_TIMEOUT}"
 
-[ -z ${_AP_KEEPALIVE_TIME+x} ] && anstmp="240" && _askno "Set $(sysctl net.ipv4.tcp_keepalive_time) - (${anstmp})" && _AP_KEEPALIVE_TIME=${_ANSWER:-$anstmp} && _confset _AP_KEEPALIVE_TIME "${_AP_KEEPALIVE_TIME}"
+[ -z ${_APA_KEEPALIVE_TIME+x} ] && anstmp="240" && _askno "Set $(sysctl net.ipv4.tcp_keepalive_time) - (${anstmp})" && _APA_KEEPALIVE_TIME=${_ANSWER:-$anstmp} && _confset _APA_KEEPALIVE_TIME "${_APA_KEEPALIVE_TIME}"
 
-[ -z ${_AP_KEEPALIVE_INTVL+x} ] && anstmp="30" && _askno "Set $(sysctl net.ipv4.tcp_keepalive_intvl) - (${anstmp})" && _AP_KEEPALIVE_INTVL=${_ANSWER:-$anstmp} && _confset _AP_KEEPALIVE_INTVL "${_AP_KEEPALIVE_INTVL}"
+[ -z ${_APA_KEEPALIVE_INTVL+x} ] && anstmp="30" && _askno "Set $(sysctl net.ipv4.tcp_keepalive_intvl) - (${anstmp})" && _APA_KEEPALIVE_INTVL=${_ANSWER:-$anstmp} && _confset _APA_KEEPALIVE_INTVL "${_APA_KEEPALIVE_INTVL}"
 
-[ -z ${_AP_KEEPALIVE_PROBES+x} ] && anstmp="9" && _askno "Set $(sysctl net.ipv4.tcp_keepalive_probes) - (${anstmp})" && _AP_KEEPALIVE_PROBES=${_ANSWER:-$anstmp} && _confset _AP_KEEPALIVE_PROBES "${_AP_KEEPALIVE_PROBES}"
+[ -z ${_APA_KEEPALIVE_PROBES+x} ] && anstmp="9" && _askno "Set $(sysctl net.ipv4.tcp_keepalive_probes) - (${anstmp})" && _APA_KEEPALIVE_PROBES=${_ANSWER:-$anstmp} && _confset _APA_KEEPALIVE_PROBES "${_APA_KEEPALIVE_PROBES}"
 
 
 _echoT "----------  data apache"
 
-[ -z ${_AP_TIMEOUT+x} ] && anstmp="60" && _askno "Time before receives and sends time out (${anstmp})" && _AP_TIMEOUT=${_ANSWER:-$anstmp} && _confset _AP_TIMEOUT "${_AP_TIMEOUT}"
+[ -z ${_APA_TIMEOUT+x} ] && anstmp="60" && _askno "Time before receives and sends time out (${anstmp})" && _APA_TIMEOUT=${_ANSWER:-$anstmp} && _confset _APA_TIMEOUT "${_APA_TIMEOUT}"
 
-[ -z ${_AP_KEEPALIVE+x} ] && anstmp="On" && _askno "Allow persistent connections On/Off (${anstmp})" && _AP_KEEPALIVE=${_ANSWER:-$anstmp} && _confset _AP_KEEPALIVE "${_AP_KEEPALIVE}"
+[ -z ${_APA_KEEPALIVE+x} ] && anstmp="On" && _askno "Allow persistent connections On/Off (${anstmp})" && _APA_KEEPALIVE=${_ANSWER:-$anstmp} && _confset _APA_KEEPALIVE "${_APA_KEEPALIVE}"
 
-[ -z ${_AP_KEEPALIVE_REQUEST+x} ] && anstmp="100" && _askno "The maximum number of requests to allow during a persistent connection (${anstmp})" && _AP_KEEPALIVE_REQUEST=${_ANSWER:-$anstmp} && _confset _AP_KEEPALIVE_REQUEST "${_AP_KEEPALIVE_REQUEST}"
+[ -z ${_APA_KEEPALIVE_REQUEST+x} ] && anstmp="100" && _askno "The maximum number of requests to allow during a persistent connection (${anstmp})" && _APA_KEEPALIVE_REQUEST=${_ANSWER:-$anstmp} && _confset _APA_KEEPALIVE_REQUEST "${_APA_KEEPALIVE_REQUEST}"
 
- [ -z ${_AP_KEEPALIVE_TIMEOUT+x} ] && anstmp="5" && _askno "Number of seconds to wait for the next request (${anstmp})" && _AP_KEEPALIVE_TIMEOUT=${_ANSWER:-$anstmp} && _confset _AP_KEEPALIVE_TIMEOUT "${_AP_KEEPALIVE_TIMEOUT}"
+ [ -z ${_APA_KEEPALIVE_TIMEOUT+x} ] && anstmp="5" && _askno "Number of seconds to wait for the next request (${anstmp})" && _APA_KEEPALIVE_TIMEOUT=${_ANSWER:-$anstmp} && _confset _APA_KEEPALIVE_TIMEOUT "${_APA_KEEPALIVE_TIMEOUT}"
 
 
-_AP_PATH_WWW=/var/www/localhost/html &&  _confset _AP_PATH_WWW "${_AP_PATH_WWW}"
-_AP_PATH_DOMAIN=${S_VM_PATH_SHARE}/www/${S_DOMAIN_FQDN} && _confset _AP_PATH_DOMAIN "${_AP_PATH_DOMAIN}"
+_APA_PATH_WWW=/var/www/localhost/html &&  _confset _APA_PATH_WWW "${_APA_PATH_WWW}"
+_APA_PATH_DOMAIN=${S_VM_PATH_SHARE}/www/${S_DOMAIN_FQDN} && _confset _APA_PATH_DOMAIN "${_APA_PATH_DOMAIN}"
 
 path_sites=/etc/apache2/sites
 path_conf=/etc/apache2/conf.d
@@ -74,7 +74,7 @@ lxc profile list -f csv|grep -q "^${profile}," && _eval lxc profile rename ${pro
 _eval lxc profile create ${profile}
 
 path=${S_HOST_PATH_SHARE}/www/${S_DOMAIN_FQDN}
-path_ct=${_AP_PATH_DOMAIN}
+path_ct=${_APA_PATH_DOMAIN}
 [ -d ${path} ] || _eval mkdir -p ${path}
 _eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
 
@@ -120,12 +120,12 @@ _echoT "----------  conf sysctl.conf"
 file=/etc/sysctl.d/20-lxd.conf
 
 txt="# apache2
-net.ipv4.tcp_max_syn_backlog = ${_AP_MAX_SYN_BACKLOG}
-net.ipv4.tcp_max_tw_buckets = ${_AP_MAX_TW_BUCKETS}
-net.ipv4.tcp_fin_timeout= ${_AP_FIN_TIMEOUT}
-net.ipv4.tcp_keepalive_time= ${_AP_KEEPALIVE_TIME}
-net.ipv4.tcp_keepalive_intvl= ${_AP_KEEPALIVE_INTVL}
-net.ipv4.tcp_keepalive_probes = ${_AP_KEEPALIVE_PROBES}"
+net.ipv4.tcp_max_syn_backlog = ${_APA_MAX_SYN_BACKLOG}
+net.ipv4.tcp_max_tw_buckets = ${_APA_MAX_TW_BUCKETS}
+net.ipv4.tcp_fin_timeout= ${_APA_FIN_TIMEOUT}
+net.ipv4.tcp_keepalive_time= ${_APA_KEEPALIVE_TIME}
+net.ipv4.tcp_keepalive_intvl= ${_APA_KEEPALIVE_INTVL}
+net.ipv4.tcp_keepalive_probes = ${_APA_KEEPALIVE_PROBES}"
 
 _lxc_exec ${_CT_NAME} "echo '${txt}' > ${file}"
 
@@ -155,10 +155,10 @@ _echoT "----------  conf.d default"
 file=/etc/apache2/conf.d/default.conf
 _lxc_exec ${_CT_NAME} "[ -f ${file} ] && cp -a ${file} ${file}.${_SDATE}"
 
-cmds="sed -i 's|^.\?\(Timeout\) .*$|\1 ${_AP_TIMEOUT}|' ${file}
-sed -i 's|^.\?\(KeepAlive\) .*$|\1 ${_AP_KEEPALIVE}|' ${file}
-sed -i 's|^.\?\(MaxKeepAliveRequests\) .*$|\1 ${_AP_KEEPALIVE_REQUEST}|' ${file}
-sed -i 's|^.\?\(KeepAliveTimeout\) .*$|\1 ${_AP_KEEPALIVE_TIMEOUT}|' ${file}"
+cmds="sed -i 's|^.\?\(Timeout\) .*$|\1 ${_APA_TIMEOUT}|' ${file}
+sed -i 's|^.\?\(KeepAlive\) .*$|\1 ${_APA_KEEPALIVE}|' ${file}
+sed -i 's|^.\?\(MaxKeepAliveRequests\) .*$|\1 ${_APA_KEEPALIVE_REQUEST}|' ${file}
+sed -i 's|^.\?\(KeepAliveTimeout\) .*$|\1 ${_APA_KEEPALIVE_TIMEOUT}|' ${file}"
 _lxc_exec ${_CT_NAME} "${cmds}"
 
 
@@ -166,7 +166,7 @@ _echoT "----------  conf httpd module root"
 
 _lxc_exec ${_CT_NAME} "[ -d ${path_sites} ] || mkdir -p ${path_sites}"
 path=/var/www/localhost/htdocs
-_lxc_exec ${_CT_NAME} "[ -d /var/www/localhost/htdocs ] && mv /var/www/localhost/htdocs ${_AP_PATH_WWW}"
+_lxc_exec ${_CT_NAME} "[ -d /var/www/localhost/htdocs ] && mv /var/www/localhost/htdocs ${_APA_PATH_WWW}"
 #_lxc_exec ${_CT_NAME} "chown -R apache/apache ${path_sites}"
 
 _echoT "----------  conf httpd module"
@@ -192,7 +192,7 @@ cmds="sed -i 's|^.\?\(ServerName\) .*$|\1 localhost|' ${file_conf_http}
 sed -i 's|^.\?\(ServerAdmin\) .*$|\1 ${S_DOMAIN_EMAIL_TECH}|' ${file_conf_http}
 sed -i 's|^\(ServerSignature\) .*$|\1 Off|' ${file_conf_http}
 sed -i 's|^\(ServerTokens\) .*$|\1 Prod|' ${file_conf_http}
-sed -i 's|/var/www/localhost/htdocs|${_AP_PATH_WWW}|' ${file_conf_http}"
+sed -i 's|/var/www/localhost/htdocs|${_APA_PATH_WWW}|' ${file_conf_http}"
 _lxc_exec ${_CT_NAME} "${cmds}"
 
 # Options
@@ -236,9 +236,9 @@ _lxc_exec ${_CT_NAME} "sed -i '/<Location \/server-info>/,/<\/Location>/ {s|^\(\
 
 _echoT "----------  ping-monitor"
 
-_lxc_exec ${_CT_NAME} "echo 'pong' > ${_AP_PATH_WWW}/ping-monitor.html"
+_lxc_exec ${_CT_NAME} "echo 'pong' > ${_APA_PATH_WWW}/ping-monitor.html"
 
-cmd="echo 'Alias \"/ping-monitor\" \"${_AP_PATH_WWW}/ping-monitor.html
+cmd="echo 'Alias \"/ping-monitor\" \"${_APA_PATH_WWW}/ping-monitor.html
 <Files ping-monitor.html>
 	SetEnvIf X-Forwarded-For ^$ notforwarded
 	Require env notforwarded
@@ -250,12 +250,12 @@ _lxc_exec ${_CT_NAME} "${cmd}"
 
 _echoT "----------  ${S_DOMAIN_FQDN} path"
 
-path=${_AP_PATH_DOMAIN}/html
+path=${_APA_PATH_DOMAIN}/html
 _lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
 
 _echoT "----------  ${S_DOMAIN_FQDN} index.html"
 
-file=${_AP_PATH_DOMAIN}/html/index.html
+file=${_APA_PATH_DOMAIN}/html/index.html
 _lxc_exec ${_CT_NAME} "echo '<html><body><h1>${S_DOMAIN_FQDN} works!</h1></body></html>' > ${file}"
 
 

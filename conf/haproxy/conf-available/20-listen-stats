@@ -14,5 +14,5 @@ listen stats
 	stats			hide-version
 	stats			refresh 5s
 	stats			show-node
-	stats			auth _HP_ACCESS_USER:_HP_ACCESS_PWD
-	stats			uri _HP_ACCESS_URI
+	stats			auth _HPX_ACCESS_USER:_HPX_ACCESS_PWD
+	stats			uri _HPX_ACCESS_URI

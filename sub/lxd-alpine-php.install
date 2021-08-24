@@ -34,50 +34,50 @@ _CT_NAME=${S_SERVICE[php]}
 #eval ${S_HOST_VM_ETH[default]}
 #_CT_IP=${s_base}.${S_SERVICE_BITS[php]}
 
-_PH_SERVICE=php-fpm7 && _confset _PH_SERVICE "${_PH_SERVICE}"
-_PH_FPM_SOCK=/run/${_PH_SERVICE}/php-fpm.sock && _confset _PH_SERVICE "${_PH_SERVICE}"
-_PH_FPM_ADMIN_SOCK=/run/${_PH_SERVICE}/php-fpm-admin.sock && _confset _PH_SERVICE "${_PH_SERVICE}"
+_PHP_SERVICE=php-fpm7 && _confset _PHP_SERVICE "${_PHP_SERVICE}"
+_PHP_FPM_SOCK=/run/${_PHP_SERVICE}/php-fpm.sock && _confset _PHP_SERVICE "${_PHP_SERVICE}"
+_PHP_FPM_ADMIN_SOCK=/run/${_PHP_SERVICE}/php-fpm-admin.sock && _confset _PHP_SERVICE "${_PHP_SERVICE}"
 
 #php_version=`_lxc_exec ${S_SERVICE[http]} "apk list php7-fpm | sed -n 's|php7-fpm-\([0-9\.]\+\)-.*|\1|p'"`
 php_modules="php7-bcmath php7-bz2 php7-ctype php7-curl php7-exif php7-fileinfo php7-dom php7-gd php7-gmp php7-iconv php7-imap php7-json php7-mbstring php7-openssl php7-pdo_mysql php7-pgsql php7-posix php7-session php7-simplexml php7-sqlite3 php7-xmlreader php7-xmlwriter php7-zip php7-xdebug php7-pecl-mcrypt php7-pecl-redis" #  php7-pecl-imagick php7-pear
 
 _echoT "----------  data php"
 
-[ -z ${_PH_MAX_EXECUTION_TIME+x} ] && anstmp="20" && _askno "max_execution_time (${anstmp})s" && _PH_MAX_EXECUTION_TIME=${_ANSWER:-$anstmp} && _confset _PH_MAX_EXECUTION_TIME "${_PH_MAX_EXECUTION_TIME}"
+[ -z ${_PHP_MAX_EXECUTION_TIME+x} ] && anstmp="20" && _askno "max_execution_time (${anstmp})s" && _PHP_MAX_EXECUTION_TIME=${_ANSWER:-$anstmp} && _confset _PHP_MAX_EXECUTION_TIME "${_PHP_MAX_EXECUTION_TIME}"
 
-[ -z ${_PH_MAX_INPUT_TIME+x} ] && anstmp="30" && _askno "max_input_time (${anstmp})s" && _PH_MAX_INPUT_TIME=${_ANSWER:-$anstmp} && _confset _PH_MAX_INPUT_TIME "${_PH_MAX_INPUT_TIME}"
+[ -z ${_PHP_MAX_INPUT_TIME+x} ] && anstmp="30" && _askno "max_input_time (${anstmp})s" && _PHP_MAX_INPUT_TIME=${_ANSWER:-$anstmp} && _confset _PHP_MAX_INPUT_TIME "${_PHP_MAX_INPUT_TIME}"
 
-[ -z ${_PH_MEMORY_LIMIT+x} ] && anstmp="128M" && _askno "memory_limit (${anstmp})" && _PH_MEMORY_LIMIT=${_ANSWER:-$anstmp} && _confset _PH_MEMORY_LIMIT "${_PH_MEMORY_LIMIT}"
+[ -z ${_PHP_MEMORY_LIMIT+x} ] && anstmp="128M" && _askno "memory_limit (${anstmp})" && _PHP_MEMORY_LIMIT=${_ANSWER:-$anstmp} && _confset _PHP_MEMORY_LIMIT "${_PHP_MEMORY_LIMIT}"
 
-[ -z ${_PH_POST_MAX_SIZE+x} ] && anstmp="8M" && _askno "post_max_size (${anstmp})" && _PH_POST_MAX_SIZE=${_ANSWER:-$anstmp} && _confset _PH_POST_MAX_SIZE "${_PH_POST_MAX_SIZE}"
+[ -z ${_PHP_POST_MAX_SIZE+x} ] && anstmp="8M" && _askno "post_max_size (${anstmp})" && _PHP_POST_MAX_SIZE=${_ANSWER:-$anstmp} && _confset _PHP_POST_MAX_SIZE "${_PHP_POST_MAX_SIZE}"
 
-[ -z ${_PH_UPLOAD_MAX_FILESIZE+x} ] && anstmp="8M" && _askno "upload_max_filesize (${anstmp})" && _PH_UPLOAD_MAX_FILESIZE=${_ANSWER:-$anstmp} && _confset _PH_UPLOAD_MAX_FILESIZE "${_PH_UPLOAD_MAX_FILESIZE}"
+[ -z ${_PHP_UPLOAD_MAX_FILESIZE+x} ] && anstmp="8M" && _askno "upload_max_filesize (${anstmp})" && _PHP_UPLOAD_MAX_FILESIZE=${_ANSWER:-$anstmp} && _confset _PHP_UPLOAD_MAX_FILESIZE "${_PHP_UPLOAD_MAX_FILESIZE}"
 
-[ -z ${_PH_SESSION_STRICT_MODE+x} ] && anstmp="1" && _askno "session.use_strict_mode (${anstmp})" && _PH_SESSION_STRICT_MODE=${_ANSWER:-$anstmp} && _confset _PH_SESSION_STRICT_MODE "${_PH_SESSION_STRICT_MODE}"
+[ -z ${_PHP_SESSION_STRICT_MODE+x} ] && anstmp="1" && _askno "session.use_strict_mode (${anstmp})" && _PHP_SESSION_STRICT_MODE=${_ANSWER:-$anstmp} && _confset _PHP_SESSION_STRICT_MODE "${_PHP_SESSION_STRICT_MODE}"
 
-[ -z ${_PH_MODULES+x} ] && anstmp="${php_modules}" && _askno "php modules to install: \n${anstmp}" && _PH_MODULES=${_ANSWER:-$anstmp} && _confset _PH_MODULES "${_PH_MODULES}"
+[ -z ${_PHP_MODULES+x} ] && anstmp="${php_modules}" && _askno "php modules to install: \n${anstmp}" && _PHP_MODULES=${_ANSWER:-$anstmp} && _confset _PHP_MODULES "${_PHP_MODULES}"
 
 _echoT "----------  data php-fpm"
 
-[ -z ${_PH_RESTART_THRESHOLD+x} ] && anstmp='30' && _askno "Give value for 'emergency_restart_threshold' ($anstmp)" && _PH_RESTART_THRESHOLD=${_ANSWER:-$anstmp} && _confset _PH_RESTART_THRESHOLD "${_PH_RESTART_THRESHOLD}"
+[ -z ${_PHP_RESTART_THRESHOLD+x} ] && anstmp='30' && _askno "Give value for 'emergency_restart_threshold' ($anstmp)" && _PHP_RESTART_THRESHOLD=${_ANSWER:-$anstmp} && _confset _PHP_RESTART_THRESHOLD "${_PHP_RESTART_THRESHOLD}"
 
-[ -z ${_PH_RESTART_INTERVAL+x} ] && anstmp='60s' && _askno "Give value for 'emergency_restart_interval' ($anstmp)" && _PH_RESTART_INTERVAL=${_ANSWER:-$anstmp} && _confset _PH_RESTART_INTERVAL "${_PH_RESTART_INTERVAL}"
+[ -z ${_PHP_RESTART_INTERVAL+x} ] && anstmp='60s' && _askno "Give value for 'emergency_restart_interval' ($anstmp)" && _PHP_RESTART_INTERVAL=${_ANSWER:-$anstmp} && _confset _PHP_RESTART_INTERVAL "${_PHP_RESTART_INTERVAL}"
 
-[ -z ${_PH_CONTROL_TIMEOUT+x} ] && anstmp='0' && _askno "Give value for 'process_control_timeout' ($anstmp)s" && _PH_CONTROL_TIMEOUT=${_ANSWER:-$anstmp} && _confset _PH_CONTROL_TIMEOUT "${_PH_CONTROL_TIMEOUT}"
+[ -z ${_PHP_CONTROL_TIMEOUT+x} ] && anstmp='0' && _askno "Give value for 'process_control_timeout' ($anstmp)s" && _PHP_CONTROL_TIMEOUT=${_ANSWER:-$anstmp} && _confset _PHP_CONTROL_TIMEOUT "${_PHP_CONTROL_TIMEOUT}"
 
 _echoT "----------  data pool www"
 
-[ -z ${_PH_W_MAX_CHILDREN+x} ] && anstmp='10' && _askno "Give value for 'pm.max_children' ($anstmp)" && _PH_W_MAX_CHILDREN=${_ANSWER:-$anstmp} && _confset _PH_W_MAX_CHILDREN "${_PH_W_MAX_CHILDREN}"
+[ -z ${_PHP_W_MAX_CHILDREN+x} ] && anstmp='10' && _askno "Give value for 'pm.max_children' ($anstmp)" && _PHP_W_MAX_CHILDREN=${_ANSWER:-$anstmp} && _confset _PHP_W_MAX_CHILDREN "${_PHP_W_MAX_CHILDREN}"
 
-[ -z ${_PH_W_START_SERVERS+x} ] && anstmp='2' && _askno "Give value for 'pm.start_servers' ($anstmp)" && _PH_W_START_SERVERS=${_ANSWER:-$anstmp} && _confset _PH_W_START_SERVERS "${_PH_W_START_SERVERS}"
+[ -z ${_PHP_W_START_SERVERS+x} ] && anstmp='2' && _askno "Give value for 'pm.start_servers' ($anstmp)" && _PHP_W_START_SERVERS=${_ANSWER:-$anstmp} && _confset _PHP_W_START_SERVERS "${_PHP_W_START_SERVERS}"
 
-[ -z ${_PH_W_MIN_SPARE_SERVERS+x} ] && anstmp='2' && _askno "Give value for 'pm.min_spare_servers' ($anstmp)" && _PH_W_MIN_SPARE_SERVERS=${_ANSWER:-$anstmp} && _confset _PH_W_MIN_SPARE_SERVERS "${_PH_W_MIN_SPARE_SERVERS}"
+[ -z ${_PHP_W_MIN_SPARE_SERVERS+x} ] && anstmp='2' && _askno "Give value for 'pm.min_spare_servers' ($anstmp)" && _PHP_W_MIN_SPARE_SERVERS=${_ANSWER:-$anstmp} && _confset _PHP_W_MIN_SPARE_SERVERS "${_PHP_W_MIN_SPARE_SERVERS}"
 
-[ -z ${_PH_W_MAX_SPARE_SERVERS+x} ] && anstmp='5' && _askno "Give value for 'pm.max_spare_servers' ($anstmp)" && _PH_W_MAX_SPARE_SERVERS=${_ANSWER:-$anstmp} && _confset _PH_W_MAX_SPARE_SERVERS "${_PH_W_MAX_SPARE_SERVERS}"
+[ -z ${_PHP_W_MAX_SPARE_SERVERS+x} ] && anstmp='5' && _askno "Give value for 'pm.max_spare_servers' ($anstmp)" && _PHP_W_MAX_SPARE_SERVERS=${_ANSWER:-$anstmp} && _confset _PHP_W_MAX_SPARE_SERVERS "${_PHP_W_MAX_SPARE_SERVERS}"
 
-[ -z ${_PH_W_MAX_REQUESTS+x} ] && anstmp='500' && _askno "Give value for 'pm.max_requests' ($anstmp)" && _PH_W_MAX_REQUESTS=${_ANSWER:-$anstmp} && _confset _PH_W_MAX_REQUESTS "${_PH_W_MAX_REQUESTS}"
+[ -z ${_PHP_W_MAX_REQUESTS+x} ] && anstmp='500' && _askno "Give value for 'pm.max_requests' ($anstmp)" && _PHP_W_MAX_REQUESTS=${_ANSWER:-$anstmp} && _confset _PHP_W_MAX_REQUESTS "${_PHP_W_MAX_REQUESTS}"
 
-[ -z ${_PH_SLOWLOG_TIMEOUT+x} ] && anstmp='2' && _askno "Give value for 'request_SLOWLOG_TIMEOUT' ($anstmp)" && _PH_SLOWLOG_TIMEOUT=${_ANSWER:-$anstmp} && _confset _PH_SLOWLOG_TIMEOUT "${_PH_SLOWLOG_TIMEOUT}"
+[ -z ${_PHP_SLOWLOG_TIMEOUT+x} ] && anstmp='2' && _askno "Give value for 'request_SLOWLOG_TIMEOUT' ($anstmp)" && _PHP_SLOWLOG_TIMEOUT=${_ANSWER:-$anstmp} && _confset _PHP_SLOWLOG_TIMEOUT "${_PHP_SLOWLOG_TIMEOUT}"
 
 
 file_php_conf=/etc/php7/php.ini
@@ -140,7 +140,7 @@ _eval sleep 1
 
 ########################  PATHS
 
-_echoT "----------  paths ${_PH_SERVICE}"
+_echoT "----------  paths ${_PHP_SERVICE}"
 
 paths="${path_php_share}/tmp ${path_php_share}/sessions ${path_php_share}/soap ${path_xdebug_profile} ${path_xdebug_trace} ${path_fpm_pool}/www ${path_fpm_pool}/www-admin"
 cmd="for path in ${paths}; do [ -d \${path} ] || mkdir -p \${path}; done"
@@ -159,7 +159,7 @@ _echoT "----------  install php7 modules"
 _lxc_exec ${_CT_NAME} "apk add ${php_modules}"
 
 _echoT "----------  service set & start"
-service=${_PH_SERVICE}
+service=${_PHP_SERVICE}
 _lxc_exec ${_CT_NAME} "rc-update add ${service}"
 _lxc_exec ${_CT_NAME} "rc-service ${service} start"
 
@@ -175,14 +175,14 @@ _lxc_exec ${_CT_NAME} "[ -f ${file} ] && cp -a ${file} ${file}.${_SDATE}"
 cmds=; while read str val; do
 	cmds+="sed -i 's|^;\?\(${str}\s*=\).*|\1 ${val}|' ${file}
 "; done <<< "track_errors Off
-max_execution_time  ${_PH_MAX_EXECUTION_TIME}
-max_input_time  ${_PH_MAX_INPUT_TIME}
-memory_limit  ${_PH_MEMORY_LIMIT}
-post_max_size  ${_PH_POST_MAX_SIZE}
+max_execution_time  ${_PHP_MAX_EXECUTION_TIME}
+max_input_time  ${_PHP_MAX_INPUT_TIME}
+memory_limit  ${_PHP_MEMORY_LIMIT}
+post_max_size  ${_PHP_POST_MAX_SIZE}
 file_uploads  On
-upload_max_filesize  ${_PH_UPLOAD_MAX_FILESIZE}
+upload_max_filesize  ${_PHP_UPLOAD_MAX_FILESIZE}
 date.timezone  'Europe/Paris'
-session.use_strict_mode  ${_PH_SESSION_STRICT_MODE}
+session.use_strict_mode  ${_PHP_SESSION_STRICT_MODE}
 session.save_handler  redis
 session.save_path  \"tcp://${S_SERVICE[cache]}:${S_CACHE_PORT}\"
 mail.log  syslog"
@@ -223,12 +223,12 @@ _echoT "----------  conf php.fpm global"
 
 cmds=; while read str val; do
 	cmds+="sed -i 's|^;\?\(${str}\s*=\).*|\1 ${val}|' ${file}
-"; done <<< "emergency_restart_threshold  ${_PH_RESTART_THRESHOLD}
-emergency_restart_interval  ${_PH_RESTART_INTERVAL}
-process_control_timeout  ${_PH_CONTROL_TIMEOUT}
+"; done <<< "emergency_restart_threshold  ${_PHP_RESTART_THRESHOLD}
+emergency_restart_interval  ${_PHP_RESTART_INTERVAL}
+process_control_timeout  ${_PHP_CONTROL_TIMEOUT}
 error_log  syslog
 syslog.facility  daemon
-syslog.ident  ${_PH_SERVICE}
+syslog.ident  ${_PHP_SERVICE}
 log_level  notice
 log_limit  1024
 log_buffering  yes"
@@ -251,25 +251,25 @@ cmds=; while read str val; do
 "; done <<< "prefix  ${path_fpm_pool}/www
 user nobody
 group nobody
-listen  ${_PH_FPM_SOCK}
-listen.backlog  $(( ${_AP_MAX_SYN_BACKLOG} / 2 ))
+listen  ${_PHP_FPM_SOCK}
+listen.backlog  $(( ${_APA_MAX_SYN_BACKLOG} / 2 ))
 listen.owner  nobody
 listen.group  nobody
 listen.mode  0666
 process.priority  0
 process.dumpable  yes
 pm dynamic
-pm.max_children  ${_PH_W_MAX_CHILDREN}
-pm.start_servers  ${_PH_W_START_SERVERS}
-pm.min_spare_servers  ${_PH_W_MIN_SPARE_SERVERS}
-pm.max_spare_servers  ${_PH_W_MAX_SPARE_SERVERS}
-pm.max_requests  ${_PH_W_MAX_REQUESTS}
+pm.max_children  ${_PHP_W_MAX_CHILDREN}
+pm.start_servers  ${_PHP_W_START_SERVERS}
+pm.min_spare_servers  ${_PHP_W_MIN_SPARE_SERVERS}
+pm.max_spare_servers  ${_PHP_W_MAX_SPARE_SERVERS}
+pm.max_requests  ${_PHP_W_MAX_REQUESTS}
 pm.status_path  /status-www
 ping.path  /ping-www
 ping.response  pong
 access.log  ${S_PATH_LOG}/php7/\$pool.access.log
 slowlog  ${S_PATH_LOG}/php7/\$pool.slow.log
-request_slowlog_timeout  ${_PH_SLOWLOG_TIMEOUT}
+request_slowlog_timeout  ${_PHP_SLOWLOG_TIMEOUT}
 catch_workers_output  yes"
 _lxc_exec ${_CT_NAME} "${cmds}"
 
@@ -297,8 +297,8 @@ cmds=; while read str val; do
 "; done <<< "prefix  ${path_fpm_pool}/www-admin
 user nobody
 group nobody
-listen  ${_PH_FPM_ADMIN_SOCK}
-listen.backlog  $(( ${_AP_MAX_SYN_BACKLOG} / 2 ))
+listen  ${_PHP_FPM_ADMIN_SOCK}
+listen.backlog  $(( ${_APA_MAX_SYN_BACKLOG} / 2 ))
 listen.owner  nobody
 listen.group  nobody
 listen.mode  0666
@@ -324,17 +324,17 @@ _lxc_var_replace ${_CT_NAME} ${file} php apache
 
 _echoT "----------  localhost files"
 
-_lxc_exec ${_CT_NAME} "echo '<?php phpinfo() ?>' > ${_AP_PATH_WWW}/phpinf.php"
+_lxc_exec ${_CT_NAME} "echo '<?php phpinfo() ?>' > ${_APA_PATH_WWW}/phpinf.php"
 
-file=${_AP_PATH_WWW}/index.php
+file=${_APA_PATH_WWW}/index.php
 _lxc_exec ${_CT_NAME} "echo '<html><body><h1><?php echo \"php works!\" ?></h1></body></html>' > ${file}"
 
 
 _echoT "----------  ${S_DOMAIN_FQDN} files"
 
-_lxc_exec ${_CT_NAME} "echo '<?php phpinfo() ?>' > ${_AP_PATH_DOMAIN}/html/phpinf.php"
+_lxc_exec ${_CT_NAME} "echo '<?php phpinfo() ?>' > ${_APA_PATH_DOMAIN}/html/phpinf.php"
 
-file=${_AP_PATH_DOMAIN}/html/index.php
+file=${_APA_PATH_DOMAIN}/html/index.php
 _lxc_exec ${_CT_NAME} "echo '<html><body><h1>${S_DOMAIN_FQDN} php works!</h1></body></html>' > ${file}"
 
 
@@ -342,7 +342,7 @@ _lxc_exec ${_CT_NAME} "echo '<html><body><h1>${S_DOMAIN_FQDN} php works!</h1></b
 
 _echoT "----------  ping-monitor file"
 
-_lxc_exec ${_CT_NAME} "echo '<?php echo \"pong\"; ?>' > ${_AP_PATH_WWW}/ping-monitor.php"
+_lxc_exec ${_CT_NAME} "echo '<?php echo \"pong\"; ?>' > ${_APA_PATH_WWW}/ping-monitor.php"
 
 _echoT "----------  ping-monitor conf"
 
@@ -362,8 +362,8 @@ _lxc_exec ${S_SERVICE[proxy]} "sed -i 's|^\(\s*server\s*${S_DOMAIN_NAME}1\s*\).*
 
 ########################  RESTART
 
-_echoT "----------  ${_PH_SERVICE} restart"
-_lxc_exec ${_CT_NAME} "rc-service ${_PH_SERVICE} restart"
+_echoT "----------  ${_PHP_SERVICE} restart"
+_lxc_exec ${_CT_NAME} "rc-service ${_PHP_SERVICE} restart"
 
 _echoT "----------  apache2 restart"
 _lxc_exec ${_CT_NAME} "rc-service apache2 restart"

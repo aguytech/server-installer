@@ -5,7 +5,30 @@
 _echoT "\n==========================================  ${S_RELEASE} ${_PART}"
 
 
-########################  INSTALL
+########################  DATA
+
+_echoT "----------  data"
+
+[ -z ${_LXD_DHCP_MIN+x} ] && anstmp="20" && _askno "Give minimal range IP for DHCP container ($anstmp)" && _LXD_DHCP_MIN=${_ANSWER:-$anstmp} && _confset _LXD_DHCP_MIN "${_LXD_DHCP_MIN}"
+
+[ -z ${_LXD_DHCP_MAX+x} ] && anstmp="254" && _askno "Give maximal range IP for DHCP container ($anstmp)" && _LXD_DHCP_MAX=${_ANSWER:-$anstmp} && _confset _LXD_DHCP_MAX "${_LXD_DHCP_MAX}"
+
+
+# root path of storage pools for
+_LXD_PATH_SP=storage-pools && _confset _LXD_PATH_SP "${_LXD_PATH_SP}"
+# path for containers
+_LXD_PATH_CT=containers && _confset _LXD_PATH_CT "${_LXD_PATH_CT}"
+# path for containers images
+_LXD_PATH_IMAGE=images && _confset _LXD_PATH_IMAGE "${_LXD_PATH_IMAGE}"
+# path for containers snapshots
+_LXD_PATH_SNAPSHOT=snapshots && _confset _LXD_PATH_SNAPSHOT "${_LXD_PATH_SNAPSHOT}"
+# path for export
+_LXD_PATH_EXPORT=export && _confset _LXD_PATH_EXPORT "${_LXD_PATH_EXPORT}"
+# port for remote connection
+_LXD_PORT=8443 && _confset _LXD_PORT "${_LXD_PORT}"
+
+
+#########################  INSTALL
 
 _echoT "----------  install"
 
@@ -128,7 +151,7 @@ _echoT "----------  network ${s_inet}"
 if ! [ "`lxc network list -f json|jq -r '.[] | select(.name == "'${s_inet}'").name'`" ]; then
 	_eval lxc network create ${s_inet}
 fi
-_eval lxc network set ${s_inet} ipv4.address=${s_cidr} ipv4.dhcp.ranges=${s_cidr%.*}.${S_HOST_DHCP_MIN}-${s_cidr%.*}.${S_HOST_DHCP_MAX} ipv4.nat=true dns.mode=managed dns.domain=lxd dns.mode=managed
+_eval lxc network set ${s_inet} ipv4.address=${s_cidr} ipv4.dhcp.ranges=${s_cidr%.*}.${_LXD_DHCP_MIN}-${s_cidr%.*}.${_LXD_DHCP_MAX} ipv4.nat=true dns.mode=managed dns.domain=lxd dns.mode=managed
 
 
 _echoT "----------  network 'stock'"
@@ -141,7 +164,7 @@ _echoT "----------  network ${s_inet}"
 if ! [ "`lxc network list -f json|jq -r '.[] | select(.name == "'${s_inet}'").name'`" ]; then
 	_eval lxc network create "${s_inet}"
 fi
-_eval lxc network set ${s_inet} ipv4.address=${s_cidr} ipv4.dhcp.ranges=${s_cidr%.*}.${S_HOST_DHCP_MIN}-${s_cidr%.*}.${S_HOST_DHCP_MAX} ipv4.nat=true dns.mode=managed dns.domain=lxd1 dns.mode=managed
+_eval lxc network set ${s_inet} ipv4.address=${s_cidr} ipv4.dhcp.ranges=${s_cidr%.*}.${_LXD_DHCP_MIN}-${s_cidr%.*}.${_LXD_DHCP_MAX} ipv4.nat=true dns.mode=managed dns.domain=lxd1 dns.mode=managed
 
 
 ########################  PROFILE

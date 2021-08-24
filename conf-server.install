@@ -169,61 +169,6 @@ if [[ " ${str} " = *" ${S_SERVER_TYPE} "* ]]; then
 		S_HOST_PATH_LOG="${_ANSWER:-${anstmp}}" && _confset S_HOST_PATH_LOG "${S_HOST_PATH_LOG}" "${S_GLOBAL_CONF}"
 	fi
 
-
-	#_echoT "----------  S_HOST_VM_ETH"
-
-	#_echo "Here is the network actually declared : \n${!S_HOST_VM_ETH[*]}"
-	#_askyn "If network are wrong, answer 'n', modify file '${S_GLOBAL_CONF}', and restart installation script"
-
-	_echoT "----------  S_HOST_DHCP_MIN"
-
-	if [ -z "${S_HOST_DHCP_MIN}" ]; then
-		anstmp="20"
-		_askno "minimal range IP for DHCP container (${anstmp})"
-		S_HOST_DHCP_MIN=${_ANSWER:-${anstmp}} && _confset S_HOST_DHCP_MIN "${S_HOST_DHCP_MIN}" "${S_GLOBAL_CONF}"
-	fi
-
-	_echoT "----------  S_HOST_DHCP_MAX"
-
-	if [ -z "${S_HOST_DHCP_MAX}" ]; then
-		anstmp="254"
-		_askno "maximal range IP for DHCP container (${anstmp})"
-		S_HOST_DHCP_MAX=${_ANSWER:-${anstmp}} && _confset S_HOST_DHCP_MAX "${S_HOST_DHCP_MAX}" "${S_GLOBAL_CONF}"
-	fi
-
-	_echoT "----------  S_HOST_PORT_PRE_SSH"
-
-	if [ -z "${S_HOST_PORT_PRE_SSH}" ]; then
-		anstmp= && regexp='^[0-9]{1,3}$'
-		while ! [[ ${anstmp} =~ $regexp ]]; do
-		       anstmp="20"
-		       _askno "Give the PREFIX of port for 'SSH' VMs connections S_HOST_PORT_PRE_SSH (${anstmp})"
-		done
-		S_HOST_PORT_PRE_SSH=${_ANSWER:-${anstmp}} && _confset S_HOST_PORT_PRE_SSH "${S_HOST_PORT_PRE_SSH}" "$S_GLOBAL_CONF"
-	fi
-
-	_echoT "----------  S_HOST_PORT_PRE_HTTP"
-
-	if [ -z "${S_HOST_PORT_PRE_HTTP}" ]; then
-		anstmp= && regexp="^[0-9]{1,3}$"
-		while ! [[ ${anstmp} =~ $regexp ]]; do
-		       anstmp="8"
-		       _askno "Give the PREFIX of port for 'HTTP' VMs connections S_HOST_PORT_PRE_HTTP (${anstmp})"
-		done
-		S_HOST_PORT_PRE_HTTP=${_ANSWER:-${anstmp}} && _confset S_HOST_PORT_PRE_HTTP "${S_HOST_PORT_PRE_HTTP}" "$S_GLOBAL_CONF"
-	fi
-
-	_echoT "----------  S_HOST_PORT_PRE_HTTPS"
-
-	if [ -z "${S_HOST_PORT_PRE_HTTPS}" ]; then
-		anstmp= && regexp="^[0-9]{1,3}$"
-		while ! [[ ${anstmp} =~ $regexp ]]; do
-		       anstmp="9"
-		       _askno "Give the PREFIX of port for 'HTTP SSL' VMs connections S_HOST_PORT_PRE_HTTPS (${anstmp})"
-		done
-		S_HOST_PORT_PRE_HTTPS=${_ANSWER:-${anstmp}} && _confset S_HOST_PORT_PRE_HTTPS "${S_HOST_PORT_PRE_HTTPS}" "$S_GLOBAL_CONF"
-	fi
-
 fi
 
 
@@ -453,22 +398,6 @@ if [ -z "${S_CACHE_PORT}" ]; then
 fi
 
 ########################  DB
-
-_echoT "----------  S_DB_USER_HTTP"
-
-if [ -z "${S_DB_USER_HTTP}" ]; then
-	anstmp="http"
-	_askno "'http' user to acces to mariadb (${anstmp})"
-	S_DB_USER_HTTP=${_ANSWER:-${anstmp}} && _confset S_DB_USER_HTTP "${S_DB_USER_HTTP}" "${S_GLOBAL_CONF}"
-fi
-
-_echoT "----------  S_DB_USER_DEV"
-
-if [ -z "${S_DB_USER_DEV}" ]; then
-	anstmp="dev"
-	_askno "'dev' user to acces to mariadb (${anstmp})"
-	S_DB_USER_DEV=${_ANSWER:-${anstmp}} && _confset S_DB_USER_DEV "${S_DB_USER_DEV}" "${S_GLOBAL_CONF}"
-fi
 
 _echoT "----------  S_DB_MARIA_PORT"
 

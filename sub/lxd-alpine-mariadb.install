@@ -30,26 +30,28 @@ _CT_NAME=${S_SERVICE[sgbd]}
 #eval ${S_HOST_VM_ETH[default]}
 #_CT_IP=${s_base}.${S_SERVICE_BITS[maria]}
 
+_MDB_SERVICE=mariadb && _confset _MDB_SERVICE "${_MDB_SERVICE}"
+_MDB_HOST_PATH=${_ZFS_ROOT}${S_HOST_PATH}/mariadb/mariadb-${S_DOMAIN_FQDN} && _confset _MDB_HOST_PATH "${_MDB_HOST_PATH}"
+_MDB_VM_PATH=/var/lib/mysql && _confset _MDB_VM_PATH "${_MDB_VM_PATH}"
+_MDB_USER_HTTP=http && _confset _MDB_USER_HTTP "${_MDB_USER_HTTP}"
+_MDB_USER_DEV=dev && _confset _MDB_USER_DEV "${_MDB_USER_DEV}"
+
+
 _echoT "----------  data pwd"
 
-[ -z ${_MA_PWD_LOCAL+x} ] && pwdtmp=`_pwd` && _askno "Enter a password for 'root@localhost ($pwdtmp)" && _MA_PWD_LOCAL=${_ANSWER:-$pwdtmp} && _confset _MA_PWD_LOCAL "${_MA_PWD_LOCAL}"
+[ -z ${_MDB_PWD_LOCAL+x} ] && pwdtmp=`_pwd` && _askno "Enter a password for 'root@localhost ($pwdtmp)" && _MDB_PWD_LOCAL=${_ANSWER:-$pwdtmp} && _confset _MDB_PWD_LOCAL "${_MDB_PWD_LOCAL}"
 
-[ -z ${_MA_PWD_REMOTE+x} ] && pwdtmp=`_pwd` && _askno "Enter a password for 'rootremote@${S_IPS_ADMIN}' ($pwdtmp)" && _MA_PWD_REMOTE=${_ANSWER:-$pwdtmp} && _confset _MA_PWD_REMOTE "$_MA_PWD_REMOTE"
+[ -z ${_MDB_PWD_REMOTE+x} ] && pwdtmp=`_pwd` && _askno "Enter a password for 'rootremote@${S_IPS_ADMIN}' ($pwdtmp)" && _MDB_PWD_REMOTE=${_ANSWER:-$pwdtmp} && _confset _MDB_PWD_REMOTE "$_MDB_PWD_REMOTE"
 
-[ -z ${_MA_PWD_HOST+x} ] && pwdtmp=`_pwd` && _askno "Enter a password for 'roothost@${S_CLUSTER[*]}' ($pwdtmp)" && _MA_PWD_HOST=${_ANSWER:-$pwdtmp} && _confset _MA_PWD_HOST "${_MA_PWD_HOST}"
+[ -z ${_MDB_PWD_HOST+x} ] && pwdtmp=`_pwd` && _askno "Enter a password for 'roothost@${S_CLUSTER[*]}' ($pwdtmp)" && _MDB_PWD_HOST=${_ANSWER:-$pwdtmp} && _confset _MDB_PWD_HOST "${_MDB_PWD_HOST}"
 
-[ -z ${_MA_PWD_ADMIN+x} ] && pwdtmp=`_pwd` && _askno "Enter a password for 'rootadmin@${S_SERVICE[admin]}' ($pwdtmp)" && _MA_PWD_ADMIN=${_ANSWER:-$pwdtmp} && _confset {_MA_PWD_ADMIN} "$_MA_PWD_ADMIN"
+[ -z ${_MDB_PWD_ADMIN+x} ] && pwdtmp=`_pwd` && _askno "Enter a password for 'rootadmin@${S_SERVICE[admin]}' ($pwdtmp)" && _MDB_PWD_ADMIN=${_ANSWER:-$pwdtmp} && _confset {_MDB_PWD_ADMIN} "$_MDB_PWD_ADMIN"
 
-[ -z ${_MA_PWD_DEV+x} ] && pwdtmp=`_pwd` && _askno "Enter a password for '${S_DB_USER_DEV}@${_VM_IP_BASE}.2% ${S_IPS_DEV}' ($pwdtmp)" && _MA_PWD_DEV=${_ANSWER:-$pwdtmp} && _confset {_MA_PWD_DEV} "$_MA_PWD_DEV"
+[ -z ${_MDB_PWD_DEV+x} ] && pwdtmp=`_pwd` && _askno "Enter a password for '${_MDB_USER_DEV}@${_VM_IP_BASE}.2% ${S_IPS_DEV}' ($pwdtmp)" && _MDB_PWD_DEV=${_ANSWER:-$pwdtmp} && _confset {_MDB_PWD_DEV} "$_MDB_PWD_DEV"
 
-[ -z ${_MA_PWD_HTTP+x} ] && pwdtmp=`_pwd` && _askno "Enter a password for '${S_DB_USER_HTTP}@${_VM_IP_BASE}.1%' ($pwdtmp)" && _MA_PWD_HTTP=${_ANSWER:-$pwdtmp} && _confset {_MA_PWD_HTTP} "$_MA_PWD_HTTP"
+[ -z ${_MDB_PWD_HTTP+x} ] && pwdtmp=`_pwd` && _askno "Enter a password for '${_MDB_USER_HTTP}@${_VM_IP_BASE}.1%' ($pwdtmp)" && _MDB_PWD_HTTP=${_ANSWER:-$pwdtmp} && _confset {_MDB_PWD_HTTP} "$_MDB_PWD_HTTP"
 
-[ -z ${_MA_PWD_TOP+x} ] && pwdtmp=`_pwd` && _askno "Enter a password for 'innotop'@'localhost' ($pwdtmp)" && _MA_PWD_TOP=${_ANSWER:-$pwdtmp} && _confset _MA_PWD_TOP "${_MA_PWD_TOP}"
-
-
-_MA_SERVICE=mariadb && _confset _MA_SERVICE "${_MA_SERVICE}"
-_MA_HOST_PATH=${_ZFS_ROOT}${S_HOST_PATH}/mariadb/mariadb-${S_DOMAIN_FQDN} && _confset _MA_HOST_PATH "${_MA_HOST_PATH}"
-_MA_VM_PATH=/var/lib/mysql && _confset _MA_VM_PATH "${_MA_VM_PATH}"
+[ -z ${_MDB_PWD_TOP+x} ] && pwdtmp=`_pwd` && _askno "Enter a password for 'innotop'@'localhost' ($pwdtmp)" && _MDB_PWD_TOP=${_ANSWER:-$pwdtmp} && _confset _MDB_PWD_TOP "${_MDB_PWD_TOP}"
 
 
 ########################  STORAGE MARIADB
@@ -73,8 +75,8 @@ if [ "${S_STORAGE_DRIVER}" = zfs ]; then
 
 	_echoT "----------  storage ${name}"
 
-	path=${_MA_HOST_PATH}/${name}
-	cmd="zfs create ${opts} -o mountpoint=/${_MA_HOST_PATH#*/}/${name} ${path}"
+	path=${_MDB_HOST_PATH}/${name}
+	cmd="zfs create ${opts} -o mountpoint=/${_MDB_HOST_PATH#*/}/${name} ${path}"
 	zfs list ${path} >/dev/null 2>&1 || _eval ${cmd}
 
 else
@@ -90,8 +92,8 @@ _echoT "----------  profiles ${profile}"
 lxc profile list -f csv|grep -q "^${profile}," && _eval lxc profile rename ${profile} ${profile}.${_SDATE}
 _eval lxc profile create ${profile}
 
-path=${_MA_HOST_PATH}
-path_ct=${_MA_VM_PATH}
+path=${_MDB_HOST_PATH}
+path_ct=${_MDB_VM_PATH}
 [ -d ${path} ] || _eval mkdir -p ${path}
 _eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
 
@@ -140,7 +142,7 @@ _lxc_exec ${_CT_NAME} "apk add mariadb mariadb-client mariadb-mytop"
 
 _echoT "----------  initialize mariadb"
 
-_lxc_exec ${_CT_NAME} "mysql_install_db --user=mysql --datadir=${_MA_VM_PATH}"
+_lxc_exec ${_CT_NAME} "mysql_install_db --user=mysql --datadir=${_MDB_VM_PATH}"
 
 _echoT "----------  service set & start"
 
@@ -153,11 +155,11 @@ _lxc_exec ${_CT_NAME} "rc-service ${service} start"
 
 _echoT "----------  root passwd"
 
-_lxc_exec ${_CT_NAME} "mysqladmin -u root password ${_MA_PWD_LOCAL}"
+_lxc_exec ${_CT_NAME} "mysqladmin -u root password ${_MDB_PWD_LOCAL}"
 
 _echoT "----------  secure"
 
-_echo "Give following password: ${_MA_PWD_LOCAL}"
+_echo "Give following password: ${_MDB_PWD_LOCAL}"
 _lxc_exec ${_CT_NAME} "mysql_secure_installation"
 
 
@@ -184,8 +186,8 @@ _echoI exit && exit
 _echoT "----------  apache2 restart"
 _lxc_exec ${_CT_NAME} "rc-service apache2 restart"
 
-_echoT "----------  ${_PH_SERVICE} restart"
-_lxc_exec ${_CT_NAME} "rc-service ${_PH_SERVICE} restart"
+_echoT "----------  ${_PHP_SERVICE} restart"
+_lxc_exec ${_CT_NAME} "rc-service ${_PHP_SERVICE} restart"
 
 _echoT "----------  ${S_SERVICE[proxy]} reload"
 _lxc_exec ${S_SERVICE[proxy]} "rc-service haproxy reload"

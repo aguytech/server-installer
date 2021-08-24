@@ -73,7 +73,7 @@ _echoT "----------  network ${s_inet}"
 if ! [ "`lxc network list -f json|jq -r '.[] | select(.name == "'${s_inet}'").name'`" ]; then
 	_eval lxc network create ${s_inet}
 fi
-_eval lxc network set ${s_inet} ipv4.address=${s_cidr} ipv4.dhcp.ranges=${s_cidr%.*}.${S_HOST_DHCP_MIN}-${s_cidr%.*}.${S_HOST_DHCP_MAX} ipv4.nat=true dns.mode=managed dns.domain=lxd dns.mode=managed
+_eval lxc network set ${s_inet} ipv4.address=${s_cidr} ipv4.dhcp.ranges=${s_cidr%.*}.${_LXD_DHCP_MIN}-${s_cidr%.*}.${_LXD_DHCP_MAX} ipv4.nat=true dns.mode=managed dns.domain=lxd dns.mode=managed
 
 
 _echoT "----------  network 'stock'"
@@ -86,7 +86,7 @@ _echoT "----------  network ${s_inet}"
 if ! [ "`lxc network list -f json|jq -r '.[] | select(.name == "'${s_inet}'").name'`" ]; then
 	_eval lxc network create "${s_inet}"
 fi
-_eval lxc network set ${s_inet} ipv4.address=${s_cidr} ipv4.dhcp.ranges=${s_cidr%.*}.${S_HOST_DHCP_MIN}-${s_cidr%.*}.${S_HOST_DHCP_MAX} ipv4.nat=true dns.mode=managed dns.domain=lxd1 dns.mode=managed
+_eval lxc network set ${s_inet} ipv4.address=${s_cidr} ipv4.dhcp.ranges=${s_cidr%.*}.${_LXD_DHCP_MIN}-${s_cidr%.*}.${_LXD_DHCP_MAX} ipv4.nat=true dns.mode=managed dns.domain=lxd1 dns.mode=managed
 
 
 ########################  PROFILE
