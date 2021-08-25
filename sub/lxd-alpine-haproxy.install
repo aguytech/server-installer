@@ -250,7 +250,7 @@ _eval lxc publish --force ${_CT_NAME} --alias ${_CT_NAME}
 
 _echoT "----------  test ${_CT_NAME}"
 
-_echoI "To test connection use: curl ${_IPTHIS}:80${_HPX_ACCESS_URI}"
+_echoI "To test connection use pwd:${_HPX_ACCESS_PWD} for:\ncurl ${_IPTHIS}:${S_HAPROXY_STATS_PORT}${_HPX_ACCESS_URI}"
 
 
 ########################  END

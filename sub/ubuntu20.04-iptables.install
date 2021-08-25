@@ -87,8 +87,7 @@ _eval chmod 750 ${file}
 _echoT "----------  systemd add service"
 
 file=/etc/systemd/system/iptables-firewall.service
-cat << EOF | _eval tee ${file}
-[Unit]
+echo "[Unit]
 Description=iptables firewall service
 After=network.target
 
@@ -101,12 +100,11 @@ StandardOutput=journal
 
 [Install]
 WantedBy=multi-user.target
-EOF
+" > ${file}
 _eval chmod 644 ${file}
 
 file=/etc/systemd/system/iptables-firewall-test.service
-cat << EOF | _eval tee ${file}
-[Unit]
+echo "[Unit]
 Description=iptables firewall service test
 BindsTo=iptables-firewall.service
 After=iptables-firewall.service
@@ -118,7 +116,7 @@ StandardOutput=journal
 
 [Install]
 WantedBy=multi-user.target
-EOF
+" > ${file}
 _eval chmod 644 ${file}
 
 
@@ -149,6 +147,7 @@ _echoT "----------  rsyslog conf client-iptables"
 
 path=${S_PATH_LOG}/iptables
 [ -d ${path} ] || _eval mkdir -p ${path}
+_eval chown syslog ${path}
 
 ########################  RSYSLOG
 

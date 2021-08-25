@@ -13,7 +13,6 @@ lxc image list -f json |jq -r '.[].aliases[].name' | grep -q ^${_CT_NAME_COM}$ |
 _echoT "------------------ required vm"
 lxc list -f json |jq -r '.[].name'| grep -q ^${S_SERVICE[log]}$ || _exite "Unable to find image container: '${S_SERVICE[log]}'"
 
-
 file_rsyslog_host=${S_PATH_INSTALL_CONF}/rsyslog/host-apache.conf
 file_rsyslog_client=${S_PATH_INSTALL_CONF}/rsyslog/client-apache.conf
 file_logrotate_host=${S_PATH_INSTALL_CONF}/logrotate/host-apache
@@ -30,6 +29,14 @@ _CT_NAME=${S_SERVICE[http]}
 
 eval ${S_HOST_VM_ETH[default]}
 _CT_IP=${s_base}.${S_SERVICE_BITS[http]}
+
+_APA_PATH_WWW=/var/www/localhost/html &&  _confset _APA_PATH_WWW "${_APA_PATH_WWW}"
+_APA_PATH_DOMAIN=${S_VM_PATH_SHARE}/www/${S_DOMAIN_FQDN} && _confset _APA_PATH_DOMAIN "${_APA_PATH_DOMAIN}"
+
+path_sites=/etc/apache2/sites
+path_conf=/etc/apache2/conf.d
+file_conf_http=/etc/apache2/httpd.conf
+
 
 _echoT "----------  data sysctl.conf"
 
@@ -55,14 +62,6 @@ _echoT "----------  data apache"
 [ -z ${_APA_KEEPALIVE_REQUEST+x} ] && anstmp="100" && _askno "The maximum number of requests to allow during a persistent connection (${anstmp})" && _APA_KEEPALIVE_REQUEST=${_ANSWER:-$anstmp} && _confset _APA_KEEPALIVE_REQUEST "${_APA_KEEPALIVE_REQUEST}"
 
  [ -z ${_APA_KEEPALIVE_TIMEOUT+x} ] && anstmp="5" && _askno "Number of seconds to wait for the next request (${anstmp})" && _APA_KEEPALIVE_TIMEOUT=${_ANSWER:-$anstmp} && _confset _APA_KEEPALIVE_TIMEOUT "${_APA_KEEPALIVE_TIMEOUT}"
-
-
-_APA_PATH_WWW=/var/www/localhost/html &&  _confset _APA_PATH_WWW "${_APA_PATH_WWW}"
-_APA_PATH_DOMAIN=${S_VM_PATH_SHARE}/www/${S_DOMAIN_FQDN} && _confset _APA_PATH_DOMAIN "${_APA_PATH_DOMAIN}"
-
-path_sites=/etc/apache2/sites
-path_conf=/etc/apache2/conf.d
-file_conf_http=/etc/apache2/httpd.conf
 
 
 ########################  PROFILE
@@ -327,6 +326,7 @@ _lxc_var_replace ${S_SERVICE[log]} ${file} logrotate
 _echoT "----------  client logrotate"
 
 file=/etc/logrotate.d/apache2
+_lxc_exec ${_CT_NAME} "grep -q /var/log/apache2/\*.info ${file} || sed -i '1i/var/log/apache2/*.warning' ${file}"
 _lxc_exec ${_CT_NAME} "grep -q /var/log/apache2/\*.info ${file} || sed -i '1i/var/log/apache2/*.info' ${file}"
 _lxc_exec ${_CT_NAME} "grep -q /var/log/apache2/\*.info ${file} || sed -i '1i/var/log/apache2/*.err' ${file}"
 _lxc_exec ${_CT_NAME} "grep -q daily ${file} || sed -i 's|^\(\s*missingok\)|    daily\n\1|' ${file}"

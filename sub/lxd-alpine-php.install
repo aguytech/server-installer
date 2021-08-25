@@ -38,6 +38,18 @@ _PHP_SERVICE=php-fpm7 && _confset _PHP_SERVICE "${_PHP_SERVICE}"
 _PHP_FPM_SOCK=/run/${_PHP_SERVICE}/php-fpm.sock && _confset _PHP_SERVICE "${_PHP_SERVICE}"
 _PHP_FPM_ADMIN_SOCK=/run/${_PHP_SERVICE}/php-fpm-admin.sock && _confset _PHP_SERVICE "${_PHP_SERVICE}"
 
+file_php_conf=/etc/php7/php.ini
+file_fpm_conf=/etc/php7/php-fpm.conf
+path_php_conf=/etc/php7/conf.d
+path_fpm_conf=/etc/php7/php-fpm.d
+path_apache_conf=/etc/apache2/conf.d
+# shared
+path_php_share=${S_VM_PATH_SHARE}/php/${S_DOMAIN_FQDN}
+path_fpm_pool=${path_php_share}/pools
+path_xdebug_profile=${path_php_share}/xdebug/profile
+path_xdebug_trace=${path_php_share}/xdebug/trace
+
+
 #php_version=`_lxc_exec ${S_SERVICE[http]} "apk list php7-fpm | sed -n 's|php7-fpm-\([0-9\.]\+\)-.*|\1|p'"`
 php_modules="php7-bcmath php7-bz2 php7-ctype php7-curl php7-exif php7-fileinfo php7-dom php7-gd php7-gmp php7-iconv php7-imap php7-json php7-mbstring php7-openssl php7-pdo_mysql php7-pgsql php7-posix php7-session php7-simplexml php7-sqlite3 php7-xmlreader php7-xmlwriter php7-zip php7-xdebug php7-pecl-mcrypt php7-pecl-redis" #  php7-pecl-imagick php7-pear
 
@@ -75,21 +87,9 @@ _echoT "----------  data pool www"
 
 [ -z ${_PHP_W_MAX_SPARE_SERVERS+x} ] && anstmp='5' && _askno "Give value for 'pm.max_spare_servers' ($anstmp)" && _PHP_W_MAX_SPARE_SERVERS=${_ANSWER:-$anstmp} && _confset _PHP_W_MAX_SPARE_SERVERS "${_PHP_W_MAX_SPARE_SERVERS}"
 
-[ -z ${_PHP_W_MAX_REQUESTS+x} ] && anstmp='500' && _askno "Give value for 'pm.max_requests' ($anstmp)" && _PHP_W_MAX_REQUESTS=${_ANSWER:-$anstmp} && _confset _PHP_W_MAX_REQUESTS "${_PHP_W_MAX_REQUESTS}"
+[ -z ${_PHP_W_MAX_REQUESTS+x} ] && anstmp='1000000' && _askno "Give value for 'pm.max_requests' ($anstmp)" && _PHP_W_MAX_REQUESTS=${_ANSWER:-$anstmp} && _confset _PHP_W_MAX_REQUESTS "${_PHP_W_MAX_REQUESTS}"
 
 [ -z ${_PHP_SLOWLOG_TIMEOUT+x} ] && anstmp='2' && _askno "Give value for 'request_SLOWLOG_TIMEOUT' ($anstmp)" && _PHP_SLOWLOG_TIMEOUT=${_ANSWER:-$anstmp} && _confset _PHP_SLOWLOG_TIMEOUT "${_PHP_SLOWLOG_TIMEOUT}"
-
-
-file_php_conf=/etc/php7/php.ini
-file_fpm_conf=/etc/php7/php-fpm.conf
-path_php_conf=/etc/php7/conf.d
-path_fpm_conf=/etc/php7/php-fpm.d
-path_apache_conf=/etc/apache2/conf.d
-# shared
-path_php_share=${S_VM_PATH_SHARE}/php/${S_DOMAIN_FQDN}
-path_fpm_pool=${path_php_share}/pools
-path_xdebug_profile=${path_php_share}/xdebug/profile
-path_xdebug_trace=${path_php_share}/xdebug/trace
 
 
 ########################  PROFILE
@@ -267,8 +267,8 @@ pm.max_requests  ${_PHP_W_MAX_REQUESTS}
 pm.status_path  /status-www
 ping.path  /ping-www
 ping.response  pong
-access.log  ${S_PATH_LOG}/php7/\$pool.access.log
-slowlog  ${S_PATH_LOG}/php7/\$pool.slow.log
+access.log  ${S_PATH_LOG}/php7/\$pool.access.info
+slowlog  ${S_PATH_LOG}/php7/\$pool.slow.info
 request_slowlog_timeout  ${_PHP_SLOWLOG_TIMEOUT}
 catch_workers_output  yes"
 _lxc_exec ${_CT_NAME} "${cmds}"
@@ -306,7 +306,7 @@ process.priority  0
 process.dumpable  yes
 pm static
 pm.max_children  1
-pm.max_requests  500
+pm.max_requests  0
 pm.status_path  /status-www-admin
 ping.path  /ping-www-admin
 ping.response  pong"
@@ -328,6 +328,9 @@ _lxc_exec ${_CT_NAME} "echo '<?php phpinfo() ?>' > ${_APA_PATH_WWW}/phpinf.php"
 
 file=${_APA_PATH_WWW}/index.php
 _lxc_exec ${_CT_NAME} "echo '<html><body><h1><?php echo \"php works!\" ?></h1></body></html>' > ${file}"
+
+file=${_APA_PATH_WWW}/index.html
+_lxc_exec ${_CT_NAME} "[ -f ${file} ] && mv ${file} ${file}.keep"
 
 
 _echoT "----------  ${S_DOMAIN_FQDN} files"

@@ -82,6 +82,9 @@ while [ "$_PART" != "quit" ]; do
 			php) # ovh home
 				_source "${_PATH_BASE_SUB}/lxd-${_RELEASE_ID}-${_PART}.install"
 				;;
+			mariadb) # ovh home
+				_source "${_PATH_BASE_SUB}/lxd-${_RELEASE_ID}-${_PART}.install"
+				;;
 			*)
 				_echoE "Wrong option: '$_PART'"
 				;;

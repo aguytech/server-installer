@@ -28,8 +28,8 @@ _require ${file_rsyslog_host} ${file_rsyslog_client} ${file_logrotate_host} ${fi
 
 _CT_NAME=${S_SERVICE[cache]}
 
-eval ${S_HOST_VM_ETH[default]}
-_CT_IP=${s_base}.${S_SERVICE_BITS[cache]}
+#eval ${S_HOST_VM_ETH[default]}
+#_CT_IP=${s_base}.${S_SERVICE_BITS[cache]}
 
 
 _echoT "----------  data sysctl.conf"
@@ -79,14 +79,12 @@ fi
 _eval lxc init ${_CT_NAME_COM} ${_CT_NAME} -p default -p global
 
 
-<<KEEP
-_echoT "----------  network fixed ip"
-
-if ! lxc list -f json | jq -r '.[] | select(.name == "'${_CT_NAME}'").devices[].name' | grep -q eth0; then
-	_eval lxc network attach ${s_inet} ${_CT_NAME} eth0 eth0
-fi
-_eval lxc config device set ${_CT_NAME} eth0 ipv4.address ${_CT_IP}
-KEEP
+#_echoT "----------  network fixed ip"
+#
+#if ! lxc list -f json | jq -r '.[] | select(.name == "'${_CT_NAME}'").devices[].name' | grep -q eth0; then
+#	_eval lxc network attach ${s_inet} ${_CT_NAME} eth0 eth0
+#fi
+#_eval lxc config device set ${_CT_NAME} eth0 ipv4.address ${_CT_IP}
 
 
 _echoT "----------  ${_CT_NAME} start"
@@ -138,20 +136,20 @@ _echoT "----------  conf"
 
 file=/etc/redis.conf
 
-cmds="sed -i 's|^\(bind\) .*$|\1 127.0.0.1 ${_CT_IP}|'  ${file}
-sed -i 's|^\(port\) .*$|\1 ${S_CACHE_PORT}|'  ${file}
-sed -i 's|^\(tcp-backlog\) .*$|\1 ${_RDS_BACKLOG}|'  ${file}
-sed -i 's|^\(timeout\) .*$|\1 ${_RDS_TIMEOUT}|'  ${file}
-sed -i 's|^\(tcp-keepalive\) .*$|\1 ${_RDS_KEEPALIVE}|'  ${file}
-sed -i 's|^\(databases\) .*$|\1 ${_RDS_DATABASES}|'  ${file}"
-_lxc_exec ${_CT_NAME} "${cmds}"
+_lxc_exec ${_CT_NAME} "sed -i 's|^\(bind\) .*$|\1 * -::*|'  ${file}"
+_lxc_exec ${_CT_NAME} "sed -i '/^logfile / s|^|#|'  ${file}"
 
-# log
-cmds="sed -i 's|^\(loglevel\) .*$|\1 ${_RDS_LOGLEVEL}|'  ${file}
-sed -i '/^logfile / s|^|#|'  ${file}
-sed -i 's|^#\?\s*\(syslog-enabled\) .*$|\1 yes|'  ${file}
-sed -i 's|^#\?\s*\(syslog-ident\) .*$|\1 redis|'  ${file}
-sed -i 's|^#\?\s*\(syslog-facility\) .*$|\1 local7|'  ${file}"
+cmds=; while read str val; do
+	cmds+="sed -i 's|^\(${str}\) .*|\1 ${val}|' ${file}
+"; done <<< "port  ${S_CACHE_PORT}
+tcp-backlog  ${_RDS_BACKLOG}
+timeout  ${_RDS_TIMEOUT}
+tcp-keepalive  ${_RDS_KEEPALIVE}
+databases  ${_RDS_DATABASES}
+loglevel  ${_RDS_LOGLEVEL}
+syslog-enabled  yes
+syslog-ident  redis
+syslog-facility  local7"
 _lxc_exec ${_CT_NAME} "${cmds}"
 
 
@@ -201,9 +199,8 @@ _lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
 
 _echoT "----------  redis test acces"
 
-_echo "timeout 3 redis-cli -h ${_CT_IP} ping"
-_evalq "timeout 3 redis-cli -h ${_CT_IP} ping 2>/dev/null"
-
+_echo "timeout 3 redis-cli -h ${_CT_NAME} ping"
+_evalq "timeout 3 redis-cli -h ${_CT_NAME} ping 2>/dev/null"
 
 _echoI "\nTo do a benchmark, just type:" && sleep 0.1
 _echo "redis-benchmark -h ${_CT_NAME} -p ${S_CACHE_PORT} -n 1000 -c 10 -k 1 -q"

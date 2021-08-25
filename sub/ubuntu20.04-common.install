@@ -17,7 +17,7 @@ path_install_bash_completion=${S_PATH_INSTALL_CONF}/bash-completion
 
 file_rsyslog_cron=${S_PATH_INSTALL_CONF}/rsyslog/cron.conf
 file_rsyslog_client_auth=${S_PATH_INSTALL_CONF}/rsyslog/client-auth.conf
-file_logrotate_server=${S_PATH_INSTALL_CONF}/logrotate/server
+file_logrotate_server=${S_PATH_INSTALL_CONF}/logrotate/host-server
 file_vim=${S_PATH_SCRIPT_CONF}/.vimrc
 file_tmux=${S_PATH_SCRIPT_CONF}/.tmux.conf
 

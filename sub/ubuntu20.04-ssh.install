@@ -15,7 +15,7 @@ if ! [ -f ${HOME}/.ssh/id_rsa ]; then
 
 	_echoT "----------  ssh-keygen"
 
-	_askyn "Do you want to generate new keys for ssh"
+	_askyn "Generate new keys for ssh"
 	[ "$_ANSWER" = y ] && _eval "ssh-keygen -t rsa"
 fi
 

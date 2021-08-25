@@ -14,7 +14,7 @@ file=/etc/server/iptables-firewall.conf
 
 __add_chain() {
 	local chain values message value cmd opts
-	_echod "${FUNCNAME}():${LINENO} IN \$@=$@"
+	_echod "${FUNCNAME}:${LINENO} IN \$@=$@"
 
 	opts_short="c:v:m:"
 	opts=$(getopt -o ${opts_short} -n "${0##*/}" -- "$@") || _exite "Wrong or missing options"
@@ -29,9 +29,9 @@ __add_chain() {
 		esac
 		shift
 	done
-	_echod "${FUNCNAME}():${LINENO} message='${message}'"
-	_echod "${FUNCNAME}():${LINENO} chain='${chain}'"
-	_echod "${FUNCNAME}():${LINENO} values='${values}'"
+	_echod "${FUNCNAME}:${LINENO} message='${message}'"
+	_echod "${FUNCNAME}:${LINENO} chain='${chain}'"
+	_echod "${FUNCNAME}:${LINENO} values='${values}'"
 
 	_echo  "${message} ${values}"
 	for value in ${values}; do
@@ -184,17 +184,17 @@ __init_end() {
 
 	_echo "- Drop all INPUT"
 	__ipt -A INPUT -j DROP-INPUT
-	${_LOG} && __ipt -A DROP-INPUT -m limit --limit 2/min -j LOG --log-prefix "ipt-drop-input " --log-level 4
+	${_LOG} && __ipt "-A DROP-INPUT -m limit --limit 2/min -j LOG --log-prefix \"ipt-drop-input \" --log-level 4"
 	__ipt -A DROP-INPUT -j DROP
 
 	_echo "- Drop all OUTPUT"
 	__ipt -A OUTPUT -j DROP-OUTPUT
-	${_LOG} && __ipt -A DROP-OUTPUT -m limit --limit 2/min -j LOG --log-prefix "ipt-drop-output " --log-level 4
+	${_LOG} && __ipt "-A DROP-OUTPUT -m limit --limit 2/min -j LOG --log-prefix \"ipt-drop-output \" --log-level 4"
 	__ipt -A DROP-OUTPUT -j DROP
 
 	_echo "- Drop all FORWARD"
 	__ipt -A FORWARD -j DROP-FORWARD
-	${_LOG} && __ipt -A DROP-FORWARD -m limit --limit 2/min -j LOG --log-prefix "ipt-drop-forward " --log-level 4
+	${_LOG} && __ipt "-A DROP-FORWARD -m limit --limit 2/min -j LOG --log-prefix \"ipt-drop-forward \" --log-level 4"
 	__ipt -A DROP-FORWARD -j DROP
 
 	${_LOG} && _echo "\nLOG IPV4 activated"
@@ -249,18 +249,14 @@ __input() {
 	__add_chain -c "${chain}" -v "${_IPS_DNS}" -m "${message}"
 
 	# NTP (time) server
-	message="- Allow INPUT port: $_PORT_NTP, UDP NTP for IP:"
-	chain="iptables -A INPUT -i ${_ETH} -p udp --sport $_PORT_NTP --dport $_PORT_NTP -j ACCEPT"
-	__add_chain -c "${chain}" -v "$_IPS_NTP" -m "${message}"
+	message="- Allow INPUT port: ${_PORT_NTP}, UDP NTP for IP:"
+	chain="iptables -A INPUT -i ${_ETH} -p udp --sport ${_PORT_NTP} --dport ${_PORT_NTP} -j ACCEPT"
+	__add_chain -c "${chain}" -v "${_IPS_NTP}" -m "${message}"
 
 	# HTTP
-	message="- Allow OUTPUT loopback to proxy for IP:"
-	chain="iptables -A OUTPUT -o lo -p tcp --dport XX -j DNAT --to-destination ${S_SERVICE[proxy]}"
-	__add_chain -c "${chain}" -v "${_PORTS_HTTP}" -m "${message}"
-
 	if [ "${_LIMIT_HTTP}" ]; then
-		message="- Allow INPUT all IPs Mails with LIMIT ${_LIMIT_HTTP} & Burst $_LIMIT_BURST_HTTP for port:"
-		chain="iptables -A INPUT -i ${_ETH} -p tcp --syn --dport XX -m limit --limit ${_LIMIT_HTTP} --limit-burst $_LIMIT_BURST_HTTP -j ACCEPT"
+		message="- Allow INPUT all IPs Mails with LIMIT ${_LIMIT_HTTP} & Burst ${_LIMIT_BURST_HTTP} for port:"
+		chain="iptables -A INPUT -i ${_ETH} -p tcp --syn --dport XX -m limit --limit ${_LIMIT_HTTP} --limit-burst ${_LIMIT_BURST_HTTP} -j ACCEPT"
 	else
 		message="- Allow INPUT all IPs HTTP for port:"
 		chain="iptables -A INPUT -i ${_ETH} -p tcp --dport XX -j ACCEPT"
@@ -270,7 +266,7 @@ __input() {
 	if [ "${_CONMAX_HTTP}" ]; then
 		message="- Limit log INPUT all IPs HTTP with max // connLimit of ${_CONMAX_HTTP} for port:"
 		#chain="iptables -A INPUT -i ${_ETH} -p tcp --dport XX -j ACCEPT"
-		chain="iptables -A INPUT -i ${_ETH} -p tcp --syn --dport XX -m connlimit --connlimit-upto ${_CONMAX_HTTP} --connlimit-mask 32 -j LOG --log-prefix "ipt-fw-limit-$port ${_CONMAX_HTTP} HTTP XX : ""
+		chain="iptables -A INPUT -i ${_ETH} -p tcp --syn --dport XX -m connlimit --connlimit-upto ${_CONMAX_HTTP} --connlimit-mask 32 -j LOG --log-prefix \"ipt-fw-limit-XX\""
 		__add_chain -c "${chain}" -v "${_PORTS_HTTP}" -m "${message}"
 
 		message="- Drop INPUT all IPs HTTP with max // connLimit of ${_CONMAX_HTTP} for port:"
@@ -324,6 +320,10 @@ __input() {
 
 __nat() {
 	_echo "\n-------------------------- NAT"
+
+	message="- Allow OUTPUT loopback to proxy for IP:"
+	chain="iptables -t nat -A OUTPUT -o lo -p tcp --dport XX -j DNAT --to-destination ${_IP_SRV[proxy]}"
+	__add_chain -c "${chain}" -v "${_PORTS_HTTP}" -m "${message}"
 
 	message="- Allow PREROUTING HTTP to proxy VM / port ${_PORTS_HTTP} to ${_IP_SRV[proxy]} for port:"
 	chain="iptables -t nat -A PREROUTING -i ${_ETH} -p tcp --dport XX -j DNAT --to-destination ${_IP_SRV[proxy]}:XX"
@@ -424,7 +424,7 @@ __scan() {
 	_echo "- Drop INPUT BROADCAST"
 	__ipt -A INPUT -m pkttype --pkt-type broadcast -j DROP-SCAN
 
-	${_LOG} && __ipt -A DROP-SCAN -m limit --limit 2/min -j LOG --log-prefix "ipt-drop-scan " --log-level 4
+	${_LOG} && __ipt "-A DROP-SCAN -m limit --limit 2/min -j LOG --log-prefix \"ipt-drop-scan \" --log-level 4"
 	__ipt -A DROP-SCAN -j DROP
 }
 
@@ -461,7 +461,7 @@ __scan2() {
 	_echo "- Drop INPUT SYNFIN-SCAN SCANS"
 	__ipt -t filter -A INPUT -p tcp --tcp-flags ALL SYN,FIN -j DROP-SCAN2
 
-	${_LOG} && __ipt -A DROP-SCAN2 -m limit --limit 2/min -j LOG --log-prefix "ipt-drop-scan2 " --log-level 4
+	${_LOG} && __ipt "-A DROP-SCAN2 -m limit --limit 2/min -j LOG --log-prefix \"ipt-drop-scan2 \" --log-level 4"
 	__ipt -A DROP-SCAN2 -j DROP
 }
 
