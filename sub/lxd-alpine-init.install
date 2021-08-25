@@ -13,6 +13,8 @@ _echoT "----------  ${_RELEASE_ID} data"
 
 [ -z ${_RELEASE+x} ] && _RELEASE=${_RELEASE_ID}${_RELEASE_NAME} && _confset _RELEASE "${_RELEASE}"
 
+_IP_HOST=${_CIDR_VM%/*} && _confset _IP_HOST "${_IP_HOST}"
+
 _CT_NAME="${_RELEASE/./}"
 
 

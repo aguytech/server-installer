@@ -99,15 +99,13 @@ _eval sleep 1
 _echoT "----------  conf sysctl.conf"
 
 file=/etc/sysctl.d/20-lxd.conf
-
 txt="# apache2 php-fpm
 net.ipv4.tcp_max_syn_backlog = ${_RDS_MAX_SYN_BACKLOG}
 net.ipv4.tcp_max_tw_buckets = ${_RDS_MAX_TW_BUCKETS}
-net.ipv4.tcp_fin_timeout= ${_RDS_FIN_TIMEOUT}
-net.ipv4.tcp_keepalive_time= ${_RDS_KEEPALIVE_TIME}
-net.ipv4.tcp_keepalive_intvl= ${_RDS_KEEPALIVE_INTVL}
+net.ipv4.tcp_fin_timeout = ${_RDS_FIN_TIMEOUT}
+net.ipv4.tcp_keepalive_time = ${_RDS_KEEPALIVE_TIME}
+net.ipv4.tcp_keepalive_intvl = ${_RDS_KEEPALIVE_INTVL}
 net.ipv4.tcp_keepalive_probes = ${_RDS_KEEPALIVE_PROBES}"
-
 _lxc_exec ${_CT_NAME} "echo '${txt}' > ${file}"
 
 
@@ -140,7 +138,7 @@ _lxc_exec ${_CT_NAME} "sed -i 's|^\(bind\) .*$|\1 * -::*|'  ${file}"
 _lxc_exec ${_CT_NAME} "sed -i '/^logfile / s|^|#|'  ${file}"
 
 cmds=; while read str val; do
-	cmds+="sed -i 's|^\(${str}\) .*|\1 ${val}|' ${file}
+	cmds+="sed -i 's|^#\?\s*\(${str}\) .*|\1 ${val}|' ${file}
 "; done <<< "port  ${S_CACHE_PORT}
 tcp-backlog  ${_RDS_BACKLOG}
 timeout  ${_RDS_TIMEOUT}

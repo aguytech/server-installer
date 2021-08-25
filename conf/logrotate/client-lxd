@@ -1,0 +1,12 @@
+S_PATH_LOG/lxd/lxd.err
+S_PATH_LOG/lxd/lxd.warning
+S_PATH_LOG/lxd/lxd.notice
+S_PATH_LOG/lxd/lxdinfo {
+	daily
+	rotate 14
+	missingok
+	compress
+	delaycompress
+	notifempty
+    create 640 root adm
+}

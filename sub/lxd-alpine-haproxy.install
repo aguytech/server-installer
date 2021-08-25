@@ -248,9 +248,16 @@ _eval lxc publish --force ${_CT_NAME} --alias ${_CT_NAME}
 
 ########################  TEST
 
+_echoT "----------  test haproxy"
+
+_echoI "password to access to  haproxy: ${_HPX_ACCESS_PWD}"
+_echoW "{_IPTHIS}:${S_HAPROXY_STATS_PORT}${_HPX_ACCESS_URI}"
+
 _echoT "----------  test ${_CT_NAME}"
 
-_echoI "To test connection use pwd:${_HPX_ACCESS_PWD} for:\ncurl ${_IPTHIS}:${S_HAPROXY_STATS_PORT}${_HPX_ACCESS_URI}"
+_echoI "To test connection type:"
+_echo "curl ${_IPTHIS}:80"
+_echo "curl ${S_DOMAIN_FQDN}:80"
 
 
 ########################  END
