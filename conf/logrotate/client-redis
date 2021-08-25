@@ -1,9 +1,9 @@
 S_PATH_LOG/redis/redis.info {
-    daily
-    missingok
-    rotate 14
-    compress
-    delaycompress
-    notifempty
+	daily
+	rotate 2
+	missingok
+	compress
+	delaycompress
+	notifempty
     create 640 root adm
 }

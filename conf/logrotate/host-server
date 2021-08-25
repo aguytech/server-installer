@@ -2,12 +2,12 @@
 #S_PATH_LOG_INSTALL/*.log
 S_PATH_LOG_SERVER/*.info
 S_PATH_LOG_SERVER/*.err
-S_PATH_LOG_SERVER/*.debug
-{
-    missingok
-    compress
-    delaycompress
-    notifempty
-    weekly
-    rotate 24
+S_PATH_LOG_SERVER/*.debug {
+	daily
+	rotate 14
+	missingok
+	compress
+	delaycompress
+	notifempty
+    create 640 root adm
 }

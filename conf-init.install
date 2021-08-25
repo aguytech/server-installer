@@ -12,7 +12,6 @@ echo -e "${blueb}----------  data${cclear}"
 
 S_PATH_INSTALL=`dirname "$(readlink -e "${BASH_SOURCE[0]}")"`
 S_PATH_INSTALL_CONF=${S_PATH_INSTALL}/conf
-S_PATH_SCRIPT=/usr/local/bs
 
 file_conf_server=${S_PATH_INSTALL}/conf-server.install
 file_install_server=${S_PATH_INSTALL_CONF}/server.conf
@@ -97,19 +96,6 @@ _redirect
 _echoT "----------  server settings"
 
 . "${file_conf_server}"
-
-
-########################  GLOBAL
-
-_echoT "----------  source ${S_GLOBAL_CONF}"
-
-. ${S_GLOBAL_CONF}
-
-
-file_env="${S_PATH_SCRIPT_CONF}/env"
-_echoT "----------  source ${file_env}"
-
-. "${file_env}"
 
 
 ########################  END

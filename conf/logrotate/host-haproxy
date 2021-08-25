@@ -1,10 +1,12 @@
-S_VM_PATH_LOG/haproxy/haproxy-status.info
-S_VM_PATH_LOG/haproxy/haproxy.info {
-    daily
-    missingok
-    rotate 14
-    compress
-    delaycompress
-    notifempty
+S_VM_PATH_LOG/haproxy/*.err
+S_VM_PATH_LOG/haproxy/*.warning
+S_VM_PATH_LOG/haproxy/*.notice
+S_VM_PATH_LOG/haproxy/*.info {
+	daily
+	rotate 14
+	missingok
+	compress
+	delaycompress
+	notifempty
     create 640 root adm
 }

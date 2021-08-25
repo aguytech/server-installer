@@ -1,9 +1,11 @@
 # Logrotate file for iptables logs
-S_PATH_LOG/iptables/*.log {
+S_PATH_LOG/iptables/*.info
+S_PATH_LOG/iptables/*.warning {
+	daily
+	rotate 2
 	missingok
 	compress
 	delaycompress
 	notifempty
-	weekly
-	rotate 8
+    create 640 root adm
 }

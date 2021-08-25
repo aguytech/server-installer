@@ -72,18 +72,6 @@ declare -A S_HOST_VM_ETH
 S_HOST_VM_ETH[default]="s_inet=lxdbr0 s_cidr=10.0.0.1/24 s_base=10.0.0"
 S_HOST_VM_ETH[stock]="s_inet=lxdbr1 s_cidr=10.0.1.1/24 s_base=10.0.1"
 
-# minimal IP for DHCP container
-S_HOST_DHCP_MIN="20"
-# maximal IP for DHCP container
-S_HOST_DHCP_MAX="254"
-
-# prefix for ssh prerouting port
-S_HOST_PORT_PRE_SSH="20"
-# prefix for http prerouting port
-S_HOST_PORT_PRE_HTTP="8"
-# prefix for https prerouting port
-S_HOST_PORT_PRE_HTTPS="9"
-
 ########################  VM
 # VM sharing path
 S_VM_PATH_SHARE="/var/share"
@@ -115,20 +103,6 @@ S_SERVICE[php]="srv-php"
 S_SERVICE[sgbd]="srv-maria"
 S_SERVICE[mail]="srv-postfix"
 S_SERVICE[admin]="srv-admin"
-
-########################  LXD
-# root path of storage pools for
-S_LXD_PATH_SP="storage-pools"
-# path for containers
-S_LXD_PATH_CT="containers"
-# path for containers images
-S_LXD_PATH_IMAGES="images"
-# path for containers snapshots
-S_LXD_PATH_SNAPSHOTS="snapshots"
-# path for export
-S_LXD_PATH_EXPORT="export"
-# port for remote connection
-S_LXD_PORT="8443"
 
 ########################  DOMAIN
 # FQDN of principal domain

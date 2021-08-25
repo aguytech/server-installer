@@ -1,12 +1,12 @@
 S_VM_PATH_LOG/apache2/*.err
-S_VM_PATH_LOG/apache2/*.warn
+S_VM_PATH_LOG/apache2/*.warning
 S_VM_PATH_LOG/apache2/*.notice
 S_VM_PATH_LOG/apache2/*.info {
-    daily
-    missingok
-    rotate 14
-    compress
-    delaycompress
-    notifempty
+	daily
+	rotate 14
+	missingok
+	compress
+	delaycompress
+	notifempty
     create 640 root adm
 }

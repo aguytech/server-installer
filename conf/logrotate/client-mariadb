@@ -1,6 +1,6 @@
 # Client logrotate file for php7
 S_PATH_LOG/php7/*.err
-S_PATH_LOG/php7/*.warning
+S_PATH_LOG/php7/*.warn
 S_PATH_LOG/php7/*.info
 S_PATH_LOG/php7/*.notice {
 	daily

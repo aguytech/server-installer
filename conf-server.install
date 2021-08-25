@@ -411,8 +411,7 @@ _echoT "----------  S_DB_PGSQL_PORT"
 
 if [ -z "${S_DB_PGSQL_PORT}" ]; then
 	anstmp="5432"
-	_askno "connections ports for rsddn2
-	postgre (${anstmp})"
+	_askno "connections ports for postgresql (${anstmp})"
 	S_DB_PGSQL_PORT=${_ANSWER:-${anstmp}} && _confset S_DB_PGSQL_PORT "${S_DB_PGSQL_PORT}" "${S_GLOBAL_CONF}"
 fi
 
