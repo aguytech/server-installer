@@ -285,13 +285,6 @@ _echoT "----------  ${_CT_NAME} log clean"
 _lxc_exec ${_CT_NAME} "find ${S_PATH_LOG}/mysql -name *.log -exec rm {} \;"
 
 
-########################  CLIENT
-
-_echoT "----------  host install mariadb-client"
-
-_eval apt install -y mariadb-client
-
-
 ########################  PUBLISH
 
 _echoT "----------  publish ${_CT_NAME}"
@@ -299,7 +292,13 @@ _echoT "----------  publish ${_CT_NAME}"
 _eval lxc image list -f json | jq -r '.[].aliases[].name' | grep -q ^${_CT_NAME}$ && lxc image alias rename ${_CT_NAME} ${_CT_NAME}-$(date +%s)
 _eval lxc publish --force ${_CT_NAME} --alias ${_CT_NAME}
 
-sleep 1
+
+########################  CLIENT
+
+_echoT "----------  host install mariadb-client"
+
+_eval apt install -y mariadb-client
+
 
 ########################  SHOW
 
