@@ -27,8 +27,8 @@ _require ${file_rsyslog_host} ${file_rsyslog_client} ${file_logrotate_host} ${fi
 
 _CT_NAME=${S_SERVICE[http]}
 
-eval ${S_HOST_VM_ETH[default]}
-_CT_IP=${s_base}.${S_SERVICE_BITS[http]}
+#eval ${S_HOST_VM_ETH[default]}
+#_CT_IP=${s_base}.${S_SERVICE_BITS[http]}
 
 _APA_PATH_WWW=/var/www/localhost/html &&  _confset _APA_PATH_WWW "${_APA_PATH_WWW}"
 _APA_PATH_DOMAIN=${S_VM_PATH_SHARE}/www/${S_DOMAIN_FQDN} && _confset _APA_PATH_DOMAIN "${_APA_PATH_DOMAIN}"
@@ -63,6 +63,20 @@ _echoT "----------  data apache"
 
  [ -z ${_APA_KEEPALIVE_TIMEOUT+x} ] && anstmp="5" && _askno "Number of seconds to wait for the next request (${anstmp})" && _APA_KEEPALIVE_TIMEOUT=${_ANSWER:-$anstmp} && _confset _APA_KEEPALIVE_TIMEOUT "${_APA_KEEPALIVE_TIMEOUT}"
 
+_echoT "----------  data apache mpm"
+
+[ -z ${_APA_START_SERVERS+x} ] && anstmp="13" && _askno "StartServers (${anstmp})" && _APA_START_SERVERS=${_ANSWER:-$anstmp} && _confset _APA_START_SERVERS "${_APA_START_SERVERS}"
+
+[ -z ${_APA_MIN_SPARE_THREADS+x} ] && anstmp="50" && _askno "MinSpareThreads (${anstmp})" && _APA_MIN_SPARE_THREADS=${_ANSWER:-$anstmp} && _confset _APA_MIN_SPARE_THREADS "${_APA_MIN_SPARE_THREADS}"
+
+[ -z ${_APA_MAX_SPARE_THREADS+x} ] && anstmp="250" && _askno "MaxSpareThreads (${anstmp})" && _APA_MAX_SPARE_THREADS=${_ANSWER:-$anstmp} && _confset _APA_MAX_SPARE_THREADS "${_APA_MAX_SPARE_THREADS}"
+
+ [ -z ${_APA_THREADS_PER_CHILD+x} ] && anstmp="25" && _askno "ThreadsPerChild (${anstmp})" && _APA_THREADS_PER_CHILD=${_ANSWER:-$anstmp} && _confset _APA_THREADS_PER_CHILD "${_APA_THREADS_PER_CHILD}"
+
+ [ -z ${_APA_MAX_REQUEST_WORKERS+x} ] && anstmp="400" && _askno "MaxRequestWorkers (${anstmp})" && _APA_MAX_REQUEST_WORKERS=${_ANSWER:-$anstmp} && _confset _APA_MAX_REQUEST_WORKERS "${_APA_MAX_REQUEST_WORKERS}"
+
+ [ -z ${_APA_MAX_CONNECTIONS_PER_CHILD+x} ] && anstmp="0" && _askno "MaxConnectionsPerChild (${anstmp})" && _APA_MAX_CONNECTIONS_PER_CHILD=${_ANSWER:-$anstmp} && _confset _APA_MAX_CONNECTIONS_PER_CHILD "${_APA_MAX_CONNECTIONS_PER_CHILD}"
+
 
 ########################  PROFILE
 
@@ -95,14 +109,12 @@ fi
 _eval lxc init ${_CT_NAME_COM} ${_CT_NAME} -p default -p global -p ${profile}
 
 
-<<KEEP
-_echoT "----------  network fixed ip"
-
-if ! lxc list -f json | jq -r '.[] | select(.name == "'${_CT_NAME}'").devices[].name' | grep -q eth0; then
-	_eval lxc network attach ${s_inet} ${_CT_NAME} eth0 eth0
-fi
-_eval lxc config device set ${_CT_NAME} eth0 ipv4.address ${_CT_IP}
-KEEP
+#_echoT "----------  network fixed ip"
+#
+#if ! lxc list -f json | jq -r '.[] | select(.name == "'${_CT_NAME}'").devices[].name' | grep -q eth0; then
+#	_eval lxc network attach ${s_inet} ${_CT_NAME} eth0 eth0
+#fi
+#_eval lxc config device set ${_CT_NAME} eth0 ipv4.address ${_CT_IP}
 
 
 _echoT "----------  ${_CT_NAME} start"
@@ -182,6 +194,20 @@ sed -i 's|^.\?\(LoadModule rewrite_module.*\)$|\1|' ${file_conf_http}"
 #sed -i 's|^.\?\(LoadModule remoteip_module.*\)$|\1|' ${file_conf_http}
 _lxc_exec ${_CT_NAME} "${cmds}"
 
+_echoT "----------  conf mpm"
+
+file=${path_conf}/mpm.conf
+_lxc_exec ${_CT_NAME} "[ ! -f '${file}.${_SDATE}' ] && cp -a '${file}' '${file}.${_SDATE}'"
+
+cmds="sed -i '/<IfModule mpm_event_module>/,/<\/IfModule>/ s|^\(\s*StartServers\s*\).*|\1 ${_APA_START_SERVERS}|' ${file}
+sed -i '/<IfModule mpm_event_module>/,/<\/IfModule>/ s|^\(\s*MinSpareThreads\s*\).*|\1 ${_APA_MIN_SPARE_THREADS}|' ${file}
+sed -i '/<IfModule mpm_event_module>/,/<\/IfModule>/ s|^\(\s*MaxSpareThreads\s*\).*|\1 ${_APA_MAX_SPARE_THREADS}|' ${file}
+sed -i '/<IfModule mpm_event_module>/,/<\/IfModule>/ s|^\(\s*ThreadsPerChild\s*\).*|\1 ${_APA_THREADS_PER_CHILD}|' ${file}
+sed -i '/<IfModule mpm_event_module>/,/<\/IfModule>/ s|^\(\s*MaxRequestWorkers\s*\).*|\1 ${_APA_MAX_REQUEST_WORKERS}|' ${file}
+sed -i '/<IfModule mpm_event_module>/,/<\/IfModule>/ s|^\(\s*MaxConnectionsPerChild\s*\).*|\1 ${_APA_MAX_CONNECTIONS_PER_CHILD}|' ${file}"
+_lxc_exec ${_CT_NAME} "${cmds}"
+
+
 _echoT "----------  conf httpd"
 
 # IncludeOptional
@@ -205,20 +231,6 @@ _lxc_exec ${_CT_NAME} "sed -i '/^<IfModule log_config_module>/,/^<\/IfModule>/ s
 file=/etc/apache2/conf.d/${file_log##*/}
 _eval lxc file push ${file_log} ${_CT_NAME}/${file}
 _lxc_var_replace ${_CT_NAME} ${file} apache
-
-
-_echoT "----------  conf mpm"
-
-file=${path_conf}/mpm.conf
-_lxc_exec ${_CT_NAME} "[ ! -f '${file}.${_SDATE}' ] && cp -a '${file}' '${file}.${_SDATE}'"
-
-cmds="sed -i '/<IfModule mpm_event_module>/,/<\/IfModule>/ s|^\(\s*StartServers\s*\).*|\1 13|' ${file}
-sed -i '/<IfModule mpm_event_module>/,/<\/IfModule>/ s|^\(\s*MinSpareThreads\s*\).*|\1 50|' ${file}
-sed -i '/<IfModule mpm_event_module>/,/<\/IfModule>/ s|^\(\s*MaxSpareThreads\s*\).*|\1 250|' ${file}
-sed -i '/<IfModule mpm_event_module>/,/<\/IfModule>/ s|^\(\s*ThreadsPerChild\s*\).*|\1 25|' ${file}
-sed -i '/<IfModule mpm_event_module>/,/<\/IfModule>/ s|^\(\s*MaxRequestWorkers\s*\).*|\1 400|' ${file}
-sed -i '/<IfModule mpm_event_module>/,/<\/IfModule>/ s|^\(\s*MaxConnectionsPerChild\s*\).*|\1 0|' ${file}"
-_lxc_exec ${_CT_NAME} "${cmds}"
 
 
 _echoT "----------  conf info & status"
