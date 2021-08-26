@@ -63,6 +63,9 @@ while [ "$_PART" != "quit" ]; do
 	_echo "Part already made: ${blueb}$partsmade${cclear}"
 	PS3="Give your choice: "
 	select _PART in quit $parts2do; do
+		# update time
+		_SDATE=`date +%s`
+
 		case "$_PART" in
 			quit)
 				break
