@@ -1,4 +1,5 @@
 # included file for haproxy configuration
+# see http://cbonte.github.io/haproxy-dconv/2.4/configuration.html#4.1
 
 defaults
 	log				global
@@ -8,16 +9,16 @@ defaults
 	option			httpchk
 	option			log-health-checks
 	option			forwardfor except 127.0.0.0/8
-	option			http-server-close
+	option			http-keep-alive # http-server-close
 	maxconn		30
 
-	timeout		connect				60s
-	timeout		client					600s
-	timeout		server					600s
-	#timeout		queue					600s
-	#timeout		http-request		60s
-	#timeout		http-keep-alive	60s
-	#timeout		check					60s
+	timeout		connect				2000	# Set the maximum time to wait for a connection attempt to a server to succeed
+	timeout		client					30000	# Set the maximum inactivity time on the client side
+	timeout		server					600000	# Set the maximum time for pending data staying into output buffer
+	timeout		queue					4000	# Set the maximum time to wait in the queue for a connection slot to be free
+	timeout		http-request		5000	# Set the maximum allowed time to wait for a complete HTTP request
+	timeout		http-keep-alive	5000	# Set the maximum allowed time to wait for a new HTTP request to appear
+	timeout		check					1000	# Set additional check timeout, but only after a connection has been already established
 
 	errorfile 400	/etc/haproxy/errors/400.http
 	errorfile 403	/etc/haproxy/errors/403.http
