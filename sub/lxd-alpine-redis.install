@@ -193,6 +193,21 @@ _echoT "----------  rsyslog restart ${_CT_NAME}"
 _lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
 
 
+########################  CLEAN LOG
+
+_echoT "----------  ${_CT_NAME} log clean"
+
+_lxc_exec ${_CT_NAME} "find ${S_PATH_LOG}/redis -name *.log -exec rm {} \;"
+
+
+########################  PUBLISH
+
+_echoT "----------  publish ${_CT_NAME}"
+
+_eval lxc image list -f json | jq -r '.[].aliases[].name' | grep -q ^${_CT_NAME}$ && lxc image alias rename ${_CT_NAME} ${_CT_NAME}-$(date +%s)
+_eval lxc publish --force ${_CT_NAME} --alias ${_CT_NAME}
+
+
 ########################  TEST
 
 _echoT "----------  redis test acces"
@@ -205,13 +220,6 @@ _echo "redis-benchmark -h ${_CT_NAME} -p ${S_CACHE_PORT} -n 1000 -c 10 -k 1 -q"
 _echo "redis-benchmark -h ${_CT_NAME} -p ${S_CACHE_PORT} -n 10000 -c 10 -k 1"
 _echoI "\nTo see latency, just type:" && sleep 0.1
 _echo "redis-cli -h ${_CT_NAME} -p ${S_CACHE_PORT} --latency-dist"
-
-########################  PUBLISH
-
-_echoT "----------  publish ${_CT_NAME}"
-
-_eval lxc image list -f json | jq -r '.[].aliases[].name' | grep -q ^${_CT_NAME}$ && lxc image alias rename ${_CT_NAME} ${_CT_NAME}-$(date +%s)
-_eval lxc publish --force ${_CT_NAME} --alias ${_CT_NAME}
 
 
 ########################  END

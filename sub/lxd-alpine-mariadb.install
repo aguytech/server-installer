@@ -35,8 +35,6 @@ eval ${S_HOST_VM_ETH[default]}
 _MDB_SERVICE=mariadb && _confset _MDB_SERVICE "${_MDB_SERVICE}"
 _MDB_HOST_PATH=${S_HOST_PATH}/mariadb/mariadb-${S_DOMAIN_FQDN} && _confset _MDB_HOST_PATH "${_MDB_HOST_PATH}"
 _MDB_VM_PATH=/var/lib/mysql && _confset _MDB_VM_PATH "${_MDB_VM_PATH}"
-_MDB_USER_HTTP=http && _confset _MDB_USER_HTTP "${_MDB_USER_HTTP}"
-_MDB_USER_DEV=dev && _confset _MDB_USER_DEV "${_MDB_USER_DEV}"
 
 path_conf=/etc/my.cnf.d
 _MDB_PATH_LOG=${S_PATH_LOG}/mysql
@@ -46,17 +44,11 @@ _echoT "----------  data pwd"
 
 [ -z ${_MDB_PWD_LOCAL+x} ] && pwdtmp=`_pwd` && _askno "Enter a password for 'root@localhost ($pwdtmp)" && _MDB_PWD_LOCAL=${_ANSWER:-$pwdtmp} && _confset _MDB_PWD_LOCAL "${_MDB_PWD_LOCAL}"
 
-[ -z ${_MDB_PWD_REMOTE+x} ] && pwdtmp=`_pwd` && _askno "Enter a password for 'rootremote@${S_IPS_ADMIN}' ($pwdtmp)" && _MDB_PWD_REMOTE=${_ANSWER:-$pwdtmp} && _confset _MDB_PWD_REMOTE "${_MDB_PWD_REMOTE}"
+[ -z ${_MDB_PWD_ADMIN+x} ] && pwdtmp=`_pwd` && _askno "Enter a password for 'rootadmin@${S_SERVICE[admin]}' ($pwdtmp)" && _MDB_PWD_ADMIN=${_ANSWER:-$pwdtmp} && _confset _MDB_PWD_ADMIN "${_MDB_PWD_ADMIN}"
 
 [ -z ${_MDB_PWD_HOST+x} ] && pwdtmp=`_pwd` && _askno "Enter a password for 'roothost@${_IPS_CLUSTER}' ($pwdtmp)" && _MDB_PWD_HOST=${_ANSWER:-$pwdtmp} && _confset _MDB_PWD_HOST "${_MDB_PWD_HOST}"
 
-[ -z ${_MDB_PWD_ADMIN+x} ] && pwdtmp=`_pwd` && _askno "Enter a password for 'rootadmin@${S_SERVICE[admin]}' ($pwdtmp)" && _MDB_PWD_ADMIN=${_ANSWER:-$pwdtmp} && _confset _MDB_PWD_ADMIN "${_MDB_PWD_ADMIN}"
-
-[ -z ${_MDB_PWD_DEV+x} ] && pwdtmp=`_pwd` && _askno "Enter a password for '${_MDB_USER_DEV}@${s_base}.% ${S_IPS_DEV}' ($pwdtmp)" && _MDB_PWD_DEV=${_ANSWER:-$pwdtmp} && _confset _MDB_PWD_DEV "${_MDB_PWD_DEV}"
-
-[ -z ${_MDB_PWD_HTTP+x} ] && pwdtmp=`_pwd` && _askno "Enter a password for '${_MDB_USER_HTTP}@${s_base}.%' ($pwdtmp)" && _MDB_PWD_HTTP=${_ANSWER:-$pwdtmp} && _confset _MDB_PWD_HTTP "${_MDB_PWD_HTTP}"
-
-[ -z ${_MDB_PWD_TOP+x} ] && pwdtmp=`_pwd` && _askno "Enter a password for 'mytop'@'localhost' ($pwdtmp)" && _MDB_PWD_TOP=${_ANSWER:-$pwdtmp} && _confset _MDB_PWD_TOP "${_MDB_PWD_TOP}"
+[ -z ${_MDB_PWD_REMOTE+x} ] && pwdtmp=`_pwd` && _askno "Enter a password for 'rootremote@${S_IPS_ADMIN}' ($pwdtmp)" && _MDB_PWD_REMOTE=${_ANSWER:-$pwdtmp} && _confset _MDB_PWD_REMOTE "${_MDB_PWD_REMOTE}"
 
 
 ########################  STORAGE MARIADB
@@ -72,13 +64,24 @@ if [ "${S_STORAGE_DRIVER}" = zfs ]; then
 	cmd="zfs create ${opts} ${path_zfs}"
 	zfs list ${path_zfs} >/dev/null 2>&1 || _eval ${cmd}
 
+
 	name=mariadb-${S_DOMAIN_FQDN}
 	_echoT "----------  zfs ${name}"
 
 	path_zfs=${_ZFS_ROOT}${_MDB_HOST_PATH}
 	path=${_MDB_HOST_PATH}
-	cmd="zfs create -o mountpoint=${path} ${path_zfs}"
-	zfs list ${path_zfs} >/dev/null 2>&1 || _eval ${cmd}
+
+	# rename
+	if zfs list ${path_zfs} >/dev/null 2>&1; then
+	 	_echoT "----------  unmount  ${path_zfs}"
+	 	zfs unmount ${path_zfs} || _exite "Unable to unmount ${path_zfs}\nUnbind container using it"
+
+		_echoT "----------  zfs backup ${path_zfs} to ${path_zfs}.${_SDATE}"
+	 	_eval zfs rename ${path_zfs} ${path_zfs}.${_SDATE}
+	 fi
+
+	_echoT "----------  zfs create ${path_zfs}"
+	_eval zfs create -o mountpoint=${path} ${path_zfs}
 
 	_echoT "----------  rights ${name}"
 
@@ -180,23 +183,34 @@ _lxc_exec ${_CT_NAME} "[ -f ${file} ] && cp -a ${file} ${file}.${_SDATE}"
 _eval lxc file push ${file_server} ${_CT_NAME}/${file}
 
 
+########################  PASSWORD
 
+_echoT "----------  variables set"
 
+strpass="root @ localhost - $_MDB_PWD_LOCAL\n"
 
+_echoT "----------  right rootadmin"
 
+for name in ${S_SERVICE[admin]}; do
+	strpass+="rootadmin @ ${name} - ${_MDB_PWD_ADMIN}\n"
+	_lxc_exec ${_CT_NAME} "mysql -uroot -p${_MDB_PWD_LOCAL} -e \"GRANT ALL PRIVILEGES ON *.* TO rootadmin@'${name}' IDENTIFIED BY '${_MDB_PWD_ADMIN}' WITH GRANT OPTION\""
+done
 
+_echoT "----------  right roothost"
 
+for ip in ${_IPS_CLUSTER} ${_IP_HOST_VM}; do
+	strpass+="roothost @ ${ip} - ${_MDB_PWD_HOST}\n"
+	_lxc_exec ${_CT_NAME} "mysql -uroot -p${_MDB_PWD_LOCAL} -e \"GRANT ALL PRIVILEGES ON *.* TO roothost@'${ip}' IDENTIFIED BY '${_MDB_PWD_HOST}' WITH GRANT OPTION\""
+done
 
+_echoT "----------  right rootremote"
 
+for ip in ${S_IPS_ADMIN}; do
+	strpass+="rootremote @ ${ip} - ${_MDB_PWD_REMOTE}\n"
+	_lxc_exec ${_CT_NAME} "mysql -uroot -p${_MDB_PWD_LOCAL} -e \"GRANT ALL PRIVILEGES ON *.* TO rootremote@'${ip}' IDENTIFIED BY '${_MDB_PWD_REMOTE}' WITH GRANT OPTION\""
+	_lxc_exec ${_CT_NAME} "mysql -uroot -p${_MDB_PWD_LOCAL} -e \"GRANT PROXY ON ''@'%' TO 'rootremote'@'${ip}' WITH GRANT OPTION\""
+done
 
-
-
-
-
-
-
-
-_echoI exit && exit
 
 ########################  PATH
 
@@ -217,28 +231,33 @@ _lxc_exec ${_CT_NAME} "rc-service ${_MDB_SERVICE} restart"
 
 _echoT "----------  ${S_SERVICE[log]} host path"
 
-path=${S_VM_PATH_LOG}/maria7
+path=${S_VM_PATH_LOG}/mysql
 _lxc_exec ${S_SERVICE[log]} "[ -d ${path} ] || mkdir -p ${path}"
 
 
-_echoT "----------  ${S_SERVICE[log]} host-mariadb"
+_echoT "----------  ${S_SERVICE[log]} host"
 
 file=/etc/rsyslog.d/${file_rsyslog_host##*/}
 _eval lxc file push ${file_rsyslog_host} ${S_SERVICE[log]}${file}
-_lxc_var_replace ${S_SERVICE[log]} ${file} rsyslog
+_lxc_var_replace ${S_SERVICE[log]} ${file} rsyslog php
 
-_echoT "----------  rsyslog restart ${S_SERVICE[log]}"
+_echoT "----------  ${S_SERVICE[log]} rsyslog restart"
 
 _lxc_exec ${S_SERVICE[log]} "rc-service rsyslog restart"
 
 
-_echoT "----------  ${S_SERVICE[log]} client-mariadb"
+_echoT "----------  ${_CT_NAME} client path"
+
+path=${S_PATH_LOG}/mysql
+_lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
+
+_echoT "----------  ${_CT_NAME} client"
 
 file=/etc/rsyslog.d/${file_rsyslog_client##*/}
 _eval lxc file push ${file_rsyslog_client} ${_CT_NAME}${file}
-_lxc_var_replace ${_CT_NAME} ${file} rsyslog maria
+_lxc_var_replace ${_CT_NAME} ${file} rsyslog php
 
-_echoT "----------  rsyslog restart ${_CT_NAME}"
+_echoT "----------  ${_CT_NAME} rsyslog restart"
 
 _lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
 
@@ -252,11 +271,25 @@ _eval lxc file push ${file_logrotate_host} ${S_SERVICE[log]}${file}
 _lxc_var_replace ${S_SERVICE[log]} ${file} logrotate
 
 
-_echoT "----------  client logrotate"
+_echoT "----------  ${_CT_NAME} logrotate"
 
 file=/etc/logrotate.d/${file_logrotate_client##*/}
 _eval lxc file push ${file_logrotate_client} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} logrotate
+
+
+########################  CLEAN LOG
+
+_echoT "----------  ${_CT_NAME} log clean"
+
+_lxc_exec ${_CT_NAME} "find ${S_PATH_LOG}/mysql -name *.log -exec rm {} \;"
+
+
+########################  CLIENT
+
+_echoT "----------  host install mariadb-client"
+
+_eval apt install -y mariadb-client
 
 
 ########################  PUBLISH
@@ -266,27 +299,31 @@ _echoT "----------  publish ${_CT_NAME}"
 _eval lxc image list -f json | jq -r '.[].aliases[].name' | grep -q ^${_CT_NAME}$ && lxc image alias rename ${_CT_NAME} ${_CT_NAME}-$(date +%s)
 _eval lxc publish --force ${_CT_NAME} --alias ${_CT_NAME}
 
+sleep 1
+
+########################  SHOW
+
+_echoT "----------  show privileges"
+
+# show users
+_lxc_exec ${_CT_NAME} "mysql -uroot -p${_MDB_PWD_LOCAL} -e \"FLUSH PRIVILEGES\""
+#_evalq "mysql -uroot -p${_MDB_PWD_LOCAL} -e \"SELECT user,host FROM mysql.user WHERE Host <> 'localhost'\""
+_lxc_exec ${_CT_NAME} "mysql -uroot -p${_MDB_PWD_LOCAL} -e \"SELECT user,host FROM mysql.user\""
+
+
+_echoT "----------  show passwords"
+
+# show users
+_echoI "Keep this passwords:"
+_echoW "${strpass%/n}"
+
 
 ########################  TEST
 
 _echoT "----------  maria test"
 
-_echoI "To verify maria configuration, type:"
-_echo "${_IPTHIS}/mariainf.maria"
-_echo "${_CT_NAME}/mariainf.maria"
-_echo "curl ${S_DOMAIN_FQDN}:80"
-
-_echoI "To verify ping response, type:"
-_echo "curl ${_CT_NAME}/ping-monitor"
-
-_echoI "To verify 'www' pool informations, type:"
-_echo "curl ${_CT_NAME}/status-www"
-_echo "curl ${_CT_NAME}/status-www?full"
-
-
-_echoI "To verify 'www-admin' pool informations, type:"
-_echo "curl ${_CT_NAME}/status-www-admin"
-_echo "curl ${_CT_NAME}/status-www-admin?full"
+_echoI "To verify maria configuration, from the host type:"
+_echo "mysql -uroot -h${_CT_NAME} -p${_MDB_PWD_HOST} "
 
 
 ########################  END
@@ -296,22 +333,33 @@ _eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"
 
 
 <<KEEP
-# SQL
+######################## SQL
+
 # SHOW VARIABLES LIKE 'character%';
 
 
+_MDB_PWD_LOCAL=
 
-# Restore root password
+# show log variables
+mysql -uroot -p${_MDB_PWD_LOCAL} -e "show variables like '%log%';"
+
+# show users
+mysql -uroot -p${_MDB_PWD_LOCAL} -e "SELECT User, Host FROM mysql.user"
+mysql -h10.0.0.120 -uroothost -p${_MDB_PWD_LOCAL} -e "SELECT User, Host FROM mysql.user"
+
+# show grants
+mysql -h 10.0.0.120 -u root -p${_MDB_PWD_LOCAL} -e "SHOW GRANTS;"
+
+# tables by engine
+mysql -uroot -p"${_MDB_PWD_LOCAL}" -e "SELECT ENGINE, COUNT(*) AS count FROM INFORMATION_SCHEMA.TABLES GROUP BY ENGINE;"
+
+
+######################## Restore root password
 rc-service mysql stop
-
-kill  `cat /run/mysqld/mysqld.pid`
-
+#kill  `cat /run/mysqld/mysqld.pid`
 /usr/bin/mysqld --datadir=/var/lib/mysql --pid-file=/run/mysqld/mysqld.pid --skip-grant-tables --skip-networking &
-
 mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED BY 'MyNewPass';FLUSH PRIVILEGES;ALTER USER 'root'@'localhost' IDENTIFIED BY 'MyNewPass';FLUSH PRIVILEGES;set password = password('MyNewPass');"
-
-kill  `cat /run/mysqld/mysqld.pid`
-
+#kill  `cat /run/mysqld/mysqld.pid`
 rc-service mariadb restart
 
 KEEP
