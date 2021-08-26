@@ -17,6 +17,7 @@ lxc list -f json |jq -r '.[].name'| grep -q ^${S_SERVICE[cache]}$ || _exite "Una
 
 file_phpfpm="${S_PATH_INSTALL_CONF}/apache2/php7-fpm.conf"
 file_monitor="${S_PATH_INSTALL_CONF}/apache2/monitor.conf"
+file_opcache="${S_PATH_INSTALL_CONF}/apache2/opcache.conf"
 file_xdebug="${S_PATH_INSTALL_CONF}/php/xdebug.ini"
 file_rsyslog_client=${S_PATH_INSTALL_CONF}/rsyslog/client-phpfpm7.conf
 file_rsyslog_host=${S_PATH_INSTALL_CONF}/rsyslog/host-phpfpm7.conf
@@ -24,7 +25,7 @@ file_logrotate_client=${S_PATH_INSTALL_CONF}/logrotate/host-phpfpm7
 file_logrotate_host=${S_PATH_INSTALL_CONF}/logrotate/host-phpfpm7
 
 _echoT "------------------ required files"
-_require ${file_phpfpm} ${file_monitor} ${file_xdebug} ${file_rsyslog_host} ${file_rsyslog_client} ${file_logrotate_host}
+_require ${file_phpfpm} ${file_monitor} ${file_opcache} ${file_xdebug} ${file_rsyslog_host} ${file_rsyslog_client} ${file_logrotate_host}
 
 ########################  DATA
 
@@ -50,7 +51,7 @@ path_xdebug_trace=${path_php_share}/xdebug/trace
 
 
 #php_version=`_lxc_exec ${S_SERVICE[http]} "apk list php7-fpm | sed -n 's|php7-fpm-\([0-9\.]\+\)-.*|\1|p'"`
-php_modules="php7-bcmath php7-bz2 php7-ctype php7-curl php7-exif php7-fileinfo php7-dom php7-gd php7-gmp php7-iconv php7-imap php7-json php7-mbstring php7-openssl php7-pdo_mysql php7-pgsql php7-posix php7-session php7-simplexml php7-sqlite3 php7-xmlreader php7-xmlwriter php7-zip php7-xdebug php7-pecl-mcrypt php7-pecl-redis" #  php7-pecl-imagick php7-pear
+php_modules="php7-bcmath php7-bz2 php7-ctype php7-curl php7-exif php7-fileinfo php7-dom php7-gd php7-gmp php7-iconv php7-imap php7-json php7-mbstring php7-openssl php7-pdo_mysql php7-opcache php7-pgsql php7-posix php7-session php7-simplexml php7-sqlite3 php7-xmlreader php7-xmlwriter php7-zip php7-xdebug php7-pecl-mcrypt php7-pecl-redis" #  php7-pecl-imagick php7-pear
 
 _echoT "----------  data php"
 
@@ -78,13 +79,13 @@ _echoT "----------  data php-fpm"
 
 _echoT "----------  data pool www"
 
-[ -z ${_PHP_W_MAX_CHILDREN+x} ] && anstmp='10' && _askno "Give value for 'pm.max_children' ($anstmp)" && _PHP_W_MAX_CHILDREN=${_ANSWER:-$anstmp} && _confset _PHP_W_MAX_CHILDREN "${_PHP_W_MAX_CHILDREN}"
+[ -z ${_PHP_W_MAX_CHILDREN+x} ] && anstmp='20' && _askno "Give value for 'pm.max_children' ($anstmp)" && _PHP_W_MAX_CHILDREN=${_ANSWER:-$anstmp} && _confset _PHP_W_MAX_CHILDREN "${_PHP_W_MAX_CHILDREN}"
 
-[ -z ${_PHP_W_START_SERVERS+x} ] && anstmp='2' && _askno "Give value for 'pm.start_servers' ($anstmp)" && _PHP_W_START_SERVERS=${_ANSWER:-$anstmp} && _confset _PHP_W_START_SERVERS "${_PHP_W_START_SERVERS}"
+[ -z ${_PHP_W_START_SERVERS+x} ] && anstmp='4' && _askno "Give value for 'pm.start_servers' ($anstmp)" && _PHP_W_START_SERVERS=${_ANSWER:-$anstmp} && _confset _PHP_W_START_SERVERS "${_PHP_W_START_SERVERS}"
 
-[ -z ${_PHP_W_MIN_SPARE_SERVERS+x} ] && anstmp='2' && _askno "Give value for 'pm.min_spare_servers' ($anstmp)" && _PHP_W_MIN_SPARE_SERVERS=${_ANSWER:-$anstmp} && _confset _PHP_W_MIN_SPARE_SERVERS "${_PHP_W_MIN_SPARE_SERVERS}"
+[ -z ${_PHP_W_MIN_SPARE_SERVERS+x} ] && anstmp='4' && _askno "Give value for 'pm.min_spare_servers' ($anstmp)" && _PHP_W_MIN_SPARE_SERVERS=${_ANSWER:-$anstmp} && _confset _PHP_W_MIN_SPARE_SERVERS "${_PHP_W_MIN_SPARE_SERVERS}"
 
-[ -z ${_PHP_W_MAX_SPARE_SERVERS+x} ] && anstmp='5' && _askno "Give value for 'pm.max_spare_servers' ($anstmp)" && _PHP_W_MAX_SPARE_SERVERS=${_ANSWER:-$anstmp} && _confset _PHP_W_MAX_SPARE_SERVERS "${_PHP_W_MAX_SPARE_SERVERS}"
+[ -z ${_PHP_W_MAX_SPARE_SERVERS+x} ] && anstmp='15' && _askno "Give value for 'pm.max_spare_servers' ($anstmp)" && _PHP_W_MAX_SPARE_SERVERS=${_ANSWER:-$anstmp} && _confset _PHP_W_MAX_SPARE_SERVERS "${_PHP_W_MAX_SPARE_SERVERS}"
 
 [ -z ${_PHP_W_MAX_REQUESTS+x} ] && anstmp='100000' && _askno "Give value for 'pm.max_requests' ($anstmp)" && _PHP_W_MAX_REQUESTS=${_ANSWER:-$anstmp} && _confset _PHP_W_MAX_REQUESTS "${_PHP_W_MAX_REQUESTS}"
 
@@ -339,6 +340,9 @@ _lxc_exec ${_CT_NAME} "echo '<?php phpinfo() ?>' > ${_APA_PATH_DOMAIN}/html/phpi
 file=${_APA_PATH_DOMAIN}/html/index.php
 _lxc_exec ${_CT_NAME} "echo '<html><body><h1>${S_DOMAIN_FQDN} php works!</h1></body></html>' > ${file}"
 
+file=${_APA_PATH_DOMAIN}/index.html
+_lxc_exec ${_CT_NAME} "[ -f ${file} ] && mv ${file} ${file}.keep"
+
 
 ########################  PING-MONITOR
 
@@ -351,6 +355,22 @@ _echoT "----------  ping-monitor conf"
 file=${path_apache_conf}/${file_monitor##*/}
 _keepcpts ${file}
 _eval lxc file push ${file_monitor} ${_CT_NAME}/${file}
+_lxc_var_replace ${_CT_NAME} ${file} apache php
+
+
+########################  OPCACHE
+
+_echoT "----------  opcache file"
+
+url=https://raw.githubusercontent.com/rlerdorf/opcache-status/master/opcache.php
+file=${_APA_PATH_WWW}/opcache.php
+_lxc_exec ${_CT_NAME} "wget ${url} -O ${file}"
+
+_echoT "----------  opcache conf"
+
+file=${path_apache_conf}/${file_opcache##*/}
+_keepcpts ${file}
+_eval lxc file push ${file_opcache} ${_CT_NAME}/${file}
 _lxc_var_replace ${_CT_NAME} ${file} apache php
 
 
@@ -451,6 +471,9 @@ _echo "curl ${S_DOMAIN_FQDN}:80"
 
 _echoI "To verify ping response, type:"
 _echo "curl ${_CT_NAME}/ping-monitor"
+
+_echoI "To verify opcache response, type:"
+_echo "curl ${_CT_NAME}/opcache"
 
 _echoI "To verify 'www' pool informations, type:"
 _echo "curl ${_CT_NAME}/status-www"
