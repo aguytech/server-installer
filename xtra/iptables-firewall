@@ -281,6 +281,11 @@ __input() {
 		__add_chain -c "${chain}" -v "${_IPS_HAPROXY}" -m "${message}"
 	done
 
+	# LXD
+	message="- Allow INPUT LXD port:${_PORT_LXD}  for IP:"
+	chain="iptables -A INPUT -i ${_ETH} -p tcp -s XX --dport ${_PORT_LXD} -j ACCEPT"
+	__add_chain -c "${chain}" -v "${_IPS_LXD}" -m "${message}"
+
 	# MariaDB
 	message="- Allow INPUT MariaDB port: ${_PORT_MARIADB} -> ${_PORT_MARIADB} for IP:"
 	#chain="iptables -A INPUT -i ${_ETH} -p tcp -s XX --sport ${_PORTS_MARIADB} -d ${_IPTHIS} --dport ${_PORT_MARIADB} -m state --state NEW,ESTABLISHED -j ACCEPT"

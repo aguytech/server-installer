@@ -53,23 +53,22 @@ fi
 str="ovh home"
 if [[ " ${str} " = *" ${S_SERVER_TYPE} "* ]]; then
 
-	_echoT "----------  S_STORAGE_DRIVER"
+	if [ -z "${S_STORAGE_DEVICE}" ]; then
+		_echoT "----------  S_STORAGE_DEVICE"
+
+		blkid|grep -v squashfs && echo
+		anstmp="/dev/sda5"
+		_askno "Give a device name for ROOT storage (${anstmp})"
+		S_STORAGE_DEVICE=${_ANSWER:-${anstmp}} && _confset S_STORAGE_DEVICE "${S_STORAGE_DEVICE}" "${S_GLOBAL_CONF}"
+	fi
 
 	if [ -z "${S_STORAGE_DRIVER}" ]; then
+		_echoT "----------  S_STORAGE_DRIVER"
+
 		anstmp="zfs"
 		_menu "Select a driver for storage (${anstmp})" zfs btrfs
 		S_STORAGE_DRIVER=${_ANSWER} && _confset S_STORAGE_DRIVER "${S_STORAGE_DRIVER}" "${S_GLOBAL_CONF}"
 	fi
-
-	_echoT "----------  S_STORAGE_ROOT"
-
-	if [ -z "${S_STORAGE_ROOT}" ]; then
-		blkid|grep -v squashfs && echo
-		anstmp="/dev/sda5"
-		_askno "Give a device name for ROOT storage (${anstmp})"
-		S_STORAGE_ROOT=${_ANSWER:-${anstmp}} && _confset S_STORAGE_ROOT "${S_STORAGE_ROOT}" "${S_GLOBAL_CONF}"
-	fi
-
 fi
 
 
@@ -360,6 +359,16 @@ if [ -z "${S_HAPROXY_STATS_PORT}" ]; then
 	S_HAPROXY_STATS_PORT=${_ANSWER:-${anstmp}} && _confset S_HAPROXY_STATS_PORT "${S_HAPROXY_STATS_PORT}" "${S_GLOBAL_CONF}"
 fi
 
+########################  LXD
+
+_echoT "----------  S_LXD_PORT"
+
+if [ -z "${S_LXD_PORT}" ]; then
+	anstmp="8443"
+	_askno "port for remote lxd acces (${anstmp})"
+	S_LXD_PORT=${_ANSWER:-${anstmp}} && _confset S_LXD_PORT "${S_LXD_PORT}" "${S_GLOBAL_CONF}"
+fi
+
 ########################  RSPAMD
 
 _echoT "----------  S_RSPAMD_PORT[proxy]"
@@ -457,5 +466,5 @@ fi
 
 ########################  END
 
-_echoT "---------- ${_PART} end"
+_echoT "===================== ${_PART} end"
 _eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"
