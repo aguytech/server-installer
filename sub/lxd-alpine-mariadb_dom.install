@@ -1,0 +1,279 @@
+#!/bin/bash
+#
+# write by Aguy
+
+_echoT "\n==========================================  ${_RELEASE} ${_PART}"
+
+grep -q "^# ${_PART}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART}" | _evalqr tee -a ${S_FILE_INSTALL_CONF}
+
+########################  REQUIRED
+
+_echoT "------------------ required vm image"
+lxc image list -f csv -c l | grep -q ^${S_SERVICE[sgbd]}$ || _exite "Unable to find image container: '${_CT_NAME_COM}"
+
+_echoT "------------------ required vm"
+lxc list -f csv -c n | grep -q ^${S_SERVICE[log]}$ || _exite "Unable to find image container: '${S_SERVICE[log]}'"
+
+
+file_master="${S_PATH_INSTALL_CONF}/mariadb/mariadb-master.cnf"
+file_slave="${S_PATH_INSTALL_CONF}/mariadb/mariadb-slave.cnf"
+
+_echoT "------------------ required files"
+_require ${file_master} ${file_slave}
+
+
+########################  DATA
+
+_MDB_NAME_MASTER=maria-ms-${S_DOMAIN_FQDN} && _confset _MDB_NAME_MASTER "${_MDB_NAME_MASTER}"
+_MDB_NAME_SLAVE=maria-sl-${S_DOMAIN_FQDN} && _confset _MDB_NAME_SLAVE "${_MDB_NAME_SLAVE}"
+
+_MDB_HOST_PATH_MASTER=${S_HOST_PATH}/mariadb/${_MDB_NAME_MASTER} && _confset _MDB_HOST_PATH_MASTER "${_MDB_HOST_PATH_MASTER}"
+_MDB_HOST_PATH_SLAVE=${S_HOST_PATH}/mariadb/${_MDB_NAME_SLAVE} && _confset _MDB_HOST_PATH_SLAVE "${_MDB_HOST_PATH_SLAVE}"
+
+_CT_NAME_MASTER=${_MDB_NAME_MASTER%.*}
+_CT_NAME_SLAVE=${_MDB_NAME_SLAVE%.*}
+
+
+_echoT "----------  data"
+
+[ -z ${_MDB_PATH_LOG+x} ] && anstmp=/var/lib/mysql && _askno "path for binary & replication logs (${anstmp})" && _MDB_PATH_LOG=${_ANSWER:-$anstmp} && _confset _MDB_PATH_LOG "${_MDB_PATH_LOG}"
+
+[ -z ${_MDB_MAX_BIN_SIZE+x} ] && anstmp=256M && _askno "max_binlog_size (${anstmp})" && _MDB_MAX_BIN_SIZE=${_ANSWER:-$anstmp} && _confset _MDB_MAX_BIN_SIZE "${_MDB_MAX_BIN_SIZE}"
+
+[ -z ${_MDB_EXPIRE_LOGS_DAYS+x} ] && anstmp=30 && _askno "expire_logs_days (${anstmp})" && _MDB_EXPIRE_LOGS_DAYS=${_ANSWER:-$anstmp} && _confset _MDB_EXPIRE_LOGS_DAYS "${_MDB_EXPIRE_LOGS_DAYS}"
+
+[ -z ${_MDB_MASTER_ID+x} ] && anstmp=1 && _askno "the server id for master (${anstmp})" && _MDB_MASTER_ID=${_ANSWER:-$anstmp} && _confset _MDB_MASTER_ID "${_MDB_MASTER_ID}"
+
+[ -z ${_MDB_SLAVE_ID+x} ] && anstmp=100 && _askno "the server id for slave (${anstmp})" && _MDB_SLAVE_ID=${_ANSWER:-$anstmp} && _confset _MDB_SLAVE_ID "${_MDB_SLAVE_ID}"
+
+[ -z ${_MDB_REPLICATE_DB+x} ] && anstmp=cloud && _askno "databases name to use for replication (${anstmp})" && _MDB_REPLICATE_DB=${_ANSWER:-$anstmp} && _confset _MDB_REPLICATE_DB "${_MDB_REPLICATE_DB}"
+
+
+[ -z ${_MDB_PWD_REPLIC+x} ] && anstmp=`_pwd` && _askno "Enter a password for 'replic@${_CT_NAME_SLAVE}($anstmp)" && _MDB_PWD_REPLIC=${_ANSWER:-$anstmp} && _confset _MDB_PWD_REPLIC "${_MDB_PWD_REPLIC}"
+
+
+########################  STORAGE MARIADB
+
+
+_echoT "----------  stop ${S_SERVICE[sgbd]}"
+lxc list -f csv -c n status=Running | grep -q ^${S_SERVICE[sgbd]}$ && lxc stop ${S_SERVICE[sgbd]}
+
+
+if [ "${S_STORAGE_DRIVER}" = zfs ]; then
+
+	echo "${_MDB_NAME_MASTER} ${_MDB_HOST_PATH_MASTER}
+${_MDB_NAME_SLAVE} ${_MDB_HOST_PATH_SLAVE}"|while read name path; do
+
+		_echoT "----------  zfs ${name}"
+		path_zfs=${_ZFS_ROOT}${path}
+
+		# rename
+		if zfs list ${path_zfs} >/dev/null 2>&1; then
+		 	_echoT "----------  unmount  ${path_zfs}"
+		 	_evalr zfs unmount ${path_zfs} || _exite "Unable to unmount ${path_zfs}\nUnbind container using it"
+
+			_echoI "----------  zfs backup ${path_zfs} to ${path_zfs}.${_SDATE}"
+		 	_evalr zfs rename ${path_zfs} ${path_zfs}.${_SDATE}
+		 fi
+
+		_echoT "----------  zfs create ${path_zfs}"
+		_evalr zfs create -o mountpoint=${path} ${path_zfs}
+
+		_echoT "----------  rights ${name}"
+
+		_evalr chown 1000100:1000101 ${path}
+		_evalr setfacl -Rm u:1000000:rwx ${path}
+		_evalr setfacl -Rm d:u:1000000:rwx ${path}
+	done
+
+elif [ "${S_STORAGE_DRIVER}" = btrfs ]; then
+
+	echo "${_MDB_NAME_MASTER} ${_MDB_HOST_PATH_MASTER}
+${_MDB_NAME_SLAVE} ${_MDB_HOST_PATH_SLAVE}"|while read name path; do
+
+		_echoT "----------  btrfs ${name}"
+		# rename
+		path_base=${S_HOST_PATH}/mariadb
+		if _evalr ls -1 ${path_base} | grep -q ${name}$; then
+			_echoI "----------  mv ${path} to ${path}.${_SDATE}"
+		 	_evalr mv ${path} ${path}.${_SDATE}
+		 fi
+
+		_echoT "----------  btrfs create ${path}"
+		_evalr btrfs subvolume create ${path}
+
+		_echoT "----------  copy ${S_SERVICE[sgbd]} -> ${name}"
+		_evalr cp -a ${path_base}/maria-default/. ${path}/
+		_evalr btrfs filesystem sync ${path}
+		_eval sleep 2
+	done
+
+else
+	_exite "This part have to be implemented"
+fi
+
+
+########################  PROFILE
+
+echo "${_MDB_NAME_MASTER} ${_MDB_HOST_PATH_MASTER}
+${_MDB_NAME_SLAVE} ${_MDB_HOST_PATH_SLAVE}"|while read name path; do
+
+	_echoT "----------  profile ${name}"
+
+	lxc profile list -f csv|grep -q "^${name}," && _eval lxc profile rename ${name} ${name}.${_SDATE}
+	_eval lxc profile create ${name}
+	_eval lxc profile device add ${name} ${name} disk source=${path} path=${_MDB_VM_PATH}
+done
+
+
+########################  INIT
+
+for name in ${_MDB_NAME_MASTER} ${_MDB_NAME_SLAVE}; do
+	ct_name=${name%.*}
+
+	_echoT "----------  pre ${ct_name}"
+
+	if lxc list -f csv -c n | grep -q ^${ct_name}$; then
+		if lxc list -f csv -c n status=Running| grep -q ^${ct_name}$; then
+			_eval lxc stop ${ct_name}
+			_eval lxc rename ${ct_name} ${ct_name}-${_SDATE}
+			_eval lxc start ${ct_name}-${_SDATE}
+		else
+			_eval lxc rename ${ct_name} ${ct_name}-${_SDATE}
+		fi
+	fi
+	_echoT "----------  init ${ct_name}"
+	_eval lxc init ${S_SERVICE[sgbd]} ${ct_name} -p default -p global -p ${name}
+	_eval sleep 2
+
+	_echoT "----------  ${ct_name} start"
+	_eval lxc start ${ct_name}
+done
+
+eval $cmds
+
+
+
+
+_echoI exit && exit
+
+
+
+
+
+########################  CONF
+
+# MASTER
+ct_name=${_CT_NAME_MASTER}
+_echoT "----------  ${ct_name} conf"
+
+file=${_MDB_PATH_CONF}/${file_master##*/}
+_lxc_exec ${ct_name} "[ -f ${file} ] && cp -a ${file} ${file}.${_SDATE}"
+_eval lxc file push ${file_master} ${ct_name}${file}
+
+_echoT "----------  ${ct_name} replic"
+cmd="CREATE USER 'replic'@'%' IDENTIFIED BY '${_MDB_PWD_REPLIC}';
+GRANT REPLICATION SLAVE ON *.* TO 'replic'@'%';"
+_lxc_exec ${ct_name} "mysql -uroot -p${_MDB_PWD_LOCAL} -e \"${cmd}\""
+
+_echoT "----------  ${ct_name} restart"
+_lxc_exec ${ct_name} "rc-service ${_MDB_SERVICE} restart"
+
+_echoT "----------  ${ct_name} sync"
+mysql -h${ct_name} -uroothost -p${_MDB_PWD_HOST} -e "SHOW MASTER STATUS"
+
+
+
+# SLAVE
+ct_name=${_CT_NAME_SLAVE}
+_echoT "----------  ${ct_name} conf"
+
+file=${_MDB_PATH_CONF}/${file_slave##*/}
+_lxc_exec ${ct_name} "[ -f ${file} ] && cp -a ${file} ${file}.${_SDATE}"
+_eval lxc file push ${file_slave} ${ct_name}${file}
+
+_echoT "----------  ${ct_name} restart"
+_lxc_exec ${ct_name} "rc-service ${_MDB_SERVICE} restart"
+
+
+
+
+
+
+
+########################  RESTART
+
+_echoT "----------  ${_MDB_SERVICE} restart"
+_lxc_exec ${_CT_NAME} "rc-service ${_MDB_SERVICE} restart"
+
+
+########################  PUBLISH
+
+_echoT "----------  publish ${_CT_NAME}"
+
+_eval lxc image list -f csv -c l | grep -q ^${_CT_NAME}$ && lxc image alias rename ${_CT_NAME} ${_CT_NAME}-$(date +%s)
+_eval lxc publish --force ${_CT_NAME} --alias ${_CT_NAME}
+
+
+########################  SHOW
+
+_echoT "----------  show privileges"
+
+# show users
+_lxc_exec ${_CT_NAME} "mysql -uroot -p${_MDB_PWD_LOCAL} -e \"FLUSH PRIVILEGES\""
+#_evalq "mysql -uroot -p${_MDB_PWD_LOCAL} -e \"SELECT user,host FROM mysql.user WHERE Host <> 'localhost'\""
+_lxc_exec ${_CT_NAME} "mysql -uroot -p${_MDB_PWD_LOCAL} -e \"SELECT user,host FROM mysql.user\""
+
+
+_echoT "----------  show passwords"
+
+# show users
+_echoI "Keep this passwords:"
+_echoW "${strpass%/n}"
+
+
+########################  TEST
+
+_echoT "----------  maria test"
+
+_echoI "To verify maria configuration, from the host type:"
+_echo "mysql -uroot -h${_CT_NAME} -p${_MDB_PWD_HOST} "
+
+
+########################  END
+
+_echoT "===================== ${_PART} end"
+_partadd ${_PART} ${S_FILE_INSTALL_DONE}
+
+
+<<KEEP
+######################## SQL
+
+# SHOW VARIABLES LIKE 'character%';
+
+
+_MDB_PWD_LOCAL=
+
+# show log variables
+mysql -uroot -p${_MDB_PWD_LOCAL} -e "show variables like '%log%';"
+
+# show users
+mysql -uroot -p${_MDB_PWD_LOCAL} -e "SELECT User, Host FROM mysql.user"
+mysql -h10.0.0.120 -uroothost -p${_MDB_PWD_LOCAL} -e "SELECT User, Host FROM mysql.user"
+
+# show grants
+mysql -h 10.0.0.120 -u root -p${_MDB_PWD_LOCAL} -e "SHOW GRANTS;"
+
+# tables by engine
+mysql -uroot -p"${_MDB_PWD_LOCAL}" -e "SELECT ENGINE, COUNT(*) AS count FROM INFORMATION_SCHEMA.TABLES GROUP BY ENGINE;"
+
+
+######################## Restore root password
+rc-service mysql stop
+#kill  `cat /run/mysqld/mysqld.pid`
+/usr/bin/mysqld --datadir=/var/lib/mysql --pid-file=/run/mysqld/mysqld.pid --skip-grant-tables --skip-networking &
+mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED BY 'MyNewPass';FLUSH PRIVILEGES;ALTER USER 'root'@'localhost' IDENTIFIED BY 'MyNewPass';FLUSH PRIVILEGES;set password = password('MyNewPass');"
+#kill  `cat /run/mysqld/mysqld.pid`
+rc-service mariadb restart
+
+KEEP
