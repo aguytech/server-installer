@@ -182,7 +182,7 @@ if [[ " ${str} " = *" ${S_SERVER_TYPE} "* ]]; then
 		_echoT "----------  zfs zpool ${path}"
 
 		[ -d "${path}" ] && rm -fR "${path}"
-		_evalq zpool create root "${S_STORAGE_ROOT}" -m "${path}"
+		_evalq zpool create root "${S_STORAGE_DEVICE}" -m "${path}"
 
 		path="${S_PATH_SAVE}"
 		_echoT "----------  zfs ${path}"
@@ -496,8 +496,8 @@ _echoT "----------  clean"
 _evalq "apt-get -y autoremove; apt-get clean; apt-get autoclean"
 
 
-_echoT "---------- ${_PART} end"
-_eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"
+_echoT "===================== ${_PART} end"
+_partadd ${_PART} ${S_FILE_INSTALL_DONE}
 
 
 <<KEEP

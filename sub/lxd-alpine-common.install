@@ -4,6 +4,7 @@
 
 _echoT "\n==========================================  ${_RELEASE} ${_PART}"
 
+grep -q "^# ${_PART}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART}" | _evalqr tee -a ${S_FILE_INSTALL_CONF}
 
 ########################  REQUIRED
 
@@ -22,7 +23,7 @@ _CT_NAME="${_RELEASE/./}"
 
 _echoT "----------  ${_RELEASE_ID} data"
 
-[ -z ${_CT_NAME_COM+x} ] && anstmp="${_CT_NAME}-com" && _askno "Give a name for common publishing image container for ${_RELEASE_ID} release ($anstmp)" && _CT_NAME_COM=${_ANSWER:-$anstmp} && _confset _CT_NAME_COM "${_CT_NAME_COM}"
+[ -z ${_CT_NAME_COM+x} ] && anstmp="${_CT_NAME}-com" && _askno "Give a name for common publishing image container for ${_RELEASE_ID} release ($anstmp)" && _CT_NAME_COM="${_ANSWER:-$anstmp}" && _confset _CT_NAME_COM "${_CT_NAME_COM}"
 
 
 ########################  CONF
@@ -38,15 +39,16 @@ _lxc_exec ${_CT_NAME} "[ -e /etc/profile.d/env.sh ] || ln -s /usr/local/bs/conf/
 #_lxc_exec ${_CT_NAME} "echo -e 'set showmatch\nset tabstop=4\nset shiftwidth=4' | tee -a /etc/vimrc /etc/exrc"
 
 file="/tmp/server.conf"
-_evalq cp ${S_GLOBAL_CONF} ${file}
-_evalq "sed -i 's|^\(S_RELEASE\)=.*$|\1=\"${_RELEASE}\"|' ${file}"
-_evalq "sed -i 's|^\(S_RELEASE_ID\)=.*$|\1=\"${_RELEASE_ID}\"|' ${file}"
-_evalq "sed -i 's|^\(S_RELEASE_NAME\)=.*$|\1=\"${_RELEASE_NAME}\"|' ${file}"
-_evalq "sed -i 's|^\(S_ETH\)=.*$|\1=\"eth0\"|' ${file}"
-_evalq "sed -i 's|^\(S_SERVER_TYPE\)=.*$|\1=\"lxd\"|' ${file}"
-_evalq "sed -i 's|^\(S_PATH_INSTALL\)=.*$|\1=\"/usr/local/install\"|' ${file}"
+_evalr cp ${S_GLOBAL_CONF} ${file}
+_evalr "sed -i 's|^\(S_RELEASE\)=.*$|\1=\"${_RELEASE}\"|' ${file}"
+_evalr "sed -i 's|^\(S_RELEASE_ID\)=.*$|\1=\"${_RELEASE_ID}\"|' ${file}"
+_evalr "sed -i 's|^\(S_RELEASE_NAME\)=.*$|\1=\"${_RELEASE_NAME}\"|' ${file}"
+_evalr "sed -i 's|^\(S_ETH\)=.*$|\1=\"eth0\"|' ${file}"
+_evalr "sed -i 's|^\(S_SERVER_TYPE\)=.*$|\1=\"lxd\"|' ${file}"
+_evalr "sed -i 's|^\(S_PATH_INSTALL\)=.*$|\1=\"/usr/local/install\"|' ${file}"
 
 _eval lxc file push ${file} ${_CT_NAME}${S_PATH_CONF}/server.conf
+_lxc_exec ${_CT_NAME} "chmod 700 -R ${S_PATH_CONF}"
 
 
 ########################  HOSTS
@@ -128,7 +130,7 @@ _lxc_exec ${_CT_NAME} "apk list -I | grep -q ^logrotate || apk add logrotate"
 _echoT "----------  logrotate host_server"
 
 file=/etc/logrotate.d/${file_logrotate_server##*/}
-_eval cp -a ${file_logrotate_server} ${file}
+_evalr cp -a ${file_logrotate_server} ${file}
 _var_replace ${file} logrotate
 
 _echoT "----------  logrotate host restart"
@@ -149,11 +151,11 @@ _lxc_exec ${_CT_NAME} "rc-service crond restart"
 
 _echoT "----------  publish ${_CT_NAME}"
 
-_eval lxc image list -f json | jq -r '.[].aliases[].name' | grep -q ^${_CT_NAME_COM}$ && lxc image alias rename ${_CT_NAME_COM} ${_CT_NAME_COM}-$(date +%s)
+_eval lxc image list -f csv -c l | grep -q ^${_CT_NAME_COM}$ && lxc image alias rename ${_CT_NAME_COM} ${_CT_NAME_COM}-$(date +%s)
 _eval lxc publish --force ${_CT_NAME} --alias ${_CT_NAME_COM}
 
 
 ########################  END
 
-_echoT "---------- ${_PART} end"
-_eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"
+_echoT "===================== ${_PART} end"
+_partadd ${_PART} ${S_FILE_INSTALL_DONE}

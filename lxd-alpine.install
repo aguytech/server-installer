@@ -30,9 +30,9 @@ S_FILE_INSTALL_DONE="${S_PATH_CONF}/lxd.done"
 # load configuration file of this installation
 [ -f "${S_FILE_INSTALL_CONF}" ] && . ${S_FILE_INSTALL_CONF}
 
-#don't mix with S_* variables
+#don't mix with S_* variables from host
 [ -z ${_RELEASE_ID+x} ] && _RELEASE_ID="alpine" && _confset _RELEASE_ID "${_RELEASE_ID}"
-
+_IP_HOST_VM=${_CIDR_VM%/*} && _confset _IP_HOST_VM "${_IP_HOST_VM}"
 
 ########################  mandatory parts
 
@@ -48,8 +48,8 @@ done
 
 while [ "$_PART" != "quit" ]; do
 
-	partsall="$(sed -n "s|^\t*\(\w\+\)) # .*$S_SERVER_TYPE.*$|\1|p" "$0" | xargs)"
-	partsrelease=" $(ls -1 "$_PATH_BASE_SUB"/*lxd-${_RELEASE_ID}* | sed -n "s|.*lxd-${_RELEASE_ID}-\(.*\)\.install|\1|p" | xargs) "
+	partsall="$(sed -n "s|^\t*\([a-z_-]\+\)) # .*${S_SERVER_TYPE}.*|\1|p" "$0" | xargs)"
+	partsrelease=" $(ls -1 "${_PATH_BASE_SUB}"/*lxd-${_RELEASE_ID}* | sed -n "s|.*lxd-${_RELEASE_ID}-\(.*\)\.install|\1|p" | xargs) "
 	partsmade=" $(cat ${S_FILE_INSTALL_DONE} | xargs) "
 	parts2do=
 	for part in $partsall; do
@@ -86,6 +86,12 @@ while [ "$_PART" != "quit" ]; do
 				_source "${_PATH_BASE_SUB}/lxd-${_RELEASE_ID}-${_PART}.install"
 				;;
 			mariadb) # ovh home
+				_source "${_PATH_BASE_SUB}/lxd-${_RELEASE_ID}-${_PART}.install"
+				;;
+			mariadb-ms) # ovh home
+				_source "${_PATH_BASE_SUB}/lxd-${_RELEASE_ID}-${_PART}.install"
+				;;
+			phpmyadmin) # ovh home
 				_source "${_PATH_BASE_SUB}/lxd-${_RELEASE_ID}-${_PART}.install"
 				;;
 			*)

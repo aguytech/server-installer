@@ -20,14 +20,14 @@ backend S_DOMAIN_NAME
 	#cookie				PROXYBAL insert
 	#retries				3  # retries x times before to redispatch to other server
 	#option				redispatch
-	#server	S_DOMAIN_NAME1		www-S_DOMAIN_FQDN-1:80  cookie S_DOMAIN_NAME1
-	#server	S_DOMAIN_NAME2		www-S_DOMAIN_FQDN-2:80  cookie S_DOMAIN_NAME2
-	#server	S_DOMAIN_NAME3		www-S_DOMAIN_FQDN-3:80  cookie S_DOMAIN_NAME3
-	#server	S_DOMAIN_NAME4		www-S_DOMAIN_FQDN-4:80  cookie S_DOMAIN_NAME4
+	#server	S_DOMAIN_NAME1		www-S_DOMAIN_NAME-1:80  cookie S_DOMAIN_NAME1
+	#server	S_DOMAIN_NAME2		www-S_DOMAIN_NAME-2:80  cookie S_DOMAIN_NAME2
+	#server	S_DOMAIN_NAME3		www-S_DOMAIN_NAME-3:80  cookie S_DOMAIN_NAME3
+	#server	S_DOMAIN_NAME4		www-S_DOMAIN_NAME-4:80  cookie S_DOMAIN_NAME4
 
 	## backup
 	server	S_DOMAIN_NAME1		S_SERVICE[http]:80
-	#server	S_DOMAIN_NAME2		www-S_DOMAIN_FQDN-2:80  backup
+	#server	S_DOMAIN_NAME2		www-S_DOMAIN_NAME-2:80  backup
 
 backend _HPX_DOMAIN_2_NAME
 	option					httpchk GET /ping-monitor

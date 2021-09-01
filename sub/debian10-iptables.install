@@ -142,9 +142,9 @@ _askyn "Verify iptables rules with 'iptl' & 'iptln'"
 [ $_ANSWER == n ] && _exit 1
 
 
-_echoT "---------- ${_PART} end"
+_echoT "===================== ${_PART} end"
 
-_eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"
+_partadd ${_PART} ${S_FILE_INSTALL_DONE}
 
 
 <<keep

@@ -8,7 +8,7 @@ _echoT "\n==========================================  ${_RELEASE} ${_PART}"
 ########################  REQUIRED
 
 _echoT "------------------ required vm image"
-lxc image list -f json |jq -r '.[].aliases[].name' | grep -q ^${_CT_NAME_COM}$ || _exite "Unable to find image container: '${_CT_NAME_COM}'"
+lxc image list -f csv -c l | grep -q ^${_CT_NAME_COM}$ || _exite "Unable to find image container: '${_CT_NAME_COM}'"
 
 
 file_rsyslog_host_auth=${S_PATH_INSTALL_CONF}/rsyslog/host-auth.conf
@@ -22,7 +22,6 @@ file_logrotate_host_iptables=${S_PATH_INSTALL_CONF}/logrotate/host-iptables
 file_logrotate_client_iptables=${S_PATH_INSTALL_CONF}/logrotate/client-iptables
 file_logrotate_host_lxd=${S_PATH_INSTALL_CONF}/logrotate/host-lxd
 file_logrotate_client_lxd=${S_PATH_INSTALL_CONF}/logrotate/client-lxd
-
 
 
 _echoT "------------------ required files"
@@ -47,7 +46,7 @@ _eval lxc profile create ${profile}
 
 path="${S_HOST_PATH_LOG}"
 path_ct="${S_VM_PATH_LOG}"
-[ -d ${path} ] || _eval mkdir -p ${path}
+[ -d ${path} ] || _evalr mkdir -p ${path}
 _eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
 
 
@@ -55,8 +54,8 @@ _eval lxc profile device add ${profile} ${profile} disk source=${path} path=${pa
 
 _echoT "----------  init"
 
-if lxc list -f json |jq -r '.[].name' | grep -q ^${_CT_NAME}$; then
-	if lxc list -f json | jq -r '.[] | select(.status == "Running").name' | grep -q ^${_CT_NAME}$; then
+if lxc list -f csv -c n | grep -q ^${_CT_NAME}$; then
+	if lxc list -f csv -c n status=Running| grep -q ^${_CT_NAME}$; then
 		_eval lxc stop ${_CT_NAME}
 		_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
 		_eval lxc start ${_CT_NAME}-${_SDATE}
@@ -77,10 +76,7 @@ _eval lxc config device set ${_CT_NAME} eth0 ipv4.address ${_CT_IP}
 
 
 _echoT "----------  ${_CT_NAME} start"
-
 _eval lxc start ${_CT_NAME}
-
-_eval sleep 1
 
 
 ########################  CONF
@@ -131,11 +127,11 @@ _lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
 _echoT "----------  iptables client conf"
 
 path=${S_PATH_LOG}/iptables
-[ -d ${path} ] || _eval mkdir -p ${path}
-_eval chown syslog ${path}
+[ -d ${path} ] || _evalr mkdir -p ${path}
+[ grep -q syslog /etc/passwd ] && _evalr chown syslog ${path}
 
 file=/etc/rsyslog.d/34-${file_rsyslog_client_iptables##*/}
-_eval cp -a ${file_rsyslog_client_iptables} ${file}
+_evalr cp -a ${file_rsyslog_client_iptables} ${file}
 _var_replace ${file} rsyslog
 
 _echoT "----------  iptables client restart"
@@ -163,11 +159,11 @@ _lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
 _echoT "----------  lxd client conf"
 
 path=${S_PATH_LOG}/lxd
-[ -d ${path} ] || _eval mkdir -p ${path}
-_eval chown syslog ${path}
+[ -d ${path} ] || _evalr mkdir -p ${path}
+_evalr chown syslog ${path}
 
 file=/etc/rsyslog.d/36-${file_rsyslog_client_lxd##*/}
-_eval cp -a ${file_rsyslog_client_lxd} ${file}
+_evalr cp -a ${file_rsyslog_client_lxd} ${file}
 _var_replace ${file} rsyslog
 
 _echoT "----------  lxd client restart"
@@ -193,7 +189,7 @@ _lxc_var_replace ${_CT_NAME} ${file} logrotate
 _echoT "----------  logrotate iptables client"
 
 file=/etc/logrotate.d/${file_logrotate_client_iptables##*/}
-_eval cp -a ${file_logrotate_client_iptables} ${file}
+_evalr cp -a ${file_logrotate_client_iptables} ${file}
 _var_replace ${file} logrotate
 
 
@@ -204,7 +200,7 @@ _eval lxc file push ${file_logrotate_host_lxd} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} logrotate
 
 file=/etc/logrotate.d/${file_logrotate_client_lxd##*/}
-_eval cp -a ${file_logrotate_client_lxd} ${file}
+_evalr cp -a ${file_logrotate_client_lxd} ${file}
 _var_replace ${file} logrotate
 
 
@@ -212,11 +208,11 @@ _var_replace ${file} logrotate
 
 _echoT "----------  publish ${_CT_NAME}"
 
-_eval lxc image list -f json | jq -r '.[].aliases[].name' | grep -q ^${_CT_NAME}$ && lxc image alias rename ${_CT_NAME} ${_CT_NAME}-$(date +%s)
+_eval lxc image list -f csv -c l | grep -q ^${_CT_NAME}$ && lxc image alias rename ${_CT_NAME} ${_CT_NAME}-$(date +%s)
 _eval lxc publish --force ${_CT_NAME} --alias ${_CT_NAME}
 
 
 ########################  END
 
-_echoT "---------- ${_PART} end"
-_eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"
+_echoT "===================== ${_PART} end"
+_partadd ${_PART} ${S_FILE_INSTALL_DONE}

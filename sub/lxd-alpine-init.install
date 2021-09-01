@@ -9,7 +9,7 @@ _echoT "\n==========================================  ${_RELEASE_ID} ${_PART}"
 
 _echoT "----------  ${_RELEASE_ID} data"
 
-[ -z ${_RELEASE_NAME+x} ] && anstmp="3.14" && _askno "Give a version image container for LXC ${_RELEASE_ID} ($anstmp)" && _RELEASE_NAME=${_ANSWER:-$anstmp} && _confset _RELEASE_NAME "${_RELEASE_NAME}"
+[ -z ${_RELEASE_NAME+x} ] && anstmp="3.14" && _askno "Give a version image container for LXC ${_RELEASE_ID} ($anstmp)" && _RELEASE_NAME="${_ANSWER:-$anstmp}" && _confset _RELEASE_NAME "${_RELEASE_NAME}"
 
 [ -z ${_RELEASE+x} ] && _RELEASE=${_RELEASE_ID}${_RELEASE_NAME} && _confset _RELEASE "${_RELEASE}"
 
@@ -44,8 +44,8 @@ _eval lxc profile device add ${profile} global disk source=${path} path=${path_c
 
 _echoT "----------  ${_CT_NAME} init"
 
-if [ "`lxc list -f json | jq -r '.[] | select(.name == "'${_CT_NAME}'").name'`" ]; then
-	[ "`lxc list -f json | jq -r '.[] | select(.status == "Running") | select(.name == "'${_CT_NAME}'").name'`" ] && lxc stop ${_CT_NAME}
+if lxc list -f csv -c n | grep -q ^${_CT_NAME}$; then
+	lxc list -f csv -c n status=Running | grep -q ^${_CT_NAME}$ && lxc stop ${_CT_NAME}
 	_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
 fi
 _eval lxc init ${_CT_NAME} ${_CT_NAME} -p stock -p global
@@ -57,12 +57,10 @@ _eval lxc init ${_CT_NAME} ${_CT_NAME} -p stock -p global
 #	lxc profile add "${_CT_NAME}" global
 #fi
 
-
-if ! [ "`lxc list -f json | jq -r '.[] | select(.status == "Running") | select(.name == "'${_CT_NAME}'").name'`" ]; then
+if lxc list -f csv -c n status=Stopped | grep -q ^${_CT_NAME}$; then
 	_echoT "----------  start ${_CT_NAME}"
 
 	_eval lxc start ${_CT_NAME}
-	sleep 1
 fi
 
 
@@ -105,5 +103,5 @@ _lxc_exec ${_CT_NAME} "chmod 700 -R ${S_PATH_CONF_SSL}/private"
 
 ########################  END
 
-_echoT "---------- ${_PART} end"
-_eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"
+_echoT "===================== ${_PART} end"
+_partadd ${_PART} ${S_FILE_INSTALL_DONE}

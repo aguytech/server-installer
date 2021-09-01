@@ -4,51 +4,54 @@
 
 _echoT "\n==========================================  ${_RELEASE} ${_PART}"
 
+grep -q "^# ${_PART}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART}" | _evalqr tee -a ${S_FILE_INSTALL_CONF}
 
 ########################  REQUIRED
 
 _echoT "------------------ required vm image"
-lxc image list -f json |jq -r '.[].aliases[].name' | grep -q ^${_CT_NAME_COM}$ || _exite "Unable to find image container: '${_CT_NAME_COM}"
+lxc image list -f csv -c l | grep -q ^${_CT_NAME_COM}$ || _exite "Unable to find image container: '${_CT_NAME_COM}"
 
 _echoT "------------------ required vm"
-lxc list -f json |jq -r '.[].name'| grep -q ^${S_SERVICE[log]}$ || _exite "Unable to find image container: '${S_SERVICE[log]}'"
+lxc list -f csv -c n| grep -q ^${S_SERVICE[log]}$ || _exite "Unable to find image container: '${S_SERVICE[log]}'"
 
-
-file_server="${S_PATH_INSTALL_CONF}/mariadb/mariadb-server.conf"
-file_master="${S_PATH_INSTALL_CONF}/mariadb/mariadb-master.conf"
+file_server="${S_PATH_INSTALL_CONF}/mariadb/mariadb-server.cnf"
 file_rsyslog_client=${S_PATH_INSTALL_CONF}/rsyslog/client-mariadb.conf
 file_rsyslog_host=${S_PATH_INSTALL_CONF}/rsyslog/host-mariadb.conf
 file_logrotate_client=${S_PATH_INSTALL_CONF}/logrotate/host-mariadb
 file_logrotate_host=${S_PATH_INSTALL_CONF}/logrotate/host-mariadb
 
 _echoT "------------------ required files"
-_require ${file_server} ${file_master} ${file_rsyslog_client} ${file_rsyslog_host} ${file_logrotate_client} ${file_logrotate_host}
+_require ${file_server} ${file_rsyslog_client} ${file_rsyslog_host} ${file_logrotate_client} ${file_logrotate_host}
 
 
 ########################  DATA
 
-_CT_NAME=${S_SERVICE[sgbd]}
-
-eval ${S_HOST_VM_ETH[default]}
-#_CT_IP=${s_base}.${S_SERVICE_BITS[maria]}
-
-_MDB_SERVICE=mariadb && _confset _MDB_SERVICE "${_MDB_SERVICE}"
-_MDB_HOST_PATH=${S_HOST_PATH}/mariadb/mariadb-${S_DOMAIN_FQDN} && _confset _MDB_HOST_PATH "${_MDB_HOST_PATH}"
-_MDB_VM_PATH=/var/lib/mysql && _confset _MDB_VM_PATH "${_MDB_VM_PATH}"
-
-path_conf=/etc/my.cnf.d
-_MDB_PATH_LOG=${S_PATH_LOG}/mysql
-
-
 _echoT "----------  data pwd"
 
-[ -z ${_MDB_PWD_LOCAL+x} ] && pwdtmp=`_pwd` && _askno "Enter a password for 'root@localhost ($pwdtmp)" && _MDB_PWD_LOCAL=${_ANSWER:-$pwdtmp} && _confset _MDB_PWD_LOCAL "${_MDB_PWD_LOCAL}"
+_MDB_PWD_LOCAL=`_pwd`
+_MDB_PWD_ADMIN=`_pwd`
+_MDB_PWD_HOST=`_pwd`
+_MDB_PWD_REMOTE=`_pwd`
 
-[ -z ${_MDB_PWD_ADMIN+x} ] && pwdtmp=`_pwd` && _askno "Enter a password for 'rootadmin@${S_SERVICE[admin]}' ($pwdtmp)" && _MDB_PWD_ADMIN=${_ANSWER:-$pwdtmp} && _confset _MDB_PWD_ADMIN "${_MDB_PWD_ADMIN}"
 
-[ -z ${_MDB_PWD_HOST+x} ] && pwdtmp=`_pwd` && _askno "Enter a password for 'roothost@${_IPS_CLUSTER}' ($pwdtmp)" && _MDB_PWD_HOST=${_ANSWER:-$pwdtmp} && _confset _MDB_PWD_HOST "${_MDB_PWD_HOST}"
+_echoT "----------  data"
 
-[ -z ${_MDB_PWD_REMOTE+x} ] && pwdtmp=`_pwd` && _askno "Enter a password for 'rootremote@${S_IPS_ADMIN}' ($pwdtmp)" && _MDB_PWD_REMOTE=${_ANSWER:-$pwdtmp} && _confset _MDB_PWD_REMOTE "${_MDB_PWD_REMOTE}"
+_MDB_SERVICE=mariadb && _confset _MDB_SERVICE "${_MDB_SERVICE}"
+_MDB_PATH_CONF=/etc/my.cnf.d && _confset _MDB_PATH_CONF "${_MDB_PATH_CONF}"
+
+anstmp=maria-srv && _askno "Name of the container profile ($anstmp)" && _MDB_NAME="${_ANSWER:-$anstmp}"
+
+[ ${_MDB_NAME} = maria-srv ] && anstmp=${S_SERVICE[sgbd]} || anstmp=${_MDB_NAME//./-}
+_askno "Name of the container ($anstmp)" && _CT_NAME="${_ANSWER:-$anstmp}"
+
+[ -z ${_MDB_VM_PATH+x} ] && anstmp=/var/lib/mysql && _askno "Path for data (${anstmp})" && _MDB_VM_PATH="${_ANSWER:-$anstmp}" && _confset _MDB_VM_PATH "${_MDB_VM_PATH}"
+
+[ -z ${_MDB_PATH_BINLOG+x} ] && anstmp=/var/lib/mysql && _askno "Path for binary logs (${anstmp})" && _MDB_PATH_BINLOG="${_ANSWER:-$anstmp}" && _confset _MDB_PATH_BINLOG "${_MDB_PATH_BINLOG}"
+
+[ -z ${_MDB_PATH_LOG+x} ] && anstmp=${S_PATH_LOG}/mysql && _askno "Path for logs (${anstmp})" && _MDB_PATH_LOG="${_ANSWER:-$anstmp}" && _confset _MDB_PATH_LOG "${_MDB_PATH_LOG}"
+
+
+_MDB_HOST_PATH=${S_HOST_PATH}/mariadb/${_MDB_NAME} && _confset _MDB_HOST_PATH "${_MDB_HOST_PATH}"
 
 
 ########################  STORAGE MARIADB
@@ -57,38 +60,61 @@ if [ "${S_STORAGE_DRIVER}" = zfs ]; then
 
 	name=mariadb
 	_echoT "----------  zfs ${name}"
-
 	path_zfs=${_ZFS_ROOT}${S_HOST_PATH}/mariadb
 	path=${S_HOST_PATH}/mariadb
 	opts="-o mountpoint=${path} -o compression=lz4 -o  acltype=posixacl -o recordsize=8K -o primarycache=metadata"
 	cmd="zfs create ${opts} ${path_zfs}"
-	zfs list ${path_zfs} >/dev/null 2>&1 || _eval ${cmd}
+	_evalr zfs list ${path_zfs} >/dev/null 2>&1 || _evalr ${cmd}
 
 
-	name=mariadb-${S_DOMAIN_FQDN}
+	name=${_MDB_NAME}
 	_echoT "----------  zfs ${name}"
-
 	path_zfs=${_ZFS_ROOT}${_MDB_HOST_PATH}
 	path=${_MDB_HOST_PATH}
 
 	# rename
 	if zfs list ${path_zfs} >/dev/null 2>&1; then
 	 	_echoT "----------  unmount  ${path_zfs}"
-	 	zfs unmount ${path_zfs} || _exite "Unable to unmount ${path_zfs}\nUnbind container using it"
+	 	_evalr zfs unmount ${path_zfs} || _exite "Unable to unmount ${path_zfs}\nUnbind container using it"
 
-		_echoT "----------  zfs backup ${path_zfs} to ${path_zfs}.${_SDATE}"
-	 	_eval zfs rename ${path_zfs} ${path_zfs}.${_SDATE}
+		_echoI "----------  zfs backup ${path_zfs} to ${path_zfs}.${_SDATE}"
+	 	_evalr zfs rename ${path_zfs} ${path_zfs}.${_SDATE}
 	 fi
 
 	_echoT "----------  zfs create ${path_zfs}"
-	_eval zfs create -o mountpoint=${path} ${path_zfs}
+	_evalr zfs create -o mountpoint=${path} ${path_zfs}
 
 	_echoT "----------  rights ${name}"
 
-	_eval chown 1000100:1000101 ${path}
+	_evalr chown 1000100:1000101 ${path}
+	_evalr setfacl -Rm u:1000000:rwx ${path}
+	_evalr setfacl -Rm d:u:1000000:rwx ${path}
 
-	_eval setfacl -Rm u:1000000:rwx ${path}
-	_eval setfacl -Rm d:u:1000000:rwx ${path}
+elif [ "${S_STORAGE_DRIVER}" = btrfs ]; then
+
+	name=mariadb
+	_echoT "----------  btrfs ${name}"
+	path_base=${S_HOST_PATH}
+	_evalr ls -1 ${path_base} | grep -q ${name}$ || _evalr btrfs subvolume create ${path_base}/${name}
+
+	name=${_MDB_NAME}
+	_echoT "----------  btrfs ${name}"
+	# rename
+	path_base=${S_HOST_PATH}/mariadb
+	path=${_MDB_HOST_PATH}
+	if _evalr ls -1 ${path_base} | grep -q ${name}$; then
+		_echoI "----------  mv ${path} to ${path}.${_SDATE}"
+	 	_evalr mv ${path} ${path}.${_SDATE}
+	 fi
+
+	_echoT "----------  btrfs create ${path}"
+	_evalr btrfs subvolume create ${path}
+
+	_echoT "----------  rights ${name}"
+
+	_evalr chown 100100:100101 ${path}
+	_evalr setfacl -Rm u:100000:rwx ${path}
+	_evalr setfacl -Rm d:u:100000:rwx ${path}
 
 else
 	_exite "This part have to be implemented"
@@ -97,15 +123,15 @@ fi
 
 ########################  PROFILE
 
-profile=maria-${S_DOMAIN_FQDN}
-_echoT "----------  profiles ${profile}"
+profile=${_MDB_NAME}
+_echoT "----------  profile ${profile}"
 
 lxc profile list -f csv|grep -q "^${profile}," && _eval lxc profile rename ${profile} ${profile}.${_SDATE}
 _eval lxc profile create ${profile}
 
 path=${_MDB_HOST_PATH}
 path_ct=${_MDB_VM_PATH}
-[ -d ${path} ] || _eval mkdir -p ${path}
+[ -d ${path} ] || _evalr mkdir -p ${path}
 _eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
 
 
@@ -113,8 +139,8 @@ _eval lxc profile device add ${profile} ${profile} disk source=${path} path=${pa
 
 _echoT "----------  init"
 
-if lxc list -f json |jq -r '.[].name' | grep -q ^${_CT_NAME}$; then
-	if lxc list -f json | jq -r '.[] | select(.status == "Running").name' | grep -q ^${_CT_NAME}$; then
+if lxc list -f csv -c n | grep -q ^${_CT_NAME}$; then
+	if lxc list -f csv -c n status=Running | grep -q ^${_CT_NAME}$; then
 		_eval lxc stop ${_CT_NAME}
 		_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
 		_eval lxc start ${_CT_NAME}-${_SDATE}
@@ -125,51 +151,43 @@ fi
 
 _eval lxc init ${_CT_NAME_COM} ${_CT_NAME} -p default -p global -p ${profile}
 
-
-#_echoT "----------  network fixed ip"
-#
-#if ! lxc list -f json | jq -r '.[] | select(.name == "'${_CT_NAME}'").devices[].name' | grep -q eth0; then
-#	_eval lxc network attach ${s_inet} ${_CT_NAME} eth0 eth0
-#fi
-#_eval lxc config device set ${_CT_NAME} eth0 ipv4.address ${_CT_IP}
-
-
 _echoT "----------  ${_CT_NAME} start"
-
 _eval lxc start ${_CT_NAME}
-
-_eval sleep 1
 
 
 ########################  INSTALL
 
 _echoT "----------  update"
-
 _lxc_exec ${_CT_NAME} "apk update"
 
 _echoT "----------  install mariadb"
-
 _lxc_exec ${_CT_NAME} "apk add mariadb mariadb-client mariadb-mytop"
 
 _echoT "----------  initialize mariadb"
-
 _lxc_exec ${_CT_NAME} "mysql_install_db --user=mysql --datadir=${_MDB_VM_PATH}"
 
 _echoT "----------  service set & start"
-
 service=mariadb
 _lxc_exec ${_CT_NAME} "rc-update add ${service}"
 _lxc_exec ${_CT_NAME} "rc-service ${service} start"
 
 
+########################  PATH
+
+_echoT "----------  paths"
+paths="${_MDB_PATH_DATA} ${_MDB_PATH_BINLOG} ${_MDB_PATH_LOG}"
+for path in ${paths}; do
+	_lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
+	_lxc_exec ${_CT_NAME} "chown mysql ${path}"
+done
+
+
 ########################  MYSQL INIT
 
 _echoT "----------  root passwd"
-
 _lxc_exec ${_CT_NAME} "mysqladmin -u root password ${_MDB_PWD_LOCAL}"
 
 _echoT "----------  secure"
-
 _echoI "Use this password: ${_MDB_PWD_LOCAL}"
 _lxc_exec ${_CT_NAME} "mysql_secure_installation"
 
@@ -178,9 +196,10 @@ _lxc_exec ${_CT_NAME} "mysql_secure_installation"
 
 _echoT "----------  conf server"
 
-file=${path_conf}/${file_server##*/}
+file=${_MDB_PATH_CONF}/${file_server##*/}
 _lxc_exec ${_CT_NAME} "[ -f ${file} ] && cp -a ${file} ${file}.${_SDATE}"
-_eval lxc file push ${file_server} ${_CT_NAME}/${file}
+_eval lxc file push ${file_server} ${_CT_NAME}${file}
+_lxc_var_replace ${_CT_NAME} ${file} mariadb
 
 
 ########################  PASSWORD
@@ -193,22 +212,26 @@ _echoT "----------  right rootadmin"
 
 for name in ${S_SERVICE[admin]}; do
 	strpass+="rootadmin @ ${name} - ${_MDB_PWD_ADMIN}\n"
-	_lxc_exec ${_CT_NAME} "mysql -uroot -p${_MDB_PWD_LOCAL} -e \"GRANT ALL PRIVILEGES ON *.* TO rootadmin@'${name}' IDENTIFIED BY '${_MDB_PWD_ADMIN}' WITH GRANT OPTION\""
+	cmd="GRANT ALL PRIVILEGES ON *.* TO rootadmin@'${name}' IDENTIFIED BY '${_MDB_PWD_ADMIN}' WITH GRANT OPTION"
+	_lxc_exec ${_CT_NAME} "mysql -uroot -p${_MDB_PWD_LOCAL} -e \"${cmd}\""
 done
 
 _echoT "----------  right roothost"
 
 for ip in ${_IPS_CLUSTER} ${_IP_HOST_VM}; do
 	strpass+="roothost @ ${ip} - ${_MDB_PWD_HOST}\n"
-	_lxc_exec ${_CT_NAME} "mysql -uroot -p${_MDB_PWD_LOCAL} -e \"GRANT ALL PRIVILEGES ON *.* TO roothost@'${ip}' IDENTIFIED BY '${_MDB_PWD_HOST}' WITH GRANT OPTION\""
+	cmd="GRANT ALL PRIVILEGES ON *.* TO roothost@'${ip}' IDENTIFIED BY '${_MDB_PWD_HOST}' WITH GRANT OPTION"
+	_lxc_exec ${_CT_NAME} "mysql -uroot -p${_MDB_PWD_LOCAL} -e \"${cmd}\""
 done
 
 _echoT "----------  right rootremote"
 
 for ip in ${S_IPS_ADMIN}; do
 	strpass+="rootremote @ ${ip} - ${_MDB_PWD_REMOTE}\n"
-	_lxc_exec ${_CT_NAME} "mysql -uroot -p${_MDB_PWD_LOCAL} -e \"GRANT ALL PRIVILEGES ON *.* TO rootremote@'${ip}' IDENTIFIED BY '${_MDB_PWD_REMOTE}' WITH GRANT OPTION\""
-	_lxc_exec ${_CT_NAME} "mysql -uroot -p${_MDB_PWD_LOCAL} -e \"GRANT PROXY ON ''@'%' TO 'rootremote'@'${ip}' WITH GRANT OPTION\""
+	cmd="GRANT ALL PRIVILEGES ON *.* TO rootremote@'${ip}' IDENTIFIED BY '${_MDB_PWD_REMOTE}' WITH GRANT OPTION"
+	_lxc_exec ${_CT_NAME} "mysql -uroot -p${_MDB_PWD_LOCAL} -e \"${cmd}\""
+	cmd="GRANT PROXY ON ''@'%' TO 'rootremote'@'${ip}' WITH GRANT OPTION"
+	_lxc_exec ${_CT_NAME} "mysql -uroot -p${_MDB_PWD_LOCAL} -e \"${cmd}\""
 done
 
 
@@ -278,6 +301,15 @@ _eval lxc file push ${file_logrotate_client} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} logrotate
 
 
+########################  PWD
+
+_echoT "----------  ${_CT_NAME} passwd"
+
+file=${S_PATH_CONF}/mariadb
+strpass= ${strpass%\\n}
+_lxc_exec ${_CT_NAME} "echo -e ${strpass//\\n/\\\\n} > ${file}"
+
+
 ########################  CLEAN LOG
 
 _echoT "----------  ${_CT_NAME} log clean"
@@ -285,19 +317,11 @@ _echoT "----------  ${_CT_NAME} log clean"
 _lxc_exec ${_CT_NAME} "find ${S_PATH_LOG}/mysql -name *.log -exec rm {} \;"
 
 
-########################  PUBLISH
-
-_echoT "----------  publish ${_CT_NAME}"
-
-_eval lxc image list -f json | jq -r '.[].aliases[].name' | grep -q ^${_CT_NAME}$ && lxc image alias rename ${_CT_NAME} ${_CT_NAME}-$(date +%s)
-_eval lxc publish --force ${_CT_NAME} --alias ${_CT_NAME}
-
-
 ########################  CLIENT
 
 _echoT "----------  host install mariadb-client"
 
-_eval apt install -y mariadb-client
+_install -y mariadb-client
 
 
 ########################  SHOW
@@ -305,30 +329,38 @@ _eval apt install -y mariadb-client
 _echoT "----------  show privileges"
 
 # show users
-_lxc_exec ${_CT_NAME} "mysql -uroot -p${_MDB_PWD_LOCAL} -e \"FLUSH PRIVILEGES\""
-#_evalq "mysql -uroot -p${_MDB_PWD_LOCAL} -e \"SELECT user,host FROM mysql.user WHERE Host <> 'localhost'\""
-_lxc_exec ${_CT_NAME} "mysql -uroot -p${_MDB_PWD_LOCAL} -e \"SELECT user,host FROM mysql.user\""
+_lxc_exec ${_CT_NAME} "mysql -uroot -p${_MDB_PWD_LOCAL} -e 'FLUSH PRIVILEGES'"
+_lxc_exec ${_CT_NAME} "mysql -uroot -p${_MDB_PWD_LOCAL} -e 'SELECT user,host FROM mysql.user'"
+#_lxc_exec ${_CT_NAME} "mysql -uroot -p${_MDB_PWD_LOCAL} -e \"SELECT user,host FROM mysql.user WHERE Host <> 'localhost'\""
 
 
 _echoT "----------  show passwords"
 
 # show users
 _echoI "Keep this passwords:"
-_echoW "${strpass%/n}"
+_echoW "${strpass}"
 
 
-########################  TEST
+#########################  TEST
 
 _echoT "----------  maria test"
 
 _echoI "To verify maria configuration, from the host type:"
-_echo "mysql -uroot -h${_CT_NAME} -p${_MDB_PWD_HOST} "
+_echo "mysql -uroothost -h${_CT_NAME} -p${_MDB_PWD_HOST} "
+
+
+#######################  PUBLISH
+
+_echoT "----------  publish ${_CT_NAME}"
+
+_eval lxc image list -f csv -c l | grep -q ^${_CT_NAME}$ && lxc image alias rename ${_CT_NAME} ${_CT_NAME}-$(date +%s)
+_eval lxc publish --force ${_CT_NAME} --alias ${_CT_NAME}
 
 
 ########################  END
 
-_echoT "---------- ${_PART} end"
-_eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"
+_echoT "===================== ${_PART} end"
+#_partadd ${_PART} ${S_FILE_INSTALL_DONE}
 
 
 <<KEEP
@@ -355,10 +387,10 @@ mysql -uroot -p"${_MDB_PWD_LOCAL}" -e "SELECT ENGINE, COUNT(*) AS count FROM INF
 
 ######################## Restore root password
 rc-service mysql stop
-#kill  `cat /run/mysqld/mysqld.pid`
+kill  \$(cat /run/mysqld/mysqld.pid)
 /usr/bin/mysqld --datadir=/var/lib/mysql --pid-file=/run/mysqld/mysqld.pid --skip-grant-tables --skip-networking &
 mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED BY 'MyNewPass';FLUSH PRIVILEGES;ALTER USER 'root'@'localhost' IDENTIFIED BY 'MyNewPass';FLUSH PRIVILEGES;set password = password('MyNewPass');"
-#kill  `cat /run/mysqld/mysqld.pid`
+kill  \$(cat /run/mysqld/mysqld.pid)
 rc-service mariadb restart
 
 KEEP

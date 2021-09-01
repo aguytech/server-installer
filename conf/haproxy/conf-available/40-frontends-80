@@ -8,6 +8,7 @@ frontend	http
 	http-request			set-header X-Forwarded-Protocol http
 
 	acl S_DOMAIN_NAME					hdr_end(host) -i S_DOMAIN_FQDN
+	acl S_DOMAIN_NAME					hdr_sub(host) -i S_DOMAIN_FQDN
 	#acl S_DOMAIN_NAME-check		path_dir /server-status /server-info /status-www /ping-www /ping-monitor
 	acl S_DOMAIN_NAME-check			path_reg ^/(server-status|server-info|status-www|ping-www|ping-monitor)
 	#acl S_DOMAIN_NAME-check		path_beg /server-status /server-info /status-www /ping-www /ping-monitor

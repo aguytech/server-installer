@@ -4,20 +4,21 @@
 
 _echoT "\n==========================================  ${_RELEASE} ${_PART}"
 
+grep -q "^# ${_PART}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART}" | _evalqr tee -a ${S_FILE_INSTALL_CONF}
 
 ########################  REQUIRED
 
 _echoT "------------------ required vm image"
-lxc image list -f json |jq -r '.[].aliases[].name' | grep -q ^${_CT_NAME_COM}$ || _exite "Unable to find image container: '${_CT_NAME_COM}'"
+lxc image list -f csv -c l | grep -q ^${_CT_NAME_COM}$ || _exite "Unable to find image container: '${_CT_NAME_COM}'"
 
 _echoT "------------------ required vm"
-lxc list -f json |jq -r '.[].name'| grep -q ^${S_SERVICE[log]}$ || _exite "Unable to find image container: '${S_SERVICE[log]}'"
+lxc list -f csv -c n | grep -q ^${S_SERVICE[log]}$ || _exite "Unable to find image container: '${S_SERVICE[log]}'"
 
+file_site=${S_PATH_INSTALL_CONF}/apache2/default.conf
 file_rsyslog_host=${S_PATH_INSTALL_CONF}/rsyslog/host-apache.conf
 file_rsyslog_client=${S_PATH_INSTALL_CONF}/rsyslog/client-apache.conf
 file_logrotate_host=${S_PATH_INSTALL_CONF}/logrotate/host-apache
 file_log=${S_PATH_INSTALL_CONF}/apache2/log.conf
-file_site=${S_PATH_INSTALL_CONF}/apache2/default.conf
 
 _echoT "------------------ required files"
 _require ${file_rsyslog_host} ${file_rsyslog_client} ${file_logrotate_host} ${file_log} ${file_site}
@@ -40,42 +41,42 @@ file_conf_http=/etc/apache2/httpd.conf
 
 _echoT "----------  data sysctl.conf"
 
-[ -z ${_APA_MAX_SYN_BACKLOG+x} ] && anstmp="${_MAX_SYN_BACKLOG}" && _askno "Set $(sysctl net.ipv4.tcp_max_syn_backlog) - (${anstmp})" && _APA_MAX_SYN_BACKLOG=${_ANSWER:-$anstmp} && _confset _APA_MAX_SYN_BACKLOG "${_APA_MAX_SYN_BACKLOG}"
+[ -z ${_APA_MAX_SYN_BACKLOG+x} ] && anstmp="${_MAX_SYN_BACKLOG}" && _askno "Set $(sysctl net.ipv4.tcp_max_syn_backlog) - (${anstmp})" && _APA_MAX_SYN_BACKLOG="${_ANSWER:-$anstmp}" && _confset _APA_MAX_SYN_BACKLOG "${_APA_MAX_SYN_BACKLOG}"
 
-[ -z ${_APA_MAX_TW_BUCKETS+x} ] && anstmp="${_MAX_TW_BUCKETS}" && _askno "Set $(sysctl net.ipv4.tcp_max_tw_buckets) - (${anstmp})" && _APA_MAX_TW_BUCKETS=${_ANSWER:-$anstmp} && _confset _APA_MAX_TW_BUCKETS "${_APA_MAX_TW_BUCKETS}"
+[ -z ${_APA_MAX_TW_BUCKETS+x} ] && anstmp="${_MAX_TW_BUCKETS}" && _askno "Set $(sysctl net.ipv4.tcp_max_tw_buckets) - (${anstmp})" && _APA_MAX_TW_BUCKETS="${_ANSWER:-$anstmp}" && _confset _APA_MAX_TW_BUCKETS "${_APA_MAX_TW_BUCKETS}"
 
-[ -z ${_APA_FIN_TIMEOUT+x} ] && anstmp="${_FIN_TIMEOUT}" && _askno "Set $(sysctl net.ipv4.tcp_fin_timeout) - (${anstmp})" && _APA_FIN_TIMEOUT=${_ANSWER:-$anstmp} && _confset _APA_FIN_TIMEOUT "${_APA_FIN_TIMEOUT}"
+[ -z ${_APA_FIN_TIMEOUT+x} ] && anstmp="${_FIN_TIMEOUT}" && _askno "Set $(sysctl net.ipv4.tcp_fin_timeout) - (${anstmp})" && _APA_FIN_TIMEOUT="${_ANSWER:-$anstmp}" && _confset _APA_FIN_TIMEOUT "${_APA_FIN_TIMEOUT}"
 
-[ -z ${_APA_KEEPALIVE_TIME+x} ] && anstmp="240" && _askno "Set $(sysctl net.ipv4.tcp_keepalive_time) - (${anstmp})" && _APA_KEEPALIVE_TIME=${_ANSWER:-$anstmp} && _confset _APA_KEEPALIVE_TIME "${_APA_KEEPALIVE_TIME}"
+[ -z ${_APA_KEEPALIVE_TIME+x} ] && anstmp="240" && _askno "Set $(sysctl net.ipv4.tcp_keepalive_time) - (${anstmp})" && _APA_KEEPALIVE_TIME="${_ANSWER:-$anstmp}" && _confset _APA_KEEPALIVE_TIME "${_APA_KEEPALIVE_TIME}"
 
-[ -z ${_APA_KEEPALIVE_INTVL+x} ] && anstmp="30" && _askno "Set $(sysctl net.ipv4.tcp_keepalive_intvl) - (${anstmp})" && _APA_KEEPALIVE_INTVL=${_ANSWER:-$anstmp} && _confset _APA_KEEPALIVE_INTVL "${_APA_KEEPALIVE_INTVL}"
+[ -z ${_APA_KEEPALIVE_INTVL+x} ] && anstmp="30" && _askno "Set $(sysctl net.ipv4.tcp_keepalive_intvl) - (${anstmp})" && _APA_KEEPALIVE_INTVL="${_ANSWER:-$anstmp}" && _confset _APA_KEEPALIVE_INTVL "${_APA_KEEPALIVE_INTVL}"
 
-[ -z ${_APA_KEEPALIVE_PROBES+x} ] && anstmp="9" && _askno "Set $(sysctl net.ipv4.tcp_keepalive_probes) - (${anstmp})" && _APA_KEEPALIVE_PROBES=${_ANSWER:-$anstmp} && _confset _APA_KEEPALIVE_PROBES "${_APA_KEEPALIVE_PROBES}"
+[ -z ${_APA_KEEPALIVE_PROBES+x} ] && anstmp="9" && _askno "Set $(sysctl net.ipv4.tcp_keepalive_probes) - (${anstmp})" && _APA_KEEPALIVE_PROBES="${_ANSWER:-$anstmp}" && _confset _APA_KEEPALIVE_PROBES "${_APA_KEEPALIVE_PROBES}"
 
 
 _echoT "----------  data apache"
 
-[ -z ${_APA_TIMEOUT+x} ] && anstmp="60" && _askno "Time before receives and sends time out (${anstmp})" && _APA_TIMEOUT=${_ANSWER:-$anstmp} && _confset _APA_TIMEOUT "${_APA_TIMEOUT}"
+[ -z ${_APA_TIMEOUT+x} ] && anstmp="60" && _askno "Time before receives and sends time out (${anstmp})" && _APA_TIMEOUT="${_ANSWER:-$anstmp}" && _confset _APA_TIMEOUT "${_APA_TIMEOUT}"
 
-[ -z ${_APA_KEEPALIVE+x} ] && anstmp="On" && _askno "Allow persistent connections On/Off (${anstmp})" && _APA_KEEPALIVE=${_ANSWER:-$anstmp} && _confset _APA_KEEPALIVE "${_APA_KEEPALIVE}"
+[ -z ${_APA_KEEPALIVE+x} ] && anstmp="On" && _askno "Allow persistent connections On/Off (${anstmp})" && _APA_KEEPALIVE="${_ANSWER:-$anstmp}" && _confset _APA_KEEPALIVE "${_APA_KEEPALIVE}"
 
-[ -z ${_APA_KEEPALIVE_REQUEST+x} ] && anstmp="100" && _askno "The maximum number of requests to allow during a persistent connection (${anstmp})" && _APA_KEEPALIVE_REQUEST=${_ANSWER:-$anstmp} && _confset _APA_KEEPALIVE_REQUEST "${_APA_KEEPALIVE_REQUEST}"
+[ -z ${_APA_KEEPALIVE_REQUEST+x} ] && anstmp="100" && _askno "The maximum number of requests to allow during a persistent connection (${anstmp})" && _APA_KEEPALIVE_REQUEST="${_ANSWER:-$anstmp}" && _confset _APA_KEEPALIVE_REQUEST "${_APA_KEEPALIVE_REQUEST}"
 
- [ -z ${_APA_KEEPALIVE_TIMEOUT+x} ] && anstmp="5" && _askno "Number of seconds to wait for the next request (${anstmp})" && _APA_KEEPALIVE_TIMEOUT=${_ANSWER:-$anstmp} && _confset _APA_KEEPALIVE_TIMEOUT "${_APA_KEEPALIVE_TIMEOUT}"
+ [ -z ${_APA_KEEPALIVE_TIMEOUT+x} ] && anstmp="5" && _askno "Number of seconds to wait for the next request (${anstmp})" && _APA_KEEPALIVE_TIMEOUT="${_ANSWER:-$anstmp}" && _confset _APA_KEEPALIVE_TIMEOUT "${_APA_KEEPALIVE_TIMEOUT}"
 
 _echoT "----------  data apache mpm"
 
-[ -z ${_APA_START_SERVERS+x} ] && anstmp="13" && _askno "StartServers (${anstmp})" && _APA_START_SERVERS=${_ANSWER:-$anstmp} && _confset _APA_START_SERVERS "${_APA_START_SERVERS}"
+[ -z ${_APA_START_SERVERS+x} ] && anstmp="13" && _askno "StartServers (${anstmp})" && _APA_START_SERVERS="${_ANSWER:-$anstmp}" && _confset _APA_START_SERVERS "${_APA_START_SERVERS}"
 
-[ -z ${_APA_MIN_SPARE_THREADS+x} ] && anstmp="50" && _askno "MinSpareThreads (${anstmp})" && _APA_MIN_SPARE_THREADS=${_ANSWER:-$anstmp} && _confset _APA_MIN_SPARE_THREADS "${_APA_MIN_SPARE_THREADS}"
+[ -z ${_APA_MIN_SPARE_THREADS+x} ] && anstmp="50" && _askno "MinSpareThreads (${anstmp})" && _APA_MIN_SPARE_THREADS="${_ANSWER:-$anstmp}" && _confset _APA_MIN_SPARE_THREADS "${_APA_MIN_SPARE_THREADS}"
 
-[ -z ${_APA_MAX_SPARE_THREADS+x} ] && anstmp="250" && _askno "MaxSpareThreads (${anstmp})" && _APA_MAX_SPARE_THREADS=${_ANSWER:-$anstmp} && _confset _APA_MAX_SPARE_THREADS "${_APA_MAX_SPARE_THREADS}"
+[ -z ${_APA_MAX_SPARE_THREADS+x} ] && anstmp="250" && _askno "MaxSpareThreads (${anstmp})" && _APA_MAX_SPARE_THREADS="${_ANSWER:-$anstmp}" && _confset _APA_MAX_SPARE_THREADS "${_APA_MAX_SPARE_THREADS}"
 
- [ -z ${_APA_THREADS_PER_CHILD+x} ] && anstmp="25" && _askno "ThreadsPerChild (${anstmp})" && _APA_THREADS_PER_CHILD=${_ANSWER:-$anstmp} && _confset _APA_THREADS_PER_CHILD "${_APA_THREADS_PER_CHILD}"
+ [ -z ${_APA_THREADS_PER_CHILD+x} ] && anstmp="25" && _askno "ThreadsPerChild (${anstmp})" && _APA_THREADS_PER_CHILD="${_ANSWER:-$anstmp}" && _confset _APA_THREADS_PER_CHILD "${_APA_THREADS_PER_CHILD}"
 
- [ -z ${_APA_MAX_REQUEST_WORKERS+x} ] && anstmp="400" && _askno "MaxRequestWorkers (${anstmp})" && _APA_MAX_REQUEST_WORKERS=${_ANSWER:-$anstmp} && _confset _APA_MAX_REQUEST_WORKERS "${_APA_MAX_REQUEST_WORKERS}"
+ [ -z ${_APA_MAX_REQUEST_WORKERS+x} ] && anstmp="400" && _askno "MaxRequestWorkers (${anstmp})" && _APA_MAX_REQUEST_WORKERS="${_ANSWER:-$anstmp}" && _confset _APA_MAX_REQUEST_WORKERS "${_APA_MAX_REQUEST_WORKERS}"
 
- [ -z ${_APA_MAX_CONNECTIONS_PER_CHILD+x} ] && anstmp="0" && _askno "MaxConnectionsPerChild (${anstmp})" && _APA_MAX_CONNECTIONS_PER_CHILD=${_ANSWER:-$anstmp} && _confset _APA_MAX_CONNECTIONS_PER_CHILD "${_APA_MAX_CONNECTIONS_PER_CHILD}"
+ [ -z ${_APA_MAX_CONNECTIONS_PER_CHILD+x} ] && anstmp="0" && _askno "MaxConnectionsPerChild (${anstmp})" && _APA_MAX_CONNECTIONS_PER_CHILD="${_ANSWER:-$anstmp}" && _confset _APA_MAX_CONNECTIONS_PER_CHILD "${_APA_MAX_CONNECTIONS_PER_CHILD}"
 
 
 ########################  PROFILE
@@ -88,7 +89,7 @@ _eval lxc profile create ${profile}
 
 path=${S_HOST_PATH_SHARE}/www/${S_DOMAIN_FQDN}
 path_ct=${_APA_PATH_DOMAIN}
-[ -d ${path} ] || _eval mkdir -p ${path}
+[ -d ${path} ] || _evalr mkdir -p ${path}
 _eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
 
 
@@ -96,8 +97,8 @@ _eval lxc profile device add ${profile} ${profile} disk source=${path} path=${pa
 
 _echoT "----------  init"
 
-if lxc list -f json |jq -r '.[].name' | grep -q ^${_CT_NAME}$; then
-	if lxc list -f json | jq -r '.[] | select(.status == "Running").name' | grep -q ^${_CT_NAME}$; then
+if lxc list -f csv -c n | grep -q ^${_CT_NAME}$; then
+	if lxc list -f csv -c n status=Running| grep -q ^${_CT_NAME}$; then
 		_eval lxc stop ${_CT_NAME}
 		_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
 		_eval lxc start ${_CT_NAME}-${_SDATE}
@@ -118,10 +119,7 @@ _eval lxc init ${_CT_NAME_COM} ${_CT_NAME} -p default -p global -p ${profile}
 
 
 _echoT "----------  ${_CT_NAME} start"
-
 _eval lxc start ${_CT_NAME}
-
-_eval sleep 1
 
 
 ########################  SYSCTL
@@ -163,7 +161,7 @@ _lxc_exec ${_CT_NAME} "rc-service ${service} start"
 
 _echoT "----------  conf.d default"
 
-file=/etc/apache2/conf.d/default.conf
+file=${file_site}/etc/apache2/conf.d/default.conf
 _lxc_exec ${_CT_NAME} "[ -f ${file} ] && cp -a ${file} ${file}.${_SDATE}"
 
 cmds="sed -i 's|^.\?\(Timeout\) .*$|\1 ${_APA_TIMEOUT}|' ${file}
@@ -226,10 +224,11 @@ _lxc_exec ${_CT_NAME} "sed -i '/^<Directory \"\/var\/www\/localhost\/html\">/,/<
 # Log options
 _lxc_exec ${_CT_NAME} "sed -i '/^LogLevel/ s|^|#|' ${file_conf_http}"
 _lxc_exec ${_CT_NAME} "sed -i '/^ErrorLog/ s|^|#|' ${file_conf_http}"
-_lxc_exec ${_CT_NAME} "sed -i '/^<IfModule log_config_module>/,/^<\/IfModule>/ s|^|#|' ${file_conf_http}"
+_lxc_exec ${_CT_NAME} "sed -i '/^<IfModule log_config_module>/i# To configure logs, see the file: ${path_conf}/log.conf' ${file_conf_http}"
+#_lxc_exec ${_CT_NAME} "sed -i '/^<IfModule log_config_module>/,/^<\/IfModule>/ s|^\([^<].*\)$|#\1|' ${file_conf_http}"
 
 file=/etc/apache2/conf.d/${file_log##*/}
-_eval lxc file push ${file_log} ${_CT_NAME}/${file}
+_eval lxc file push ${file_log} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} apache
 
 
@@ -273,7 +272,7 @@ _lxc_exec ${_CT_NAME} "echo '<html><body><h1>${S_DOMAIN_FQDN} works!</h1></body>
 _echoT "----------  ${S_DOMAIN_FQDN} conf"
 
 file=${path_sites}/${file_site##*/}
-_eval lxc file push ${file_site} ${_CT_NAME}/${file}
+_eval lxc file push ${file_site} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} apache
 
 
@@ -361,7 +360,7 @@ _lxc_exec ${_CT_NAME} "find ${S_PATH_LOG}/apache2 -name *.log -exec rm {} \;"
 
 _echoT "----------  publish ${_CT_NAME}"
 
-_eval lxc image list -f json | jq -r '.[].aliases[].name' | grep -q ^${_CT_NAME}$ && lxc image alias rename ${_CT_NAME} ${_CT_NAME}-$(date +%s)
+_eval lxc image list -f csv -c l | grep -q ^${_CT_NAME}$ && lxc image alias rename ${_CT_NAME} ${_CT_NAME}-$(date +%s)
 _eval lxc publish --force ${_CT_NAME} --alias ${_CT_NAME}
 
 
@@ -376,8 +375,8 @@ _echo "curl ${_CT_NAME}/ping-monitor"
 
 ########################  END
 
-_echoT "---------- ${_PART} end"
-_eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"
+_echoT "===================== ${_PART} end"
+_partadd ${_PART} ${S_FILE_INSTALL_DONE}
 
 
 <<KEEP

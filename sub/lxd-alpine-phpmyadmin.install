@@ -1,0 +1,99 @@
+#!/bin/bash
+#
+# write by Aguy
+
+_echoT "\n==========================================  ${_RELEASE} ${_PART}"
+
+grep -q "^# ${_PART}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART}" | _evalqr tee -a ${S_FILE_INSTALL_CONF}
+
+########################  REQUIRED
+
+_echoT "------------------ required vm image"
+lxc image list -f csv -c l | grep -q ^${S_SERVICE[http]}$ || _exite "Unable to find image container: '${S_SERVICE[http]}"
+
+
+########################  DATA
+
+_echoT "----------  data"
+
+ct_name_http=www-ambau-1
+domain=ambau.ovh
+ct_name_sgbd=maria-ambau-m1
+pwd_sgbd=a_3MHH4yHYbFgZ
+pma_version=5.1.1
+file_pma=phpMyAdmin-${pma_version}-all-languages.tar.gz
+
+ok=false; while ! ${ok}; do
+	anstmp=5.1.1 && _askno "version of phpMyAdmin to download (5.1.1)"
+	file_pma=phpMyAdmin-${_ANSWER}-all-languages.tar.gz
+	uri=https://files.phpmyadmin.net/phpMyAdmin/${_ANSWER}/${file_pma}
+	wget ${uri} -O /tmp/${file_pma} && ok=true || _echo "Unable to get version: ${_ANSWER}"
+done
+pma_version=${_ANSWER}
+
+<<KEEP
+ok=false; while ! ${ok}; do
+	_askno "Name of php instance to use for web server"
+	lxc list -f csv -c n | grep -q ^${_ANSWER}$ && ok=true || _echo "Unable to find container: ${_ANSWER}"
+done
+ct_name_http=${_ANSWER}
+
+ct_name=${ct_name_http}
+domains=\$(lxc exec ${ct_name} -- sh -c "ls -1 ${S_VM_PATH_SHARE}/www")
+[ -z "${domains}" ] && _exite "Unable to find shared domains in ${ct_name}"
+_menu "Select one available domain to use" ${domains} && domain=${_ANSWER}
+
+ok=false; while ! ${ok}; do
+	_askno "Name of mariadb instance to use for sgbd"
+	lxc image list -f csv -c l | grep -q ^${_ANSWER}$ && ok=true || _echo "Unable to find container: ${_ANSWER}"
+done
+ct_name_sgbd=${_ANSWER}
+
+ct_name=${ct_name_sgbd}
+ok=false; while ! ${ok}; do
+	_askno "Password for user: 'roothost' for '${ct_name}'"
+	mysql -s -h${ct_name} -uroothost -p${_ANSWER} -e '' && ok=true || _echo "Unable to connect to: ${ct_name}"
+done
+pwd_sgbd=${_ANSWER}
+KEEP
+
+pwd_pma=`_pwd`
+path_domain=${S_VM_PATH_SHARE}/www/${domain}
+
+_echo ct_name=${ct_name}
+_echo domain=${domain}
+_echo ct_name_sgbd=${ct_name_sgbd}
+_echo pwd_sgbd=${pwd_sgbd}
+_echo pma_version=${pma_version}
+_echo file_pma=${file_pma}
+
+########################  CONF
+
+_echoT "----------  ${ct_name_http} get pma"
+path="${path_domain}/"
+_lxc_exec ${ct_name_http} "[ -d ${path} ] && mv ${path} ${path}.${_SDATE}"
+uri=""
+_lxc_exec ${ct_name_http} "[ -d ${path} ] && mv ${path} ${path}.${_SDATE}"
+
+
+
+########################  SHOW
+
+_echoI exit && exit
+
+
+########################  PUBLISH
+
+for ct_name in ${ct_name_master} ${ct_name_slave}; do
+	_echoT "----------  publish ${ct_name}"
+
+	lxc image list -f csv -c l | grep -q ^${ct_name}$ && _eval lxc image alias rename ${ct_name} ${ct_name}-$(date +%s)
+	_eval lxc publish --force ${ct_name} --alias ${ct_name}
+done
+
+
+########################  END
+
+_echoT "===================== ${_PART} end"
+#_partadd ${_PART} ${S_FILE_INSTALL_DONE}
+

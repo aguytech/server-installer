@@ -4,15 +4,16 @@
 
 _echoT "\n==========================================  ${_RELEASE} ${_PART}"
 
+grep -q "^# ${_PART}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART}" | _evalqr tee -a ${S_FILE_INSTALL_CONF}
 
 ########################  REQUIRED
 
 _echoT "------------------ required vm image"
-lxc image list -f json |jq -r '.[].aliases[].name' | grep -q ^${_CT_NAME_COM}$ || _exite "Unable to find image container: '${_CT_NAME_COM}'"
+lxc image list -f csv -c l | grep -q ^${_CT_NAME_COM}$ || _exite "Unable to find image container: '${_CT_NAME_COM}'"
 
 _echoT "------------------ required vm"
-lxc list -f json |jq -r '.[].name'| grep -q ^${S_SERVICE[log]}$ || _exite "Unable to find image container: '${S_SERVICE[log]}'"
-lxc list -f json |jq -r '.[].name'| grep -q ^${S_SERVICE[http]}$ || _exite "Unable to find image container: '${S_SERVICE[http]}'"
+lxc list -f csv -c n | grep -q ^${S_SERVICE[log]}$ || _exite "Unable to find image container: '${S_SERVICE[log]}'"
+lxc list -f csv -c n | grep -q ^${S_SERVICE[http]}$ || _exite "Unable to find image container: '${S_SERVICE[http]}'"
 
 file_haproxy_initd=${S_PATH_INSTALL_XTRA}/haproxy
 file_vim=${S_PATH_SCRIPT_CONF}/.vimrc
@@ -54,8 +55,8 @@ _HPX_DOMAIN_2_NAME="${_HPX_DOMAIN_2_FQDN%.*}" && _confset _HPX_DOMAIN_2_NAME "${
 
 _echoT "----------  init"
 
-if lxc list -f json |jq -r '.[].name' | grep -q ^${_CT_NAME}$; then
-	if lxc list -f json | jq -r '.[] | select(.status == "Running").name' | grep -q ^${_CT_NAME}$; then
+if lxc list -f csv -c n | grep -q ^${_CT_NAME}$; then
+	if lxc list -f csv -c n status=Running| grep -q ^${_CT_NAME}$; then
 		_eval lxc stop ${_CT_NAME}
 		_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
 		_eval lxc start ${_CT_NAME}-${_SDATE}
@@ -76,10 +77,7 @@ _eval lxc config device set ${_CT_NAME} eth0 ipv4.address ${_CT_IP}
 
 
 _echoT "----------  ${_CT_NAME} start"
-
 _eval lxc start ${_CT_NAME}
-
-_eval sleep 1
 
 
 ########################  SYSCTL
@@ -152,7 +150,7 @@ done
 
 _echoT "----------  conf init.d"
 
-file=/etc/init.d/haproxy
+file=/etc/init.d/${file_haproxy_initd##*/}
 _lxc_exec ${_CT_NAME} "[ -f ${file} ] && mv ${file} ${file}.${_SDATE} && chmod -x ${file}.${_SDATE}"
 _eval lxc file push ${file_haproxy_initd} ${_CT_NAME}/etc/init.d/haproxy
 _lxc_exec ${_CT_NAME} "chmod +x ${file}"
@@ -242,7 +240,7 @@ _lxc_var_replace ${S_SERVICE[log]} ${file} logrotate
 
 _echoT "----------  publish ${_CT_NAME}"
 
-_eval lxc image list -f json | jq -r '.[].aliases[].name' | grep -q ^${_CT_NAME}$ && lxc image alias rename ${_CT_NAME} ${_CT_NAME}-$(date +%s)
+_eval lxc image list -f csv -c l | grep -q ^${_CT_NAME}$ && lxc image alias rename ${_CT_NAME} ${_CT_NAME}-$(date +%s)
 _eval lxc publish --force ${_CT_NAME} --alias ${_CT_NAME}
 
 
@@ -251,7 +249,7 @@ _eval lxc publish --force ${_CT_NAME} --alias ${_CT_NAME}
 _echoT "----------  test haproxy"
 
 _echoI "password to access to  haproxy: ${_HPX_ACCESS_PWD}"
-_echoW "{_IPTHIS}:${S_HAPROXY_STATS_PORT}${_HPX_ACCESS_URI}"
+_echoW "${_IPTHIS}:${S_HAPROXY_STATS_PORT}${_HPX_ACCESS_URI}"
 
 _echoT "----------  test ${_CT_NAME}"
 
@@ -262,5 +260,5 @@ _echo "curl ${S_DOMAIN_FQDN}:80"
 
 ########################  END
 
-_echoT "---------- ${_PART} end"
-_eval "_partadd ${_PART} ${S_FILE_INSTALL_DONE}"
+_echoT "===================== ${_PART} end"
+_partadd ${_PART} ${S_FILE_INSTALL_DONE}
