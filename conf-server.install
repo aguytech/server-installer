@@ -354,8 +354,8 @@ fi
 _echoT "----------  S_HAPROXY_STATS_PORT"
 
 if [ -z "${S_HAPROXY_STATS_PORT}" ]; then
-	anstmp="1777"
-	_askno "port for haproxy statistics (${anstmp})"
+	anstmp="1777 1778"
+	_askno "ports for haproxy statistics (${anstmp})"
 	S_HAPROXY_STATS_PORT=${_ANSWER:-${anstmp}} && _confset S_HAPROXY_STATS_PORT "${S_HAPROXY_STATS_PORT}" "${S_GLOBAL_CONF}"
 fi
 

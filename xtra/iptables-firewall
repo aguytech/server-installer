@@ -326,34 +326,38 @@ __input() {
 __nat() {
 	_echo "\n-------------------------- NAT"
 
+	${_NAT_HAPROXY} && ports="${_PORT_HAPROXY}"  || ports=
+	message="- Allow PREROUTING Stats proxy to proxy VM to ${_IP_SRV[proxy]} for port:"
+	chain="iptables -t nat -A PREROUTING -i ${_ETH} -p tcp --dport XX -j DNAT --to-destination ${_IP_SRV[proxy]}:XX"
+	__add_chain -c "${chain}" -v "${ports}" -m "${message}"
+
+	${_NAT_RSYSLOG} && ports="${_PORT_RSYSLOG}"  || ports=
+	message="- Allow PREROUTING Log ${_PTC_RSYSLOG} to log VM to ${_IP_SRV[log]} for port:"
+	chain="iptables -t nat -A PREROUTING -i ${_ETH} -p ${_PTC_RSYSLOG} --dport XX -j DNAT --to-destination ${_IP_SRV[log]}:XX"
+	__add_chain -c "${chain}" -v "${ports}" -m "${message}"
+
+	${_NAT_HTTP} && ports="${_PORTS_HTTP}"  || ports=
+	message="- Allow PREROUTING HTTPx to proxy VM to ${_IP_SRV[proxy]} for port:"
+	chain="iptables -t nat -A PREROUTING -i ${_ETH} -p tcp --dport XX -j DNAT --to-destination ${_IP_SRV[proxy]}:XX"
+	__add_chain -c "${chain}" -v "${ports}" -m "${message}"
 	message="- Allow OUTPUT loopback to proxy for IP:"
 	chain="iptables -t nat -A OUTPUT -o lo -p tcp --dport XX -j DNAT --to-destination ${_IP_SRV[proxy]}"
-	__add_chain -c "${chain}" -v "${_PORTS_HTTP}" -m "${message}"
+	__add_chain -c "${chain}" -v "${ports}" -m "${message}"
 
-	message="- Allow PREROUTING HTTP to proxy VM / port ${_PORTS_HTTP} to ${_IP_SRV[proxy]} for port:"
-	chain="iptables -t nat -A PREROUTING -i ${_ETH} -p tcp --dport XX -j DNAT --to-destination ${_IP_SRV[proxy]}:XX"
-	__add_chain -c "${chain}" -v "${_PORTS_HTTP}" -m "${message}"
-
-	message="- Allow PREROUTING Stats proxy to proxy VM / port ${_PORT_HAPROXY} to ${_IP_SRV[proxy]} for port:"
-	chain="iptables -t nat -A PREROUTING -i ${_ETH} -p tcp --dport XX -j DNAT --to-destination ${_IP_SRV[proxy]}:XX"
-	__add_chain -c "${chain}" -v "${_PORT_HAPROXY}" -m "${message}"
-
-	message="- Allow PREROUTING Log ${_PTC_RSYSLOG} to log VM / port ${_PORT_RSYSLOG} to ${_IP_SRV[log]} for protocol:"
-	chain="iptables -t nat -A PREROUTING -i ${_ETH} -p XX --dport ${_PORT_RSYSLOG} -j DNAT --to-destination ${_IP_SRV[log]}:${_PORT_RSYSLOG}"
-	__add_chain -c "${chain}" -v "${_PTC_RSYSLOG}" -m "${message}"
-
-	${_NAT_SGBD} && ips="${_PORT_MARIADB:-_PORT_PGSQL}"  || ips=
+	${_NAT_SGBD} && ports="${_PORT_MARIADB:-_PORT_PGSQL}"  || ports=
 	message="- Allow PREROUTING SGBD to sgbd VM ${_ETH} to ${_IP_SRV[sgbd]} for port:"
 	chain="iptables -t nat -A PREROUTING -i ${_ETH} -p tcp --dport XX -j DNAT --to-destination ${_IP_SRV[sgbd]}:XX"
-	__add_chain -c "${chain}" -v "${ips}" -m "${message}"
+	__add_chain -c "${chain}" -v "${ports}" -m "${message}"
 
+	${_NAT_MAIL} && ports="${_PORTS_MAIL}"  || ports=
 	message="- Allow PREROUTING Mail to mail VM ${_ETH} to ${_IP_SRV[mail]} for port:"
 	chain="iptables -t nat -A PREROUTING -i ${_ETH} -p tcp --dport XX -j DNAT --to-destination ${_IP_SRV[mail]}:XX"
-	__add_chain -c "${chain}" -v "${_PORTS_MAIL}" -m "${message}"
+	__add_chain -c "${chain}" -v "${ports}" -m "${message}"
 
+	${_NAT_RSPAMD} && ports="${_PORTS_RSPAMD}"  || ports=
 	message="- Allow PREROUTING Stats rspamd to mail VM ${_ETH} to ${_IP_SRV[mail]} for port:"
 	chain="iptables -t nat -A PREROUTING -i ${_ETH} -p tcp --dport XX -j DNAT --to-destination ${_IP_SRV[mail]}:XX"
-	__add_chain -c "${chain}" -v "${_PORTS_RSPAMD}" -m "${message}"
+	__add_chain -c "${chain}" -v "${ports}" -m "${message}"
 }
 
 __vm_init() {
