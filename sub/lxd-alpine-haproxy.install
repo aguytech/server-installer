@@ -39,6 +39,9 @@ _CT_NAME=${S_SERVICE[proxy]}
 eval ${S_HOST_VM_ETH[default]}
 _CT_IP=${s_base}.${S_SERVICE_BITS[proxy]}
 
+_HPX_STATS_PORT=${S_HAPROXY_STATS_PORT%% *}
+_HPX_STATS_2_PORT=${S_HAPROXY_STATS_PORT#* } && _HPX_STATS_2_PORT=${_HPX_STATS_2_PORT%% *}
+
 _echoT "----------  data"
 
 [ -z ${_HPX_DOMAIN_2_FQDN+x} ] && anstmp="ggj.ovh" && _askno "Give a second fqdn second domain name (${anstmp})" && _HPX_DOMAIN_2_FQDN="${_ANSWER:-$anstmp}" && _confset _HPX_DOMAIN_2_FQDN "$_HPX_DOMAIN_2_FQDN"
@@ -97,16 +100,27 @@ net.ipv4.tcp_keepalive_probes = ${_KEEPALIVE_PROBES}"
 _lxc_exec ${_CT_NAME} "echo '${txt}' > ${file}"
 
 
+########################  PROXY
+
+_echoT "----------  proxy httpx"
+for port in 80 443; do
+	_eval lxc config device add ${_CT_NAME} http proxy listen=tcp:0.0.0.0:${port}
+done
+
+_echoT "----------  proxy stats"
+for port in ${S_HAPROXY_STATS_PORT}; do
+	_eval lxc config device add ${_CT_NAME} stats-${port} proxy listen=tcp:0.0.0.0:${port} connect=tcp:127.0.0.1:${port}
+done
+
+
 ########################  INSTALL
 
 _echoT "----------  install"
-
 _lxc_exec ${_CT_NAME} "apk update"
 _lxc_exec ${_CT_NAME} "apk add haproxy bash bash-completion vim curl" # lnav
 
 
 _echoT "----------  service set"
-
 service=haproxy
 _lxc_exec ${_CT_NAME} "rc-update add ${service}"
 _lxc_exec ${_CT_NAME} "rc-service ${service} start"
@@ -161,17 +175,46 @@ _echoT "----------  restart"
 _lxc_exec ${_CT_NAME} "rc-service haproxy restart"
 
 
-########################  CERTBOT
+########################  letsencrypt
+# cert.pem: Your domain’s certificate
+# chain.pem: The Let’s Encrypt chain certificate
+# fullchain.pem: cert.pem and chain.pem combined
+# privkey.pem: Your certificate’s private key
 
-_echoT "----------  certbot install"
+_echoT "----------  letsencrypt install"
+_lxc_exec ${_CT_NAME} "apk add certbot"
 
-_echoI "----------  This part have to be implemented"
+_echoT "----------  haproxy stop"
+_lxc_exec ${_CT_NAME} "rc-service haproxy stop"
 
-#_lxc_exec ${_CT_NAME} "apk add certbot"
+_echoT "----------  letsencrypt first run"
+subs="ada admin blog carte chat chiffres cloud cms code compta dev diaspora discord discourse down elastik filerun files forum gestion git gitea gitlab graylog imap info kibana links log mail manage matomo metrics monitor mx nextcloud pfa pma roundcube shaarli smtp snippet social st stats test tuleap vma vmail webmail wiki www zabbix" #  mail10 mx10
+str="-d ${S_DOMAIN_FQDN}"; for sub in ${subs}; do str+=" -d ${sub}.${S_DOMAIN_FQDN}"; done
+_lxc_exec ${_CT_NAME} "certbot certonly --standalone --preferred-challenges http --http-01-port 80 ${str}"
+
+_echoT "----------  letsencrypt pem"
+path=${S_PATH_CONF_SSL}/private
+path_le=/etc/letsencrypt/live/${S_DOMAIN_FQDN}
+_lxc_exec ${_CT_NAME} "cat ${path_le}/fullchain.pem ${path_le}/privkey.pem > ${path}/${S_DOMAIN_FQDN}.pem"
+
+file_names=`_lxc_exec ${_CT_NAME} "ls -1 ${path} | grep -v ^letsencrypt"`
+_lxc_exec ${_CT_NAME} "echo \"${file_names}\" > ${path}/letsencrypt.pem.lst"
+
+_lxc_exec ${_CT_NAME}  "find ${S_PATH_CONF_SSL} -type f -exec chmod 640 '{}' \\;"
+_lxc_exec ${_CT_NAME}  "find ${S_PATH_CONF_SSL}/private -type f -exec chmod 600 '{}' \\;"
+
+_echoT "----------  haproxy start"
+_lxc_exec ${_CT_NAME} "rc-service haproxy start"
+
+_echoT "----------  letsencrypt script"
+
+_echoT "----------  letsencrypt cron"
+
+
+# https://www.digitalocean.com/community/tutorials/how-to-secure-haproxy-with-let-s-encrypt-on-centos-7
 
 
 ########################  RSYSLOG
-
 
 if [ "${S_RSYSLOG_PTC}" = udp ]; then
 	_echoT "----------  conf udp"
@@ -181,42 +224,35 @@ if [ "${S_RSYSLOG_PTC}" = udp ]; then
 	_lxc_exec ${_CT_NAME} "sed -i '/^\s*port=/ s|=.*|=\"${S_RSYSLOG_PORT}\"|' ${file}"
 
 	_echoT "----------  restart rsyslog ${_CT_NAME}"
-
 	_lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
 fi
 
 
 _echoT "----------  ${S_SERVICE[log]} host path"
-
 path=${S_VM_PATH_LOG}/haproxy
 _lxc_exec ${S_SERVICE[log]} "[ -d ${path} ] || mkdir -p ${path}"
 
 
 _echoT "----------  ${S_SERVICE[log]} host-haproxy"
-
 file=/etc/rsyslog.d/${file_rsyslog_host##*/}
 _eval lxc file push ${file_rsyslog_host} ${S_SERVICE[log]}${file}
 _lxc_var_replace ${S_SERVICE[log]} ${file} rsyslog
 
 _echoT "----------  restart rsyslog ${S_SERVICE[log]}"
-
 _lxc_exec ${S_SERVICE[log]} "rc-service rsyslog restart"
 
 
 _echoT "----------  ${S_SERVICE[log]} client path"
-
 path=${S_PATH_LOG}/haproxy
 _lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
 
 
 _echoT "----------  ${S_SERVICE[log]} client-haproxy"
-
 file=/etc/rsyslog.d/${file_rsyslog_client##*/}
 _eval lxc file push ${file_rsyslog_client} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} rsyslog
 
 _echoT "----------  rsyslog restart ${_CT_NAME}"
-
 _lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
 
 
@@ -228,12 +264,23 @@ file=/etc/logrotate.d/${file_logrotate_host##*/}
 _eval lxc file push ${file_logrotate_host} ${S_SERVICE[log]}${file}
 _lxc_var_replace ${S_SERVICE[log]} ${file} logrotate
 
+_echoT "----------  ${S_SERVICE[log]} crond restart"
+_lxc_exec ${S_SERVICE[log]} "rc-service crond restart"
+
 
 _echoT "----------  client logrotate"
-
 file=/etc/logrotate.d/${file_logrotate_client##*/}
 _eval lxc file push ${file_logrotate_client} ${S_SERVICE[log]}${file}
-_lxc_var_replace ${S_SERVICE[log]} ${file} logrotate
+_lxc_var_replace ${_CT_NAME} ${file} logrotate
+
+_echoT "----------  ${_CT_NAME} crond restart"
+_lxc_exec ${_CT_NAME} "rc-service crond restart"
+
+
+########################  CLEAN LOG
+
+_echoT "----------  ${_CT_NAME} log clean"
+_lxc_exec ${_CT_NAME} "find ${S_PATH_LOG}/haproxy -name *.log -exec rm {} \;"
 
 
 ########################  PUBLISH
@@ -249,7 +296,7 @@ _eval lxc publish --force ${_CT_NAME} --alias ${_CT_NAME}
 _echoT "----------  test haproxy"
 
 _echoI "password to access to  haproxy: ${_HPX_ACCESS_PWD}"
-_echoW "${_IPTHIS}:${S_HAPROXY_STATS_PORT}${_HPX_ACCESS_URI}"
+_echoW "${_IPTHIS}:${_HPX_STATS_PORT}${_HPX_ACCESS_URI}"
 
 _echoT "----------  test ${_CT_NAME}"
 

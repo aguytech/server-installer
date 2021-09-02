@@ -1,8 +1,8 @@
-# Host logrotate file for php7
-S_VM_PATH_LOG/apache2/*.err
-S_VM_PATH_LOG/apache2/*.warn
-S_VM_PATH_LOG/apache2/*.notice
-S_VM_PATH_LOG/apache2/*.info {
+S_VM_PATH_LOG/mysql/*.emerg
+S_VM_PATH_LOG/mysql/*.err
+S_VM_PATH_LOG/mysql/*.warn
+S_VM_PATH_LOG/mysql/*.notice
+S_VM_PATH_LOG/mysql/*.info {
 	daily
 	rotate 14
 	missingok

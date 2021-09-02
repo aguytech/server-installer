@@ -1,4 +1,8 @@
-S_VM_PATH_LOG/redis/redis.info {
+S_VM_PATH_LOG/redis/*.emerg
+S_VM_PATH_LOG/redis/*.err
+S_VM_PATH_LOG/redis/*.warning
+S_VM_PATH_LOG/redis/*.notice
+S_VM_PATH_LOG/redis/*.info {
 	daily
 	rotate 14
 	missingok

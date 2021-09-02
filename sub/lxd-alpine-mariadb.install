@@ -29,9 +29,9 @@ _require ${file_server} ${file_rsyslog_client} ${file_rsyslog_host} ${file_logro
 _echoT "----------  data pwd"
 
 _MDB_PWD_LOCAL=`_pwd`
-_MDB_PWD_ADMIN=`_pwd`
-_MDB_PWD_HOST=`_pwd`
 _MDB_PWD_REMOTE=`_pwd`
+[ -z ${_MDB_PWD_HOST+x} ] && _MDB_PWD_HOST=`_pwd` && _confset _MDB_PWD_HOST "${_MDB_PWD_HOST}"
+[ -z ${_MDB_PWD_ADMIN+x} ] && _MDB_PWD_ADMIN=`_pwd` && _confset _MDB_PWD_ADMIN "${_MDB_PWD_ADMIN}"
 
 
 _echoT "----------  data"
@@ -39,10 +39,10 @@ _echoT "----------  data"
 _MDB_SERVICE=mariadb && _confset _MDB_SERVICE "${_MDB_SERVICE}"
 _MDB_PATH_CONF=/etc/my.cnf.d && _confset _MDB_PATH_CONF "${_MDB_PATH_CONF}"
 
-anstmp=maria-srv && _askno "Name of the container profile ($anstmp)" && _MDB_NAME="${_ANSWER:-$anstmp}"
+anstmp=maria-srv && _askno "Name of the container profile (${anstmp})" && _MDB_NAME="${_ANSWER:-$anstmp}"
 
 [ ${_MDB_NAME} = maria-srv ] && anstmp=${S_SERVICE[sgbd]} || anstmp=${_MDB_NAME//./-}
-_askno "Name of the container ($anstmp)" && _CT_NAME="${_ANSWER:-$anstmp}"
+_askno "Name of the container (${anstmp})" && _CT_NAME="${_ANSWER:-$anstmp}"
 
 [ -z ${_MDB_VM_PATH+x} ] && anstmp=/var/lib/mysql && _askno "Path for data (${anstmp})" && _MDB_VM_PATH="${_ANSWER:-$anstmp}" && _confset _MDB_VM_PATH "${_MDB_VM_PATH}"
 
@@ -238,7 +238,6 @@ done
 ########################  PATH
 
 _echoT "----------  path ${_MDB_PATH_LOG}"
-
 path=${_MDB_PATH_LOG}
 _lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
 _lxc_exec ${_CT_NAME} "chown mysql ${_MDB_PATH_LOG}"
@@ -253,52 +252,56 @@ _lxc_exec ${_CT_NAME} "rc-service ${_MDB_SERVICE} restart"
 ########################  RSYSLOG
 
 _echoT "----------  ${S_SERVICE[log]} host path"
-
 path=${S_VM_PATH_LOG}/mysql
 _lxc_exec ${S_SERVICE[log]} "[ -d ${path} ] || mkdir -p ${path}"
 
 
 _echoT "----------  ${S_SERVICE[log]} host"
-
 file=/etc/rsyslog.d/${file_rsyslog_host##*/}
 _eval lxc file push ${file_rsyslog_host} ${S_SERVICE[log]}${file}
 _lxc_var_replace ${S_SERVICE[log]} ${file} rsyslog php
 
 _echoT "----------  ${S_SERVICE[log]} rsyslog restart"
-
 _lxc_exec ${S_SERVICE[log]} "rc-service rsyslog restart"
 
 
 _echoT "----------  ${_CT_NAME} client path"
-
 path=${S_PATH_LOG}/mysql
 _lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
 
 _echoT "----------  ${_CT_NAME} client"
-
 file=/etc/rsyslog.d/${file_rsyslog_client##*/}
 _eval lxc file push ${file_rsyslog_client} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} rsyslog php
 
 _echoT "----------  ${_CT_NAME} rsyslog restart"
-
 _lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
 
 
 ########################  LOGROTATE
 
 _echoT "----------  ${S_SERVICE[log]} logrotate"
-
 file=/etc/logrotate.d/${file_logrotate_host##*/}
 _eval lxc file push ${file_logrotate_host} ${S_SERVICE[log]}${file}
 _lxc_var_replace ${S_SERVICE[log]} ${file} logrotate
 
+_echoT "----------  ${S_SERVICE[log]} crond restart"
+_lxc_exec ${S_SERVICE[log]} "rc-service crond restart"
+
 
 _echoT "----------  ${_CT_NAME} logrotate"
-
 file=/etc/logrotate.d/${file_logrotate_client##*/}
 _eval lxc file push ${file_logrotate_client} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} logrotate
+
+_echoT "----------  ${_CT_NAME} crond restart"
+_lxc_exec ${_CT_NAME} "rc-service crond restart"
+
+
+########################  CLEAN LOG
+
+_echoT "----------  ${_CT_NAME} log clean"
+_lxc_exec ${_CT_NAME} "find ${S_PATH_LOG}/mysql -name *.log -exec rm {} \;"
 
 
 ########################  PWD
@@ -308,13 +311,6 @@ _echoT "----------  ${_CT_NAME} passwd"
 file=${S_PATH_CONF}/mariadb
 strpass= ${strpass%\\n}
 _lxc_exec ${_CT_NAME} "echo -e ${strpass//\\n/\\\\n} > ${file}"
-
-
-########################  CLEAN LOG
-
-_echoT "----------  ${_CT_NAME} log clean"
-
-_lxc_exec ${_CT_NAME} "find ${S_PATH_LOG}/mysql -name *.log -exec rm {} \;"
 
 
 ########################  CLIENT

@@ -1,10 +1,8 @@
+S_VM_PATH_LOG/*.emerg
 S_VM_PATH_LOG/*.err
-S_VM_PATH_LOG/*.error
-S_VM_PATH_LOG/*.warn
 S_VM_PATH_LOG/*.warning
 S_VM_PATH_LOG/*.notice
-S_VM_PATH_LOG/*.info
-S_VM_PATH_LOG/*.log {
+S_VM_PATH_LOG/*.info {
 	daily
 	rotate 14
 	missingok

@@ -28,34 +28,34 @@ _askyn "To install a master/slave mariadb cluster, you need to have 2 available 
 _echoT "----------  data"
 
 <<KEEP
-ct_name_master=maria-ambau-m1
-ct_name_slave=maria-ambau-s1
+ct_master=maria-ambau-m1
+ct_slave=maria-ambau-s1
 pwd_master=a_3MHH4yHYbFgZ
 pwd_slave=mzHeL2eI5DwxQD
 KEEP
 
-ok=false; while ! ${ok}; do
-	_askno "Name of mariadb instance to use for MASTER"
-	lxc image list -f csv -c l | grep -q ^${_ANSWER}$ && ok=true || _echo "Unable to find container: ${_ANSWER}"
-done
-ct_name_master=${_ANSWER}
+# ct_master
+cts=$(lxc list -f csv -c n maria-)
+[ "${cts}" ] && _menu "Select one available mariadb container for MASTER" ${cts} || _exite "unable to find container maria-* to use"
+ct_master=${_ANSWER}
 
-ok=false; while ! ${ok}; do
-	_askno "Name of mariadb instance to use for SLAVE"
-	lxc image list -f csv -c l | grep -q ^${_ANSWER}$ && ok=true || _echo "Unable to find container: ${_ANSWER}"
-done
-ct_name_slave=${_ANSWER}
+# ct_slave
+cts=$(lxc list -f csv -c n maria- | grep -v ^${ct_master})
+[ "${cts}" ] && _menu "Select one available mariadb container for SLAVE" ${cts} || _exite "unable to find container maria-* to use"
+ct_slave=${_ANSWER}
 
-ct_name=${ct_name_master}
+# pwd_master
+ct_name=${ct_master}
 ok=false; while ! ${ok}; do
 	_askno "Password for user: 'roothost' for '${ct_name}'"
 	mysql -s -h${ct_name} -uroothost -p${_ANSWER} -e '' && ok=true || _echo "Unable to connect to: ${ct_name} with pwd: ${_ANSWER}"
 done
 pwd_master=${_ANSWER}
 
-ct_name=${ct_name_slave}
+# pwd_slave
+ct_name=${ct_slave}
 ok=false; while ! ${ok}; do
-	_askno "Password for user: 'roothost' for '${ct_name}'"
+	anstmp=${pwd_master} && _askno "Password for user: 'roothost' for '${ct_name}' (${anstmp})"
 	mysql -s -h${ct_name} -uroothost -p${_ANSWER} -e '' && ok=true || _echo "Unable to connect to: ${ct_name}"
 done
 pwd_slave=${_ANSWER}
@@ -73,7 +73,7 @@ pwd_replic=`_pwd`
 ########################  CONF
 
 # MASTER
-ct_name=${ct_name_master}
+ct_name=${ct_master}
 
 if lxc list -f csv -c n status=Stopped | grep -q ^${ct_name}$; then
 	_echoT "----------  ${ct_name} start"
@@ -120,7 +120,7 @@ _eval "mysql -h${ct_name} -uroothost -p${pwd_master} -e \"UNLOCK TABLES;\""
 
 
 # SLAVE
-ct_name=${ct_name_slave}
+ct_name=${ct_slave}
 
 if lxc list -f csv -c n status=Stopped | grep -q ^${ct_name}$; then
 	_echoT "----------  ${ct_name} start"
@@ -143,11 +143,11 @@ _echoT "----------  ${ct_name} ${_MDB_SERVICE} restart"
 _lxc_exec ${ct_name} "rc-service ${_MDB_SERVICE} restart"
 
 _echoT "----------  ${ct_name} conf master"
-_eval "mysql -h${ct_name} -uroothost -p${pwd_slave} -e \"SET default_master_connection = '${ct_name_master}';\""
+_eval "mysql -h${ct_name} -uroothost -p${pwd_slave} -e \"SET default_master_connection = '${ct_master}';\""
 _eval "mysql -h${ct_name} -uroothost -p${pwd_slave} -e \"STOP SLAVE;\""
 
 cmd="CHANGE MASTER TO
-MASTER_HOST='${ct_name_master}',
+MASTER_HOST='${ct_master}',
 MASTER_USER='replic',
 MASTER_PASSWORD='${pwd_replic}',
 MASTER_PORT=${S_DB_MARIA_PORT},
@@ -157,19 +157,19 @@ MASTER_CONNECT_RETRY=10;"
 _eval "mysql -h${ct_name} -uroothost -p${pwd_slave} -e \"${cmd}\""
 
 _echoT "----------  ${ct_name} start slave"
-_eval "mysql -h${ct_name} -uroothost -p${pwd_slave} -e \"START SLAVE '${ct_name_master}';\""
+_eval "mysql -h${ct_name} -uroothost -p${pwd_slave} -e \"START SLAVE '${ct_master}';\""
 
 
 ########################  SHOW
 
 _echoT "----------  show master privileges"
-_eval "mysql -h${ct_name_master} -uroothost -p${pwd_master} -e \"SELECT user,host FROM mysql.user WHERE user like 'replic';\""
+_eval "mysql -h${ct_master} -uroothost -p${pwd_master} -e \"SELECT user,host FROM mysql.user WHERE user like 'replic';\""
 
 _echoT "----------  status master"
-_eval "mysql -h${ct_name_master} -uroothost -p${pwd_master} -e \"SHOW MASTER STATUS;\""
+_eval "mysql -h${ct_master} -uroothost -p${pwd_master} -e \"SHOW MASTER STATUS;\""
 
 _echoT "----------  status slave"
-_eval "mysql -h${ct_name_slave} -uroothost -p${pwd_slave} -e \"SHOW SLAVE STATUS \G;\" | head -n19"
+_eval "mysql -h${ct_slave} -uroothost -p${pwd_slave} -e \"SHOW SLAVE STATUS \G;\" | head -n19"
 
 _echoT "----------  show passwords"
 _echoI "Keep this passwords:"
@@ -178,7 +178,7 @@ _echoW "${strpass%\\n}"
 
 ########################  PUBLISH
 
-for ct_name in ${ct_name_master} ${ct_name_slave}; do
+for ct_name in ${ct_master} ${ct_slave}; do
 	_echoT "----------  publish ${ct_name}"
 
 	lxc image list -f csv -c l | grep -q ^${ct_name}$ && _eval lxc image alias rename ${ct_name} ${ct_name}-$(date +%s)

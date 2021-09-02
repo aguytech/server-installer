@@ -22,11 +22,11 @@ _require ${file_xtra_script} ${file_xtra_conf} ${file_xtra_log}
 _echoT "----------  data"
 
 # host
-[ -z ${_IP_PRE_SSH+x} ] && anstmp="20" && _askno "Give the PREFIX of port for 'SSH' VMs connections ($anstmp)" && _IP_PRE_SSH="${_ANSWER:-$anstmp}" && _confset _IP_PRE_SSH "${_IP_PRE_SSH}"
+[ -z ${_IP_PRE_SSH+x} ] && anstmp="20" && _askno "Give the PREFIX of port for 'SSH' VMs connections (${anstmp})" && _IP_PRE_SSH="${_ANSWER:-$anstmp}" && _confset _IP_PRE_SSH "${_IP_PRE_SSH}"
 
-[ -z ${_IP_PRE_HTTP+x} ] && anstmp="8" && _askno "Give the PREFIX of port for 'HTTP' VMs connections  ($anstmp)" && _IP_PRE_HTTP="${_ANSWER:-$anstmp}" && _confset _IP_PRE_HTTP "${_IP_PRE_HTTP}"
+[ -z ${_IP_PRE_HTTP+x} ] && anstmp="8" && _askno "Give the PREFIX of port for 'HTTP' VMs connections  (${anstmp})" && _IP_PRE_HTTP="${_ANSWER:-$anstmp}" && _confset _IP_PRE_HTTP "${_IP_PRE_HTTP}"
 
-[ -z ${_IP_PRE_HTTPS+x} ] && anstmp="9" && _askno "Give the PREFIX of port for 'HTTP' VMs connections ($anstmp)" && _IP_PRE_HTTPS="${_ANSWER:-$anstmp}" && _confset _IP_PRE_HTTPS "${_IP_PRE_HTTPS}"
+[ -z ${_IP_PRE_HTTPS+x} ] && anstmp="9" && _askno "Give the PREFIX of port for 'HTTP' VMs connections (${anstmp})" && _IP_PRE_HTTPS="${_ANSWER:-$anstmp}" && _confset _IP_PRE_HTTPS "${_IP_PRE_HTTPS}"
 
 
 ########################  SYSCTL

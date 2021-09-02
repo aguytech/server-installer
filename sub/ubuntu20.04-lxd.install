@@ -14,9 +14,9 @@ _require ${file_env} ${file_bash_aliases} ${file_bash_functions} ${file_rsyslog_
 
 _echoT "----------  data"
 
-[ -z ${_LXD_DHCP_MIN+x} ] && anstmp="20" && _askno "Give minimal range IP for DHCP container ($anstmp)" && _LXD_DHCP_MIN="${_ANSWER:-$anstmp}" && _confset _LXD_DHCP_MIN "${_LXD_DHCP_MIN}"
+[ -z ${_LXD_DHCP_MIN+x} ] && anstmp="20" && _askno "Give minimal range IP for DHCP container (${anstmp})" && _LXD_DHCP_MIN="${_ANSWER:-$anstmp}" && _confset _LXD_DHCP_MIN "${_LXD_DHCP_MIN}"
 
-[ -z ${_LXD_DHCP_MAX+x} ] && anstmp="254" && _askno "Give maximal range IP for DHCP container ($anstmp)" && _LXD_DHCP_MAX="${_ANSWER:-$anstmp}" && _confset _LXD_DHCP_MAX "${_LXD_DHCP_MAX}"
+[ -z ${_LXD_DHCP_MAX+x} ] && anstmp="254" && _askno "Give maximal range IP for DHCP container (${anstmp})" && _LXD_DHCP_MAX="${_ANSWER:-$anstmp}" && _confset _LXD_DHCP_MAX "${_LXD_DHCP_MAX}"
 
 
 # root path of storage pools for

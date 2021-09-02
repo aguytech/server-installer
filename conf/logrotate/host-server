@@ -1,8 +1,10 @@
-# Logrotate file for server functions logs
 #S_PATH_LOG_INSTALL/*.log
-S_PATH_LOG_SERVER/*.info
-S_PATH_LOG_SERVER/*.err
-S_PATH_LOG_SERVER/*.debug {
+S_PATH_LOG/redis/*.emerg
+S_PATH_LOG/redis/*.err
+S_PATH_LOG/redis/*.warning
+S_PATH_LOG/redis/*.notice
+S_PATH_LOG/redis/*.info
+S_PATH_LOG/redis/*.debug {
 	daily
 	rotate 14
 	missingok

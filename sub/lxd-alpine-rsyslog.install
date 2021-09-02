@@ -152,12 +152,10 @@ _lxc_var_replace ${_CT_NAME} ${file} rsyslog
 
 
 _echoT "----------  lxd host restart"
-
 _lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
 
 
 _echoT "----------  lxd client conf"
-
 path=${S_PATH_LOG}/lxd
 [ -d ${path} ] || _evalr mkdir -p ${path}
 _evalr chown syslog ${path}
@@ -167,34 +165,28 @@ _evalr cp -a ${file_rsyslog_client_lxd} ${file}
 _var_replace ${file} rsyslog
 
 _echoT "----------  lxd client restart"
-
 _service restart rsyslog
 
 
 ########################  LOGROTATE HOST
 
 _echoT "----------  logrotate rsyslog host"
-
 file=/etc/logrotate.d/${file_logrotate_host_rsyslog##*/}
 _eval lxc file push ${file_logrotate_host_rsyslog} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} logrotate
 
-
 _echoT "----------  logrotate iptables host"
-
 file=/etc/logrotate.d/${file_logrotate_host_iptables##*/}
 _eval lxc file push ${file_logrotate_host_iptables} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} logrotate
 
 _echoT "----------  logrotate iptables client"
-
 file=/etc/logrotate.d/${file_logrotate_client_iptables##*/}
 _evalr cp -a ${file_logrotate_client_iptables} ${file}
 _var_replace ${file} logrotate
 
 
 _echoT "----------  logrotate lxd host"
-
 file=/etc/logrotate.d/${file_logrotate_host_lxd##*/}
 _eval lxc file push ${file_logrotate_host_lxd} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} logrotate
@@ -202,6 +194,13 @@ _lxc_var_replace ${_CT_NAME} ${file} logrotate
 file=/etc/logrotate.d/${file_logrotate_client_lxd##*/}
 _evalr cp -a ${file_logrotate_client_lxd} ${file}
 _var_replace ${file} logrotate
+
+
+_echoT "----------  ${_CT_NAME} crond restart"
+_lxc_exec ${_CT_NAME} "rc-service crond restart"
+
+_echoT "----------  logrotate restart"
+_service restart logrotate
 
 
 ########################  PUBLISH

@@ -1,4 +1,4 @@
-# Host logrotate file for php7
+S_VM_PATH_LOG/apache2/*.emerg
 S_VM_PATH_LOG/apache2/*.err
 S_VM_PATH_LOG/apache2/*.warning
 S_VM_PATH_LOG/apache2/*.notice

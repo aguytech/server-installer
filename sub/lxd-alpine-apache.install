@@ -18,10 +18,11 @@ file_site=${S_PATH_INSTALL_CONF}/apache2/default.conf
 file_rsyslog_host=${S_PATH_INSTALL_CONF}/rsyslog/host-apache.conf
 file_rsyslog_client=${S_PATH_INSTALL_CONF}/rsyslog/client-apache.conf
 file_logrotate_host=${S_PATH_INSTALL_CONF}/logrotate/host-apache
+file_logrotate_client=${S_PATH_INSTALL_CONF}/logrotate/client-apache
 file_log=${S_PATH_INSTALL_CONF}/apache2/log.conf
 
 _echoT "------------------ required files"
-_require ${file_rsyslog_host} ${file_rsyslog_client} ${file_logrotate_host} ${file_log} ${file_site}
+_require ${file_rsyslog_host} ${file_rsyslog_client} ${file_logrotate_host} ${file_logrotate_client} ${file_log} ${file_site}
 
 
 ########################  DATA
@@ -82,7 +83,7 @@ _echoT "----------  data apache mpm"
 ########################  PROFILE
 
 profile=www-${S_DOMAIN_FQDN}
-_echoT "----------  profiles ${profile}"
+_echoT "----------  profile ${profile}"
 
 lxc profile list -f csv|grep -q "^${profile}," && _eval lxc profile rename ${profile} ${profile}.${_SDATE}
 _eval lxc profile create ${profile}
@@ -161,7 +162,7 @@ _lxc_exec ${_CT_NAME} "rc-service ${service} start"
 
 _echoT "----------  conf.d default"
 
-file=${file_site}/etc/apache2/conf.d/default.conf
+file=${path_conf}/default.conf
 _lxc_exec ${_CT_NAME} "[ -f ${file} ] && cp -a ${file} ${file}.${_SDATE}"
 
 cmds="sed -i 's|^.\?\(Timeout\) .*$|\1 ${_APA_TIMEOUT}|' ${file}
@@ -227,7 +228,7 @@ _lxc_exec ${_CT_NAME} "sed -i '/^ErrorLog/ s|^|#|' ${file_conf_http}"
 _lxc_exec ${_CT_NAME} "sed -i '/^<IfModule log_config_module>/i# To configure logs, see the file: ${path_conf}/log.conf' ${file_conf_http}"
 #_lxc_exec ${_CT_NAME} "sed -i '/^<IfModule log_config_module>/,/^<\/IfModule>/ s|^\([^<].*\)$|#\1|' ${file_conf_http}"
 
-file=/etc/apache2/conf.d/${file_log##*/}
+file=${path_conf}/${file_log##*/}
 _eval lxc file push ${file_log} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} apache
 
@@ -298,61 +299,55 @@ _lxc_exec ${S_SERVICE[proxy]} "rc-service haproxy reload"
 ########################  RSYSLOG
 
 _echoT "----------  ${S_SERVICE[log]} host path"
-
 path=${S_VM_PATH_LOG}/apache2
 _lxc_exec ${S_SERVICE[log]} "[ -d ${path} ] || mkdir -p ${path}"
 
 
 _echoT "----------  ${S_SERVICE[log]} host"
-
 file=/etc/rsyslog.d/${file_rsyslog_host##*/}
 _eval lxc file push ${file_rsyslog_host} ${S_SERVICE[log]}${file}
 _lxc_var_replace ${S_SERVICE[log]} ${file} rsyslog
 
 _echoT "----------  rsyslog restart ${S_SERVICE[log]}"
-
 _lxc_exec ${S_SERVICE[log]} "rc-service rsyslog restart"
 
 
 _echoT "----------  ${_CT_NAME} client path"
-
 path=${S_PATH_LOG}/apache2
 _lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
 
 _echoT "----------  ${_CT_NAME} client"
-
 file=/etc/rsyslog.d/${file_rsyslog_client##*/}
 _eval lxc file push ${file_rsyslog_client} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} rsyslog
 
 _echoT "----------  ${_CT_NAME} rsyslog restart"
-
 _lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
 
 
 ########################  LOGROTATE
 
 _echoT "----------  ${S_SERVICE[log]} logrotate"
-
 file=/etc/logrotate.d/${file_logrotate_host##*/}
 _eval lxc file push ${file_logrotate_host} ${S_SERVICE[log]}${file}
 _lxc_var_replace ${S_SERVICE[log]} ${file} logrotate
 
+_echoT "----------  ${S_SERVICE[log]} crond restart"
+_lxc_exec ${S_SERVICE[log]} "rc-service crond restart"
 
-_echoT "----------  client logrotate"
 
-file=/etc/logrotate.d/apache2
-_lxc_exec ${_CT_NAME} "grep -q /var/log/apache2/\*.info ${file} || sed -i '1i/var/log/apache2/*.warning' ${file}"
-_lxc_exec ${_CT_NAME} "grep -q /var/log/apache2/\*.info ${file} || sed -i '1i/var/log/apache2/*.info' ${file}"
-_lxc_exec ${_CT_NAME} "grep -q /var/log/apache2/\*.info ${file} || sed -i '1i/var/log/apache2/*.err' ${file}"
-_lxc_exec ${_CT_NAME} "grep -q daily ${file} || sed -i 's|^\(\s*missingok\)|    daily\n\1|' ${file}"
-_lxc_exec ${_CT_NAME} "grep -q ^\s*rotate ${file} || sed -i 's|^\(\s*missingok\)|\1\n    rotate 14|' ${file}"
+_echoT "----------  ${_CT_NAME} logrotate"
+file=/etc/logrotate.d/${file_logrotate_client##*/}
+_eval lxc file push ${file_logrotate_client} ${_CT_NAME}${file}
+_lxc_var_replace ${_CT_NAME} ${file} logrotate
+
+_echoT "----------  ${_CT_NAME} crond restart"
+_lxc_exec ${_CT_NAME} "rc-service crond restart"
 
 
 ########################  CLEAN LOG
 
 _echoT "----------  ${_CT_NAME} log clean"
-
 _lxc_exec ${_CT_NAME} "find ${S_PATH_LOG}/apache2 -name *.log -exec rm {} \;"
 
 

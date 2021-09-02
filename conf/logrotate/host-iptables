@@ -1,6 +1,8 @@
-# Logrotate file for iptables logs
-S_VM_PATH_LOG/iptables/*.info
-S_VM_PATH_LOG/iptables/*.warning {
+S_VM_PATH_LOG/iptables/*.emerg
+S_VM_PATH_LOG/iptables/*.err
+S_VM_PATH_LOG/iptables/*.warning
+S_VM_PATH_LOG/iptables/*.notice
+S_VM_PATH_LOG/iptables/*.info {
 	daily
 	rotate 14
 	missingok

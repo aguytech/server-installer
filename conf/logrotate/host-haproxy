@@ -1,3 +1,4 @@
+S_VM_PATH_LOG/haproxy/*.emerg
 S_VM_PATH_LOG/haproxy/*.err
 S_VM_PATH_LOG/haproxy/*.warning
 S_VM_PATH_LOG/haproxy/*.notice

@@ -55,7 +55,6 @@ fi
 ########################  END
 
 _echoT "===================== ${_PART} end"
-
 _partadd ${_PART} ${S_FILE_INSTALL_DONE}
 
 <<KEEP

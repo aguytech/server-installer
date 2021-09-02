@@ -1,7 +1,8 @@
-S_PATH_LOG/lxd/lxd.err
-S_PATH_LOG/lxd/lxd.warning
-S_PATH_LOG/lxd/lxd.notice
-S_PATH_LOG/lxd/lxdinfo {
+S_PATH_LOG/lxd/*.emerg
+S_PATH_LOG/lxd/*.err
+S_PATH_LOG/lxd/*.warning
+S_PATH_LOG/lxd/*.notice
+S_PATH_LOG/lxd/*.info {
 	daily
 	rotate 14
 	missingok

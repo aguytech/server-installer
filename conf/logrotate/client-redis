@@ -1,4 +1,8 @@
-S_PATH_LOG/redis/redis.info {
+S_PATH_LOG/redis/*.emerg
+S_PATH_LOG/redis/*.err
+S_PATH_LOG/redis/*.warning
+S_PATH_LOG/redis/*.notice
+S_PATH_LOG/redis/*.info {
 	daily
 	rotate 2
 	missingok

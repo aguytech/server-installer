@@ -139,45 +139,58 @@ _lxc_exec ${_CT_NAME} "${cmds}"
 
 
 _echoT "----------  restart redis"
-
 _lxc_exec ${_CT_NAME} "rc-service redis restart"
 
 
 ########################  RSYSLOG
 
 _echoT "----------  ${S_SERVICE[log]} host path"
-
 path=${S_VM_PATH_LOG}/redis
 _lxc_exec ${S_SERVICE[log]} "[ -d ${path} ] || mkdir -p ${path}"
 
 
 _echoT "----------  ${S_SERVICE[log]} host-redis"
-
 file=/etc/rsyslog.d/${file_rsyslog_host##*/}
 _eval lxc file push ${file_rsyslog_host} ${S_SERVICE[log]}${file}
 _lxc_var_replace ${S_SERVICE[log]} ${file} rsyslog
 
 _echoT "----------  restart rsyslog ${S_SERVICE[log]}"
-
 _lxc_exec ${S_SERVICE[log]} "rc-service rsyslog restart"
 
 
 _echoT "----------  ${S_SERVICE[log]} client path"
-
 path=${S_PATH_LOG}/redis
 _lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
 _lxc_exec ${_CT_NAME} "rm ${path}/redis.log 2>/dev/null"
 
 
 _echoT "----------  ${S_SERVICE[log]} client-redis"
-
 file=/etc/rsyslog.d/${file_rsyslog_client##*/}
 _eval lxc file push ${file_rsyslog_client} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} rsyslog
 
 _echoT "----------  rsyslog restart ${_CT_NAME}"
-
 _lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
+
+
+########################  LOGROTATE
+
+_echoT "----------  ${S_SERVICE[log]} logrotate"
+file=/etc/logrotate.d/${file_logrotate_host##*/}
+_eval lxc file push ${file_logrotate_host} ${S_SERVICE[log]}${file}
+_lxc_var_replace ${S_SERVICE[log]} ${file} logrotate
+
+_echoT "----------  ${S_SERVICE[log]} crond restart"
+_lxc_exec ${S_SERVICE[log]} "rc-service crond restart"
+
+
+_echoT "----------  ${_CT_NAME} logrotate"
+file=/etc/logrotate.d/${file_logrotate_client##*/}
+_eval lxc file push ${file_logrotate_client} ${_CT_NAME}${file}
+_lxc_var_replace ${_CT_NAME} ${file} logrotate
+
+_echoT "----------  ${_CT_NAME} crond restart"
+_lxc_exec ${_CT_NAME} "rc-service crond restart"
 
 
 ########################  CLEAN LOG

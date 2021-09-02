@@ -62,11 +62,11 @@ echo -e "${blueb}----------  conf rights${cclear}"
 for path in "${S_PATH_CONF}/ssl/private" "${S_PATH_CONF}/ssl/certs"; do
 	! [ -d "$path" ] && mkdir -p "$path"
 done
-find "${S_PATH_CONF}" -type d -exec chmod 750 -R "{}" \;
-find "${S_PATH_CONF}" -type f -exec chmod 640 -R "{}" \;
-find "${S_PATH_CONF}/ssl/private" -type d -exec chmod 700 -R "{}" \;
-find "${S_PATH_CONF}/ssl/private" -type f -exec chmod 600 -R "{}" \;
-[ -h /server ] && ln -sv /etc/server /server
+find "${S_PATH_CONF}" -type d -exec chmod 750 "{}" \;
+find "${S_PATH_CONF}" -type f -exec chmod 640 "{}" \;
+find "${S_PATH_CONF}/ssl/private" -type d -exec chmod 700 "{}" \;
+find "${S_PATH_CONF}/ssl/private" -type f -exec chmod 600 "{}" \;
+[ -h /server ] || ln -s /etc/server /server
 
 echo -e "${blueb}----------  server.conf${cclear}"
 

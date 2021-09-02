@@ -32,9 +32,6 @@ _require ${file_phpfpm} ${file_monitor} ${file_opcache} ${file_xdebug} ${file_rs
 
 _CT_NAME=${S_SERVICE[php]}
 
-#eval ${S_HOST_VM_ETH[default]}
-#_CT_IP=${s_base}.${S_SERVICE_BITS[php]}
-
 _PHP_SERVICE=php-fpm7 && _confset _PHP_SERVICE "${_PHP_SERVICE}"
 _PHP_FPM_SOCK=/run/${_PHP_SERVICE}/php-fpm.sock && _confset _PHP_SERVICE "${_PHP_SERVICE}"
 _PHP_FPM_ADMIN_SOCK=/run/${_PHP_SERVICE}/php-fpm-admin.sock && _confset _PHP_SERVICE "${_PHP_SERVICE}"
@@ -72,25 +69,25 @@ _echoT "----------  data php"
 
 _echoT "----------  data php-fpm"
 
-[ -z ${_PHP_RESTART_THRESHOLD+x} ] && anstmp='30' && _askno "Give value for 'emergency_restart_threshold' ($anstmp)" && _PHP_RESTART_THRESHOLD="${_ANSWER:-$anstmp}" && _confset _PHP_RESTART_THRESHOLD "${_PHP_RESTART_THRESHOLD}"
+[ -z ${_PHP_RESTART_THRESHOLD+x} ] && anstmp='30' && _askno "Give value for 'emergency_restart_threshold' (${anstmp})" && _PHP_RESTART_THRESHOLD="${_ANSWER:-$anstmp}" && _confset _PHP_RESTART_THRESHOLD "${_PHP_RESTART_THRESHOLD}"
 
-[ -z ${_PHP_RESTART_INTERVAL+x} ] && anstmp='60s' && _askno "Give value for 'emergency_restart_interval' ($anstmp)" && _PHP_RESTART_INTERVAL="${_ANSWER:-$anstmp}" && _confset _PHP_RESTART_INTERVAL "${_PHP_RESTART_INTERVAL}"
+[ -z ${_PHP_RESTART_INTERVAL+x} ] && anstmp='60s' && _askno "Give value for 'emergency_restart_interval' (${anstmp})" && _PHP_RESTART_INTERVAL="${_ANSWER:-$anstmp}" && _confset _PHP_RESTART_INTERVAL "${_PHP_RESTART_INTERVAL}"
 
-[ -z ${_PHP_CONTROL_TIMEOUT+x} ] && anstmp='0' && _askno "Give value for 'process_control_timeout' ($anstmp)s" && _PHP_CONTROL_TIMEOUT="${_ANSWER:-$anstmp}" && _confset _PHP_CONTROL_TIMEOUT "${_PHP_CONTROL_TIMEOUT}"
+[ -z ${_PHP_CONTROL_TIMEOUT+x} ] && anstmp='0' && _askno "Give value for 'process_control_timeout' (${anstmp})s" && _PHP_CONTROL_TIMEOUT="${_ANSWER:-$anstmp}" && _confset _PHP_CONTROL_TIMEOUT "${_PHP_CONTROL_TIMEOUT}"
 
 _echoT "----------  data pool www"
 
-[ -z ${_PHP_W_MAX_CHILDREN+x} ] && anstmp='20' && _askno "Give value for 'pm.max_children' ($anstmp)" && _PHP_W_MAX_CHILDREN="${_ANSWER:-$anstmp}" && _confset _PHP_W_MAX_CHILDREN "${_PHP_W_MAX_CHILDREN}"
+[ -z ${_PHP_W_MAX_CHILDREN+x} ] && anstmp='20' && _askno "Give value for 'pm.max_children' (${anstmp})" && _PHP_W_MAX_CHILDREN="${_ANSWER:-$anstmp}" && _confset _PHP_W_MAX_CHILDREN "${_PHP_W_MAX_CHILDREN}"
 
-[ -z ${_PHP_W_START_SERVERS+x} ] && anstmp='4' && _askno "Give value for 'pm.start_servers' ($anstmp)" && _PHP_W_START_SERVERS="${_ANSWER:-$anstmp}" && _confset _PHP_W_START_SERVERS "${_PHP_W_START_SERVERS}"
+[ -z ${_PHP_W_START_SERVERS+x} ] && anstmp='4' && _askno "Give value for 'pm.start_servers' (${anstmp})" && _PHP_W_START_SERVERS="${_ANSWER:-$anstmp}" && _confset _PHP_W_START_SERVERS "${_PHP_W_START_SERVERS}"
 
-[ -z ${_PHP_W_MIN_SPARE_SERVERS+x} ] && anstmp='4' && _askno "Give value for 'pm.min_spare_servers' ($anstmp)" && _PHP_W_MIN_SPARE_SERVERS="${_ANSWER:-$anstmp}" && _confset _PHP_W_MIN_SPARE_SERVERS "${_PHP_W_MIN_SPARE_SERVERS}"
+[ -z ${_PHP_W_MIN_SPARE_SERVERS+x} ] && anstmp='4' && _askno "Give value for 'pm.min_spare_servers' (${anstmp})" && _PHP_W_MIN_SPARE_SERVERS="${_ANSWER:-$anstmp}" && _confset _PHP_W_MIN_SPARE_SERVERS "${_PHP_W_MIN_SPARE_SERVERS}"
 
-[ -z ${_PHP_W_MAX_SPARE_SERVERS+x} ] && anstmp='15' && _askno "Give value for 'pm.max_spare_servers' ($anstmp)" && _PHP_W_MAX_SPARE_SERVERS="${_ANSWER:-$anstmp}" && _confset _PHP_W_MAX_SPARE_SERVERS "${_PHP_W_MAX_SPARE_SERVERS}"
+[ -z ${_PHP_W_MAX_SPARE_SERVERS+x} ] && anstmp='15' && _askno "Give value for 'pm.max_spare_servers' (${anstmp})" && _PHP_W_MAX_SPARE_SERVERS="${_ANSWER:-$anstmp}" && _confset _PHP_W_MAX_SPARE_SERVERS "${_PHP_W_MAX_SPARE_SERVERS}"
 
-[ -z ${_PHP_W_MAX_REQUESTS+x} ] && anstmp='100000' && _askno "Give value for 'pm.max_requests' ($anstmp)" && _PHP_W_MAX_REQUESTS="${_ANSWER:-$anstmp}" && _confset _PHP_W_MAX_REQUESTS "${_PHP_W_MAX_REQUESTS}"
+[ -z ${_PHP_W_MAX_REQUESTS+x} ] && anstmp='100000' && _askno "Give value for 'pm.max_requests' (${anstmp})" && _PHP_W_MAX_REQUESTS="${_ANSWER:-$anstmp}" && _confset _PHP_W_MAX_REQUESTS "${_PHP_W_MAX_REQUESTS}"
 
-[ -z ${_PHP_SLOWLOG_TIMEOUT+x} ] && anstmp='2' && _askno "Give value for 'request_SLOWLOG_TIMEOUT' ($anstmp)" && _PHP_SLOWLOG_TIMEOUT="${_ANSWER:-$anstmp}" && _confset _PHP_SLOWLOG_TIMEOUT "${_PHP_SLOWLOG_TIMEOUT}"
+[ -z ${_PHP_SLOWLOG_TIMEOUT+x} ] && anstmp='2' && _askno "Give value for 'request_SLOWLOG_TIMEOUT' (${anstmp})" && _PHP_SLOWLOG_TIMEOUT="${_ANSWER:-$anstmp}" && _confset _PHP_SLOWLOG_TIMEOUT "${_PHP_SLOWLOG_TIMEOUT}"
 
 
 ########################  PROFILE
@@ -375,7 +372,6 @@ _lxc_var_replace ${_CT_NAME} ${file} apache php
 ########################  HAPROXY
 
 _echoT "----------  ${S_SERVICE[proxy]} ${S_DOMAIN_NAME}1 "
-
 file=/etc/haproxy/conf-available/80-backends
 _lxc_exec ${S_SERVICE[proxy]} "sed -i 's|${S_SERVICE[http]}|${S_SERVICE[php]}|' ${file}"
 
@@ -395,58 +391,55 @@ _lxc_exec ${S_SERVICE[proxy]} "rc-service haproxy reload"
 ########################  RSYSLOG
 
 _echoT "----------  ${S_SERVICE[log]} host path"
-
 path=${S_VM_PATH_LOG}/php7
 _lxc_exec ${S_SERVICE[log]} "[ -d ${path} ] || mkdir -p ${path}"
 
 
 _echoT "----------  ${S_SERVICE[log]} host"
-
 file=/etc/rsyslog.d/${file_rsyslog_host##*/}
 _eval lxc file push ${file_rsyslog_host} ${S_SERVICE[log]}${file}
 _lxc_var_replace ${S_SERVICE[log]} ${file} rsyslog php
 
 _echoT "----------  rsyslog restart ${S_SERVICE[log]}"
-
 _lxc_exec ${S_SERVICE[log]} "rc-service rsyslog restart"
 
 
 _echoT "----------  ${_CT_NAME} client path"
-
 path=${S_PATH_LOG}/php7
 _lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
 
 _echoT "----------  ${_CT_NAME} client"
-
 file=/etc/rsyslog.d/${file_rsyslog_client##*/}
 _eval lxc file push ${file_rsyslog_client} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} rsyslog php
 
 _echoT "----------  rsyslog restart ${_CT_NAME}"
-
 _lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
 
 
 ########################  LOGROTATE
 
 _echoT "----------  ${S_SERVICE[log]} logrotate"
-
 file=/etc/logrotate.d/${file_logrotate_host##*/}
 _eval lxc file push ${file_logrotate_host} ${S_SERVICE[log]}${file}
 _lxc_var_replace ${S_SERVICE[log]} ${file} logrotate
 
+_echoT "----------  ${S_SERVICE[log]} crond restart"
+_lxc_exec ${S_SERVICE[log]} "rc-service crond restart"
+
 
 _echoT "----------  ${_CT_NAME} logrotate"
-
 file=/etc/logrotate.d/${file_logrotate_client##*/}
 _eval lxc file push ${file_logrotate_client} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} logrotate
+
+_echoT "----------  ${_CT_NAME} crond restart"
+_lxc_exec ${_CT_NAME} "rc-service crond restart"
 
 
 ########################  CLEAN LOG
 
 _echoT "----------  ${_CT_NAME} log clean"
-
 _lxc_exec ${_CT_NAME} "find ${S_PATH_LOG}/php7 -name *.log -exec rm {} \;"
 
 

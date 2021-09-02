@@ -9,7 +9,7 @@ _echoT "\n==========================================  ${_RELEASE_ID} ${_PART}"
 
 _echoT "----------  ${_RELEASE_ID} data"
 
-[ -z ${_RELEASE_NAME+x} ] && anstmp="3.14" && _askno "Give a version image container for LXC ${_RELEASE_ID} ($anstmp)" && _RELEASE_NAME="${_ANSWER:-$anstmp}" && _confset _RELEASE_NAME "${_RELEASE_NAME}"
+[ -z ${_RELEASE_NAME+x} ] && anstmp="3.14" && _askno "Give a version image container for LXC ${_RELEASE_ID} (${anstmp})" && _RELEASE_NAME="${_ANSWER:-$anstmp}" && _confset _RELEASE_NAME "${_RELEASE_NAME}"
 
 [ -z ${_RELEASE+x} ] && _RELEASE=${_RELEASE_ID}${_RELEASE_NAME} && _confset _RELEASE "${_RELEASE}"
 
@@ -99,6 +99,8 @@ done
 
 _lxc_exec ${_CT_NAME} "chown -R 0:0 ${S_PATH_CONF_SSL} && chmod -R 750 ${S_PATH_CONF_SSL}"
 _lxc_exec ${_CT_NAME} "chmod 700 -R ${S_PATH_CONF_SSL}/private"
+
+[ -h /server ] || ln -s /etc/server /server
 
 
 ########################  END
