@@ -1,7 +1,7 @@
 # included file for haproxy configuration
 
 listen stats-S_DOMAIN_NAME
-	bind			*:1778
+	bind			*:_HPX_STATS_2_PORT
 
 	log				global
 	mode			http

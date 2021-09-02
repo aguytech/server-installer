@@ -20,5 +20,4 @@ frontend	http
 	#redirect				scheme https code 301 if !S_DOMAIN_NAME-check !{ ssl_fc }
 
 	#use_backend	admin if admin
-	use_backend		S_DOMAIN_NAME if S_DOMAIN_NAME
-	use_backend		S_DOMAIN_NAME if S_DOMAIN_NAME-check
+	use_backend		S_DOMAIN_NAME if S_DOMAIN_NAME || S_DOMAIN_NAME-check

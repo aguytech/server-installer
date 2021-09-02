@@ -1,7 +1,7 @@
 # included file for haproxy configuration
 
 listen stats
-	bind			*:S_HAPROXY_STATS_PORT
+	bind			*:_HPX_STATS_PORT
 
 	log				global
 	mode			http
