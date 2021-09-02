@@ -128,7 +128,9 @@ S_RSYSLOG_PORT="514"
 
 ########################  HAPROXY
 # port for haproxy statistics
-S_HAPROXY_STATS_PORT="1777 1778"
+S_HAPROXY_STATS_PORTS="1777 1778"
+# port for letsencrypt
+S_LETSENCRYPT_PORT="8079"
 
 ########################  LXD
 # port for lxd

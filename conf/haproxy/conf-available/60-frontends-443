@@ -2,7 +2,8 @@
 # included file for haproxy configuration
 
 frontend	https
-	bind	*:443 ssl crt-list /etc/server/ssl/private/letsencrypt.pem.lst
+	bind *:443			ssl crt-list /etc/server/ssl/private/letsencrypt.pem.lst
+	#bind *:443		ssl crt /etc/server/ssl/private/ambau.ovh.pem
 
 	default_backend		default
 
@@ -12,11 +13,10 @@ frontend	https
 	acl S_DOMAIN_NAME					hdr_end(host) -i S_DOMAIN_FQDN
 	#acl wigwam					hdr(host) -i cloud.wigwam.bzh cloud.coworking-lannion.org
 	acl _HPX_DOMAIN_2_NAME				hdr_end(host) -i _HPX_DOMAIN_2_FQDN
-
 	acl S_DOMAIN_NAME-admin		hdr(host) admin.S_DOMAIN_FQDN matomo.S_DOMAIN_FQDN monitor.S_DOMAIN_FQDN pfa.S_DOMAIN_FQDN pma.S_DOMAIN_FQDN
+	acl letsencrypt		path_beg /.well-known/acme-challenge/
 
 	#acl _HPX_DOMAIN_2_NAME-admin	hdr(host) admin._HPX_DOMAIN_2_FQDN matomo._HPX_DOMAIN_2_FQDN monitor._HPX_DOMAIN_2_FQDN pfa._HPX_DOMAIN_2_FQDN pma._HPX_DOMAIN_2_FQDN
-	#acl letsencrypt	path_beg /.well-known/acme-challenge/
 	#acl admin-dev		src 92.154.29.60 129.20.228.3 129.20.228.19 129.20.228.20 129.20.228.21
 
 	#redirect	prefix	https://info.otokoz.ovh code 301 if { hdr(host) -i info.S_DOMAIN_FQDN }
@@ -28,4 +28,4 @@ frontend	https
 	#use_backend			S_DOMAIN_NAME-test if S_DOMAIN_NAME-test
 	use_backend				_HPX_DOMAIN_2_NAME if _HPX_DOMAIN_2_NAME
 	#use_backend				wigwam if wigwam
-	#use_backend			letsencrypt if letsencrypt
+	use_backend			letsencrypt if letsencrypt

@@ -25,7 +25,7 @@ fdisk /dev/sda # m p F n w | extend with lxd:+50G / save:available
 blkid|grep -v squashfs
 
 apt update && apt -y dist-upgrade
-/usr/local/install/ubuntu.install # sed -i 's|ambau|otokoz|g' /etc/server/server.conf && grep otokoz /etc/server/server.conf
+/usr/local/install/ubuntu.install # sed -i 's|ambau|ggj|g' /etc/server/server.conf && grep ggj /etc/server/server.conf
 MANUALLY
 
 ######################## CONF

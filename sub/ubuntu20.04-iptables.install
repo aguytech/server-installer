@@ -35,7 +35,6 @@ _echoT "----------  sysctl conf"
 
 file=/etc/sysctl.conf
 _keepcpts ${file}
-sed -i 's|||' ${file}
 echo "
 # iptables
 net.ipv4.ip_forward = ${_SOMAXCONN}
@@ -45,15 +44,12 @@ net.ipv4.tcp_max_tw_buckets = ${_MAX_TW_BUCKETS}
 net.ipv4.tcp_fin_timeout= ${_FIN_TIMEOUT}
 net.ipv4.tcp_keepalive_time= ${_KEEPALIVE_TIME}
 net.ipv4.tcp_keepalive_intvl= ${_KEEPALIVE_INTVL}
-net.ipv4.tcp_keepalive_probes = ${_KEEPALIVE_PROBES}" > ${file}
+net.ipv4.tcp_keepalive_probes = ${_KEEPALIVE_PROBES}" >> ${file}
 
 _echoT "----------  sysctl restart"
-
-systemctl restart systemd-sysctl.service
-
+_service restart systemd-sysctl
 
 _echoT "----------  network forward"
-
 # allow forwading
 file=/proc/sys/net/ipv4/ip_forward
 grep -q 1 ${file} || echo 1 > ${file}
@@ -62,6 +58,7 @@ _eval sysctl net.ipv4.ip_forward=1
 
 file=/etc/sysctl.conf
 _eval "sed -i 's|^#\?\(net.ipv4.ip_forward\)=.*|\1=1|' ${file}"
+
 
 ########################  FIREWALL
 

@@ -39,12 +39,12 @@ _CT_NAME=${S_SERVICE[proxy]}
 eval ${S_HOST_VM_ETH[default]}
 _CT_IP=${s_base}.${S_SERVICE_BITS[proxy]}
 
-_HPX_STATS_PORT=${S_HAPROXY_STATS_PORT%% *}
-_HPX_STATS_2_PORT=${S_HAPROXY_STATS_PORT#* } && _HPX_STATS_2_PORT=${_HPX_STATS_2_PORT%% *}
+_HPX_STATS_PORT=${S_HAPROXY_STATS_PORTS%% *}
+_HPX_STATS_2_PORT=${S_HAPROXY_STATS_PORTS#* } && _HPX_STATS_2_PORT=${_HPX_STATS_2_PORT%% *}
 
 _echoT "----------  data"
 
-[ -z ${_HPX_DOMAIN_2_FQDN+x} ] && anstmp="ggj.ovh" && _askno "Give a second fqdn second domain name (${anstmp})" && _HPX_DOMAIN_2_FQDN="${_ANSWER:-$anstmp}" && _confset _HPX_DOMAIN_2_FQDN "$_HPX_DOMAIN_2_FQDN"
+[ -z ${_HPX_DOMAIN_2_FQDN+x} ] && anstmp="otokoz.ovh" && _askno "Give a second fqdn second domain name (${anstmp})" && _HPX_DOMAIN_2_FQDN="${_ANSWER:-$anstmp}" && _confset _HPX_DOMAIN_2_FQDN "$_HPX_DOMAIN_2_FQDN"
 _HPX_DOMAIN_2_NAME="${_HPX_DOMAIN_2_FQDN%.*}" && _confset _HPX_DOMAIN_2_NAME "${_HPX_DOMAIN_2_NAME}"
 
 [ -z ${_HPX_ACCESS_USER+x} ] && anstmp="admin" && _askno "Enter a name for stats access (${anstmp})" && _HPX_ACCESS_USER="${_ANSWER:-$anstmp}" && _confset _HPX_ACCESS_USER "${_HPX_ACCESS_USER}"
@@ -104,11 +104,11 @@ _lxc_exec ${_CT_NAME} "echo '${txt}' > ${file}"
 
 _echoT "----------  proxy httpx"
 for port in 80 443; do
-	_eval lxc config device add ${_CT_NAME} http proxy listen=tcp:0.0.0.0:${port}
+	_eval lxc config device add ${_CT_NAME} http-${port} proxy listen=tcp:0.0.0.0:${port} connect=tcp:127.0.0.1:${port}
 done
 
 _echoT "----------  proxy stats"
-for port in ${S_HAPROXY_STATS_PORT}; do
+for port in ${S_HAPROXY_STATS_PORTS}; do
 	_eval lxc config device add ${_CT_NAME} stats-${port} proxy listen=tcp:0.0.0.0:${port} connect=tcp:127.0.0.1:${port}
 done
 
@@ -188,9 +188,10 @@ _echoT "----------  haproxy stop"
 _lxc_exec ${_CT_NAME} "rc-service haproxy stop"
 
 _echoT "----------  letsencrypt first run"
-subs="ada admin blog carte chat chiffres cloud cms code compta dev diaspora discord discourse down elastik filerun files forum gestion git gitea gitlab graylog imap info kibana links log mail manage matomo metrics monitor mx nextcloud pfa pma roundcube shaarli smtp snippet social st stats test tuleap vma vmail webmail wiki www zabbix" #  mail10 mx10
+subs="ada admin blog carte chat chiffres cloud cms code compta dev diaspora discord discourse down elastik files forum gestion git gitea gitlab graylog imap info kibana links log mail manage matomo metrics monitor mx nextcloud pfa pma roundcube shaarli smtp snippet social st stats test tuleap vma vmail webmail wiki www zabbix" #  mail10 mx10
 str="-d ${S_DOMAIN_FQDN}"; for sub in ${subs}; do str+=" -d ${sub}.${S_DOMAIN_FQDN}"; done
-_lxc_exec ${_CT_NAME} "certbot certonly --standalone --preferred-challenges http --http-01-port 80 ${str}"
+cmd="certbot certonly --standalone --preferred-challenges --non-interactive --agree-tos --email aguytech@free.fr http --http-01-port 80 ${str}"
+_lxc_exec ${_CT_NAME} "${cmd}"
 
 _echoT "----------  letsencrypt pem"
 path=${S_PATH_CONF_SSL}/private

@@ -292,9 +292,11 @@ service=apache2
 _echoT "----------  ${_CT_NAME} ${service} restart"
 _lxc_exec ${_CT_NAME} "rc-service ${service} restart"
 
-_echoT "----------  ${S_SERVICE[proxy]} reload haproxy reload"
-_lxc_exec ${S_SERVICE[proxy]} "rc-service haproxy reload"
+if lxc image list -f csv -c l | grep -q ^${S_SERVICE[proxy]}$; then
 
+	_echoT "----------  ${S_SERVICE[proxy]} reload haproxy reload"
+	_lxc_exec ${S_SERVICE[proxy]} "rc-service haproxy reload"
+fi
 
 ########################  RSYSLOG
 

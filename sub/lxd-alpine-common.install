@@ -125,7 +125,7 @@ _lxc_exec ${_CT_NAME} "rc-service rsyslog start"
 _echoT "----------  logrotate global"
 
 file=/etc/logrotate.conf
-_eval  sed -i '/^#dateext/ s|^#||' ${file}
+_lxc_exec ${_CT_NAME} "sed -i '/^#dateext/ s|^#||' ${file}"
 
 
 _echoT "----------  logrotate install"

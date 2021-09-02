@@ -128,7 +128,7 @@ _echoT "----------  iptables client conf"
 
 path=${S_PATH_LOG}/iptables
 [ -d ${path} ] || _evalr mkdir -p ${path}
-[ grep -q syslog /etc/passwd ] && _evalr chown syslog ${path}
+grep -q syslog /etc/passwd && _evalr chown syslog ${path}
 
 file=/etc/rsyslog.d/34-${file_rsyslog_client_iptables##*/}
 _evalr cp -a ${file_rsyslog_client_iptables} ${file}

@@ -351,12 +351,20 @@ fi
 
 ########################  HAPROXY
 
-_echoT "----------  S_HAPROXY_STATS_PORT"
+_echoT "----------  S_HAPROXY_STATS_PORTS"
 
-if [ -z "${S_HAPROXY_STATS_PORT}" ]; then
+if [ -z "${S_HAPROXY_STATS_PORTS}" ]; then
 	anstmp="1777 1778"
 	_askno "ports for haproxy statistics (${anstmp})"
-	S_HAPROXY_STATS_PORT=${_ANSWER:-${anstmp}} && _confset S_HAPROXY_STATS_PORT "${S_HAPROXY_STATS_PORT}" "${S_GLOBAL_CONF}"
+	S_HAPROXY_STATS_PORTS=${_ANSWER:-${anstmp}} && _confset S_HAPROXY_STATS_PORTS "${S_HAPROXY_STATS_PORTS}" "${S_GLOBAL_CONF}"
+fi
+
+_echoT "----------  S_LETSENCRYPT_PORT"
+
+if [ -z "${S_LETSENCRYPT_PORT}" ]; then
+	anstmp="8079"
+	_askno "port for letsencrypt (${anstmp})"
+	S_LETSENCRYPT_PORT=${_ANSWER:-${anstmp}} && _confset S_LETSENCRYPT_PORT "${S_LETSENCRYPT_PORT}" "${S_GLOBAL_CONF}"
 fi
 
 ########################  LXD

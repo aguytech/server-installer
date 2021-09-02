@@ -456,7 +456,7 @@ _service restart rsyslog
 _echoT "----------  logrotate global"
 
 file=/etc/logrotate.conf
-_eval  sed -i '/^#dateext/ s|^#||' ${file}
+_eval  "sed -i '/^#dateext/ s|^#||' ${file}"
 
 _echoT "----------  logrotate server"
 

@@ -5,8 +5,8 @@
 backend	default
 	server	default  S_SERVICE[http]:80 maxconn 20 check
 
-#backend				letsencrypt
-#	server					letsencrypt 127.0.0.1:50000
+backend				letsencrypt
+	server				letsencrypt 127.0.0.1:50000
 
 backend S_DOMAIN_NAME
 	#option				httpchk GET /ping-monitor "HTTP/1.1\r\nHost: S_DOMAIN_FQDN"
