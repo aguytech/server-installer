@@ -23,7 +23,7 @@ $cfg['LoginCookieValidity'] = 60*60*4;
 /**
  * Prevents ssl error
  */
-$cfg['PmaAbsoluteUri'] = '_PMA_URL';
+$cfg['PmaAbsoluteUri'] = '_PMA_URI';
 
 /**
  * Servers configuration

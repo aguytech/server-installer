@@ -20,10 +20,8 @@ file_rsyslog_client=${S_PATH_INSTALL_CONF}/rsyslog/client-redis.conf
 file_logrotate_host=${S_PATH_INSTALL_CONF}/logrotate/host-redis
 file_logrotate_client=${S_PATH_INSTALL_CONF}/logrotate/client-redis
 
-
 _echoT "------------------ required files"
 _require ${file_rsyslog_host} ${file_rsyslog_client} ${file_logrotate_host} ${file_logrotate_client}
-
 
 ########################  DATA
 
@@ -32,6 +30,9 @@ _CT_NAME=${S_SERVICE[cache]}
 #eval ${S_HOST_VM_ETH[default]}
 #_CT_IP=${s_base}.${S_SERVICE_BITS[cache]}
 
+_echoT "----------  data"
+
+[ -z ${_RDS_CLIENT+x} ] && anstmp=y && _askno "Install redis-client (${anstmp})" && _RDS_CLIENT="${_ANSWER:-$anstmp}" && _confset _RDS_CLIENT "${_RDS_CLIENT}"
 
 _echoT "----------  data sysctl.conf"
 
@@ -41,12 +42,11 @@ _echoT "----------  data sysctl.conf"
 
 [ -z ${_RDS_FIN_TIMEOUT+x} ] && anstmp="${_FIN_TIMEOUT}" && _askno "Set $(sysctl net.ipv4.tcp_fin_timeout) - (${anstmp})" && _RDS_FIN_TIMEOUT="${_ANSWER:-$anstmp}" && _confset _RDS_FIN_TIMEOUT "${_RDS_FIN_TIMEOUT}"
 
-[ -z ${_RDS_KEEPALIVE_TIME+x} ] && anstmp="240" && _askno "Set $(sysctl net.ipv4.tcp_keepalive_time) - (${anstmp})" && _RDS_KEEPALIVE_TIME="${_ANSWER:-$anstmp}" && _confset _RDS_KEEPALIVE_TIME "${_RDS_KEEPALIVE_TIME}"
+[ -z ${_RDS_KEEPALIVE_TIME+x} ] && anstmp=240 && _askno "Set $(sysctl net.ipv4.tcp_keepalive_time) - (${anstmp})" && _RDS_KEEPALIVE_TIME="${_ANSWER:-$anstmp}" && _confset _RDS_KEEPALIVE_TIME "${_RDS_KEEPALIVE_TIME}"
 
-[ -z ${_RDS_KEEPALIVE_INTVL+x} ] && anstmp="30" && _askno "Set $(sysctl net.ipv4.tcp_keepalive_intvl) - (${anstmp})" && _RDS_KEEPALIVE_INTVL="${_ANSWER:-$anstmp}" && _confset _RDS_KEEPALIVE_INTVL "${_RDS_KEEPALIVE_INTVL}"
+[ -z ${_RDS_KEEPALIVE_INTVL+x} ] && anstmp=30 && _askno "Set $(sysctl net.ipv4.tcp_keepalive_intvl) - (${anstmp})" && _RDS_KEEPALIVE_INTVL="${_ANSWER:-$anstmp}" && _confset _RDS_KEEPALIVE_INTVL "${_RDS_KEEPALIVE_INTVL}"
 
-[ -z ${_RDS_KEEPALIVE_PROBES+x} ] && anstmp="9" && _askno "Set $(sysctl net.ipv4.tcp_keepalive_probes) - (${anstmp})" && _RDS_KEEPALIVE_PROBES="${_ANSWER:-$anstmp}" && _confset _RDS_KEEPALIVE_PROBES "${_RDS_KEEPALIVE_PROBES}"
-
+[ -z ${_RDS_KEEPALIVE_PROBES+x} ] && anstmp=9 && _askno "Set $(sysctl net.ipv4.tcp_keepalive_probes) - (${anstmp})" && _RDS_KEEPALIVE_PROBES="${_ANSWER:-$anstmp}" && _confset _RDS_KEEPALIVE_PROBES "${_RDS_KEEPALIVE_PROBES}"
 
 _echoT "----------  data redis"
 
@@ -54,11 +54,11 @@ _echoT "----------  data redis"
 
 [ -z "${_RDS_KEEPALIVE+x}" ] && anstmp="$(( ${_APA_KEEPALIVE_TIME} + 60 ))" && _askno "Give time to keep alive (sends acks) 'tcp-keepalive' (${anstmp})s" && _RDS_KEEPALIVE="${_ANSWER:-$anstmp}" && _confset _RDS_KEEPALIVE "${_RDS_KEEPALIVE}"
 
-[ -z "${_RDS_TIMEOUT+x}" ] && anstmp="3600" && _askno "Give time to idle connection 'timeout' (${anstmp})s" && _RDS_TIMEOUT="${_ANSWER:-$anstmp}" && _confset _RDS_TIMEOUT "${_RDS_TIMEOUT}"
+[ -z "${_RDS_TIMEOUT+x}" ] && anstmp=3600 && _askno "Give time to idle connection 'timeout' (${anstmp})s" && _RDS_TIMEOUT="${_ANSWER:-$anstmp}" && _confset _RDS_TIMEOUT "${_RDS_TIMEOUT}"
 
-[ -z "${_RDS_DATABASES+x}" ] && anstmp="16" && _askno "Give a number of max 'databases' (${anstmp})" && _RDS_DATABASES="${_ANSWER:-$anstmp}" && _confset _RDS_DATABASES "${_RDS_DATABASES}"
+[ -z "${_RDS_DATABASES+x}" ] && anstmp=16 && _askno "Give a number of max 'databases' (${anstmp})" && _RDS_DATABASES="${_ANSWER:-$anstmp}" && _confset _RDS_DATABASES "${_RDS_DATABASES}"
 
-[ -z "${_RDS_LOGLEVEL+x}" ] && anstmp="notice" && _askno "Give the log level 'loglevel': debug/verbose/notice/warning  (${anstmp})" && _RDS_LOGLEVEL="${_ANSWER:-$anstmp}" && _confset _RDS_LOGLEVEL "${_RDS_LOGLEVEL}"
+[ -z "${_RDS_LOGLEVEL+x}" ] && anstmp=notice && _askno "Give the log level 'loglevel': debug/verbose/notice/warning  (${anstmp})" && _RDS_LOGLEVEL="${_ANSWER:-$anstmp}" && _confset _RDS_LOGLEVEL "${_RDS_LOGLEVEL}"
 
 
 ########################  INIT
@@ -101,8 +101,10 @@ _lxc_exec ${_CT_NAME} "echo '${txt}' > ${file}"
 
 ########################  INSTALL
 
-_echoT "----------  host install"
-_install -y redis-tools
+if [ "${_RDS_CLIENT}" = y ]; then
+	_echoT "----------  host install"
+	_install redis-tools
+fi
 
 
 _echoT "----------  install"
@@ -201,7 +203,7 @@ _lxc_exec ${_CT_NAME} "find ${S_PATH_LOG}/redis -name *.log -exec rm {} \;"
 
 ########################  TEST
 
-_echoT "----------  redis test acces"
+_echoT "----------  redis test access"
 
 _echo "timeout 3 redis-cli -h ${_CT_NAME} ping"
 _eval "timeout 3 redis-cli -h ${_CT_NAME} ping 2>/dev/null"

@@ -68,7 +68,6 @@ _lxc_exec ${_CT_NAME} "chmod 700 -R ${S_PATH_CONF}"
 ########################  SYSLOG
 
 _echoT "----------  syslog remove"
-
 _lxc_exec ${_CT_NAME} "rc-service syslog stop"
 _lxc_exec ${_CT_NAME} "rc-status boot|grep -q '^\s*syslog\s' && rc-update del syslog boot"
 
@@ -76,14 +75,12 @@ _lxc_exec ${_CT_NAME} "rc-status boot|grep -q '^\s*syslog\s' && rc-update del sy
 ########################  RSYSLOG
 
 _echoT "----------  rsyslog install"
-
 _lxc_exec ${_CT_NAME} "apk list -I|grep -q ^rsyslog || apk add rsyslog"
 path="/etc/rsyslog.d"
 _lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir ${path}"
 
 
 _echoT "----------  rsyslog vm enable"
-
 service="rsyslog"
 _lxc_exec ${_CT_NAME} "rc-update add ${service}"
 
@@ -109,45 +106,38 @@ _lxc_var_replace ${_CT_NAME} ${file} rsyslog
 
 
 _echoT "----------  rsyslog client-auth"
-
 file=/etc/rsyslog.d/${file_rsyslog_client_auth##*/}
 _eval lxc file push ${file_rsyslog_client_auth} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} rsyslog
 
 
 _echoT "----------  rsyslog vm start"
-
 _lxc_exec ${_CT_NAME} "rc-service rsyslog start"
 
 
 ########################  LOGROTATE
 
-_echoT "----------  logrotate global"
+_echoT "----------  logrotate install"
+_lxc_exec ${_CT_NAME} "apk list -I | grep -q ^logrotate || apk add logrotate"
 
+
+_echoT "----------  logrotate global"
 file=/etc/logrotate.conf
 _lxc_exec ${_CT_NAME} "sed -i '/^#dateext/ s|^#||' ${file}"
 
 
-_echoT "----------  logrotate install"
-
-_lxc_exec ${_CT_NAME} "apk list -I | grep -q ^logrotate || apk add logrotate"
-
-
 _echoT "----------  logrotate host_server"
-
 file=/etc/logrotate.d/${file_logrotate_server##*/}
 _evalr cp -a ${file_logrotate_server} ${file}
 _var_replace ${file} logrotate
 
 _echoT "----------  logrotate host restart"
-
 _service restart rsyslog
 
 
 ########################  CRON
 
 _echoT "----------  cron"
-
 file="/etc/crontabs/root"
 _lxc_exec ${_CT_NAME} "sed -i '/^\*\/15/ s|^|#|' ${file}"
 _lxc_exec ${_CT_NAME} "rc-service crond restart"
@@ -156,7 +146,6 @@ _lxc_exec ${_CT_NAME} "rc-service crond restart"
 ########################  PUBLISH
 
 _echoT "----------  publish ${_CT_NAME}"
-
 _eval lxc image list -f csv -c l | grep -q ^${_CT_NAME_COM}$ && lxc image alias rename ${_CT_NAME_COM} ${_CT_NAME_COM}-$(date +%s)
 _eval lxc publish --force ${_CT_NAME} --alias ${_CT_NAME_COM}
 

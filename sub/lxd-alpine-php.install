@@ -193,8 +193,9 @@ cmds=; while read str val; do
 "; done <<< "opcache.enable 1
 opcache.enable_cli  0
 opcache.memory_consumption  128
-opcache.interned_strings_buffer  8
+opcache.interned_strings_buffer  16
 opcache.max_accelerated_files  10000
+validate_timestamps  1
 opcache.revalidate_freq  4
 opcache.save_comments  1"
 _lxc_exec ${_CT_NAME} "${cmds}"
@@ -373,7 +374,7 @@ _lxc_var_replace ${_CT_NAME} ${file} apache php
 
 _echoT "----------  ${S_SERVICE[proxy]} ${S_DOMAIN_NAME}1 "
 file=/etc/haproxy/conf-available/80-backends
-_lxc_exec ${S_SERVICE[proxy]} "sed -i 's|${S_SERVICE[http]}|${S_SERVICE[php]}|' ${file}"
+_lxc_exec ${S_SERVICE[proxy]} "sed -i 's|${S_SERVICE[http]}|${S_SERVICE[php]}|g' ${file}"
 
 
 ########################  RESTART

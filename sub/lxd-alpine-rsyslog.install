@@ -158,7 +158,7 @@ _lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
 _echoT "----------  lxd client conf"
 path=${S_PATH_LOG}/lxd
 [ -d ${path} ] || _evalr mkdir -p ${path}
-_evalr chown syslog ${path}
+grep -q syslog /etc/passwd && _evalr chown syslog ${path}
 
 file=/etc/rsyslog.d/36-${file_rsyslog_client_lxd##*/}
 _evalr cp -a ${file_rsyslog_client_lxd} ${file}

@@ -14,6 +14,10 @@ cts_maria=`lxc list -f json | jq -r '.[] | select(.profiles | any(contains("mari
 [ -z "${cts_php}" ] && _exite "unable to find container with php* profile"
 [ -z "${cts_maria}" ] && _exite "unable to find container with php* profile"
 
+file_conf=${_APA_PATH_DOMAIN}/pma/config.inc.php
+
+_echoT "------------------ required files"
+_require ${file_rsyslog_host} ${file_rsyslog_client} ${file_logrotate_host} ${file_logrotate_client}
 
 ########################  DATA
 
@@ -34,7 +38,6 @@ file_pma_tmp=/tmp/${file_pma}
 uri=https://files.phpmyadmin.net/phpMyAdmin/${pma_version}/${file_pma}
 path_sites=/etc/apache2/sites
 file_site=${S_PATH_INSTALL_CONF}/apache2/admin.conf
-file_conf=${S_PATH_INSTALL_CONF}/pma-config.php
 
 <<KEEP
 # _CT_NAME
@@ -96,7 +99,7 @@ KEEP
 
 _APA_PATH_DOMAIN=${S_VM_PATH_SHARE}/www/${_APA_DOMAIN}
 _APA_SUBDOMAIN=admin
-_PMA_URL=https://${_APA_SUBDOMAIN}.${S_DOMAIN_FQDN}
+_PMA_URI=https://${_APA_SUBDOMAIN}.${S_DOMAIN_FQDN}
 _PMA_HOST=${cts_maria%% *}
 _PMA_PORT=${S_DB_MARIA_PORT}
 _PMA_USER=pma
@@ -245,7 +248,7 @@ _lxc_exec ${_CT_NAME} "cd ${path} && ln -sv ${file_pma%.tar.gz} pma"
 
 _echoT "----------  ${domain} pma conf"
 
-file=${_APA_PATH_DOMAIN}/pma/config.inc.php
+file=${_APA_PATH_DOMAIN}/${file_site##*/}
 _eval lxc file push ${file_conf} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} pma
 

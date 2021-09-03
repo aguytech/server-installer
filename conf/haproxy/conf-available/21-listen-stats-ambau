@@ -1,6 +1,6 @@
 # included file for haproxy configuration
 
-listen stats-S_DOMAIN_NAME
+listen stats-S_DOMAIN_FQDN
 	bind			*:_HPX_STATS_2_PORT
 
 	log				global
@@ -12,7 +12,7 @@ listen stats-S_DOMAIN_NAME
 	#stats			scope . # . for only this section
 	stats			scope S_DOMAIN_FQDN:80
 	stats			scope S_DOMAIN_FQDN:443
-	stats			scope S_DOMAIN_NAME
+	stats			scope S_DOMAIN_FQDN
 	#stats			scope admin
 	stats			enable
 	stats			hide-version

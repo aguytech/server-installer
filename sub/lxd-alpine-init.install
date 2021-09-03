@@ -20,7 +20,7 @@ _CT_NAME="${_RELEASE/./}"
 
 _echoT "----------  ${_RELEASE} copy"
 
-if ! [ "`lxc image list -f json | jq -r '.[].aliases[].name | select(. | contains("'${_CT_NAME}'"))'`" ]; then
+if ! lxc image list -f json | jq -r '.[].aliases[].name'|grep -q ^${_CT_NAME}$; then
 	_echo "copy images ${_CT_NAME}"
 	_eval lxc image copy images:${_RELEASE_ID}/${_RELEASE_NAME} local: --alias ${_CT_NAME} --auto-update
 fi
@@ -100,7 +100,7 @@ done
 _lxc_exec ${_CT_NAME} "chown -R 0:0 ${S_PATH_CONF_SSL} && chmod -R 750 ${S_PATH_CONF_SSL}"
 _lxc_exec ${_CT_NAME} "chmod 700 -R ${S_PATH_CONF_SSL}/private"
 
-[ -h /server ] || ln -s /etc/server /server
+_lxc_exec ${_CT_NAME} "[ -h /server ] || ln -s /etc/server /server"
 
 
 ########################  END

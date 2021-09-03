@@ -56,6 +56,7 @@ pwd_master=${_ANSWER}
 ct_name=${ct_slave}
 ok=false; while ! ${ok}; do
 	anstmp=${pwd_master} && _askno "Password for user: 'roothost' for '${ct_name}' (${anstmp})"
+	_ANSWER="${_ANSWER:-$anstmp}"
 	mysql -s -h${ct_name} -uroothost -p${_ANSWER} -e '' && ok=true || _echo "Unable to connect to: ${ct_name}"
 done
 pwd_slave=${_ANSWER}
@@ -102,7 +103,7 @@ _eval "mysql -s -h${ct_name} -uroothost -p${pwd_master} -e \"SELECT user,host FR
 _echoT "----------  ${ct_name} passwd"
 file=${S_PATH_CONF}/mariadb
 strpass="replic @ % - ${pwd_replic}"
-cmd="grep -q ^replic ${file} && sed -i '/^replic/c ${strpass}'  ${file} || sed -i '$a ${strpass}' ${file}"
+cmd="grep -q ^replic ${file} && sed -i '/^replic/c ${strpass}'  ${file} || sed -i '\$a ${strpass}' ${file}"
 _lxc_exec ${ct_name} "${cmd}"
 
 _echoT "----------  ${ct_name} lock"
@@ -189,5 +190,4 @@ done
 ########################  END
 
 _echoT "===================== ${_PART} end"
-#_partadd ${_PART} ${S_FILE_INSTALL_DONE}
-
+_partadd ${_PART%++} ${S_FILE_INSTALL_DONE}

@@ -36,6 +36,9 @@ _MDB_PWD_REMOTE=`_pwd`
 
 _echoT "----------  data"
 
+[ -z ${_MDB_CLIENT+x} ] && anstmp=y && _askno "Install mariadb-client (${anstmp})" && _MDB_CLIENT="${_ANSWER:-$anstmp}" && _confset _MDB_CLIENT "${_MDB_CLIENT}"
+
+
 _MDB_SERVICE=mariadb && _confset _MDB_SERVICE "${_MDB_SERVICE}"
 _MDB_PATH_CONF=/etc/my.cnf.d && _confset _MDB_PATH_CONF "${_MDB_PATH_CONF}"
 
@@ -156,6 +159,12 @@ _eval lxc start ${_CT_NAME}
 
 
 ########################  INSTALL
+
+if [ "${_MDB_CLIENT}" = y ]; then
+	_echoT "----------  host install"
+	_install mariadb-client
+fi
+
 
 _echoT "----------  update"
 _lxc_exec ${_CT_NAME} "apk update"
@@ -309,7 +318,7 @@ _lxc_exec ${_CT_NAME} "find ${S_PATH_LOG}/mysql -name *.log -exec rm {} \;"
 _echoT "----------  ${_CT_NAME} passwd"
 
 file=${S_PATH_CONF}/mariadb
-strpass= ${strpass%\\n}
+strpass=${strpass%\\n}
 _lxc_exec ${_CT_NAME} "echo -e ${strpass//\\n/\\\\n} > ${file}"
 
 
@@ -317,7 +326,7 @@ _lxc_exec ${_CT_NAME} "echo -e ${strpass//\\n/\\\\n} > ${file}"
 
 _echoT "----------  host install mariadb-client"
 
-_install -y mariadb-client
+_install mariadb-client
 
 
 ########################  SHOW
@@ -356,7 +365,7 @@ _eval lxc publish --force ${_CT_NAME} --alias ${_CT_NAME}
 ########################  END
 
 _echoT "===================== ${_PART} end"
-#_partadd ${_PART} ${S_FILE_INSTALL_DONE}
+_partadd ${_PART%++} ${S_FILE_INSTALL_DONE}
 
 
 <<KEEP
