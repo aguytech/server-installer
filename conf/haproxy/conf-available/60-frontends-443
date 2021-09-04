@@ -20,7 +20,7 @@ frontend https
 
 	#redirect	prefix	https://info.otokoz.ovh code 301 if { hdr(host) -i info.S_DOMAIN_FQDN }
 
-	#use_backend				S_DOMAIN_FQDN-admin if S_DOMAIN_FQDN-admin
+	use_backend				S_DOMAIN_FQDN-admin if S_DOMAIN_FQDN-admin
 	#use_backend			S_DOMAIN_FQDN-admin if S_DOMAIN_FQDN-admin or _HPX_DOMAIN_2_FQDN-admin
 	use_backend				S_DOMAIN_FQDN if S_DOMAIN_FQDN
 	#use_backend			S_DOMAIN_FQDN if { hdr_end(host) -i S_DOMAIN_FQDN }

@@ -1,0 +1,14 @@
+resolvers lxd
+	nameserver dns1 _HPX_DNS_DEFAULT
+
+	#parse-resolv-conf
+	resolve_retries	3
+	timeout resolve	500
+	timeout retry		2s
+
+	hold valid		10s
+	hold other		30s
+	hold refused	30s
+	hold nx			30s
+	hold timeout	10s
+	hold obsolete	10s

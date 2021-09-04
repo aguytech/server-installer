@@ -58,6 +58,7 @@ _echoT "----------  data"
 _HPX_DOMAIN_2_NAME="${_HPX_DOMAIN_2_FQDN%.*}" && _confset _HPX_DOMAIN_2_NAME "${_HPX_DOMAIN_2_NAME}"
 _HPX_CT_NAME="${S_DOMAIN_FQDN//./-}" && _confset _HPX_CT_NAME "${_HPX_CT_NAME}"
 _HPX_CT_2_NAME="${_HPX_DOMAIN_2_FQDN//./-}" && _confset _HPX_CT_2_NAME "${_HPX_CT_2_NAME}"
+_HPX_DNS_DEFAULT="${s_base}.1:53" && _confset _HPX_DNS_DEFAULT "${_HPX_DNS_DEFAULT}"
 
 
 ########################  INIT
@@ -129,7 +130,6 @@ _lxc_exec ${_CT_NAME} "apk add haproxy bash bash-completion vim curl" # lnav
 _echoT "----------  service set"
 service=haproxy
 _lxc_exec ${_CT_NAME} "rc-update add ${service}"
-_lxc_exec ${_CT_NAME} "rc-service ${service} start"
 
 
 ########################  CONF
@@ -163,7 +163,7 @@ _lxc_var_replace ${_CT_NAME} ${path} haproxy
 _echoT "----------  conf enable"
 
 _lxc_exec ${_CT_NAME} "[ -d ${path}/conf-enabled ] || mkdir -p ${path}/conf-enabled"
-files="00-defaults 20-listen-stats 40-frontends-80 80-backends"
+files="00-defaults 02-resolvers-lxd 20-listen-stats 40-frontends-80 80-backends"
 [ ${S_DOMAIN_FQDN##*.} != lxd ] && files+=" 60-frontends-443"
 for str in ${files}; do
 	_lxc_exec ${_CT_NAME} "[ -e ${path}/conf-enabled/${str} ] || ln -s ${path}/conf-available/${str}  ${path}/conf-enabled/${str}"
@@ -178,11 +178,6 @@ _eval lxc file push ${file_haproxy_initd} ${_CT_NAME}/etc/init.d/haproxy
 _lxc_exec ${_CT_NAME} "chmod +x ${file}"
 
 
-_echoT "----------  restart"
-
-_lxc_exec ${_CT_NAME} "rc-service haproxy restart"
-
-
 if [ ${S_DOMAIN_FQDN##*.} != lxd ]; then
 
 	########################  letsencrypt
@@ -191,8 +186,10 @@ if [ ${S_DOMAIN_FQDN##*.} != lxd ]; then
 	# fullchain.pem: cert.pem and chain.pem combined
 	# privkey.pem: Your certificate’s private key
 
-	_echoT "----------  haproxy stop"
-	_lxc_exec ${_CT_NAME} "rc-service haproxy stop"
+	if lxc list -f csv -c n status=Running| grep -q ^${_CT_NAME}$; then
+		_echoT "----------  haproxy stop"
+		_lxc_exec ${_CT_NAME} "rc-service haproxy stop"
+	fi
 
 
 	_echoT "----------  letsencrypt install"
