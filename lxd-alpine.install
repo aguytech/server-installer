@@ -49,7 +49,7 @@ done
 while [ "${_PART}" != "quit" ]; do
 
 	partsall="$(sed -n "s|^\t*\([^)]\+\)) # .*${S_SERVER_TYPE}.*|\1|p" "$0"|xargs)"
-	partsadd="$(sed -n "s|^\t*\([^)]\+\)) # .*${S_SERVER_TYPE}.*|\1|p" "$0"|grep ++$|xargs)"
+	partsadd="$(sed -n "s|^\t*\([^)]\+\)) # .*${S_SERVER_TYPE}.*|\1|p" "$0"|grep ^++|xargs)"
 	partsrelease=" $(ls -1 "${_PATH_BASE_SUB}"/*lxd-${_RELEASE_ID}*|sed -n "s|.*lxd-${_RELEASE_ID}-\(.*\)\.install|\1|p"|xargs) "
 	partsrelease+="${partsadd} "
 	partsmade=" $(cat ${S_FILE_INSTALL_DONE}|xargs) "
@@ -73,34 +73,37 @@ while [ "${_PART}" != "quit" ]; do
 				break
 				;;
 			rsyslog) # ovh home
-				_source "${_PATH_BASE_SUB}/lxd-${_RELEASE_ID}-${_PART%++}.install"
+				_source "${_PATH_BASE_SUB}/lxd-${_RELEASE_ID}-${_PART#++}.install"
 				;;
 			apache) # ovh home
-				_source "${_PATH_BASE_SUB}/lxd-${_RELEASE_ID}-${_PART%++}.install"
+				_source "${_PATH_BASE_SUB}/lxd-${_RELEASE_ID}-${_PART#++}.install"
 				;;
 			haproxy) # ovh home
-				_source "${_PATH_BASE_SUB}/lxd-${_RELEASE_ID}-${_PART%++}.install"
+				_source "${_PATH_BASE_SUB}/lxd-${_RELEASE_ID}-${_PART#++}.install"
 				;;
 			redis) # ovh home
-				_source "${_PATH_BASE_SUB}/lxd-${_RELEASE_ID}-${_PART%++}.install"
+				_source "${_PATH_BASE_SUB}/lxd-${_RELEASE_ID}-${_PART#++}.install"
 				;;
 			php) # ovh home
-				_source "${_PATH_BASE_SUB}/lxd-${_RELEASE_ID}-${_PART%++}.install"
+				_source "${_PATH_BASE_SUB}/lxd-${_RELEASE_ID}-${_PART#++}.install"
 				;;
 			mariadb) # ovh home
-				_source "${_PATH_BASE_SUB}/lxd-${_RELEASE_ID}-${_PART%++}.install"
+				_source "${_PATH_BASE_SUB}/lxd-${_RELEASE_ID}-${_PART#++}.install"
 				;;
 			mariadb-ms) # ovh home
-				_source "${_PATH_BASE_SUB}/lxd-${_RELEASE_ID}-${_PART%++}.install"
+				_source "${_PATH_BASE_SUB}/lxd-${_RELEASE_ID}-${_PART#++}.install"
 				;;
 			phpmyadmin) # ovh home
-				_source "${_PATH_BASE_SUB}/lxd-${_RELEASE_ID}-${_PART%++}.install"
+				_source "${_PATH_BASE_SUB}/lxd-${_RELEASE_ID}-${_PART#++}.install"
 				;;
-			mariadb++) # ovh home
-				_source "${_PATH_BASE_SUB}/lxd-${_RELEASE_ID}-${_PART%++}.install"
+			++mariadb) # ovh home
+				_source "${_PATH_BASE_SUB}/lxd-${_RELEASE_ID}-${_PART#++}.install"
 				;;
-			mariadb-ms++) # ovh home
-				_source "${_PATH_BASE_SUB}/lxd-${_RELEASE_ID}-${_PART%++}.install"
+			++mariadb-ms) # ovh home
+				_source "${_PATH_BASE_SUB}/lxd-${_RELEASE_ID}-${_PART#++}.install"
+				;;
+			++phpmyadmin) # ovh home
+				_source "${_PATH_BASE_SUB}/lxd-${_RELEASE_ID}-${_PART#++}.install"
 				;;
 			*)
 				_echoE "Wrong option: '${_PART}'"

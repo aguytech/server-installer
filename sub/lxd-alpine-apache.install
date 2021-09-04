@@ -4,7 +4,7 @@
 
 _echoT "\n==========================================  ${_RELEASE} ${_PART}"
 
-grep -q "^# ${_PART}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART}" | _evalqr tee -a ${S_FILE_INSTALL_CONF}
+grep -q "^# ${_PART#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART}" | _evalqr tee -a ${S_FILE_INSTALL_CONF}
 
 ########################  REQUIRED
 
@@ -107,7 +107,6 @@ if lxc list -f csv -c n | grep -q ^${_CT_NAME}$; then
 		_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
 	fi
 fi
-
 _eval lxc init ${_CT_NAME_COM} ${_CT_NAME} -p default -p global -p ${profile}
 
 
@@ -246,7 +245,6 @@ _lxc_exec ${_CT_NAME} "sed -i '/<Location \/server-info>/,/<\/Location>/ {s|^\(\
 ########################  PING-MONITOR
 
 _echoT "----------  ping-monitor"
-
 _lxc_exec ${_CT_NAME} "echo 'pong' > ${_APA_PATH_WWW}/ping-monitor.html"
 
 cmd="echo 'Alias \"/ping-monitor\" \"${_APA_PATH_WWW}/ping-monitor.html
@@ -284,6 +282,13 @@ _lxc_exec ${S_SERVICE[log]} "[ -d ${path} ] || mkdir -p ${path}"
 
 # desactive default virtualhost site
 #_lxc_exec ${_CT_NAME} "mv ${file} ${file}.keep"
+
+
+########################  RIGHTS
+
+_echoT "----------  rights"
+_lxc_exec ${_CT_NAME} "chown nobody:nobody -R ${_APA_PATH_WWW}"
+_lxc_exec ${_CT_NAME} "chown nobody:nobody -R ${_APA_PATH_DOMAIN}/*"
 
 
 ########################  RESTART
@@ -353,14 +358,6 @@ _echoT "----------  ${_CT_NAME} log clean"
 _lxc_exec ${_CT_NAME} "find ${S_PATH_LOG}/apache2 -name *.log -exec rm {} \;"
 
 
-########################  PUBLISH
-
-_echoT "----------  publish ${_CT_NAME}"
-
-_eval lxc image list -f csv -c l | grep -q ^${_CT_NAME}$ && lxc image alias rename ${_CT_NAME} ${_CT_NAME}-$(date +%s)
-_eval lxc publish --force ${_CT_NAME} --alias ${_CT_NAME}
-
-
 ########################  TEST
 
 _echoT "----------  publish ${_CT_NAME}"
@@ -370,10 +367,18 @@ _echo "curl ${_CT_NAME}:80"
 _echo "curl ${_CT_NAME}/ping-monitor"
 
 
+########################  PUBLISH
+
+_echoT "----------  publish ${_CT_NAME}"
+
+_eval lxc image list -f csv -c l | grep -q ^${_CT_NAME}$ && lxc image alias rename ${_CT_NAME} ${_CT_NAME}-$(date +%s)
+_eval lxc publish --force ${_CT_NAME} --alias ${_CT_NAME}
+
+
 ########################  END
 
 _echoT "===================== ${_PART} end"
-_partadd ${_PART%++} ${S_FILE_INSTALL_DONE}
+_partadd ${_PART#++} ${S_FILE_INSTALL_DONE}
 
 
 <<KEEP

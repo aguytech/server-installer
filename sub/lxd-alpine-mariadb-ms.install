@@ -4,16 +4,9 @@
 
 _echoT "\n==========================================  ${_RELEASE} ${_PART}"
 
-grep -q "^# ${_PART}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART}" | _evalqr tee -a ${S_FILE_INSTALL_CONF}
+grep -q "^# ${_PART#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART}" | _evalqr tee -a ${S_FILE_INSTALL_CONF}
 
 ########################  REQUIRED
-
-_echoT "------------------ required vm image"
-lxc image list -f csv -c l | grep -q ^${S_SERVICE[sgbd]}$ || _exite "Unable to find image container: '${S_SERVICE[sgbd]}"
-
-_echoT "------------------ required vm"
-lxc list -f csv -c n | grep -q ^${S_SERVICE[log]}$ || _exite "Unable to find image container: '${S_SERVICE[log]}'"
-
 
 file_master="${S_PATH_INSTALL_CONF}/mariadb/mariadb-master.cnf"
 file_slave="${S_PATH_INSTALL_CONF}/mariadb/mariadb-slave.cnf"
@@ -94,15 +87,15 @@ _echoT "----------  ${ct_name} restart"
 _lxc_exec ${ct_name} "rc-service ${_MDB_SERVICE} restart"
 
 _echoT "----------  ${ct_name} replic"
-cmd="CREATE OR REPLACE USER 'replic'@'%' IDENTIFIED BY '${pwd_replic}';
-GRANT REPLICATION SLAVE ON *.* TO 'replic'@'%';"
+cmd="CREATE OR REPLACE USER 'replic'@'${ct_master}.lxd' IDENTIFIED BY '${pwd_replic}';
+GRANT REPLICATION SLAVE ON *.* TO 'replic'@'${ct_master}.lxd';"
 _eval "mysql -h${ct_name} -uroothost -p${pwd_master} -e \"FLUSH PRIVILEGES;\""
 _eval "mysql -h${ct_name} -uroothost -p${pwd_master} -e \"${cmd}\""
 _eval "mysql -s -h${ct_name} -uroothost -p${pwd_master} -e \"SELECT user,host FROM mysql.user WHERE user like 'replic';\""
 
 _echoT "----------  ${ct_name} passwd"
 file=${S_PATH_CONF}/mariadb
-strpass="replic @ % - ${pwd_replic}"
+strpass="replic @ ${ct_master}.lxd - ${pwd_replic}"
 cmd="grep -q ^replic ${file} && sed -i '/^replic/c ${strpass}'  ${file} || sed -i '\$a ${strpass}' ${file}"
 _lxc_exec ${ct_name} "${cmd}"
 
@@ -190,4 +183,4 @@ done
 ########################  END
 
 _echoT "===================== ${_PART} end"
-_partadd ${_PART%++} ${S_FILE_INSTALL_DONE}
+_partadd ${_PART#++} ${S_FILE_INSTALL_DONE}

@@ -32,7 +32,7 @@ _CT_NAME=${S_SERVICE[cache]}
 
 _echoT "----------  data"
 
-[ -z ${_RDS_CLIENT+x} ] && anstmp=y && _askno "Install redis-client (${anstmp})" && _RDS_CLIENT="${_ANSWER:-$anstmp}" && _confset _RDS_CLIENT "${_RDS_CLIENT}"
+[ -z ${_RDS_CLIENT+x} ] && anstmp=y && _askno "Install redis-client on Host (${anstmp})" && _RDS_CLIENT="${_ANSWER:-$anstmp}" && _confset _RDS_CLIENT "${_RDS_CLIENT}"
 
 _echoT "----------  data sysctl.conf"
 

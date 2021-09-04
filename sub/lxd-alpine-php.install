@@ -49,9 +49,13 @@ path_xdebug_trace=${path_php_share}/xdebug/trace
 
 
 #php_version=`_lxc_exec ${S_SERVICE[http]} "apk list php7-fpm | sed -n 's|php7-fpm-\([0-9\.]\+\)-.*|\1|p'"`
-php_modules="php7-bcmath php7-bz2 php7-ctype php7-curl php7-exif php7-fileinfo php7-dom php7-gd php7-gmp php7-iconv php7-imap php7-json php7-mbstring php7-openssl php7-pdo_mysql php7-opcache php7-pgsql php7-posix php7-session php7-simplexml php7-sqlite3 php7-xmlreader php7-xmlwriter php7-zip php7-xdebug php7-pecl-mcrypt php7-pecl-redis" #  php7-pecl-imagick php7-pear
+php_modules="php7-bcmath php7-bz2 php7-ctype php7-curl php7-exif php7-fileinfo php7-dom php7-gd php7-gmp php7-iconv php7-imap php7-json php7-mbstring php7-mysqli php7-openssl php7-pdo_mysql php7-opcache php7-pgsql php7-posix php7-session php7-simplexml php7-sqlite3 php7-xmlreader php7-xmlwriter php7-zip php7-xdebug php7-pecl-mcrypt php7-pecl-redis php7-xml" #  php7-pecl-imagick php7-pear
 
 _echoT "----------  data php"
+
+anstmp=www-${S_DOMAIN_FQDN//./-} && _askno "Base name of php containers to build (${anstmp})" && _PHP_BASENAME="${_ANSWER:-$anstmp}"
+
+anstmp=2 && _askno "Number of php containers to build (${anstmp})" && _PHP_CTS="${_ANSWER:-$anstmp}"
 
 [ -z ${_PHP_MAX_EXECUTION_TIME+x} ] && anstmp="20" && _askno "max_execution_time (${anstmp})s" && _PHP_MAX_EXECUTION_TIME="${_ANSWER:-$anstmp}" && _confset _PHP_MAX_EXECUTION_TIME "${_PHP_MAX_EXECUTION_TIME}"
 
@@ -343,11 +347,9 @@ _lxc_exec ${_CT_NAME} "[ -f ${file} ] && mv ${file} ${file}.keep"
 ########################  PING-MONITOR
 
 _echoT "----------  ping-monitor file"
-
 _lxc_exec ${_CT_NAME} "echo '<?php echo \"pong\"; ?>' > ${_APA_PATH_WWW}/ping-monitor.php"
 
 _echoT "----------  ping-monitor conf"
-
 file=${path_apache_conf}/${file_monitor##*/}
 _keepcpts ${file}
 _eval lxc file push ${file_monitor} ${_CT_NAME}${file}
@@ -357,17 +359,23 @@ _lxc_var_replace ${_CT_NAME} ${file} apache php
 ########################  OPCACHE
 
 _echoT "----------  opcache file"
-
 url=https://raw.githubusercontent.com/rlerdorf/opcache-status/master/opcache.php
 file=${_APA_PATH_WWW}/opcache.php
 _lxc_exec ${_CT_NAME} "wget -q ${url} -O ${file}"
 
 _echoT "----------  opcache conf"
-
 file=${path_apache_conf}/${file_opcache##*/}
 _keepcpts ${file}
 _eval lxc file push ${file_opcache} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} apache php
+
+
+########################  RIGHTS
+
+_echoT "----------  rights"
+_lxc_exec ${_CT_NAME} "chown nobody:nobody -R ${path_php_share}/*"
+_lxc_exec ${_CT_NAME} "chown nobody:nobody -R ${_APA_PATH_WWW}"
+_lxc_exec ${_CT_NAME} "chown nobody:nobody -R ${_APA_PATH_DOMAIN}/*"
 
 
 ########################  HAPROXY
@@ -442,6 +450,17 @@ _lxc_exec ${_CT_NAME} "rc-service crond restart"
 
 _echoT "----------  ${_CT_NAME} log clean"
 _lxc_exec ${_CT_NAME} "find ${S_PATH_LOG}/php7 -name *.log -exec rm {} \;"
+
+
+########################  DOMAIN CT
+
+_echoT "---------- build ${_PHP_BASENAME} x ${_PHP_CTS}"
+
+for i in `seq 1 ${_PHP_CTS}`; do
+ct_name=${_PHP_BASENAME}-${i}
+_eval lxc copy ${_CT_NAME} ${ct_name}
+_eval lxc start ${ct_name}
+done
 
 
 ########################  TEST
