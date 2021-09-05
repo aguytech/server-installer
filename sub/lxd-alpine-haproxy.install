@@ -17,17 +17,17 @@ lxc list -f csv -c n | grep -q ^${S_SERVICE[http]}$ || _exite "Unable to find im
 
 file_haproxy_initd=${S_PATH_INSTALL_XTRA}/haproxy
 file_vim=${S_PATH_SCRIPT_CONF}/.vimrc
-path_haproxy=${S_PATH_INSTALL_CONF}/haproxy
-path_pem=${S_PATH_CONF_SSL}/private
+file_lcrypt=${S_PATH_INSTALL_CONF}/cron/letsencrypt-renew
 
 file_rsyslog_host=${S_PATH_INSTALL_CONF}/rsyslog/host-haproxy.conf
 file_rsyslog_client=${S_PATH_INSTALL_CONF}/rsyslog/client-haproxy.conf
 file_logrotate_host=${S_PATH_INSTALL_CONF}/logrotate/host-haproxy
 file_logrotate_client=${S_PATH_INSTALL_CONF}/logrotate/client-haproxy
 
+path_haproxy=${S_PATH_INSTALL_CONF}/haproxy
 
 _echoT "------------------ required files"
-_require ${file_haproxy_initd} ${file_vim} ${file_rsyslog_host} ${file_rsyslog_client} ${file_logrotate_host} ${file_logrotate_client}
+_require ${file_haproxy_initd} ${file_vim}  ${file_lcrypt} ${file_rsyslog_host} ${file_rsyslog_client} ${file_logrotate_host} ${file_logrotate_client}
 
 _echoT "------------------ required paths"
 _requirep ${path_haproxy}
@@ -45,7 +45,12 @@ _HPX_STATS_2_PORT=${S_HAPROXY_STATS_PORTS#* } && _HPX_STATS_2_PORT=${_HPX_STATS_
 
 _echoT "----------  data"
 
-[ -z ${_HPX_DOMAIN_2_FQDN+x} ] && anstmp=otokoz.ovh && _askno "Give a second fqdn second domain name (${anstmp})" && _HPX_DOMAIN_2_FQDN="${_ANSWER:-$anstmp}" && _confset _HPX_DOMAIN_2_FQDN "$_HPX_DOMAIN_2_FQDN"
+[ -z ${_HPX_LCRYPT_EMAIL+x} ] && anstmp=${S_DOMAIN_EMAIL_TECH} && _askno "Technical email for letsencrypt (${anstmp})" && _HPX_LCRYPT_EMAIL="${_ANSWER:-$anstmp}" && _confset _HPX_LCRYPT_EMAIL "${_HPX_LCRYPT_EMAIL}"
+
+anstmp="ada admin blog carte chat chiffres cloud cms code compta dev diaspora discord discourse down elastik files forum gestion git gitea gitlab graylog imap info kibana links log mail manage matomo metrics monitor mx nextcloud pfa pma roundcube shaarli smtp snippet social st stats test tuleap vma vmail webmail wiki www zabbix" #  mail10 mx10
+[ -z ${_HPX_LCRYPT_SUBS+x} ] && _askno "Subdomains to register to letsencrypt (${anstmp})" && _HPX_LCRYPT_SUBS="${_ANSWER:-$anstmp}" && _confset _HPX_LCRYPT_SUBS "${_HPX_LCRYPT_SUBS}"
+
+[ -z ${_HPX_DOMAIN_2_FQDN+x} ] && anstmp=otokoz.ovh && _askno "A second fqdn second domain name:\n (${anstmp})" && _HPX_DOMAIN_2_FQDN="${_ANSWER:-$anstmp}" && _confset _HPX_DOMAIN_2_FQDN "${_HPX_DOMAIN_2_FQDN}"
 
 [ -z ${_HPX_ACCESS_USER+x} ] && anstmp=admin && _askno "Name for stats access (${anstmp})" && _HPX_ACCESS_USER="${_ANSWER:-$anstmp}" && _confset _HPX_ACCESS_USER "${_HPX_ACCESS_USER}"
 
@@ -186,32 +191,44 @@ if [ ${S_DOMAIN_FQDN##*.} != lxd ]; then
 	# fullchain.pem: cert.pem and chain.pem combined
 	# privkey.pem: Your certificate’s private key
 
-	if lxc list -f csv -c n status=Running| grep -q ^${_CT_NAME}$; then
-		_echoT "----------  haproxy stop"
-		_lxc_exec ${_CT_NAME} "rc-service haproxy stop"
-	fi
-
+	_echoT "----------  haproxy stop"
+	_lxc_exec ${_CT_NAME} "rc-service -s haproxy stop"
 
 	_echoT "----------  letsencrypt install"
 	_lxc_exec ${_CT_NAME} "apk add certbot"
 
-	_echoT "----------  letsencrypt first run"
-	subs="ada admin blog carte chat chiffres cloud cms code compta dev diaspora discord discourse down elastik files forum gestion git gitea gitlab graylog imap info kibana links log mail manage matomo metrics monitor mx nextcloud pfa pma roundcube shaarli smtp snippet social st stats test tuleap vma vmail webmail wiki www zabbix" #  mail10 mx10
-	str="-d ${S_DOMAIN_FQDN}"; for sub in ${subs}; do str+=" -d ${sub}.${S_DOMAIN_FQDN}"; done
-	cmd="certbot certonly --standalone --preferred-challenges http --http-01-port 80 --non-interactive --agree-tos --email aguytech@free.fr ${str}"
-	#cmd="certbot certonly --standalone --preferred-challenges http --http-01-port 80 -d example.com -d www.example.com"
-	_lxc_exec ${_CT_NAME} "${cmd}"
+	_echoT "----------  copy letsencrypt"
+	_echoI "Copy backup of letsencrypt certs and valid" && read str
+
+
+	for domain in ${S_DOMAIN_FQDN} ${_HPX_DOMAIN_2_FQDN}; do
+
+		if ! _lxc_exec ${_CT_NAME} "[ -d /etc/letsencrypt/live/${domain} ]"; then
+
+			_echoT "----------  letsencrypt cert ${domain}"
+			str="-d ${domain}"
+			for sub in ${_HPX_LCRYPT_SUBS}; do
+				str+=" -d ${sub}.${domain}"
+			done
+			cmd="certbot certonly --standalone --preferred-challenges http --http-01-port 80 --non-interactive --agree-tos --email ${_HPX_LCRYPT_EMAIL} ${str}"
+			#cmd="certbot certonly --standalone --preferred-challenges http --http-01-port 80 -d example.com -d www.example.com"
+			_lxc_exec ${_CT_NAME} "${cmd}"
+		else
+			_echoT "----------  letsencrypt skip ${domain}"
+		fi
+
+	done
 
 	_echoT "----------  letsencrypt unify"
 	_lxc_exec ${_CT_NAME} "${S_PATH_SCRIPT}/scripts/letsencrypt-unify.sh"
 
+	_echoT "----------  letsencrypt unified"
+	_lxc_exec ${_CT_NAME} "cat ${S_PATH_CONF_SSL}/private/letsencrypt.pem.lst"
+
 	_echoT "----------  letsencrypt cron"
-	file=/etc/periodic/weekly/letsencrypt_renew.sh
-	str='#!/bin/sh
-	#
-	# renew certificate with letsencrypt
-	certbot renew --standalone --preferred-challenges http --http-01-port '${_HPX_LCRYPT_PORT}' --post-hook "'${S_PATH_SCRIPT}'/scripts/letsencrypt-unify.sh && rc-service haproxy reload" --quiet'
-	_lxc_exec ${_CT_NAME} "echo '${str}' > ${file}"
+	file=/etc/periodic/weekly/${file_lcrypt##*/}
+	_eval lxc file push ${file_lcrypt} ${_CT_NAME}${file}
+	_lxc_var_replace ${_CT_NAME} ${file} haproxy
 	_lxc_exec ${_CT_NAME} "chmod +x ${file}"
 
 
@@ -219,7 +236,6 @@ if [ ${S_DOMAIN_FQDN##*.} != lxd ]; then
 	_lxc_exec ${_CT_NAME} "rc-service haproxy start"
 
 	# https://www.digitalocean.com/community/tutorials/how-to-secure-haproxy-with-let-s-encrypt-on-centos-7
-
 fi
 
 
@@ -296,7 +312,7 @@ _lxc_exec ${_CT_NAME} "find ${S_PATH_LOG}/haproxy -name *.log -exec rm {} \;"
 
 _echoT "----------  publish ${_CT_NAME}"
 
-_eval lxc image list -f csv -c l | grep -q ^${_CT_NAME}$ && lxc image alias rename ${_CT_NAME} ${_CT_NAME}-$(date +%s)
+lxc image list -f csv -c l | grep -q ^${_CT_NAME}$ && _eval lxc image alias rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
 _eval lxc publish --force ${_CT_NAME} --alias ${_CT_NAME}
 
 

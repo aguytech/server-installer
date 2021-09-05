@@ -19,11 +19,7 @@ _require ${file_rsyslog_cron} ${file_rsyslog_client_auth} ${file_logrotate_serve
 
 ########################  DATA
 
-_CT_NAME="${_RELEASE/./}"
-
-_echoT "----------  ${_RELEASE_ID} data"
-
-[ -z ${_CT_NAME_COM+x} ] && anstmp="${_CT_NAME}-com" && _askno "Give a name for common publishing image container for ${_RELEASE_ID} release (${anstmp})" && _CT_NAME_COM="${_ANSWER:-$anstmp}" && _confset _CT_NAME_COM "${_CT_NAME_COM}"
+_CT_NAME=${_CT_NAME_COM}
 
 
 ########################  CONF
@@ -146,7 +142,7 @@ _lxc_exec ${_CT_NAME} "rc-service crond restart"
 ########################  PUBLISH
 
 _echoT "----------  publish ${_CT_NAME}"
-_eval lxc image list -f csv -c l | grep -q ^${_CT_NAME_COM}$ && lxc image alias rename ${_CT_NAME_COM} ${_CT_NAME_COM}-$(date +%s)
+lxc image list -f csv -c l | grep -q ^${_CT_NAME_COM}$ && _eval lxc image alias rename ${_CT_NAME_COM} ${_CT_NAME_COM}-${_SDATE}
 _eval lxc publish --force ${_CT_NAME} --alias ${_CT_NAME_COM}
 
 

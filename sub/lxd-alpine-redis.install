@@ -219,7 +219,7 @@ _echo "redis-cli -h ${_CT_NAME} -p ${S_CACHE_PORT} --latency-dist"
 
 _echoT "----------  publish ${_CT_NAME}"
 
-_eval lxc image list -f csv -c l | grep -q ^${_CT_NAME}$ && lxc image alias rename ${_CT_NAME} ${_CT_NAME}-$(date +%s)
+lxc image list -f csv -c l | grep -q ^${_CT_NAME}$ && _eval lxc image alias rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
 _eval lxc publish --force ${_CT_NAME} --alias ${_CT_NAME}
 
 

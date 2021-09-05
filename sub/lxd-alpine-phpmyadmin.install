@@ -28,7 +28,7 @@ _require ${file_conf} ${file_conf_part} ${file_site}
 
 _echoT "----------  data"
 
-# _CT_NAME
+# cts_php
 _menua "Select one available php container to use" ${cts_all_php}
 cts_php=$(echo ${_ANSWER})
 if [ -z "${cts_php}" ]; then
@@ -219,7 +219,7 @@ for ct_php in ${cts_php}; do
 	_lxc_exec ${ct_php} "[ -d ${path} ] && mv ${path} ${path}.${_SDATE}"
 
 	path=${_APA_PATH_DOMAIN}
-	_eval lxc file push ${file_pma_tmp} ${ct_php}/${path}/
+	_eval lxc file push -q ${file_pma_tmp} ${ct_php}/${path}/
 	_lxc_exec ${ct_php} "tar xzf ${path}/${file_pma} -C ${path}" || _exite "Unable to decompress file: ${file}"
 	_lxc_exec ${ct_php} "[ -h ${path}/pma ] && rm ${path}/pma"
 	_lxc_exec ${ct_php} "cd ${path} && ln -sv ${file_pma%.tar.gz} pma"
@@ -251,8 +251,8 @@ for ct_php in ${cts_php}; do
 	########################  RIGHTS
 
 	_echoT "----------  rights"
-	_lxc_exec ${_CT_NAME} "chown nobody:nobody -R ${_APA_PATH_WWW}"
-	_lxc_exec ${_CT_NAME} "chown nobody:nobody -R ${_APA_PATH_DOMAIN}/*"
+	_lxc_exec ${ct_php} "chown nobody:nobody -R ${_APA_PATH_WWW}"
+	_lxc_exec ${ct_php} "chown nobody:nobody -R ${_APA_PATH_DOMAIN}/*"
 
 
 	#############  RESTART
@@ -332,7 +332,7 @@ _echoW "${strpass%\\n}"
 for ct_name in ${cts_php} ${cts_maria}; do
 	_echoT "----------  publish ${ct_name}"
 
-	lxc image list -f csv -c l | grep -q ^${ct_name}$ && _eval lxc image alias rename ${ct_name} ${ct_name}-$(date +%s)
+	lxc image list -f csv -c l | grep -q ^${ct_name}$ && _eval lxc image alias rename ${ct_name} ${ct_name}-${_SDATE}
 	_eval lxc publish --force ${ct_name} --alias ${ct_name}
 done
 

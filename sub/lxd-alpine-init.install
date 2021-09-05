@@ -12,9 +12,9 @@ _echoT "----------  ${_RELEASE_ID} data"
 [ -z ${_RELEASE_NAME+x} ] && anstmp="3.14" && _askno "Give a version image container for LXC ${_RELEASE_ID} (${anstmp})" && _RELEASE_NAME="${_ANSWER:-$anstmp}" && _confset _RELEASE_NAME "${_RELEASE_NAME}"
 
 [ -z ${_RELEASE+x} ] && _RELEASE=${_RELEASE_ID}${_RELEASE_NAME} && _confset _RELEASE "${_RELEASE}"
+_CT_NAME_COM="${_RELEASE/./}-com" && _confset _CT_NAME_COM "${_CT_NAME_COM}"
 
-_CT_NAME="${_RELEASE/./}"
-
+_CT_NAME=${_CT_NAME_COM}
 
 ########################  COPY
 
@@ -82,7 +82,7 @@ _lxc_exec ${_CT_NAME} "apk del tzdata"
 _echoT "----------  path bs"
 
 path="/tmp/bs"
-! [ -d ${path} ] && rm -fR ${path}
+[ -d ${path} ] && rm -fR ${path}
 cp -a ${S_PATH_INSTALL%/*}/bs ${path} && rm -fR ${path}/.git
 _lxc_exec ${_CT_NAME} "[ -d /usr/local/bs ] && mv /usr/local/bs /usr/local/bs.${_SDATE}"
 _eval lxc file push --recursive ${path} ${_CT_NAME}/usr/local/

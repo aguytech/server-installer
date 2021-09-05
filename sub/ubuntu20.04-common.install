@@ -87,12 +87,6 @@ ${_ANSWER}
 fi
 
 
-_echoT "----------  home"
-
-# home
-_evalq chown root:1000 /home && _evalq chmod g+rwx /home
-
-
 _echoT "----------  .bashrc"
 
 file=~/.bashrc
@@ -202,6 +196,16 @@ fi
 _echoT "----------  bash-completion"
 
 _evalq cp -a "${path_install_bash_completion}"/* "/usr/share/bash-completion/completions/"
+
+
+if type vim >/dev/null 2>&1 ; then
+    _echoT "------------------  links edit"
+
+    file in /etc/alternatives/editor; do
+        [ -e ${file} ] && _evalr rm ${file}
+        _evalr ln -sv /usr/bin/vim.basic ${file}
+    done
+fi
 
 
 ########################  STORAGE

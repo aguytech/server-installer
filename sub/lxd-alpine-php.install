@@ -457,9 +457,9 @@ _lxc_exec ${_CT_NAME} "find ${S_PATH_LOG}/php7 -name *.log -exec rm {} \;"
 _echoT "---------- build ${_PHP_BASENAME} x ${_PHP_CTS}"
 
 for i in `seq 1 ${_PHP_CTS}`; do
-ct_name=${_PHP_BASENAME}-${i}
-_eval lxc copy ${_CT_NAME} ${ct_name}
-_eval lxc start ${ct_name}
+	ct_name=${_PHP_BASENAME}-${i}
+	_eval lxc copy ${_CT_NAME} ${ct_name}
+	_eval lxc start ${ct_name}
 done
 
 
@@ -490,10 +490,14 @@ _echo "curl ${_CT_NAME}/status-www-admin?full"
 
 ########################  PUBLISH
 
-_echoT "----------  publish ${_CT_NAME}"
+cts_name="${_CT_NAME}"
+for i in `seq 1 ${_PHP_CTS}`; do cts_name+=" ${_PHP_BASENAME}-${i}"; done
+for ct_name in ${cts_name}; do
 
-_eval lxc image list -f csv -c l | grep -q ^${_CT_NAME}$ && lxc image alias rename ${_CT_NAME} ${_CT_NAME}-$(date +%s)
-_eval lxc publish --force ${_CT_NAME} --alias ${_CT_NAME}
+	_echoT "----------  publish ${ct_name}"
+	lxc image list -f csv -c l | grep -q ^${ct_name}$ && _eval lxc image alias rename ${ct_name} ${ct_name}-${_SDATE}
+	_eval lxc publish --force ${ct_name} --alias ${ct_name}
+done
 
 
 ########################  END

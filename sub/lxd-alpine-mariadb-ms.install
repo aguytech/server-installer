@@ -175,7 +175,7 @@ _echoW "${strpass%\\n}"
 for ct_name in ${ct_master} ${ct_slave}; do
 	_echoT "----------  publish ${ct_name}"
 
-	lxc image list -f csv -c l | grep -q ^${ct_name}$ && _eval lxc image alias rename ${ct_name} ${ct_name}-$(date +%s)
+	lxc image list -f csv -c l | grep -q ^${ct_name}$ && _eval lxc image alias rename ${ct_name} ${ct_name}-${_SDATE}
 	_eval lxc publish --force ${ct_name} --alias ${ct_name}
 done
 
