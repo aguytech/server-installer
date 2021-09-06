@@ -5,7 +5,7 @@ frontend http
 	http-request 	set-header X-Forwarded-Protocol http
 	default_backend	default
 
-	acl S_DOMAIN_FQDN			hdr_end(host) -i S_DOMAIN_FQDN
+	acl S_DOMAIN_FQDN		hdr_end(host) -i S_DOMAIN_FQDN
 	#acl S_DOMAIN_FQDN			hdr_sub(host) -i S_DOMAIN_FQDN
 	acl S_DOMAIN_FQDN-check		path_dir /ping-monitor /server-status /server-info /status-www /status-www-admin /ping-www
 	#acl S_DOMAIN_FQDN-check		path_reg ^/(ping-monitor|server-status|server-info|status-www|status-www-admin|ping-www)
@@ -13,14 +13,14 @@ frontend http
 	acl S_DOMAIN_FQDN-admin		hdr(host) admin.S_DOMAIN_FQDN matomo.S_DOMAIN_FQDN monitor.S_DOMAIN_FQDN pfa.S_DOMAIN_FQDN pma.S_DOMAIN_FQDN
 	acl letsencrypt			path_beg /.well-known/acme-challenge/
 
-	# _HPX_DOMAIN_2_FQDN
-	#acl _HPX_DOMAIN_2_FQDN			hdr_end(host) -i _HPX_DOMAIN_2_FQDN
+	# _DOMAIN_2_FQDN
+	#acl _DOMAIN_2_FQDN			hdr_end(host) -i _DOMAIN_2_FQDN
 
 	#redirect		scheme https code 301 if S_DOMAIN_FQDN !S_DOMAIN_FQDN-check !letsencrypt !{ ssl_fc }
 	#redirect		scheme https code 301 if !S_DOMAIN_FQDN-check !letsencrypt !{ ssl_fc }
 
 	use_backend		S_DOMAIN_FQDN-admin if S_DOMAIN_FQDN-admin
-	#use_backend		S_DOMAIN_FQDN-admin if S_DOMAIN_FQDN-admin or _HPX_DOMAIN_2_FQDN-admin
+	#use_backend		S_DOMAIN_FQDN-admin if S_DOMAIN_FQDN-admin or _DOMAIN_2_FQDN-admin
 	use_backend		S_DOMAIN_FQDN if S_DOMAIN_FQDN || S_DOMAIN_FQDN-check
-	#use_backend		_HPX_DOMAIN_2_FQDN if _HPX_DOMAIN_2_FQDN
+	#use_backend		_DOMAIN_2_FQDN if _DOMAIN_2_FQDN
 	use_backend		letsencrypt if letsencrypt

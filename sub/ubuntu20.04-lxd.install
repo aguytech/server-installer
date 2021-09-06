@@ -64,15 +64,11 @@ link="/lxd"
 path="${S_HOST_PATH_SHARE}"
 _echoT "----------  rights ${path}"
 
-if [ "${S_STORAGE_DRIVER}" = zfs ]; then
-	_evalr setfacl -Rm u:1000000:rwx "${path}"
-	_evalr setfacl -Rm d:u:1000000:rwx "${path}"
-elif [ "${S_STORAGE_DRIVER}" = btrfs ]; then
-	_evalr setfacl -Rm u:100000:rwx "${path}"
-	_evalr setfacl -Rm d:u:100000:rwx "${path}"
-else
-	_exite "This part have to be implemented"
-fi
+ id=1000000
+[ "${S_STORAGE_DRIVER}" = btrfs ] && id=100000
+_evalr setfacl -Rm u:${id}:rwx "${path}"
+_evalr setfacl -Rm d:u:${id}:rwx "${path}"
+_evalr chown ${id}:${id} -R "${path}"
 
 
 ########################  CLEAN STORAGE

@@ -138,6 +138,12 @@ file="/etc/crontabs/root"
 _lxc_exec ${_CT_NAME} "sed -i '/^\*\/15/ s|^|#|' ${file}"
 _lxc_exec ${_CT_NAME} "rc-service crond restart"
 
+file=/etc/crontabs/mail
+_lxc_exec ${_CT_NAME} "echo 'MAILTO=${S_DOMAIN_EMAIL_TECH}' > ${file}"
+
+_echoT "----------  cron restart"
+_lxc_exec ${_CT_NAME} "rc-service crond restart"
+
 
 ########################  PUBLISH
 

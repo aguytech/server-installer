@@ -13,7 +13,6 @@ lxc image list -f csv -c l | grep -q ^${_CT_NAME_COM}$ || _exite "Unable to find
 
 _echoT "------------------ required vm"
 lxc list -f csv -c n | grep -q ^${S_SERVICE[log]}$ || _exite "Unable to find image container: '${S_SERVICE[log]}'"
-lxc list -f csv -c n | grep -q ^${S_SERVICE[http]}$ || _exite "Unable to find image container: '${S_SERVICE[http]}'"
 
 file_haproxy_initd=${S_PATH_INSTALL_XTRA}/haproxy
 file_vim=${S_PATH_SCRIPT_CONF}/.vimrc
@@ -35,35 +34,49 @@ _requirep ${path_haproxy}
 
 ########################  DATA
 
-_CT_NAME=${S_SERVICE[proxy]}
+_echoT "----------  data domain"
 
-eval ${S_HOST_VM_ETH[default]}
-_CT_IP=${s_base}.${S_SERVICE_BITS[proxy]}
-
-_HPX_STATS_PORT=${S_HAPROXY_STATS_PORTS%% *} && _confset _HPX_STATS_PORT "${_HPX_STATS_PORT}"
-_HPX_STATS_2_PORT=${S_HAPROXY_STATS_PORTS#* } && _HPX_STATS_2_PORT=${_HPX_STATS_2_PORT%% *} && _confset _HPX_STATS_2_PORT "${_HPX_STATS_2_PORT}"
+cts_www=`lxc list -f json | jq -r '.[] | select(.profiles | any(contains("www-"))).name'`
+[ "${cts_www}" ] || _exite "Unable to find a container with a www* profile"
+_menu "Select one available container for www default server" ${cts_www}
+_SERVER_DEFAULT=${_ANSWER}
 
 _echoT "----------  data"
 
-[ -z ${_HPX_LCRYPT_EMAIL+x} ] && anstmp=${S_DOMAIN_EMAIL_TECH} && _askno "Technical email for letsencrypt (${anstmp})" && _HPX_LCRYPT_EMAIL="${_ANSWER:-$anstmp}" && _confset _HPX_LCRYPT_EMAIL "${_HPX_LCRYPT_EMAIL}"
+anstmp=otokoz.ovh && _askno "A second fqdn second domain name: (${anstmp})" && _DOMAIN_2_FQDN="${_ANSWER:-$anstmp}" && _confset _DOMAIN_2_FQDN "${_DOMAIN_2_FQDN}"
 
-anstmp="ada admin blog carte chat chiffres cloud cms code compta dev diaspora discord discourse down elastik files forum gestion git gitea gitlab graylog imap info kibana links log mail manage matomo metrics monitor mx nextcloud pfa pma roundcube shaarli smtp snippet social st stats test tuleap vma vmail webmail wiki www zabbix" #  mail10 mx10
-[ -z ${_HPX_LCRYPT_SUBS+x} ] && _askno "Subdomains to register to letsencrypt (${anstmp})" && _HPX_LCRYPT_SUBS="${_ANSWER:-$anstmp}" && _confset _HPX_LCRYPT_SUBS "${_HPX_LCRYPT_SUBS}"
+ anstmp=admin && _askno "Name for stats access (${anstmp})" && _HPX_ACCESS_USER="${_ANSWER:-$anstmp}" && _confset _HPX_ACCESS_USER "${_HPX_ACCESS_USER}"
 
-[ -z ${_HPX_DOMAIN_2_FQDN+x} ] && anstmp=otokoz.ovh && _askno "A second fqdn second domain name:\n (${anstmp})" && _HPX_DOMAIN_2_FQDN="${_ANSWER:-$anstmp}" && _confset _HPX_DOMAIN_2_FQDN "${_HPX_DOMAIN_2_FQDN}"
+anstmp=`_pwd` && _askno "Password to stats access (${anstmp})" && _HPX_ACCESS_PWD="${_ANSWER:-$anstmp}" && _confset _HPX_ACCESS_PWD "${_HPX_ACCESS_PWD}"
 
-[ -z ${_HPX_ACCESS_USER+x} ] && anstmp=admin && _askno "Name for stats access (${anstmp})" && _HPX_ACCESS_USER="${_ANSWER:-$anstmp}" && _confset _HPX_ACCESS_USER "${_HPX_ACCESS_USER}"
+anstmp=/haproxy-stats && _askno "URI to access to admin site (${anstmp})" && _HPX_ACCESS_URI="${_ANSWER:-$anstmp}" && _confset _HPX_ACCESS_URI "${_HPX_ACCESS_URI}"
 
-[ -z ${_HPX_ACCESS_PWD+x} ] && anstmp=`_pwd` && _askno "Password to stats access (${anstmp})" && _HPX_ACCESS_PWD="${_ANSWER:-$anstmp}" && _confset _HPX_ACCESS_PWD "${_HPX_ACCESS_PWD}"
+_echoT "----------  data letsencrypt"
 
-[ -z ${_HPX_ACCESS_URI+x} ] && anstmp=/haproxy-stats && _askno "URI to access to admin site (${anstmp})" && _HPX_ACCESS_URI="${_ANSWER:-$anstmp}" && _confset _HPX_ACCESS_URI "${_HPX_ACCESS_URI}"
+_askyn "Use letsencrypt" && _HPX_LCRYPT_ENABLE="${_ANSWER/n/}" && _confset _HPX_LCRYPT_ENABLE "${_HPX_LCRYPT_ENABLE}"
 
-[ -z ${_HPX_LCRYPT_PORT+x} ] && anstmp=8079 && _askno "Port for letsencrypt (${anstmp})" && _HPX_LCRYPT_PORT="${_ANSWER:-$anstmp}" && _confset _HPX_LCRYPT_PORT "${_HPX_LCRYPT_PORT}"
+if [ "${_HPX_LCRYPT_ENABLE}" ]; then
 
-_HPX_DOMAIN_2_NAME="${_HPX_DOMAIN_2_FQDN%.*}" && _confset _HPX_DOMAIN_2_NAME "${_HPX_DOMAIN_2_NAME}"
+	anstmp=${S_DOMAIN_EMAIL_TECH} && _askno "Technical email for letsencrypt (${anstmp})" && _HPX_LCRYPT_EMAIL="${_ANSWER:-$anstmp}" && _confset _HPX_LCRYPT_EMAIL "${_HPX_LCRYPT_EMAIL}"
+
+	anstmp="ada admin blog carte chat chiffres cloud cms code compta dev diaspora discord discourse down elastik files forum gestion git gitea gitlab graylog imap info kibana links log mail manage matomo metrics monitor mx nextcloud pfa pma roundcube shaarli smtp snippet social st stats test tuleap vma vmail webmail wiki www zabbix" #  mail10 mx10
+	[ -z ${_HPX_LCRYPT_SUBS+x} ] && _askno "Subdomains to register to letsencrypt (${anstmp})" && _HPX_LCRYPT_SUBS="${_ANSWER:-$anstmp}" && _confset _HPX_LCRYPT_SUBS "${_HPX_LCRYPT_SUBS}"
+
+	[ -z ${_HPX_LCRYPT_PORT+x} ] && anstmp=8079 && _askno "Port for letsencrypt (${anstmp})" && _HPX_LCRYPT_PORT="${_ANSWER:-$anstmp}" && _confset _HPX_LCRYPT_PORT "${_HPX_LCRYPT_PORT}"
+fi
+
+
+_CT_NAME=${S_SERVICE[proxy]}
+eval ${S_HOST_VM_ETH[default]}
+_CT_IP=${s_base}.${S_SERVICE_BITS[proxy]}
+
+_DOMAIN_2_NAME="${_DOMAIN_2_FQDN%.*}" && _confset _DOMAIN_2_NAME "${_DOMAIN_2_NAME}"
 _HPX_CT_NAME="${S_DOMAIN_FQDN//./-}" && _confset _HPX_CT_NAME "${_HPX_CT_NAME}"
-_HPX_CT_2_NAME="${_HPX_DOMAIN_2_FQDN//./-}" && _confset _HPX_CT_2_NAME "${_HPX_CT_2_NAME}"
+_HPX_CT_2_NAME="${_DOMAIN_2_FQDN//./-}" && _confset _HPX_CT_2_NAME "${_HPX_CT_2_NAME}"
 _HPX_DNS_DEFAULT="${s_base}.1:53" && _confset _HPX_DNS_DEFAULT "${_HPX_DNS_DEFAULT}"
+
+_HPX_STATS_PORT=${S_HAPROXY_STATS_PORTS%% *} && _confset _HPX_STATS_PORT "${_HPX_STATS_PORT}"
+_HPX_STATS_2_PORT=${S_HAPROXY_STATS_PORTS#* } && _HPX_STATS_2_PORT=${_HPX_STATS_2_PORT%% *} && _confset _HPX_STATS_2_PORT "${_HPX_STATS_2_PORT}"
 
 
 ########################  INIT
@@ -71,13 +84,8 @@ _HPX_DNS_DEFAULT="${s_base}.1:53" && _confset _HPX_DNS_DEFAULT "${_HPX_DNS_DEFAU
 _echoT "----------  init"
 
 if lxc list -f csv -c n | grep -q ^${_CT_NAME}$; then
-	if lxc list -f csv -c n status=Running| grep -q ^${_CT_NAME}$; then
-		_eval lxc stop ${_CT_NAME}
-		_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
-		_eval lxc start ${_CT_NAME}-${_SDATE}
-	else
-		_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
-	fi
+	lxc list -f csv -c n status=Running| grep -q ^${_CT_NAME}$ && _eval lxc stop ${_CT_NAME}
+	_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
 fi
 
 _eval lxc init ${_CT_NAME_COM} ${_CT_NAME} -p default -p global
@@ -183,7 +191,7 @@ _eval lxc file push ${file_haproxy_initd} ${_CT_NAME}/etc/init.d/haproxy
 _lxc_exec ${_CT_NAME} "chmod +x ${file}"
 
 
-if [ ${S_DOMAIN_FQDN##*.} != lxd ]; then
+if [ "${_HPX_LCRYPT_ENABLE}" ]; then
 
 	########################  letsencrypt
 	# cert.pem: Your domain’s certificate
@@ -201,7 +209,7 @@ if [ ${S_DOMAIN_FQDN##*.} != lxd ]; then
 	_echoI "Copy backup of letsencrypt certs and valid" && read str
 
 
-	for domain in ${S_DOMAIN_FQDN} ${_HPX_DOMAIN_2_FQDN}; do
+	for domain in ${S_DOMAIN_FQDN} ${_DOMAIN_2_FQDN}; do
 
 		if ! _lxc_exec ${_CT_NAME} "[ -d /etc/letsencrypt/live/${domain} ]"; then
 
@@ -228,7 +236,7 @@ if [ ${S_DOMAIN_FQDN##*.} != lxd ]; then
 	_echoT "----------  letsencrypt cron"
 	file=/etc/periodic/weekly/${file_lcrypt##*/}
 	_eval lxc file push ${file_lcrypt} ${_CT_NAME}${file}
-	_lxc_var_replace ${_CT_NAME} ${file} haproxy
+	_lxc_var_replace ${_CT_NAME} ${file} haproxy script
 	_lxc_exec ${_CT_NAME} "chmod +x ${file}"
 
 

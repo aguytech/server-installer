@@ -362,7 +362,7 @@ _echoT "----------  cron conf"
 file=/etc/crontab
 _keepcpts ${file}
 str="MAILTO=${S_DOMAIN_EMAIL_TECH}"
-! grep -q '^MAILTO' "${file}" && _eval "sed -i '/^PATH=.*/ a ${str}' ${file}"
+grep -q '^MAILTO' "${file}" || _eval "sed -i '/^PATH=.*/ a ${str}' ${file}"
 
 
 ########################  NTP

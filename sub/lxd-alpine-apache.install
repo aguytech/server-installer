@@ -27,17 +27,17 @@ _require ${file_rsyslog_host} ${file_rsyslog_client} ${file_logrotate_host} ${fi
 
 ########################  DATA
 
-_CT_NAME=${S_SERVICE[http]}
-
 #eval ${S_HOST_VM_ETH[default]}
 #_CT_IP=${s_base}.${S_SERVICE_BITS[http]}
 
-_APA_PATH_WWW=/var/www/localhost/html &&  _confset _APA_PATH_WWW "${_APA_PATH_WWW}"
-_APA_PATH_DOMAIN=${S_VM_PATH_SHARE}/www/${S_DOMAIN_FQDN} && _confset _APA_PATH_DOMAIN "${_APA_PATH_DOMAIN}"
+_echoT "----------  data domain"
 
-path_sites=/etc/apache2/sites
-path_conf=/etc/apache2/conf.d
-file_conf_http=/etc/apache2/httpd.conf
+anstmp=${S_DOMAIN_FQDN} && _askno "Domain name to use (${anstmp})"
+_DOMAIN_FQDN="${_ANSWER:-$anstmp}"
+_DOMAIN_NAME="${_DOMAIN_FQDN%.*}"
+
+anstmp=apa-${_DOMAIN_FQDN//./-} && _askno "Name of container to build (${anstmp})"
+_CT_NAME="${_ANSWER:-$anstmp}"
 
 
 _echoT "----------  data sysctl.conf"
@@ -67,29 +67,37 @@ _echoT "----------  data apache"
 
 _echoT "----------  data apache mpm"
 
-[ -z ${_APA_START_SERVERS+x} ] && anstmp="13" && _askno "StartServers (${anstmp})" && _APA_START_SERVERS="${_ANSWER:-$anstmp}" && _confset _APA_START_SERVERS "${_APA_START_SERVERS}"
+anstmp="13" && _askno "StartServers (${anstmp})" && _APA_START_SERVERS="${_ANSWER:-$anstmp}" && _confset _APA_START_SERVERS "${_APA_START_SERVERS}"
 
-[ -z ${_APA_MIN_SPARE_THREADS+x} ] && anstmp="50" && _askno "MinSpareThreads (${anstmp})" && _APA_MIN_SPARE_THREADS="${_ANSWER:-$anstmp}" && _confset _APA_MIN_SPARE_THREADS "${_APA_MIN_SPARE_THREADS}"
+anstmp="50" && _askno "MinSpareThreads (${anstmp})" && _APA_MIN_SPARE_THREADS="${_ANSWER:-$anstmp}" && _confset _APA_MIN_SPARE_THREADS "${_APA_MIN_SPARE_THREADS}"
 
-[ -z ${_APA_MAX_SPARE_THREADS+x} ] && anstmp="250" && _askno "MaxSpareThreads (${anstmp})" && _APA_MAX_SPARE_THREADS="${_ANSWER:-$anstmp}" && _confset _APA_MAX_SPARE_THREADS "${_APA_MAX_SPARE_THREADS}"
+anstmp="250" && _askno "MaxSpareThreads (${anstmp})" && _APA_MAX_SPARE_THREADS="${_ANSWER:-$anstmp}" && _confset _APA_MAX_SPARE_THREADS "${_APA_MAX_SPARE_THREADS}"
 
- [ -z ${_APA_THREADS_PER_CHILD+x} ] && anstmp="25" && _askno "ThreadsPerChild (${anstmp})" && _APA_THREADS_PER_CHILD="${_ANSWER:-$anstmp}" && _confset _APA_THREADS_PER_CHILD "${_APA_THREADS_PER_CHILD}"
+anstmp="25" && _askno "ThreadsPerChild (${anstmp})" && _APA_THREADS_PER_CHILD="${_ANSWER:-$anstmp}" && _confset _APA_THREADS_PER_CHILD "${_APA_THREADS_PER_CHILD}"
 
- [ -z ${_APA_MAX_REQUEST_WORKERS+x} ] && anstmp="400" && _askno "MaxRequestWorkers (${anstmp})" && _APA_MAX_REQUEST_WORKERS="${_ANSWER:-$anstmp}" && _confset _APA_MAX_REQUEST_WORKERS "${_APA_MAX_REQUEST_WORKERS}"
+anstmp="400" && _askno "MaxRequestWorkers (${anstmp})" && _APA_MAX_REQUEST_WORKERS="${_ANSWER:-$anstmp}" && _confset _APA_MAX_REQUEST_WORKERS "${_APA_MAX_REQUEST_WORKERS}"
 
- [ -z ${_APA_MAX_CONNECTIONS_PER_CHILD+x} ] && anstmp="0" && _askno "MaxConnectionsPerChild (${anstmp})" && _APA_MAX_CONNECTIONS_PER_CHILD="${_ANSWER:-$anstmp}" && _confset _APA_MAX_CONNECTIONS_PER_CHILD "${_APA_MAX_CONNECTIONS_PER_CHILD}"
+anstmp="0" && _askno "MaxConnectionsPerChild (${anstmp})" && _APA_MAX_CONNECTIONS_PER_CHILD="${_ANSWER:-$anstmp}" && _confset _APA_MAX_CONNECTIONS_PER_CHILD "${_APA_MAX_CONNECTIONS_PER_CHILD}"
+
+
+path_sites=/etc/apache2/sites
+path_conf=/etc/apache2/conf.d
+file_conf_http=/etc/apache2/httpd.conf
+
+_APA_PATH_WWW=/var/www/localhost/html &&  _confset _APA_PATH_WWW "${_APA_PATH_WWW}"
+_PATH_DOMAIN=${S_VM_PATH_SHARE}/www/${_DOMAIN_FQDN}
 
 
 ########################  PROFILE
 
-profile=www-${S_DOMAIN_FQDN}
+profile=www-${_DOMAIN_FQDN}
 _echoT "----------  profile ${profile}"
 
 lxc profile list -f csv|grep -q "^${profile}," && _eval lxc profile rename ${profile} ${profile}.${_SDATE}
 _eval lxc profile create ${profile}
 
-path=${S_HOST_PATH_SHARE}/www/${S_DOMAIN_FQDN}
-path_ct=${_APA_PATH_DOMAIN}
+path=${S_HOST_PATH_SHARE}/www/${_DOMAIN_FQDN}
+path_ct=${_PATH_DOMAIN}
 [ -d ${path} ] || _evalr mkdir -p ${path}
 _eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
 
@@ -99,14 +107,10 @@ _eval lxc profile device add ${profile} ${profile} disk source=${path} path=${pa
 _echoT "----------  init"
 
 if lxc list -f csv -c n | grep -q ^${_CT_NAME}$; then
-	if lxc list -f csv -c n status=Running| grep -q ^${_CT_NAME}$; then
-		_eval lxc stop ${_CT_NAME}
-		_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
-		_eval lxc start ${_CT_NAME}-${_SDATE}
-	else
-		_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
-	fi
+	lxc list -f csv -c n status=Running| grep -q ^${_CT_NAME}$ && _eval lxc stop ${_CT_NAME}
+	_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
 fi
+
 _eval lxc init ${_CT_NAME_COM} ${_CT_NAME} -p default -p global -p ${profile}
 
 
@@ -212,7 +216,7 @@ _echoT "----------  conf httpd"
 _lxc_exec ${_CT_NAME} "grep -q ${path_sites} ${file_conf_http} || echo 'IncludeOptional ${path_sites}/*.conf' >>  ${file_conf_http}"
 
 cmds="sed -i 's|^.\?\(ServerName\) .*$|\1 localhost|' ${file_conf_http}
-sed -i 's|^.\?\(ServerAdmin\) .*$|\1 ${S_DOMAIN_EMAIL_TECH}|' ${file_conf_http}
+sed -i 's|^.\?\(ServerAdmin\) .*$|\1 ${S_DOMAIN_EMAIL_ADMIN}|' ${file_conf_http}
 sed -i 's|^\(ServerSignature\) .*$|\1 Off|' ${file_conf_http}
 sed -i 's|^\(ServerTokens\) .*$|\1 Prod|' ${file_conf_http}
 sed -i 's|/var/www/localhost/htdocs|${_APA_PATH_WWW}|' ${file_conf_http}"
@@ -237,9 +241,9 @@ _echoT "----------  conf info & status"
 file=${path_conf}/info.conf
 _lxc_exec ${_CT_NAME} "[ ! -f '${file}.${_SDATE}' ] && cp -a '${file}' '${file}.${_SDATE}'"
 # optimize require for info
-_lxc_exec ${_CT_NAME} "sed -i '/<Location \/server-status>/,/<\/Location>/ {s|^\(\s*\)\(Require host\).*|\1\2 ${S_DOMAIN_FQDN}\n\1Require ip ${_IPS_AUTH}|}' ${file}"
+_lxc_exec ${_CT_NAME} "sed -i '/<Location \/server-status>/,/<\/Location>/ {s|^\(\s*\)\(Require host\).*|\1\2 ${_DOMAIN_FQDN}\n\1Require ip ${_IPS_AUTH}|}' ${file}"
 # optimize require for status
-_lxc_exec ${_CT_NAME} "sed -i '/<Location \/server-info>/,/<\/Location>/ {s|^\(\s*\)\(Require host\).*|\1\2 ${S_DOMAIN_FQDN}\n\1Require ip ${_IPS_AUTH}|}' ${file}"
+_lxc_exec ${_CT_NAME} "sed -i '/<Location \/server-info>/,/<\/Location>/ {s|^\(\s*\)\(Require host\).*|\1\2 ${_DOMAIN_FQDN}\n\1Require ip ${_IPS_AUTH}|}' ${file}"
 
 
 ########################  PING-MONITOR
@@ -255,27 +259,27 @@ cmd="echo 'Alias \"/ping-monitor\" \"${_APA_PATH_WWW}/ping-monitor.html
 _lxc_exec ${_CT_NAME} "${cmd}"
 
 
-########################  S_DOMAIN_FQDN
+########################  _DOMAIN_FQDN
 
-_echoT "----------  ${S_DOMAIN_FQDN} path"
+_echoT "----------  ${_DOMAIN_FQDN} path"
 
-path=${_APA_PATH_DOMAIN}/html
+path=${_PATH_DOMAIN}/html
 _lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
 
-_echoT "----------  ${S_DOMAIN_FQDN} index.html"
+_echoT "----------  ${_DOMAIN_FQDN} index.html"
 
-file=${_APA_PATH_DOMAIN}/html/index.html
-_lxc_exec ${_CT_NAME} "echo '<html><body><h1>${S_DOMAIN_FQDN} works!</h1></body></html>' > ${file}"
+file=${_PATH_DOMAIN}/html/index.html
+_lxc_exec ${_CT_NAME} "echo '<html><body><h1>${_DOMAIN_FQDN} works!</h1></body></html>' > ${file}"
 
 
-_echoT "----------  ${S_DOMAIN_FQDN} conf"
+_echoT "----------  ${_DOMAIN_FQDN} conf"
 
 file=${path_sites}/${file_site##*/}
 _eval lxc file push ${file_site} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} apache
 
 
-_echoT "----------  ${S_DOMAIN_FQDN} path"
+_echoT "----------  ${_DOMAIN_FQDN} path"
 
 path=${S_VM_PATH_LOG}/apache2
 _lxc_exec ${S_SERVICE[log]} "[ -d ${path} ] || mkdir -p ${path}"
@@ -287,8 +291,8 @@ _lxc_exec ${S_SERVICE[log]} "[ -d ${path} ] || mkdir -p ${path}"
 ########################  RIGHTS
 
 _echoT "----------  rights"
-_lxc_exec ${_CT_NAME} "chown nobody:nobody -R ${_APA_PATH_WWW}"
-_lxc_exec ${_CT_NAME} "chown nobody:nobody -R ${_APA_PATH_DOMAIN}/*"
+_lxc_exec ${_CT_NAME} "chown apache:apache -R ${_APA_PATH_WWW}"
+_lxc_exec ${_CT_NAME} "chown apache:apache -R ${_PATH_DOMAIN}/*"
 
 
 ########################  RESTART

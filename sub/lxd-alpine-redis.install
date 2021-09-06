@@ -13,7 +13,6 @@ lxc image list -f csv -c l | grep -q ^${_CT_NAME_COM}$ || _exite "Unable to find
 
 _echoT "------------------ required vm"
 lxc list -f csv -c n | grep -q ^${S_SERVICE[log]}$ || _exite "Unable to find image container: '${S_SERVICE[log]}'"
-lxc list -f csv -c n | grep -q ^${S_SERVICE[http]}$ || _exite "Unable to find image container: '${S_SERVICE[http]}'"
 
 file_rsyslog_host=${S_PATH_INSTALL_CONF}/rsyslog/host-redis.conf
 file_rsyslog_client=${S_PATH_INSTALL_CONF}/rsyslog/client-redis.conf
@@ -50,31 +49,24 @@ _echoT "----------  data sysctl.conf"
 
 _echoT "----------  data redis"
 
-[ -z "${_RDS_BACKLOG+x}" ] && anstmp="$(( ${_RDS_MAX_SYN_BACKLOG} / 2 ))" && _askno "Give a value for 'tcp-backlog', if change adjust sysctl parameters... (${anstmp})" && _RDS_BACKLOG="${_ANSWER:-$anstmp}" && _confset _RDS_BACKLOG "${_RDS_BACKLOG}"
+anstmp="$(( ${_RDS_MAX_SYN_BACKLOG} / 2 ))" && _askno "Give a value for 'tcp-backlog', if change adjust sysctl parameters... (${anstmp})" && _RDS_BACKLOG="${_ANSWER:-$anstmp}" && _confset _RDS_BACKLOG "${_RDS_BACKLOG}"
 
-[ -z "${_RDS_KEEPALIVE+x}" ] && anstmp="$(( ${_APA_KEEPALIVE_TIME} + 60 ))" && _askno "Give time to keep alive (sends acks) 'tcp-keepalive' (${anstmp})s" && _RDS_KEEPALIVE="${_ANSWER:-$anstmp}" && _confset _RDS_KEEPALIVE "${_RDS_KEEPALIVE}"
+anstmp="$(( ${_APA_KEEPALIVE_TIME} + 60 ))" && _askno "Give time to keep alive (sends acks) 'tcp-keepalive' (${anstmp})s" && _RDS_KEEPALIVE="${_ANSWER:-$anstmp}" && _confset _RDS_KEEPALIVE "${_RDS_KEEPALIVE}"
 
-[ -z "${_RDS_TIMEOUT+x}" ] && anstmp=3600 && _askno "Give time to idle connection 'timeout' (${anstmp})s" && _RDS_TIMEOUT="${_ANSWER:-$anstmp}" && _confset _RDS_TIMEOUT "${_RDS_TIMEOUT}"
+anstmp=3600 && _askno "Give time to idle connection 'timeout' (${anstmp})s" && _RDS_TIMEOUT="${_ANSWER:-$anstmp}" && _confset _RDS_TIMEOUT "${_RDS_TIMEOUT}"
 
-[ -z "${_RDS_DATABASES+x}" ] && anstmp=16 && _askno "Give a number of max 'databases' (${anstmp})" && _RDS_DATABASES="${_ANSWER:-$anstmp}" && _confset _RDS_DATABASES "${_RDS_DATABASES}"
+anstmp=16 && _askno "Give a number of max 'databases' (${anstmp})" && _RDS_DATABASES="${_ANSWER:-$anstmp}" && _confset _RDS_DATABASES "${_RDS_DATABASES}"
 
-[ -z "${_RDS_LOGLEVEL+x}" ] && anstmp=notice && _askno "Give the log level 'loglevel': debug/verbose/notice/warning  (${anstmp})" && _RDS_LOGLEVEL="${_ANSWER:-$anstmp}" && _confset _RDS_LOGLEVEL "${_RDS_LOGLEVEL}"
+anstmp=notice && _askno "Give the log level 'loglevel': debug/verbose/notice/warning  (${anstmp})" && _RDS_LOGLEVEL="${_ANSWER:-$anstmp}" && _confset _RDS_LOGLEVEL "${_RDS_LOGLEVEL}"
 
 
 ########################  INIT
 
 _echoT "----------  init"
 
-! lxc image list -f json|jq -r '.[].aliases[].name'|grep -q ^${_CT_NAME_COM}$ && _exite "Unable to find image container '${_CT_NAME_COM}'"
 if lxc list -f csv -c n | grep -q ^${_CT_NAME}$; then
-	if lxc list -f csv -c n status=Running | grep -q ^${_CT_NAME}$; then
-		_eval lxc stop ${_CT_NAME}
-		_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
-		_eval lxc start ${_CT_NAME}-${_SDATE}
-	else
-		_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
-	fi
-
+	lxc list -f csv -c n status=Running| grep -q ^${_CT_NAME}$ && _eval lxc stop ${_CT_NAME}
+	_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
 fi
 
 _eval lxc init ${_CT_NAME_COM} ${_CT_NAME} -p default -p global

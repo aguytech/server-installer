@@ -137,13 +137,8 @@ _eval lxc profile device add ${profile} ${profile} disk source=${path} path=${pa
 _echoT "----------  init"
 
 if lxc list -f csv -c n | grep -q ^${_CT_NAME}$; then
-	if lxc list -f csv -c n status=Running | grep -q ^${_CT_NAME}$; then
-		_eval lxc stop ${_CT_NAME}
-		_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
-		_eval lxc start ${_CT_NAME}-${_SDATE}
-	else
-		_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
-	fi
+	lxc list -f csv -c n status=Running| grep -q ^${_CT_NAME}$ && _eval lxc stop ${_CT_NAME}
+	_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
 fi
 
 _eval lxc init ${_CT_NAME_COM} ${_CT_NAME} -p default -p global -p ${profile}
@@ -225,14 +220,6 @@ for ip in ${S_IPS_ADMIN}; do
 	cmd="GRANT PROXY ON ''@'%' TO 'rootremote'@'${ip}' WITH GRANT OPTION"
 	_lxc_exec ${_CT_NAME} "mysql -uroot -p${_MDB_PWD_LOCAL} -e \"${cmd}\""
 done
-
-
-########################  PATH
-
-_echoT "----------  path ${_MDB_PATH_LOG}"
-path=${_MDB_PATH_LOG}
-_lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
-_lxc_exec ${_CT_NAME} "chown mysql ${_MDB_PATH_LOG}"
 
 
 ########################  RESTART
