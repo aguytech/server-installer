@@ -15,51 +15,47 @@ cts_all_maria=`lxc list -f json | jq -r '.[] | select(.profiles | any(contains("
 [ -z "${cts_all_maria}" ] && _exite "unable to find container with php* profile"
 
 file_conf=${S_PATH_INSTALL_CONF}/php/pma-config.inc.php
-file_conf_part=${S_PATH_INSTALL_CONF}/php/pma-part-config.inc.php
 file_site=${S_PATH_INSTALL_CONF}/apache2/domain.conf
 
 _echoT "------------------ required files"
-_require ${file_conf} ${file_conf_part} ${file_site}
+_require ${file_conf} ${file_site}
 
 
 ########################  DATA
-
-[ -z ${_MDB_PWD_ADMIN+x} ] && _MDB_PWD_ADMIN=`_pwd` && _confset _MDB_PWD_ADMIN "${_MDB_PWD_ADMIN}"
 
 _echoT "----------  data domain"
 
 anstmp=${S_DOMAIN_FQDN} && _askno "Domain name to use (${anstmp})"
 _DOMAIN_FQDN="${_ANSWER:-$anstmp}"
 
-anstmp=admin && _askno "Give the new subdomain for admin (${anstmp})"
+anstmp=cloud && _askno "Give the new subdomain for admin (${anstmp})"
 _SUBDOMAIN="${_ANSWER:-$anstmp}"
 
-anstmp=www-admin-${S_DOMAIN_FQDN//./-} && _askno "Base name of php containers to build (${anstmp})"
+anstmp=www-cloud-${S_DOMAIN_FQDN//./-} && _askno "Base name of php containers to build (${anstmp})"
 ct_base="${_ANSWER:-$anstmp}"
 
-anstmp=2 && _askno "Number of php containers to build (${anstmp})"
+anstmp=1 && _askno "Number of php containers to build (${anstmp})"
 ct_num="${_ANSWER:-$anstmp}"
 
 _menu "Select one available php container to copy from" ${cts_all_php}
 ct_from=${_ANSWER}
 
-_menua "Select mariadb container to administrate" ${cts_all_maria}
-cts_maria=$(echo "${_ANSWER}"|sort -r|xargs)
+_menu "Select mariadb container to use" ${cts_all_maria}
+ct_maria=${_ANSWER}
 
-ct_name=${cts_maria%% *}
 ok=false; while ! ${ok}; do
-	_askno "Password for user: 'roothost' for '${ct_name}'"
-	[ "${_ANSWER}" ] && mysql -s -h${ct_name} -uroothost -p${_ANSWER} -e '' && ok=true || _echo "Unable to connect to: ${ct_name}"
+	_askno "Password for user: 'roothost' for '${ct_maria}'"
+	[ "${_ANSWER}" ] && mysql -s -h${ct_maria} -uroothost -p${_ANSWER} -e '' && ok=true || _echo "Unable to connect to: ${ct_maria}"
 done
 pwd_maria=${_ANSWER}
 
 # app_version & file_app
 ok=false; while ! ${ok}; do
-	anstmp=5.1.1 && _askno "version of phpMyAdmin to download (${anstmp})"
+	anstmp=22.1.1 && _askno "version of Nextcloud to download (${anstmp})"
 	app_version="${_ANSWER:-$anstmp}"
-	file_app=phpMyAdmin-${app_version}-all-languages.tar.gz
+	file_app=nextcloud-${app_version}.tar.bz2
 	file_app_tmp=/tmp/${file_app}
-	uri=https://files.phpmyadmin.net/phpMyAdmin/${app_version}/${file_app}
+	uri=https://download.nextcloud.com/server/releases/${file_app}
 	if ! [ -f ${file_app_tmp} ] || [ `ls -s ${file_app_tmp}|cut -d' ' -f1` = 0 ]; then
 		_echoT "----------  wget ${file_app}"
 		wget -q ${uri} -O ${file_app_tmp} && ok=true || _echoe "Unable to get version: ${uri}"
@@ -69,7 +65,7 @@ ok=false; while ! ${ok}; do
 done
 
 _PATH_DOMAIN=${S_VM_PATH_SHARE}/www/${_SUBDOMAIN}.${_DOMAIN_FQDN}
-_APP_URI=https://pma.${_DOMAIN_FQDN}
+_APP_URI=https://${_SUBDOMAIN}.${_DOMAIN_FQDN}
 _APP_DB_PORT=${S_DB_MARIA_PORT}
 _APP_DB_USER=pma
 _APP_DB_PWD=`_pwd`
@@ -77,9 +73,8 @@ _APP_BLOWFISH=`_pwd32`
 _APP_PATH_UP=${S_VM_PATH_SHARE}/php/up
 _APP_PATH_DW=${S_VM_PATH_SHARE}/php/down
 
-cts_php=`for i in $(seq 1 ${ct_num}); do echo ${ct_base}-${i}; done`
 path_sites=/etc/apache2/sites
-db_app=phpmyadmin
+db_app=nextcloud
 
 
 ########################  PROFILE
@@ -114,6 +109,7 @@ _eval lxc copy ${ct_from} ${_CT_NAME}
 _echoT "----------  ${_CT_NAME} start"
 lxc list -f csv -c n status=Stopped | grep -q ^${_CT_NAME}$ && _eval lxc start ${_CT_NAME}
 
+
 #############  PROFILE
 
 # remove profiles
@@ -141,85 +137,26 @@ _echoT "----------  site default keep"
 file=${path_sites}/default.conf
 _lxc_exec ${_CT_NAME} "[ -f ${file} ] && mv ${file} ${file}.keep"
 
-_echoT "----------  ping-monitor file"
-_lxc_exec ${_CT_NAME} "echo '<?php echo \"admin\"; ?>' > ${_APA_PATH_WWW}/ping-monitor.php"
-
-_echoT "----------  ping-monitor"
-_lxc_exec ${_CT_NAME} "echo 'admin' > ${_APA_PATH_WWW}/ping-monitor.html"
-
-
-#############  SITE ADMIN
+#############  SITE APP
 
 domain=${_SUBDOMAIN}.${_DOMAIN_FQDN}
 _echoT "----------  ${domain} path"
-path=${_PATH_DOMAIN}/${_SUBDOMAIN}
-_lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
 
-_echoT "----------  ${domain} index.php"
-file=${_PATH_DOMAIN}/${_SUBDOMAIN}/index.php
-_lxc_exec ${_CT_NAME} "echo '<html><body><h1><?php echo \"php ${_SUBDOMAIN} works! \" ?></h1></body></html>' > ${file}"
-
-
-_echoT "----------  ${domain} conf apache"
 file=${path_sites}/${_SUBDOMAIN}.conf
 _eval lxc file push ${file_site} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} apache
-
-
-#############  SITE APP
-
-domain=pma.${S_DOMAIN_FQDN}
-_echoT "----------  ${domain} conf apache"
-
-domain_tmp=${_SUBDOMAIN}
-_SUBDOMAIN=pma
-
-file=${path_sites}/pma.conf
-_eval lxc file push ${file_site} ${_CT_NAME}${file}
-_lxc_var_replace ${_CT_NAME} ${file} apache
-_lxc_execq ${_CT_NAME} "sed -i 's|^\(\s*\)#\?\(SetEnv PHP_ADMIN_VALUE .session.gc_maxlifetime =\).*$|\1\2 14400\"|' ${file}"
-
-_SUBDOMAIN=${domain_tmp}
+_lxc_execq ${_CT_NAME} "sed -i 's|^\(\s*\)#\?\(SetEnv PHP_ADMIN_VALUE .session.gc_maxlifetime =\).*$|\1\2 3600\"|' ${file}"
 
 _echoT "----------  ${domain} file"
-
-path=${_PATH_DOMAIN}/${file_app%.tar.gz}
+path=${_PATH_DOMAIN}/${file_app%.tar.bz2}
 _lxc_exec ${_CT_NAME} "[ -d ${path} ] && mv ${path} ${path}.${_SDATE}"
 
 path=${_PATH_DOMAIN}
 _eval lxc file push -q ${file_app_tmp} ${_CT_NAME}/${path}/
-_lxc_exec ${_CT_NAME} "tar xzf ${path}/${file_app} -C ${path}" || _exite "Unable to decompress file: ${file}"
-_lxc_exec ${_CT_NAME} "[ -h ${path}/pma ] && rm ${path}/pma"
-_lxc_exec ${_CT_NAME} "cd ${path} && ln -sv ${file_app%.tar.gz} pma"
-
-
-_echoT "----------  ${domain} path tmp"
-
-path=${_PATH_DOMAIN}/pma/tmp
-_lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
-_lxc_exec ${_CT_NAME} "chown apache:apache ${path} && chmod 700 ${path}"
-
-
-_echoT "----------  ${domain} pma conf"
-
-file=${_PATH_DOMAIN}/pma/config.inc.php
-_eval lxc file push ${file_conf} ${_CT_NAME}${file}
-_lxc_var_replace ${_CT_NAME} ${file} pma
-[ "${S_DOMAIN_FQDN##*.}" = lxd ] && _lxc_exec ${_CT_NAME} "sed -i '/.cfg..PmaAbsoluteUri/ s|https|http|' ${file}"
-
-file_part=${_PATH_DOMAIN}/pma/config-part.inc.php
-for ct_maria in ${cts_maria}; do
-	_echoT "----------  ${domain} conf ${cts_maria}"
-	_eval lxc file push ${file_conf_part} ${_CT_NAME}${file_part}
-	_PMA_HOST=${ct_maria}
-	_lxc_var_replace ${_CT_NAME} ${file_part} pma
-	_lxc_exec ${_CT_NAME} "sed -i -e '/#partadd/r ${file_part}' ${file}" >/dev/null
-done
-
-
-_echoT "----------  ${_CT_NAME} pull sql file"
-file_tables=/tmp/create_tables.sql
-_evalr lxc file pull ${_CT_NAME}/${_PATH_DOMAIN}/pma/sql/create_tables.sql ${file_tables}
+_lxc_exec ${_CT_NAME} "tar xjf ${path}/${file_app} -C ${path}" || _exite "Unable to decompress file: ${file}"
+_lxc_exec ${_CT_NAME} "[ -d ${path}/nextcloud ] && mv ${path}/nextcloud ${path}/${file_app%.tar.bz2}"
+_lxc_exec ${_CT_NAME} "[ -h ${path}/${_SUBDOMAIN} ] && rm ${path}/${_SUBDOMAIN}"
+_lxc_exec ${_CT_NAME} "cd ${path} && ln -sv ${file_app%.tar.bz2} ${_SUBDOMAIN}"
 
 
 ########################  RIGHTS
@@ -238,47 +175,45 @@ _echoT "----------  apache2 restart"
 _lxc_exec ${_CT_NAME} "rc-service apache2 restart"
 
 
+_echoI exit && exit
+
+
+
 ########################  MARIADB
 
-for ct_maria in ${cts_maria}; do
+_echoT "\n==========  for ${ct_maria}"
 
-	_echoT "\n==========  for ${ct_maria}"
+_echoT "----------  ${ct_maria} db create"
+cmd="CREATE DATABASE IF NOT EXISTS ${db_app};"
+_eval "mysql -h${ct_maria} -uroothost -p${pwd_maria} -e \"${cmd}\""
 
-	_echoT "----------  ${ct_maria} db create"
-	cmd="CREATE DATABASE IF NOT EXISTS ${db_app};"
-	_eval "mysql -h${ct_maria} -uroothost -p${pwd_maria} -e \"${cmd}\""
+_echoT "----------  ${ct_maria} tables create"
+_eval "mysql -h${ct_maria} -uroothost -p${pwd_maria} < ${file_tables}"
 
-	_echoT "----------  ${ct_maria} tables create"
-	_eval "mysql -h${ct_maria} -uroothost -p${pwd_maria} < ${file_tables}"
 
-	for ct_php in ${cts_php}; do
+_echoT "----------  ${ct_maria} pma strpass"
+file=${S_PATH_CONF}/mariadb
+str="${_APP_DB_USER} @ ${ct_php}.lxd - ${_APP_DB_PWD}"
+strpass+="${str}\n"
+cmd="grep -q ^pma ${file} && sed -i '/^pma/c ${str}'  ${file} || sed -i '\$a ${str}' ${file}"
+_lxc_exec ${ct_maria} "${cmd}"
 
-		_echoT "----------  ${ct_maria} pma strpass"
-		file=${S_PATH_CONF}/mariadb
-		str="${_APP_DB_USER} @ ${ct_php}.lxd - ${_APP_DB_PWD}"
-		strpass+="${str}\n"
-		cmd="grep -q ^pma ${file} && sed -i '/^pma/c ${str}'  ${file} || sed -i '\$a ${str}' ${file}"
-		_lxc_exec ${ct_maria} "${cmd}"
+_echoT "----------  ${ct_maria} pma grant"
+cmd="GRANT USAGE ON *.* TO '${_APP_DB_USER}'@'${ct_php}.lxd' IDENTIFIED BY '${_APP_DB_PWD}';"
+_eval "mysql -h${ct_maria} -uroothost -p${pwd_maria} -e \"${cmd}\""
+cmd="GRANT ALL PRIVILEGES ON ${db_app}.* TO '${_APP_DB_USER}'@'${ct_php}.lxd';"
+_eval "mysql -h${ct_maria} -uroothost -p${pwd_maria} -e \"${cmd}\""
 
-		_echoT "----------  ${ct_maria} pma grant"
-		cmd="GRANT USAGE ON *.* TO '${_APP_DB_USER}'@'${ct_php}.lxd' IDENTIFIED BY '${_APP_DB_PWD}';"
-		_eval "mysql -h${ct_maria} -uroothost -p${pwd_maria} -e \"${cmd}\""
-		cmd="GRANT ALL PRIVILEGES ON ${db_app}.* TO '${_APP_DB_USER}'@'${ct_php}.lxd';"
-		_eval "mysql -h${ct_maria} -uroothost -p${pwd_maria} -e \"${cmd}\""
+_echoT "----------  ${ct_maria} rootadmin strpass"
+file=${S_PATH_CONF}/mariadb
+str="rootadmin @ ${ct_php}.lxd - ${_MDB_PWD_ADMIN}"
+strpass+="${str}\n"
+cmd="grep -q '^rootadmin @ ${ct_php}.lxd' ${file} && sed -i '/^rootadmin @ ${ct_php}.lxd/c ${str}'  ${file} || sed -i '\$a ${str}' ${file}"
+_lxc_exec ${ct_maria} "${cmd}"
 
-		_echoT "----------  ${ct_maria} rootadmin strpass"
-		file=${S_PATH_CONF}/mariadb
-		str="rootadmin @ ${ct_php}.lxd - ${_MDB_PWD_ADMIN}"
-		strpass+="${str}\n"
-		cmd="grep -q '^rootadmin @ ${ct_php}.lxd' ${file} && sed -i '/^rootadmin @ ${ct_php}.lxd/c ${str}'  ${file} || sed -i '\$a ${str}' ${file}"
-		_lxc_exec ${ct_maria} "${cmd}"
-
-		_echoT "----------  ${ct_maria} rootadmin grant"
-		cmd="GRANT ALL PRIVILEGES ON *.* TO rootadmin@'${ct_php}.lxd' IDENTIFIED BY '${_MDB_PWD_ADMIN}' WITH GRANT OPTION"
-		_eval "mysql -h${ct_maria} -uroothost -p${pwd_maria} -e \"${cmd}\""
-	done
-
-done
+_echoT "----------  ${ct_maria} rootadmin grant"
+cmd="GRANT ALL PRIVILEGES ON *.* TO rootadmin@'${ct_php}.lxd' IDENTIFIED BY '${_MDB_PWD_ADMIN}' WITH GRANT OPTION"
+_eval "mysql -h${ct_maria} -uroothost -p${pwd_maria} -e \"${cmd}\""
 
 
 ########################  COPY
@@ -299,11 +234,8 @@ done
 
 ########################  SHOW
 
-_echoT "----------  show privileges"
-for ct_maria in ${cts_maria}; do
-	_echo "${ct_maria}:"
-	_eval "mysql -h${ct_maria} -uroothost -p${pwd_maria} -e \"SELECT user,host FROM mysql.user WHERE user like 'pma';\""
-done
+_echoT "----------  show privileges ${ct_maria}"
+_eval "mysql -h${ct_maria} -uroothost -p${pwd_maria} -e \"SELECT user,host FROM mysql.user WHERE user like 'pma';\""
 
 _echoT "----------  show passwords"
 _echoI "Keep this passwords:"
@@ -317,7 +249,7 @@ _echoI "\n----------  Adjust backend for domain ${_DOMAIN_FQDN}"
 
 ########################  PUBLISH
 
-for ct_name in ${cts_php} ${cts_maria}; do
+for ct_name in ${ct_php} ${ct_maria}; do
 	_echoT "----------  publish ${ct_name}"
 
 	lxc image list -f csv -c l | grep -q ^${ct_name}$ && _eval lxc image alias rename ${ct_name} ${ct_name}-${_SDATE}
@@ -328,4 +260,4 @@ done
 ########################  END
 
 _echoT "===================== ${_PART} end"
-_partadd ${_PART#++} ${S_FILE_INSTALL_DONE}
+#_partadd ${_PART#++} ${S_FILE_INSTALL_DONE}
