@@ -53,29 +53,29 @@ ok=false; while ! ${ok}; do
 done
 _PWD_MARIA=${_ANSWER}
 
-# pma_version & file_pma
+# app_version & file_app
 ok=false; while ! ${ok}; do
-	anstmp=5.1.1 && _askno "version of phpMyAdmin to download (5.1.1)"
-	pma_version="${_ANSWER:-$anstmp}"
-	file_pma=phpMyAdmin-${pma_version}-all-languages.tar.gz
-	file_pma_tmp=/tmp/${file_pma}
-	uri=https://files.phpmyadmin.net/phpMyAdmin/${pma_version}/${file_pma}
-	if ! [ -f ${file_pma_tmp} ] || [ `ls -s ${file_pma_tmp}|cut -d' ' -f1` = 0 ]; then
-		_echoT "----------  wget ${file_pma}"
-		wget -q ${uri} -O ${file_pma_tmp} && ok=true || _echoe "Unable to get version: ${uri}"
+	anstmp=5.1.1 && _askno "version of phpMyAdmin to download (${anstmp})"
+	app_version="${_ANSWER:-$anstmp}"
+	file_app=phpMyAdmin-${app_version}-all-languages.tar.gz
+	file_app_tmp=/tmp/${file_app}
+	uri=https://files.phpmyadmin.net/phpMyAdmin/${app_version}/${file_app}
+	if ! [ -f ${file_app_tmp} ] || [ `ls -s ${file_app_tmp}|cut -d' ' -f1` = 0 ]; then
+		_echoT "----------  wget ${file_app}"
+		wget -q ${uri} -O ${file_app_tmp} && ok=true || _echoe "Unable to get version: ${uri}"
 	else
 		ok=true
 	fi
 done
 
 _PATH_DOMAIN=${S_VM_PATH_SHARE}/www/${_SUBDOMAIN}.${_DOMAIN_FQDN}
-_PMA_URI=https://pma.${_DOMAIN_FQDN}
-_PMA_PORT=${S_DB_MARIA_PORT}
-_PMA_USER=pma
-_PMA_PWD=`_pwd`
-_PMA_BLOWFISH=`_pwd32`
-_PMA_PATH_UP=${S_VM_PATH_SHARE}/php/up
-_PMA_PATH_DW=${S_VM_PATH_SHARE}/php/down
+_APP_URI=https://pma.${_DOMAIN_FQDN}
+_APP_DB_PORT=${S_DB_MARIA_PORT}
+_APP_DB_USER=pma
+_APP_DB_PWD=`_pwd`
+_APP_BLOWFISH=`_pwd32`
+_APP_PATH_UP=${S_VM_PATH_SHARE}/php/up
+_APP_PATH_DW=${S_VM_PATH_SHARE}/php/down
 
 cts_php=`for i in $(seq 1 ${ct_num}); do echo ${ct_base}-${i}; done`
 path_sites=/etc/apache2/sites
@@ -185,14 +185,14 @@ _SUBDOMAIN=${domain_tmp}
 
 _echoT "----------  ${domain} file"
 
-path=${_PATH_DOMAIN}/${file_pma%.tar.gz}
+path=${_PATH_DOMAIN}/${file_app%.tar.gz}
 _lxc_exec ${_CT_NAME} "[ -d ${path} ] && mv ${path} ${path}.${_SDATE}"
 
 path=${_PATH_DOMAIN}
-_eval lxc file push -q ${file_pma_tmp} ${_CT_NAME}/${path}/
-_lxc_exec ${_CT_NAME} "tar xzf ${path}/${file_pma} -C ${path}" || _exite "Unable to decompress file: ${file}"
+_eval lxc file push -q ${file_app_tmp} ${_CT_NAME}/${path}/
+_lxc_exec ${_CT_NAME} "tar xzf ${path}/${file_app} -C ${path}" || _exite "Unable to decompress file: ${file}"
 _lxc_exec ${_CT_NAME} "[ -h ${path}/pma ] && rm ${path}/pma"
-_lxc_exec ${_CT_NAME} "cd ${path} && ln -sv ${file_pma%.tar.gz} pma"
+_lxc_exec ${_CT_NAME} "cd ${path} && ln -sv ${file_app%.tar.gz} pma"
 
 
 _echoT "----------  ${domain} path tmp"
@@ -257,15 +257,15 @@ for ct_maria in ${cts_maria}; do
 
 		_echoT "----------  ${ct_maria} pma strpass"
 		file=${S_PATH_CONF}/mariadb
-		str="${_PMA_USER} @ ${ct_php}.lxd - ${_PMA_PWD}"
+		str="${_APP_DB_USER} @ ${ct_php}.lxd - ${_APP_DB_PWD}"
 		strpass+="${str}\n"
 		cmd="grep -q ^pma ${file} && sed -i '/^pma/c ${str}'  ${file} || sed -i '\$a ${str}' ${file}"
 		_lxc_exec ${ct_maria} "${cmd}"
 
 		_echoT "----------  ${ct_maria} pma grant"
-		cmd="GRANT USAGE ON *.* TO '${_PMA_USER}'@'${ct_php}.lxd' IDENTIFIED BY '${_PMA_PWD}';"
+		cmd="GRANT USAGE ON *.* TO '${_APP_DB_USER}'@'${ct_php}.lxd' IDENTIFIED BY '${_APP_DB_PWD}';"
 		_eval "mysql -h${ct_maria} -uroothost -p${_PWD_MARIA} -e \"${cmd}\""
-		cmd="GRANT ALL PRIVILEGES ON ${db_pma}.* TO '${_PMA_USER}'@'${ct_php}.lxd';"
+		cmd="GRANT ALL PRIVILEGES ON ${db_pma}.* TO '${_APP_DB_USER}'@'${ct_php}.lxd';"
 		_eval "mysql -h${ct_maria} -uroothost -p${_PWD_MARIA} -e \"${cmd}\""
 
 		_echoT "----------  ${ct_maria} rootadmin strpass"

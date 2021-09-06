@@ -13,7 +13,7 @@ declare(strict_types=1);
  * This is needed for cookie based authentication to encrypt password in
  * cookie. Needs to be 32 chars long.
  */
-$cfg['blowfish_secret'] = '_PMA_BLOWFISH'; /* YOU MUST FILL IN THIS FOR COOKIE AUTH! */
+$cfg['blowfish_secret'] = '_APP_BLOWFISH'; /* YOU MUST FILL IN THIS FOR COOKIE AUTH! */
 
 /**
  * Cookie validity
@@ -23,7 +23,7 @@ $cfg['LoginCookieValidity'] = 60*60*4;
 /**
  * Prevents ssl error
  */
-$cfg['PmaAbsoluteUri'] = '_PMA_URI';
+$cfg['PmaAbsoluteUri'] = '_APP_URI';
 
 /**
  * Servers configuration
@@ -42,8 +42,8 @@ $i = 0;
 /**
  * Directories for saving/loading files from server
  */
-$cfg['UploadDir'] = '_PMA_PATH_UP';
-$cfg['SaveDir'] = '_PMA_PATH_DW';
+$cfg['UploadDir'] = '_APP_PATH_UP';
+$cfg['SaveDir'] = '_APP_PATH_DW';
 
 /**
  * Whether to display icons or text or both icons and text in table row

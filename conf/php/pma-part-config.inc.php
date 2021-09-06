@@ -14,9 +14,9 @@ $cfg['Servers'][$i]['AllowNoPassword'] = false;
 
 /* User used to manipulate with storage */
 $cfg['Servers'][$i]['controlhost'] = '_PMA_HOST';
-$cfg['Servers'][$i]['controlport'] = '_PMA_PORT';
-$cfg['Servers'][$i]['controluser'] = '_PMA_USER';
-$cfg['Servers'][$i]['controlpass'] = '_PMA_PWD';
+$cfg['Servers'][$i]['controlport'] = '_APP_DB_PORT';
+$cfg['Servers'][$i]['controluser'] = '_APP_DB_USER';
+$cfg['Servers'][$i]['controlpass'] = '_APP_DB_PWD';
 
 /* Storage database and tables */
 $cfg['Servers'][$i]['pmadb'] = 'phpmyadmin';
