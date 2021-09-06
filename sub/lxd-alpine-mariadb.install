@@ -60,20 +60,18 @@ if [ "${S_STORAGE_DRIVER}" = zfs ]; then
 	path_zfs=${_ZFS_ROOT}${S_HOST_PATH}/mariadb
 	path=${S_HOST_PATH}/mariadb
 	opts="-o mountpoint=${path} -o compression=lz4 -o  acltype=posixacl -o recordsize=8K -o primarycache=metadata"
-	cmd="zfs create ${opts} ${path_zfs}"
-	_evalr zfs list ${path_zfs} >/dev/null 2>&1 || _evalr ${cmd}
+	_evalr zfs list ${path_zfs} >/dev/null 2>&1 || _evalr zfs create ${opts} ${path_zfs}
 
 
 	name=${_MDB_NAME}
 	_echoT "----------  zfs ${name}"
-	path_zfs=${_ZFS_ROOT}${_MDB_HOST_PATH}
 	path=${_MDB_HOST_PATH}
+	path_zfs=${_ZFS_ROOT}${_MDB_HOST_PATH}
 
 	# rename
 	if zfs list ${path_zfs} >/dev/null 2>&1; then
 	 	_echoT "----------  unmount  ${path_zfs}"
 	 	_evalr zfs unmount ${path_zfs} || _exite "Unable to unmount ${path_zfs}\nUnbind container using it"
-
 		_echoI "----------  zfs backup ${path_zfs} to ${path_zfs}.${_SDATE}"
 	 	_evalr zfs rename ${path_zfs} ${path_zfs}.${_SDATE}
 	 fi
@@ -81,25 +79,20 @@ if [ "${S_STORAGE_DRIVER}" = zfs ]; then
 	_echoT "----------  zfs create ${path_zfs}"
 	_evalr zfs create -o mountpoint=${path} ${path_zfs}
 
-	_echoT "----------  rights ${name}"
-
-	_evalr chown 1000100:1000101 ${path}
-	_evalr setfacl -Rm u:1000000:rwx ${path}
-	_evalr setfacl -Rm d:u:1000000:rwx ${path}
+	id=1000000
 
 elif [ "${S_STORAGE_DRIVER}" = btrfs ]; then
 
 	name=mariadb
 	_echoT "----------  btrfs ${name}"
-	path_base=${S_HOST_PATH}
-	_evalr ls -1 ${path_base} | grep -q ${name}$ || _evalr btrfs subvolume create ${path_base}/${name}
+	path=${S_HOST_PATH}/mariadb
+	_evalr ls -1 ${path} >/dev/null 2>&1 || _evalr btrfs subvolume create ${path}
 
 	name=${_MDB_NAME}
 	_echoT "----------  btrfs ${name}"
 	# rename
-	path_base=${S_HOST_PATH}/mariadb
 	path=${_MDB_HOST_PATH}
-	if _evalr ls -1 ${path_base} | grep -q ${name}$; then
+	if _evalr ls -1 ${path} >/dev/null 2>&1; then
 		_echoI "----------  mv ${path} to ${path}.${_SDATE}"
 	 	_evalr mv ${path} ${path}.${_SDATE}
 	 fi
@@ -107,15 +100,15 @@ elif [ "${S_STORAGE_DRIVER}" = btrfs ]; then
 	_echoT "----------  btrfs create ${path}"
 	_evalr btrfs subvolume create ${path}
 
-	_echoT "----------  rights ${name}"
-
-	_evalr chown 100100:100101 ${path}
-	_evalr setfacl -Rm u:100000:rwx ${path}
-	_evalr setfacl -Rm d:u:100000:rwx ${path}
-
+	id=100000
 else
 	_exite "This part have to be implemented"
 fi
+
+_echoT "----------  rights ${name}"
+_evalr chown ${id}:${id} ${path}
+_evalr setfacl -Rm u:${id}:rwx ${path}
+_evalr setfacl -Rm d:u:${id}:rwx ${path}
 
 
 ########################  PROFILE

@@ -9,8 +9,8 @@ grep -q "^# ${_PART#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART}" | _evalqr
 ########################  REQUIRED
 
 _echoT "------------------ required vm"
-cts_www=`lxc image list -f csv -c l| grep -e '^\(apa\|ngx\)'`
-[ "${cts_www}" ] || _exite "unable to find image container start with apa|ngx"
+cts_all_www=`lxc image list -f csv -c l| grep -e '^\(apa\|ngx\)'`
+[ "${cts_all_www}" ] || _exite "unable to find image container start with apa|ngx"
 
 lxc list -f csv -c n| grep -q ^${S_SERVICE[cache]}$ || _exite "Unable to find image container: '${S_SERVICE[cache]}'"
 
@@ -54,20 +54,19 @@ ct_base="${_ANSWER:-$anstmp}"
 anstmp=2 && _askno "Number of containers to build (${anstmp})"
 ct_num="${_ANSWER:-$anstmp}"
 
-_echoT "----------  data WWW"
+_echoT "----------  data www"
 
-_menu "Select one available image container for WWW base" ${cts_www}
+_menu "Select one available image container for WWW base" ${cts_all_www}
 ct_www=${_ANSWER}
 
 profiles=`lxc profile list -f csv|grep "^www.*,"|cut -d, -f1`
-[ "${profiles}" ] && _menu "Select a available WWW profile to apply" ${profiles}
-profile_www="${_ANSWER}"
+[ "${profiles}" ] && _menu "Select an available WWW profile to apply" ${profiles}
+profile_www="${_ANSWER}" || _ANSWER=
 
-_echoT "----------  data PHP"
+_echoT "----------  data php"
 
 profiles=`lxc profile list -f csv|grep "^php.*,"|cut -d, -f1`
-_ANSWER=
-[ "${profiles}" ] && _menu "Select a available PHP profile to apply or none" none ${profiles}
+[ "${profiles}" ] && _menu "Select an available PHP profile to apply or none" none ${profiles} || _ANSWER=
 profile="${_ANSWER/none/}"
 [ -z "${profile}" ] && anstmp=php7-${_DOMAIN_FQDN} && _askno "Name of the new  PHP profile (${anstmp})" && profile="${_ANSWER:-$anstmp}"
 
@@ -156,7 +155,6 @@ if lxc list -f csv -c n | grep -q ^${_CT_NAME}$; then
 	lxc list -f csv -c n status=Running| grep -q ^${_CT_NAME}$ && _eval lxc stop ${_CT_NAME}
 	_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
 fi
-
 _eval lxc init ${ct_www} ${_CT_NAME} -p default -p global -p ${profile_www} -p ${profile}
 
 

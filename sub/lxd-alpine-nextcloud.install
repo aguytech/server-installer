@@ -9,10 +9,15 @@ grep -q "^# ${_PART#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART}" | _evalqr
 ########################  REQUIRED
 
 _echoT "------------------ required vm"
-cts_all_php=`lxc list -f json | jq -r '.[] | select(.profiles | any(contains("php"))).name'`
-[ -z "${cts_all_php}" ] && _exite "unable to find container with php* profile"
+img_all_www=`lxc image list -f csv -c l| grep -e '^\(apa\|www\)'`
+[ "${img_all_www}" ] || _exite "Unable to find a www image container (apa|ngx)"
+
+profiles_all_php=`lxc profile list -f csv|grep "^php.*,"|cut -d, -f1`
+[ -z "${profiles_all_php}" ] && _exite "Unable to find a php profile"
+
 cts_all_maria=`lxc list -f json | jq -r '.[] | select(.profiles | any(contains("maria"))).name'`
-[ -z "${cts_all_maria}" ] && _exite "unable to find container with php* profile"
+[ -z "${cts_all_maria}" ] && _exite "Unable to find a container with maria* profile"
+
 
 file_conf=${S_PATH_INSTALL_CONF}/php/pma-config.inc.php
 file_site=${S_PATH_INSTALL_CONF}/apache2/domain.conf
@@ -37,8 +42,22 @@ ct_base="${_ANSWER:-$anstmp}"
 anstmp=1 && _askno "Number of php containers to build (${anstmp})"
 ct_num="${_ANSWER:-$anstmp}"
 
-_menu "Select one available php container to copy from" ${cts_all_php}
-ct_from=${_ANSWER}
+_echoT "----------  data www"
+
+_menu "Select one available image container for WWW base" ${img_all_www}
+ct_www=${_ANSWER}
+
+profiles=`lxc profile list -f csv|grep "^www.*,"|cut -d, -f1`
+[ "${profiles}" ] && _menu "Select an available WWW profile to apply or none" none ${profiles} || _ANSWER=
+profile_www="${_ANSWER/none/}" && profile_www_exist=${profile_www}
+[ -z "${profile_www_exist}" ] && anstmp=www-${_SUBDOMAIN}.${_DOMAIN_FQDN} && _askno "Name of the new  WWW profile (${anstmp})" && profile_www="${_ANSWER:-$anstmp}"
+
+_echoT "----------  data php"
+
+_menu "Select an available PHP profile to apply or none" ${profiles_all_php} || _ANSWER=
+profile_php="${_ANSWER/none/}"
+
+_echoT "----------  data mariadb"
 
 _menu "Select mariadb container to use" ${cts_all_maria}
 ct_maria=${_ANSWER}
@@ -64,6 +83,9 @@ ok=false; while ! ${ok}; do
 	fi
 done
 
+
+_CT_NAME=${ct_base}-1
+
 _PATH_DOMAIN=${S_VM_PATH_SHARE}/www/${_SUBDOMAIN}.${_DOMAIN_FQDN}
 _APP_URI=https://${_SUBDOMAIN}.${_DOMAIN_FQDN}
 _APP_DB_PORT=${S_DB_MARIA_PORT}
@@ -77,58 +99,111 @@ path_sites=/etc/apache2/sites
 db_app=nextcloud
 
 
+########################  STORAGE
+
+if [ "${S_STORAGE_DRIVER}" = zfs ]; then
+
+	name=${_SUBDOMAIN}
+	_echoT "----------  zfs ${name}"
+	path=${S_HOST_PATH}/${name}
+	path_zfs=${_ZFS_ROOT}${path}
+	opts="-o mountpoint=${path} -o compression=lz4 -o  acltype=posixacl"
+	_evalr zfs list ${path_zfs} >/dev/null 2>&1 || _evalr zfs create ${opts} ${path_zfs}
+
+	name=${_DOMAIN_FQDN}
+	_echoT "----------  zfs ${name}"
+	path=${S_HOST_PATH}/${_SUBDOMAIN}/${name}
+	path_zfs=${_ZFS_ROOT}${path}
+
+	# rename
+	if zfs list ${path_zfs} >/dev/null 2>&1; then
+	 	_echoT "----------  unmount  ${path_zfs}"
+	 	_evalr zfs unmount ${path_zfs} || _exite "Unable to unmount ${path_zfs}\nUnbind container using it"
+		_echoI "----------  zfs backup ${path_zfs} to ${path_zfs}.${_SDATE}"
+	 	_evalr zfs rename ${path_zfs} ${path_zfs}.${_SDATE}
+	 fi
+
+	_echoT "----------  zfs create ${path_zfs}"
+	_evalr zfs create -o mountpoint=${path} ${path_zfs}
+
+	id=1000000
+
+elif [ "${S_STORAGE_DRIVER}" = btrfs ]; then
+
+	name=${_SUBDOMAIN}
+	_echoT "----------  btrfs ${name}"
+	path=${S_HOST_PATH}/${name}
+	_evalr ls -1 ${path} >/dev/null 2>&1 || _evalr btrfs subvolume create ${path}
+
+	name=${_DOMAIN_FQDN}
+	_echoT "----------  btrfs ${name}"
+	# rename
+	path=${S_HOST_PATH}/${_SUBDOMAIN}/${name}
+	if _evalr ls -1 ${path} >/dev/null 2>&1; then
+		_echoI "----------  mv ${path} to ${path}.${_SDATE}"
+	 	_evalr mv ${path} ${path}.${_SDATE}
+	 fi
+
+	_echoT "----------  btrfs create ${path}"
+	_evalr btrfs subvolume create ${path}
+
+	id=100000
+
+else
+	_exite "This part have to be implemented"
+fi
+
+_echoT "----------  rights ${name}"
+_evalr chown ${id}:${id} ${path}
+_evalr setfacl -Rm u:${id}:rwx ${path}
+_evalr setfacl -Rm d:u:${id}:rwx ${path}
+
+
 ########################  PROFILE
 
-profile=www-${_SUBDOMAIN}.${_DOMAIN_FQDN}
+# www
+if [ -z "${profile_www_exist}" ]; then
+
+	profile=${profile_www}
+	_echoT "----------  profile ${profile}"
+
+	lxc profile list -f csv|grep -q "^${profile}," && _eval lxc profile rename ${profile} ${profile}.${_SDATE}
+	_eval lxc profile create ${profile}
+
+	path=${S_HOST_PATH_SHARE}/www/${_SUBDOMAIN}.${_DOMAIN_FQDN}
+	path_ct=${_PATH_DOMAIN}
+	[ -d ${path} ] || _evalr mkdir -p ${path}
+	_eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
+fi
+
+# cloud
+profile=${_SUBDOMAIN}.${_DOMAIN_FQDN}
 _echoT "----------  profile ${profile}"
 
 lxc profile list -f csv|grep -q "^${profile}," && _eval lxc profile rename ${profile} ${profile}.${_SDATE}
 _eval lxc profile create ${profile}
 
-path=${S_HOST_PATH_SHARE}/www/${_SUBDOMAIN}.${_DOMAIN_FQDN}
-path_ct=${_PATH_DOMAIN}
+path=${S_HOST_PATH}/${_SUBDOMAIN}/${_DOMAIN_FQDN}
+path_ct=${S_VM_PATH_SHARE}/cloud
 [ -d ${path} ] || _evalr mkdir -p ${path}
 _eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
 
 
-########################  PHP
+########################  INIT
 
-_CT_NAME=${ct_base}-1
+_echoT "----------  init"
 
 if lxc list -f csv -c n | grep -q ^${_CT_NAME}$; then
 	lxc list -f csv -c n status=Running| grep -q ^${_CT_NAME}$ && _eval lxc stop ${_CT_NAME}
 	_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
 fi
-
-_echoT "----------  copy ${ct_from} to ${_CT_NAME}"
-_eval lxc copy ${ct_from} ${_CT_NAME}
+_eval lxc init ${ct_www} ${_CT_NAME} -p default -p global -p ${profile_www}  -p ${profile_php} -p ${profile}
 
 
 #############  START
 
 _echoT "----------  ${_CT_NAME} start"
 lxc list -f csv -c n status=Stopped | grep -q ^${_CT_NAME}$ && _eval lxc start ${_CT_NAME}
-
-
-#############  PROFILE
-
-# remove profiles
-profiles=`lxc list ^${_CT_NAME}$ -f json | jq -r '.[].profiles[]' | grep '^www-'`
-if [ "${profiles}" ]; then
-	 _menur "Select profiles to remove" ${profiles}
-
-	_echoT "----------  profile remove ${profiles}"
-	for profile in ${_ANSWER}; do
-		_eval lxc profile remove ${_CT_NAME} ${profile}
-		path=${S_VM_PATH_SHARE}/www/${profile}
-		_lxc_exec ${_CT_NAME} "[ -d ${path} ] && rmdir ${path}"
-	done
-fi
-
-profile=www-${_SUBDOMAIN}.${_DOMAIN_FQDN}
-lxc list ^${_CT_NAME}$ -f json | jq -r '.[].profiles[]' | grep -q "^${profile}$" && lxc profile rename ${profile} ${profile}.${_SDATE}
-_echoT "----------  profile add ${_CT_NAME}"
-_eval lxc profile add ${_CT_NAME} ${profile}
 
 
 #############  WWW

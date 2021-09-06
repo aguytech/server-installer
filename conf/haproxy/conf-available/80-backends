@@ -2,7 +2,7 @@
 
 backend default
 	default-server		weight 20  maxconn 30  check  inter 4s  fall 2  rise 1  resolvers lxd  resolve-prefer ipv4 # resolve-net 10.0.0.1/24
-	server			default  _SERVER_DEFAULT:80 maxconn 20 check
+	server			_SERVER_DEFAULT  _SERVER_DEFAULT:80 maxconn 20 check
 
 backend letsencrypt
 	server			letsencrypt 127.0.0.1:_HPX_LCRYPT_PORT

@@ -10,9 +10,10 @@ grep -q "^# ${_PART#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART}" | _evalqr
 
 _echoT "------------------ required vm"
 cts_all_php=`lxc list -f json | jq -r '.[] | select(.profiles | any(contains("php"))).name'`
-[ -z "${cts_all_php}" ] && _exite "unable to find container with php* profile"
+[ -z "${cts_all_php}" ] && _exite "Unable to find a container with php* profile"
+
 cts_all_maria=`lxc list -f json | jq -r '.[] | select(.profiles | any(contains("maria"))).name'`
-[ -z "${cts_all_maria}" ] && _exite "unable to find container with php* profile"
+[ -z "${cts_all_maria}" ] && _exite "Unable to find a container with maria* profile"
 
 file_conf=${S_PATH_INSTALL_CONF}/php/pma-config.inc.php
 file_conf_part=${S_PATH_INSTALL_CONF}/php/pma-part-config.inc.php

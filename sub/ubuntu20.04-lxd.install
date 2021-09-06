@@ -63,8 +63,7 @@ link="/lxd"
 
 path="${S_HOST_PATH_SHARE}"
 _echoT "----------  rights ${path}"
-
- id=1000000
+id=1000000
 [ "${S_STORAGE_DRIVER}" = btrfs ] && id=100000
 _evalr setfacl -Rm u:${id}:rwx "${path}"
 _evalr setfacl -Rm d:u:${id}:rwx "${path}"
