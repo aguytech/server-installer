@@ -226,54 +226,6 @@ if [ -z "${S_SERVICE[log]}" ]; then
 	S_SERVICE[log]=${_ANSWER:-${anstmp}} && _confset_array "S_SERVICE" "log" "${S_SERVICE[log]}" "${S_GLOBAL_CONF}"
 fi
 
-_echoT "----------  S_SERVICE cache"
-
-if [ -z "${S_SERVICE[cache]}" ]; then
-	anstmp="srv-redis"
-	_askno "service name for cache (${anstmp})"
-	S_SERVICE[cache]=${_ANSWER:-${anstmp}} && _confset_array "S_SERVICE" "cache" "${S_SERVICE[cache]}" "${S_GLOBAL_CONF}"
-fi
-
-_echoT "----------  S_SERVICE http"
-
-if [ -z "${S_SERVICE[http]}" ]; then
-	anstmp="srv-apache"
-	_askno "service name for http (${anstmp})"
-	S_SERVICE[http]=${_ANSWER:-${anstmp}} && _confset_array "S_SERVICE" "http" "${S_SERVICE[http]}" "${S_GLOBAL_CONF}"
-fi
-
-_echoT "----------  S_SERVICE php"
-
-if [ -z "${S_SERVICE[php]}" ]; then
-	anstmp="srv-php"
-	_askno "service name for php (${anstmp})"
-	S_SERVICE[php]=${_ANSWER:-${anstmp}} && _confset_array "S_SERVICE" "php" "${S_SERVICE[php]}" "${S_GLOBAL_CONF}"
-fi
-
-_echoT "----------  S_SERVICE sgbd"
-
-if [ -z "${S_SERVICE[sgbd]}" ]; then
-	anstmp="srv-maria"
-	_askno "service name for sgbd (${anstmp})"
-	S_SERVICE[sgbd]=${_ANSWER:-${anstmp}} && _confset_array "S_SERVICE" "sgbd" "${S_SERVICE[sgbd]}" "${S_GLOBAL_CONF}"
-fi
-
-_echoT "----------  S_SERVICE mail"
-
-if [ -z "${S_SERVICE[mail]}" ]; then
-	anstmp="srv-postfix"
-	_askno "service name for mail (${anstmp})"
-	S_SERVICE[mail]=${_ANSWER:-${anstmp}} && _confset_array "S_SERVICE" "mail" "${S_SERVICE[mail]}" "${S_GLOBAL_CONF}"
-fi
-
-_echoT "----------  S_SERVICE admin"
-
-if [ -z "${S_SERVICE[admin]}" ]; then
-	anstmp="srv-admin"
-	_askno "service name for admin (${anstmp})"
-	S_SERVICE[admin]=${_ANSWER:-${anstmp}} && _confset_array "S_SERVICE" "admin" "${S_SERVICE[admin]}" "${S_GLOBAL_CONF}"
-fi
-
 
 ###################  DOMAIN
 

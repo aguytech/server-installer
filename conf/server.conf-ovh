@@ -87,22 +87,11 @@ S_VM_PATH_BACKUP="/save/backup"
 declare -A S_SERVICE_BITS
 S_SERVICE_BITS[proxy]="2"
 S_SERVICE_BITS[log]="4"
-S_SERVICE_BITS[cache]="6"
-S_SERVICE_BITS[http]="10"
-S_SERVICE_BITS[sgbd]="12"
-S_SERVICE_BITS[mail]="14"
-S_SERVICE_BITS[admin]="16"
 
 # services name
 declare -A S_SERVICE
 S_SERVICE[proxy]="srv-haproxy"
 S_SERVICE[log]="srv-rsyslog"
-S_SERVICE[cache]="srv-redis"
-S_SERVICE[http]="srv-apache"
-S_SERVICE[php]="srv-php"
-S_SERVICE[sgbd]="srv-maria"
-S_SERVICE[mail]="srv-postfix"
-S_SERVICE[admin]="srv-admin"
 
 ########################  DOMAIN
 # FQDN of principal domain
