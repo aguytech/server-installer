@@ -9,10 +9,12 @@ grep -q "^# ${_PART#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART}" | _evalqr
 ########################  REQUIRED
 
 _echoT "------------------ required vm"
-cts_all_www=`lxc image list -f csv -c l| grep -e '^\(apa\|ngx\)'`
+cts_all_www=`lxc image list -f csv -c l| grep -e '^\(wa-\|wn-\)'`
 [ "${cts_all_www}" ] || _exite "unable to find image container start with apa|ngx"
 
-lxc list -f csv -c n| grep -q ^${S_SERVICE[cache]}$ || _exite "Unable to find image container: '${S_SERVICE[cache]}'"
+imgs_all_rds=`lxc list -f csv -c n| grep '^rds-'`
+[ "${imgs_all_rds}" ] || _exite "unable to find www container"
+
 
 file_phpfpm="${S_PATH_INSTALL_CONF}/apache2/php7-fpm.conf"
 file_monitor="${S_PATH_INSTALL_CONF}/apache2/monitor.conf"
@@ -28,18 +30,6 @@ _require ${file_phpfpm} ${file_monitor} ${file_opcache} ${file_xdebug} ${file_rs
 
 ########################  DATA
 
-_PHP_SERVICE=php-fpm7 && _confset _PHP_SERVICE "${_PHP_SERVICE}"
-_PHP_FPM_SOCK=/run/${_PHP_SERVICE}/php-fpm.sock && _confset _PHP_SERVICE "${_PHP_SERVICE}"
-_PHP_FPM_ADMIN_SOCK=/run/${_PHP_SERVICE}/php-fpm-admin.sock && _confset _PHP_SERVICE "${_PHP_SERVICE}"
-
-file_php_conf=/etc/php7/php.ini
-file_fpm_conf=/etc/php7/php-fpm.conf
-
-path_php_conf=/etc/php7/conf.d
-path_fpm_conf=/etc/php7/php-fpm.d
-path_apache_conf=/etc/apache2/conf.d
-
-
 #php_version=`_lxc_exec ${S_SERVICE[http]} "apk list php7-fpm | sed -n 's|php7-fpm-\([0-9\.]\+\)-.*|\1|p'"`
 php_modules="php7-bcmath php7-bz2 php7-ctype php7-curl php7-exif php7-fileinfo php7-dom php7-gd php7-gmp php7-iconv php7-imap php7-json php7-mbstring php7-mysqli php7-openssl php7-pdo_mysql php7-opcache php7-pgsql php7-posix php7-session php7-simplexml php7-sqlite3 php7-xmlreader php7-xmlwriter php7-zip php7-xdebug php7-pecl-mcrypt php7-pecl-redis php7-xml" #  php7-pecl-imagick php7-pear
 
@@ -48,13 +38,13 @@ _echoT "----------  data domain"
 anstmp=${S_DOMAIN_FQDN} && _askno "Domain name to use (${anstmp})"
 _DOMAIN_FQDN="${_ANSWER:-$anstmp}"
 
-anstmp=www-${_DOMAIN_FQDN//./-} && _askno "Base name of containers to build (${anstmp})"
+anstmp=wap-${_DOMAIN_FQDN//./-} && _askno "Base name of containers to build (${anstmp})"
 ct_base="${_ANSWER:-$anstmp}"
 
 anstmp=2 && _askno "Number of containers to build (${anstmp})"
 ct_num="${_ANSWER:-$anstmp}"
 
-_echoT "----------  data www"
+_echoT "----------  data image"
 
 _menu "Select one available image container for WWW base" ${cts_all_www}
 ct_www=${_ANSWER}
@@ -62,6 +52,9 @@ ct_www=${_ANSWER}
 profiles=`lxc profile list -f csv|grep "^www.*,"|cut -d, -f1`
 [ "${profiles}" ] && _menu "Select an available WWW profile to apply" ${profiles}
 profile_www="${_ANSWER}" || _ANSWER=
+
+_menu "Select one available container for cache" ${imgs_all_rds}
+ct_rds=${_ANSWER}
 
 _echoT "----------  data php"
 
@@ -123,6 +116,18 @@ _PHP_W_MAX_REQUESTS="${_ANSWER:-$anstmp}" && _confset _PHP_W_MAX_REQUESTS "${_PH
 anstmp='2' && _askno "Give value for 'request_SLOWLOG_TIMEOUT' (${anstmp})"
 _PHP_SLOWLOG_TIMEOUT="${_ANSWER:-$anstmp}" && _confset _PHP_SLOWLOG_TIMEOUT "${_PHP_SLOWLOG_TIMEOUT}"
 
+
+_PHP_SERVICE=php-fpm7 && _confset _PHP_SERVICE "${_PHP_SERVICE}"
+_PHP_FPM_SOCK=/run/${_PHP_SERVICE}/php-fpm.sock && _confset _PHP_SERVICE "${_PHP_SERVICE}"
+_PHP_FPM_ADMIN_SOCK=/run/${_PHP_SERVICE}/php-fpm-admin.sock && _confset _PHP_SERVICE "${_PHP_SERVICE}"
+
+file_php_conf=/etc/php7/php.ini
+file_fpm_conf=/etc/php7/php-fpm.conf
+
+path_php_conf=/etc/php7/conf.d
+path_fpm_conf=/etc/php7/php-fpm.d
+path_apache_conf=/etc/apache2/conf.d
+
 # shared
 _PATH_DOMAIN=${S_VM_PATH_SHARE}/www/${_DOMAIN_FQDN}
 path_php_share=${S_VM_PATH_SHARE}/php/${_DOMAIN_FQDN}
@@ -168,6 +173,13 @@ _eval lxc init ${ct_www} ${_CT_NAME} -p default -p global -p ${profile_www} -p $
 
 _echoT "----------  ${_CT_NAME} start"
 _eval lxc start ${_CT_NAME}
+
+
+########################  METADATA
+
+_echoT "----------  metadata"
+_lxc_meta_add ${_CT_NAME} profiles ${profile_www} ${profile}
+_lxc_meta_add ${_CT_NAME} apps php7
 
 
 ########################  PATHS
@@ -217,7 +229,7 @@ upload_max_filesize  ${_PHP_UPLOAD_MAX_FILESIZE}
 date.timezone  'Europe/Paris'
 session.use_strict_mode  ${_PHP_SESSION_STRICT_MODE}
 session.save_handler  redis
-session.save_path  \"tcp://${S_SERVICE[cache]}:${S_CACHE_PORT}\"
+session.save_path  \"tcp://${ct_rds}:${S_CACHE_PORT}\"
 mail.log  syslog"
 #error_log  syslog
 #syslog.ident  php
@@ -495,30 +507,29 @@ done
 
 _echoT "----------  php test"
 
-_echoI "To verify php configuration, type:"
+_echoW "To verify php configuration, type:"
 _echo "curl ${_IPTHIS}/phpinf.php"
 _echo "curl ${_CT_NAME}/phpinf.php"
 _echo "curl ${_DOMAIN_FQDN}:80"
 
-_echoI "To verify ping response, type:"
+_echoW "To verify ping response, type:"
 _echo "curl ${_CT_NAME}/ping-monitor"
 
-_echoI "To verify opcache response, type:"
-_echo "curl ${_CT_NAME}/opcache"
+_echoW "To verify opcache response, type:"
+_echoW "curl ${_CT_NAME}/opcache"
 
-_echoI "To verify 'www' pool informations, type:"
+_echoW "To verify 'www' pool informations, type:"
 _echo "curl ${_CT_NAME}/status-www"
 _echo "curl ${_CT_NAME}/status-www?full"
 
-
-_echoI "To verify 'www-admin' pool informations, type:"
+_echoW "To verify 'www-admin' pool informations, type:"
 _echo "curl ${_CT_NAME}/status-www-admin"
 _echo "curl ${_CT_NAME}/status-www-admin?full"
 
 
 ########################  HAPROXY
 
-_echoI "\n----------  Adjust backend for domain ${_DOMAIN_FQDN}"
+_echoe "\n----------  Adjust backend for domain ${_DOMAIN_FQDN}"
 
 
 ########################  PUBLISH

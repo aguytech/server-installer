@@ -53,14 +53,14 @@ anstmp=/haproxy-stats && _askno "URI to access to admin site (${anstmp})" && _HP
 
 _echoT "----------  data letsencrypt"
 
-_askyn "Use letsencrypt" && _HPX_LCRYPT_ENABLE="${_ANSWER/n/}" && _confset _HPX_LCRYPT_ENABLE "${_HPX_LCRYPT_ENABLE}"
+_askyn "Use letsencrypt" && _HPX_LCRYPT_ENABLE="${_ANSWER/n/}"
 
 if [ "${_HPX_LCRYPT_ENABLE}" ]; then
 
 	anstmp=${S_DOMAIN_EMAIL_TECH} && _askno "Technical email for letsencrypt (${anstmp})" && _HPX_LCRYPT_EMAIL="${_ANSWER:-$anstmp}" && _confset _HPX_LCRYPT_EMAIL "${_HPX_LCRYPT_EMAIL}"
 
 	anstmp="ada admin blog carte chat chiffres cloud cms code compta dev diaspora discord discourse down elastik files forum gestion git gitea gitlab graylog imap info kibana links log mail manage matomo metrics monitor mx nextcloud pfa pma roundcube shaarli smtp snippet social st stats test tuleap vma vmail webmail wiki www zabbix" #  mail10 mx10
-	[ -z ${_HPX_LCRYPT_SUBS+x} ] && _askno "Subdomains to register to letsencrypt (${anstmp})" && _HPX_LCRYPT_SUBS="${_ANSWER:-$anstmp}" && _confset _HPX_LCRYPT_SUBS "${_HPX_LCRYPT_SUBS}"
+	_askno "Subdomains to register to letsencrypt (${anstmp})" && _HPX_LCRYPT_SUBS="${_ANSWER:-$anstmp}" && _confset _HPX_LCRYPT_SUBS "${_HPX_LCRYPT_SUBS}"
 
 	[ -z ${_HPX_LCRYPT_PORT+x} ] && anstmp=8079 && _askno "Port for letsencrypt (${anstmp})" && _HPX_LCRYPT_PORT="${_ANSWER:-$anstmp}" && _confset _HPX_LCRYPT_PORT "${_HPX_LCRYPT_PORT}"
 fi
@@ -82,25 +82,26 @@ _HPX_STATS_2_PORT=${S_HAPROXY_STATS_PORTS#* } && _HPX_STATS_2_PORT=${_HPX_STATS_
 ########################  INIT
 
 _echoT "----------  init"
-
 if lxc list -f csv -c n | grep -q ^${_CT_NAME}$; then
 	lxc list -f csv -c n status=Running| grep -q ^${_CT_NAME}$ && _eval lxc stop ${_CT_NAME}
 	_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
 fi
-
 _eval lxc init ${_CT_NAME_COM} ${_CT_NAME} -p default -p global
 
-
 _echoT "----------  network fixed ip"
-
 if ! lxc list -f json | jq -r '.[] | select(.name == "'${_CT_NAME}'").devices[].name' | grep -q eth0; then
-	_eval lxc network attach ${s_inet} ${_CT_NAME} eth0 eth0
+	#_eval lxc network attach ${s_inet} ${_CT_NAME} eth0 eth0
+	_eval lxc config device override ${_CT_NAME} eth0 ipv4.address=${_CT_IP}
 fi
-_eval lxc config device set ${_CT_NAME} eth0 ipv4.address ${_CT_IP}
-
 
 _echoT "----------  ${_CT_NAME} start"
 _eval lxc start ${_CT_NAME}
+
+
+########################  METADATA
+
+_echoT "----------  metadata"
+_lxc_meta_add ${_CT_NAME} apps haproxy
 
 
 ########################  SYSCTL

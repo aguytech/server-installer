@@ -36,10 +36,10 @@ _DOMAIN_FQDN="${_ANSWER:-$anstmp}"
 anstmp=cloud && _askno "Give the new subdomain for admin (${anstmp})"
 _SUBDOMAIN="${_ANSWER:-$anstmp}"
 
-anstmp=www-cloud-${S_DOMAIN_FQDN//./-} && _askno "Base name of php containers to build (${anstmp})"
+anstmp=www-cloud-${S_DOMAIN_FQDN//./-} && _askno "Base name of containers to build (${anstmp})"
 ct_base="${_ANSWER:-$anstmp}"
 
-anstmp=1 && _askno "Number of php containers to build (${anstmp})"
+anstmp=1 && _askno "Number of containers to build (${anstmp})"
 ct_num="${_ANSWER:-$anstmp}"
 
 _echoT "----------  data www"

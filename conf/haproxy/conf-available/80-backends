@@ -19,14 +19,14 @@ backend S_DOMAIN_FQDN
 	#cookie			PROXYBAL insert
 	#retries		3  # retries x times before to redispatch to other server
 	#option			redispatch
-	#server	_HPX_CT_NAME-1	www-_HPX_CT_NAME-1:80  cookie _HPX_CT_NAME-1
-	#server	_HPX_CT_NAME-2	www-_HPX_CT_NAME-2:80  cookie _HPX_CT_NAME-2
-	#server	_HPX_CT_NAME-3	www-_HPX_CT_NAME-3:80  cookie _HPX_CT_NAME-3
-	#server	_HPX_CT_NAME-4	www-_HPX_CT_NAME-4:80  cookie _HPX_CT_NAME-4
+	#server	_HPX_CT_NAME-1	wap-_HPX_CT_NAME-1:80  cookie _HPX_CT_NAME-1
+	#server	_HPX_CT_NAME-2	wap-_HPX_CT_NAME-2:80  cookie _HPX_CT_NAME-2
+	#server	_HPX_CT_NAME-3	wap-_HPX_CT_NAME-3:80  cookie _HPX_CT_NAME-3
+	#server	_HPX_CT_NAME-4	wap-_HPX_CT_NAME-4:80  cookie _HPX_CT_NAME-4
 
 	## backup
-	server	_HPX_CT_NAME-1		_SERVER_DEFAULT:80
-	#server	_HPX_CT_NAME-2	www-_HPX_CT_NAME-2:80  backup
+	server	_SERVER_DEFAULT		_SERVER_DEFAULT:80
+	#server	_HPX_CT_NAME-2	wap-_HPX_CT_NAME-2:80  backup
 
 backend _DOMAIN_2_FQDN
 	#option			httpchk GET /ping-monitor "HTTP/1.1\r\nHost: _DOMAIN_2_FQDN"
@@ -34,16 +34,16 @@ backend _DOMAIN_2_FQDN
 	http-check		expect string pong
 	default-server	weight 20  maxconn 30  check  inter 4s  fall 2  rise 1  resolvers lxd  resolve-prefer ipv4 # resolve-net 10.0.0.1/24
 
-	#server	_HPX_CT_2_NAME1	www-_HPX_CT_2_NAME-1:80 weight 10 maxconn 30 check inter 4s
-	#server	_HPX_CT_2_NAME2	www-_HPX_CT_2_NAME-2:80 weight 10 maxconn 30 check inter 4s backup
+	#server	_HPX_CT_2_NAME1	wap-_HPX_CT_2_NAME-1:80 weight 10 maxconn 30 check inter 4s
+	#server	_HPX_CT_2_NAME2	wap-_HPX_CT_2_NAME-2:80 weight 10 maxconn 30 check inter 4s backup
 
 backend	S_DOMAIN_FQDN-admin
-	#option			httpchk GET /ping-www HTTP/1.1\r\nHost:\ admin.S_DOMAIN_FQDN
+	#option			httpchk GET /ping-wap HTTP/1.1\r\nHost:\ admin.S_DOMAIN_FQDN
 	option			httpchk GET /ping-monitor
 	http-check		expect string admin
 	default-server	weight 30 maxconn 5  check inter 4s fall 2 rise 1  resolvers lxd  resolve-prefer ipv4 # resolve-net 10.0.0.1/24
 	http-response	set-header  Strict-Transport-Security "max-age=16000000; includeSubDomains; preload;" # 16000000 seconds ~ 6 months
 	#option			allbackups
 
-	#server	admin-_HPX_CT_NAME-1	www-admin-_HPX_CT_NAME-1:80
-	#server	admin-_HPX_CT_NAME-2	www-admin-_HPX_CT_NAME-2:80  backup
+	#server	admin-_HPX_CT_NAME-1	wap-admin-_HPX_CT_NAME-1:80
+	#server	admin-_HPX_CT_NAME-2	wap-admin-_HPX_CT_NAME-2:80  backup

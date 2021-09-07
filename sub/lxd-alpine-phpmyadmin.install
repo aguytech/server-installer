@@ -97,7 +97,7 @@ path_ct=${_PATH_DOMAIN}
 _eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
 
 
-########################  PHP
+########################  COPY
 
 _CT_NAME=${ct_base}-1
 

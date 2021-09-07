@@ -24,10 +24,13 @@ _require ${file_rsyslog_host} ${file_rsyslog_client} ${file_logrotate_host} ${fi
 
 ########################  DATA
 
-_CT_NAME=${S_SERVICE[cache]}
+_echoT "----------  data domain"
 
-#eval ${S_HOST_VM_ETH[default]}
-#_CT_IP=${s_base}.${S_SERVICE_BITS[cache]}
+anstmp=rds-${S_DOMAIN_NAME//./-} && _askno "Base name of containers to build (${anstmp})"
+ct_base="${_ANSWER:-$anstmp}"
+
+anstmp=1 && _askno "Number of containers to build (${anstmp})"
+ct_num="${_ANSWER:-$anstmp}"
 
 _echoT "----------  data"
 
@@ -60,6 +63,9 @@ anstmp=16 && _askno "Give a number of max 'databases' (${anstmp})" && _RDS_DATAB
 anstmp=notice && _askno "Give the log level 'loglevel': debug/verbose/notice/warning  (${anstmp})" && _RDS_LOGLEVEL="${_ANSWER:-$anstmp}" && _confset _RDS_LOGLEVEL "${_RDS_LOGLEVEL}"
 
 
+_CT_NAME=${ct_base}-1
+
+
 ########################  INIT
 
 _echoT "----------  init"
@@ -74,6 +80,12 @@ _eval lxc init ${_CT_NAME_COM} ${_CT_NAME} -p default -p global
 
 _echoT "----------  ${_CT_NAME} start"
 _eval lxc start ${_CT_NAME}
+
+
+########################  METADATA
+
+_echoT "----------  metadata"
+_lxc_meta_add ${_CT_NAME} apps redis
 
 
 ########################  SYSCTL

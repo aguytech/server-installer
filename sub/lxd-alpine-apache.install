@@ -36,7 +36,7 @@ anstmp=${S_DOMAIN_FQDN} && _askno "Domain name to use (${anstmp})"
 _DOMAIN_FQDN="${_ANSWER:-$anstmp}"
 _DOMAIN_NAME="${_DOMAIN_FQDN%.*}"
 
-anstmp=apa-${_DOMAIN_FQDN//./-} && _askno "Name of container to build (${anstmp})"
+anstmp=wa-${_DOMAIN_FQDN//./-} && _askno "Name of container to build (${anstmp})"
 _CT_NAME="${_ANSWER:-$anstmp}"
 
 
@@ -110,7 +110,6 @@ if lxc list -f csv -c n | grep -q ^${_CT_NAME}$; then
 	lxc list -f csv -c n status=Running| grep -q ^${_CT_NAME}$ && _eval lxc stop ${_CT_NAME}
 	_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
 fi
-
 _eval lxc init ${_CT_NAME_COM} ${_CT_NAME} -p default -p global -p ${profile}
 
 
@@ -124,6 +123,13 @@ _eval lxc init ${_CT_NAME_COM} ${_CT_NAME} -p default -p global -p ${profile}
 
 _echoT "----------  ${_CT_NAME} start"
 _eval lxc start ${_CT_NAME}
+
+
+########################  METADATA
+
+_echoT "----------  metadata"
+_lxc_meta_add ${_CT_NAME} profiles ${profile}
+_lxc_meta_add ${_CT_NAME} apps apache2
 
 
 ########################  SYSCTL

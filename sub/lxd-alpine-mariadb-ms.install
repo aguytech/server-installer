@@ -8,13 +8,18 @@ grep -q "^# ${_PART#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART}" | _evalqr
 
 ########################  REQUIRED
 
+_echoT "------------------ required vm"
+imgs_all_mdb=`lxc list -f csv -c n| grep '^mdb-'|xargs`
+[ "${imgs_all_mdb}" ] || _exite "unable to find mariadb container"
+
+
 file_master="${S_PATH_INSTALL_CONF}/mariadb/mariadb-master.cnf"
 file_slave="${S_PATH_INSTALL_CONF}/mariadb/mariadb-slave.cnf"
 
 _echoT "------------------ required files"
 _require ${file_master} ${file_slave}
 
-_askyn "To install a master/slave mariadb cluster, you need to have 2 available instances of mariadb ?" && [ ${_ANSWER} = n ] && _exit 0
+_askyn "To install a master/slave mariadb cluster, you need to have 2 available instances of mariadb?" && [ ${_ANSWER} = n ] && _exit 0
 
 ########################  DATA
 
@@ -28,13 +33,13 @@ pwd_slave=mzHeL2eI5DwxQD
 KEEP
 
 # ct_master
-cts=$(lxc list -f csv -c n maria-)
-[ "${cts}" ] && _menu "Select one available mariadb container for MASTER" ${cts} || _exite "unable to find container maria-* to use"
+cts_maria=" ${imgs_all_mdb} "
+[ "${cts_maria}" ] && _menu "Select one available mariadb container for MASTER" ${cts_maria} || _exite "Unable to find container maria-* to use"
 ct_master=${_ANSWER}
 
 # ct_slave
-cts=$(lxc list -f csv -c n maria- | grep -v ^${ct_master})
-[ "${cts}" ] && _menu "Select one available mariadb container for SLAVE" ${cts} || _exite "unable to find container maria-* to use"
+cts_maria="${cts_maria/ ${ct_master} / }"
+[ "${cts_maria}" ] && _menu "Select one available mariadb container for SLAVE" ${cts_maria} || _exite "Unable to find container maria-* to use"
 ct_slave=${_ANSWER}
 
 # pwd_master
@@ -64,10 +69,13 @@ anstmp="" && _askno "databases name to USE for replication: only these, not othe
 pwd_replic=`_pwd`
 
 
-########################  CONF
+########################  CONF MASTER
 
-# MASTER
 ct_name=${ct_master}
+
+#  METADATA
+_echoT "----------  metadata"
+_lxc_meta_add ${ct_name} apps mariadb-master
 
 if lxc list -f csv -c n status=Stopped | grep -q ^${ct_name}$; then
 	_echoT "----------  ${ct_name} start"
@@ -87,11 +95,11 @@ _echoT "----------  ${ct_name} restart"
 _lxc_exec ${ct_name} "rc-service ${_MDB_SERVICE} restart"
 
 _echoT "----------  ${ct_name} replic"
-cmd="CREATE OR REPLACE USER 'replic'@'${ct_master}.lxd' IDENTIFIED BY '${pwd_replic}';
-GRANT REPLICATION SLAVE ON *.* TO 'replic'@'${ct_master}.lxd';"
-_eval "mysql -h${ct_name} -uroothost -p${pwd_master} -e \"FLUSH PRIVILEGES;\""
+cmd="CREATE OR REPLACE USER 'replic'@'${ct_slave}.lxd' IDENTIFIED BY '${pwd_replic}';
+GRANT REPLICATION SLAVE ON *.* TO 'replic'@'${ct_slave}.lxd';"
 _eval "mysql -h${ct_name} -uroothost -p${pwd_master} -e \"${cmd}\""
 _eval "mysql -s -h${ct_name} -uroothost -p${pwd_master} -e \"SELECT user,host FROM mysql.user WHERE user like 'replic';\""
+_eval "mysql -h${ct_name} -uroothost -p${pwd_master} -e \"FLUSH PRIVILEGES;\""
 
 _echoT "----------  ${ct_name} passwd"
 file=${S_PATH_CONF}/mariadb
@@ -113,8 +121,13 @@ _echoT "----------  ${ct_name} unlock"
 _eval "mysql -h${ct_name} -uroothost -p${pwd_master} -e \"UNLOCK TABLES;\""
 
 
-# SLAVE
+########################  CONF SLAVE
+
 ct_name=${ct_slave}
+
+#  METADATA
+_echoT "----------  metadata"
+_lxc_meta_add ${ct_name} apps mariadb-slave
 
 if lxc list -f csv -c n status=Stopped | grep -q ^${ct_name}$; then
 	_echoT "----------  ${ct_name} start"

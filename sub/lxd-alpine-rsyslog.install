@@ -53,25 +53,26 @@ _eval lxc profile device add ${profile} ${profile} disk source=${path} path=${pa
 ########################  INIT
 
 _echoT "----------  init"
-
 if lxc list -f csv -c n | grep -q ^${_CT_NAME}$; then
 	lxc list -f csv -c n status=Running| grep -q ^${_CT_NAME}$ && _eval lxc stop ${_CT_NAME}
 	_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
 fi
-
 _eval lxc init ${_CT_NAME_COM} ${_CT_NAME} -p default -p global -p ${profile}
 
-
 _echoT "----------  network fixed ip"
-
 if ! lxc list -f json | jq -r '.[] | select(.name == "'${_CT_NAME}'").devices[].name' | grep -q eth0; then
-	_eval lxc network attach ${s_inet} ${_CT_NAME} eth0 eth0
+	_eval lxc config device override ${_CT_NAME} eth0 ipv4.address=${_CT_IP}
 fi
-_eval lxc config device set ${_CT_NAME} eth0 ipv4.address ${_CT_IP}
-
 
 _echoT "----------  ${_CT_NAME} start"
 _eval lxc start ${_CT_NAME}
+
+
+########################  METADATA
+
+_echoT "----------  metadata"
+_lxc_meta_add ${_CT_NAME} profiles ${profile}
+_lxc_meta_add ${_CT_NAME} apps rsyslog
 
 
 ########################  CONF
