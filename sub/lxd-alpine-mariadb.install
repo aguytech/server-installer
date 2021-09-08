@@ -106,9 +106,9 @@ else
 fi
 
 _echoT "----------  rights ${name}"
-_evalr chown ${id}:${id} ${path}
-_evalr setfacl -Rm u:${id}:rwx ${path}
-_evalr setfacl -Rm d:u:${id}:rwx ${path}
+_evalr chown ${id}:${id} ${_MDB_HOST_PATH}
+_evalr setfacl -Rm u:${id}:rwx ${_MDB_HOST_PATH}
+_evalr setfacl -Rm d:u:${id}:rwx ${_MDB_HOST_PATH}
 
 
 ########################  PROFILE

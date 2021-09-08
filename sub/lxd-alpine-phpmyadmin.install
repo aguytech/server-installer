@@ -210,7 +210,6 @@ _echoT "----------  ${domain} path tmp"
 
 path=${_PATH_DOMAIN}/${sub_pma}/tmp
 _lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
-_lxc_exec ${_CT_NAME} "chown apache:apache ${path} && chmod 700 ${path}"
 
 
 _echoT "----------  ${domain} ${sub_pma} conf"

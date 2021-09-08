@@ -163,9 +163,9 @@ if [ -z "${profile_cloud_exist}" ]; then
 	fi
 
 	_echoT "----------  rights ${name}"
-	_evalr chown ${id}:${id} ${path}
-	_evalr setfacl -Rm u:${id}:rwx ${path}
-	_evalr setfacl -Rm d:u:${id}:rwx ${path}
+	_evalr chown ${id}:${id} ${S_HOST_PATH}/cloud/${_DOMAIN_FQDN}
+	_evalr setfacl -Rm u:${id}:rwx ${S_HOST_PATH}/cloud/${_DOMAIN_FQDN}
+	_evalr setfacl -Rm d:u:${id}:rwx ${S_HOST_PATH}/cloud/${_DOMAIN_FQDN}
 fi
 
 
