@@ -529,7 +529,8 @@ _echo "curl ${_CT_NAME}/status-www-admin?full"
 
 ########################  HAPROXY
 
-_echoe "\n----------  Adjust backend for domain ${_DOMAIN_FQDN}"
+_echoI "\nAdjust backend for domain: ${_DOMAIN_FQDN} with:"
+_echo `for i in `seq 1 ${ct_num}`; do echo ${ct_base}-${i};done`
 
 
 ########################  PUBLISH

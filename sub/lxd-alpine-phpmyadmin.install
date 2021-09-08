@@ -9,11 +9,15 @@ grep -q "^# ${_PART#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART}" | _evalqr
 ########################  REQUIRED
 
 _echoT "------------------ required vm"
-cts_all_php=`lxc list -f json | jq -r '.[] | select(.profiles | any(contains("php"))).name'`
-[ -z "${cts_all_php}" ] && _exite "Unable to find a container with php* profile"
+img_all_www=`lxc image list -f csv -c l| grep '^wap-'`
+[ "${img_all_www}" ] || _exite "Unable to find a www image container"
 
-cts_all_maria=`lxc list -f json | jq -r '.[] | select(.profiles | any(contains("maria"))).name'`
-[ -z "${cts_all_maria}" ] && _exite "Unable to find a container with maria* profile"
+profiles_all_php=`lxc profile list -f csv|grep "^php.*,"|cut -d, -f1`
+[ -z "${profiles_all_php}" ] && _exite "Unable to find a php profile"
+
+cts_all_maria=`lxc list -f json | jq -r '.[] | select(.profiles | any(contains("mdb-"))).name'`
+[ -z "${cts_all_maria}" ] && _exite "Unable to find a container with maria profile"
+
 
 file_conf=${S_PATH_INSTALL_CONF}/php/pma-config.inc.php
 file_conf_part=${S_PATH_INSTALL_CONF}/php/pma-part-config.inc.php
@@ -35,14 +39,31 @@ _DOMAIN_FQDN="${_ANSWER:-$anstmp}"
 anstmp=admin && _askno "Give the new subdomain for admin (${anstmp})"
 _SUBDOMAIN="${_ANSWER:-$anstmp}"
 
-anstmp=www-admin-${S_DOMAIN_FQDN//./-} && _askno "Base name of php containers to build (${anstmp})"
+anstmp=wap-${_SUBDOMAIN}-${S_DOMAIN_NAME//./-} && _askno "Base name of containers to build (${anstmp})"
 ct_base="${_ANSWER:-$anstmp}"
 
-anstmp=2 && _askno "Number of php containers to build (${anstmp})"
+anstmp=2 && _askno "Number of containers to build (${anstmp})"
 ct_num="${_ANSWER:-$anstmp}"
 
-_menu "Select one available php container to copy from" ${cts_all_php}
-ct_from=${_ANSWER}
+anstmp=pma && _askno "Give the new subdomain for phpmyadmin (${anstmp})"
+sub_pma="${_ANSWER:-$anstmp}"
+
+_echoT "----------  data www"
+
+_menu "Select one available image container for www service" ${img_all_www}
+ct_www=${_ANSWER}
+
+profiles=`lxc profile list -f csv|grep "^www.*,"|cut -d, -f1`
+[ "${profiles}" ] && _menu "Select an available www profile to apply or none" none ${profiles} || _ANSWER=
+profile_www="${_ANSWER/none/}" && profile_www_exist=${profile_www}
+[ -z "${profile_www_exist}" ] && anstmp=www-${_SUBDOMAIN}.${_DOMAIN_FQDN} && _askno "Name of the new  www profile (${anstmp})" && profile_www="${_ANSWER:-$anstmp}"
+
+_echoT "----------  data php"
+
+_menu "Select an available PHP profile to apply or none" ${profiles_all_php} || _ANSWER=
+profile_php="${_ANSWER/none/}"
+
+_echoT "----------  data mariadb"
 
 _menua "Select mariadb container to administrate" ${cts_all_maria}
 cts_maria=$(echo "${_ANSWER}"|sort -r|xargs)
@@ -69,9 +90,12 @@ ok=false; while ! ${ok}; do
 	fi
 done
 
+_CT_NAME=${ct_base}-1
+
 _PATH_DOMAIN=${S_VM_PATH_SHARE}/www/${_SUBDOMAIN}.${_DOMAIN_FQDN}
-_APP_URI=https://pma.${_DOMAIN_FQDN}
+_APP_URI=https://${sub_pma}.${_DOMAIN_FQDN}
 _APP_DB_PORT=${S_DB_MARIA_PORT}
+_APP_DB_NAME=phpmyadmin
 _APP_DB_USER=pma
 _APP_DB_PWD=`_pwd`
 _APP_BLOWFISH=`_pwd32`
@@ -80,60 +104,48 @@ _APP_PATH_DW=${S_VM_PATH_SHARE}/php/down
 
 cts_php=`for i in $(seq 1 ${ct_num}); do echo ${ct_base}-${i}; done`
 path_sites=/etc/apache2/sites
-db_app=phpmyadmin
 
 
 ########################  PROFILE
 
-profile=www-${_SUBDOMAIN}.${_DOMAIN_FQDN}
-_echoT "----------  profile ${profile}"
+# www
+if [ -z "${profile_www_exist}" ]; then
 
-lxc profile list -f csv|grep -q "^${profile}," && _eval lxc profile rename ${profile} ${profile}.${_SDATE}
-_eval lxc profile create ${profile}
+	profile=${profile_www}
+	_echoT "----------  profile ${profile}"
 
-path=${S_HOST_PATH_SHARE}/www/${_SUBDOMAIN}.${_DOMAIN_FQDN}
-path_ct=${_PATH_DOMAIN}
-[ -d ${path} ] || _evalr mkdir -p ${path}
-_eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
+	lxc profile list -f csv|grep -q "^${profile}," && _eval lxc profile rename ${profile} ${profile}.${_SDATE}
+	_eval lxc profile create ${profile}
+
+	path=${S_HOST_PATH_SHARE}/www/${_SUBDOMAIN}.${_DOMAIN_FQDN}
+	path_ct=${_PATH_DOMAIN}
+	[ -d ${path} ] || _evalr mkdir -p ${path}
+	_eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
+fi
 
 
-########################  COPY
+#######################  INIT
 
-_CT_NAME=${ct_base}-1
+_echoT "----------  init"
 
 if lxc list -f csv -c n | grep -q ^${_CT_NAME}$; then
 	lxc list -f csv -c n status=Running| grep -q ^${_CT_NAME}$ && _eval lxc stop ${_CT_NAME}
 	_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
 fi
+_eval lxc init ${ct_www} ${_CT_NAME} -p default -p global -p ${profile_www}  -p ${profile_php}
 
-_echoT "----------  copy ${ct_from} to ${_CT_NAME}"
-_eval lxc copy ${ct_from} ${_CT_NAME}
+
+########################  METADATA
+
+_echoT "----------  metadata"
+_lxc_meta_add ${_CT_NAME} profilesl ${profile_www} ${profile_php} ${profile}
+_lxc_meta_add ${_CT_NAME} apps phpmyadmin
 
 
 #############  START
 
 _echoT "----------  ${_CT_NAME} start"
 lxc list -f csv -c n status=Stopped | grep -q ^${_CT_NAME}$ && _eval lxc start ${_CT_NAME}
-
-#############  PROFILE
-
-# remove profiles
-profiles=`lxc list ^${_CT_NAME}$ -f json | jq -r '.[].profiles[]' | grep '^www-'`
-if [ "${profiles}" ]; then
-	 _menur "Select profiles to remove" ${profiles}
-
-	_echoT "----------  profile remove ${profiles}"
-	for profile in ${_ANSWER}; do
-		_eval lxc profile remove ${_CT_NAME} ${profile}
-		path=${S_VM_PATH_SHARE}/www/${profile}
-		_lxc_exec ${_CT_NAME} "[ -d ${path} ] && rmdir ${path}"
-	done
-fi
-
-profile=www-${_SUBDOMAIN}.${_DOMAIN_FQDN}
-lxc list ^${_CT_NAME}$ -f json | jq -r '.[].profiles[]' | grep -q "^${profile}$" && lxc profile rename ${profile} ${profile}.${_SDATE}
-_echoT "----------  profile add ${_CT_NAME}"
-_eval lxc profile add ${_CT_NAME} ${profile}
 
 
 #############  WWW
@@ -145,8 +157,8 @@ _lxc_exec ${_CT_NAME} "[ -f ${file} ] && mv ${file} ${file}.keep"
 _echoT "----------  ping-monitor file"
 _lxc_exec ${_CT_NAME} "echo '<?php echo \"admin\"; ?>' > ${_APA_PATH_WWW}/ping-monitor.php"
 
-_echoT "----------  ping-monitor"
-_lxc_exec ${_CT_NAME} "echo 'admin' > ${_APA_PATH_WWW}/ping-monitor.html"
+#_echoT "----------  ping-monitor"
+#_lxc_exec ${_CT_NAME} "echo 'admin' > ${_APA_PATH_WWW}/ping-monitor.html"
 
 
 #############  SITE ADMIN
@@ -169,13 +181,13 @@ _lxc_var_replace ${_CT_NAME} ${file} apache
 
 #############  SITE APP
 
-domain=pma.${S_DOMAIN_FQDN}
+domain=${sub_pma}.${S_DOMAIN_FQDN}
 _echoT "----------  ${domain} conf apache"
 
 domain_tmp=${_SUBDOMAIN}
-_SUBDOMAIN=pma
+_SUBDOMAIN=${sub_pma}
 
-file=${path_sites}/pma.conf
+file=${path_sites}/${sub_pma}.conf
 _eval lxc file push ${file_site} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} apache
 _lxc_execq ${_CT_NAME} "sed -i 's|^\(\s*\)#\?\(SetEnv PHP_ADMIN_VALUE .session.gc_maxlifetime =\).*$|\1\2 14400\"|' ${file}"
@@ -190,25 +202,25 @@ _lxc_exec ${_CT_NAME} "[ -d ${path} ] && mv ${path} ${path}.${_SDATE}"
 path=${_PATH_DOMAIN}
 _eval lxc file push -q ${file_app_tmp} ${_CT_NAME}/${path}/
 _lxc_exec ${_CT_NAME} "tar xzf ${path}/${file_app} -C ${path}" || _exite "Unable to decompress file: ${file}"
-_lxc_exec ${_CT_NAME} "[ -h ${path}/pma ] && rm ${path}/pma"
-_lxc_exec ${_CT_NAME} "cd ${path} && ln -sv ${file_app%.tar.gz} pma"
+_lxc_exec ${_CT_NAME} "[ -h ${path}/${sub_pma} ] && rm ${path}/${sub_pma}"
+_lxc_exec ${_CT_NAME} "cd ${path} && ln -sv ${file_app%.tar.gz} ${sub_pma}"
 
 
 _echoT "----------  ${domain} path tmp"
 
-path=${_PATH_DOMAIN}/pma/tmp
+path=${_PATH_DOMAIN}/${sub_pma}/tmp
 _lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
 _lxc_exec ${_CT_NAME} "chown apache:apache ${path} && chmod 700 ${path}"
 
 
-_echoT "----------  ${domain} pma conf"
+_echoT "----------  ${domain} ${sub_pma} conf"
 
-file=${_PATH_DOMAIN}/pma/config.inc.php
+file=${_PATH_DOMAIN}/${sub_pma}/config.inc.php
 _eval lxc file push ${file_conf} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} pma
 [ "${S_DOMAIN_FQDN##*.}" = lxd ] && _lxc_exec ${_CT_NAME} "sed -i '/.cfg..PmaAbsoluteUri/ s|https|http|' ${file}"
 
-file_part=${_PATH_DOMAIN}/pma/config-part.inc.php
+file_part=${_PATH_DOMAIN}/${sub_pma}/config-part.inc.php
 for ct_maria in ${cts_maria}; do
 	_echoT "----------  ${domain} conf ${cts_maria}"
 	_eval lxc file push ${file_conf_part} ${_CT_NAME}${file_part}
@@ -220,7 +232,7 @@ done
 
 _echoT "----------  ${_CT_NAME} pull sql file"
 file_tables=/tmp/create_tables.sql
-_evalr lxc file pull ${_CT_NAME}/${_PATH_DOMAIN}/pma/sql/create_tables.sql ${file_tables}
+_evalr lxc file pull ${_CT_NAME}/${_PATH_DOMAIN}/${sub_pma}/sql/create_tables.sql ${file_tables}
 
 
 ########################  RIGHTS
@@ -246,7 +258,7 @@ for ct_maria in ${cts_maria}; do
 	_echoT "\n==========  for ${ct_maria}"
 
 	_echoT "----------  ${ct_maria} db create"
-	cmd="CREATE DATABASE IF NOT EXISTS ${db_app};"
+	cmd="CREATE DATABASE IF NOT EXISTS ${_APP_DB_NAME};"
 	_eval "mysql -h${ct_maria} -uroothost -p${pwd_maria} -e \"${cmd}\""
 
 	_echoT "----------  ${ct_maria} tables create"
@@ -254,17 +266,21 @@ for ct_maria in ${cts_maria}; do
 
 	for ct_php in ${cts_php}; do
 
-		_echoT "----------  ${ct_maria} pma strpass"
+		_echoT "----------  ${ct_maria} ${_APP_DB_USER} grant"
+		cmd="GRANT USAGE ON *.* TO '${_APP_DB_USER}'@'${ct_php}.lxd' IDENTIFIED BY '${_APP_DB_PWD}';"
+		_eval "mysql -h${ct_maria} -uroothost -p${pwd_maria} -e \"${cmd}\""
+		cmd="GRANT ALL PRIVILEGES ON ${_APP_DB_NAME}.* TO '${_APP_DB_USER}'@'${ct_php}.lxd';"
+		_eval "mysql -h${ct_maria} -uroothost -p${pwd_maria} -e \"${cmd}\""
+
+		_echoT "----------  ${ct_maria} ${_APP_DB_USER} strpass"
 		file=${S_PATH_CONF}/mariadb
 		str="${_APP_DB_USER} @ ${ct_php}.lxd - ${_APP_DB_PWD}"
 		strpass+="${str}\n"
-		cmd="grep -q ^pma ${file} && sed -i '/^pma/c ${str}'  ${file} || sed -i '\$a ${str}' ${file}"
+		cmd="grep -q ^${_APP_DB_USER} ${file} && sed -i '/^${_APP_DB_USER}/c ${str}'  ${file} || sed -i '\$a ${str}' ${file}"
 		_lxc_exec ${ct_maria} "${cmd}"
 
-		_echoT "----------  ${ct_maria} pma grant"
-		cmd="GRANT USAGE ON *.* TO '${_APP_DB_USER}'@'${ct_php}.lxd' IDENTIFIED BY '${_APP_DB_PWD}';"
-		_eval "mysql -h${ct_maria} -uroothost -p${pwd_maria} -e \"${cmd}\""
-		cmd="GRANT ALL PRIVILEGES ON ${db_app}.* TO '${_APP_DB_USER}'@'${ct_php}.lxd';"
+		_echoT "----------  ${ct_maria} rootadmin grant"
+		cmd="GRANT ALL PRIVILEGES ON *.* TO rootadmin@'${ct_php}.lxd' IDENTIFIED BY '${_MDB_PWD_ADMIN}' WITH GRANT OPTION"
 		_eval "mysql -h${ct_maria} -uroothost -p${pwd_maria} -e \"${cmd}\""
 
 		_echoT "----------  ${ct_maria} rootadmin strpass"
@@ -273,10 +289,6 @@ for ct_maria in ${cts_maria}; do
 		strpass+="${str}\n"
 		cmd="grep -q '^rootadmin @ ${ct_php}.lxd' ${file} && sed -i '/^rootadmin @ ${ct_php}.lxd/c ${str}'  ${file} || sed -i '\$a ${str}' ${file}"
 		_lxc_exec ${ct_maria} "${cmd}"
-
-		_echoT "----------  ${ct_maria} rootadmin grant"
-		cmd="GRANT ALL PRIVILEGES ON *.* TO rootadmin@'${ct_php}.lxd' IDENTIFIED BY '${_MDB_PWD_ADMIN}' WITH GRANT OPTION"
-		_eval "mysql -h${ct_maria} -uroothost -p${pwd_maria} -e \"${cmd}\""
 	done
 
 done
@@ -303,7 +315,7 @@ done
 _echoT "----------  show privileges"
 for ct_maria in ${cts_maria}; do
 	_echo "${ct_maria}:"
-	_eval "mysql -h${ct_maria} -uroothost -p${pwd_maria} -e \"SELECT user,host FROM mysql.user WHERE user like 'pma';\""
+	_eval "mysql -h${ct_maria} -uroothost -p${pwd_maria} -e \"SELECT user,host FROM mysql.user WHERE user like '${_APP_DB_USER}';\""
 done
 
 _echoT "----------  show passwords"
@@ -313,7 +325,8 @@ _echoW "${strpass%\\n}"
 
 ########################  HAPROXY
 
-_echoI "\n----------  Adjust backend for domain ${_DOMAIN_FQDN}"
+_echoI "\nAdjust backend for domain: ${_SUBDOMAIN}.${_DOMAIN_FQDN} with:"
+_echo "${cts_php}"
 
 
 ########################  PUBLISH

@@ -9,22 +9,21 @@ grep -q "^# ${_PART#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART}" | _evalqr
 ########################  REQUIRED
 
 _echoT "------------------ required vm"
-img_all_www=`lxc image list -f csv -c l| grep -e '^\(apa\|www\)'`
-[ "${img_all_www}" ] || _exite "Unable to find a www image container (apa|ngx)"
+img_all_www=`lxc image list -f csv -c l| grep '^wap-'`
+[ "${img_all_www}" ] || _exite "Unable to find a www image container"
 
 profiles_all_php=`lxc profile list -f csv|grep "^php.*,"|cut -d, -f1`
 [ -z "${profiles_all_php}" ] && _exite "Unable to find a php profile"
 
-cts_all_maria=`lxc list -f json | jq -r '.[] | select(.profiles | any(contains("maria"))).name'`
-[ -z "${cts_all_maria}" ] && _exite "Unable to find a container with maria* profile"
+cts_all_maria=`lxc list -f json | jq -r '.[] | select(.profiles | any(contains("mdb-"))).name'`
+[ -z "${cts_all_maria}" ] && _exite "Unable to find a container with maria profile"
 
 
-file_conf=${S_PATH_INSTALL_CONF}/php/pma-config.inc.php
+file_conf=${S_PATH_INSTALL_CONF}/php/nextcloud-config.php
 file_site=${S_PATH_INSTALL_CONF}/apache2/domain.conf
 
 _echoT "------------------ required files"
 _require ${file_conf} ${file_site}
-
 
 ########################  DATA
 
@@ -36,21 +35,26 @@ _DOMAIN_FQDN="${_ANSWER:-$anstmp}"
 anstmp=cloud && _askno "Give the new subdomain for admin (${anstmp})"
 _SUBDOMAIN="${_ANSWER:-$anstmp}"
 
-anstmp=www-cloud-${S_DOMAIN_FQDN//./-} && _askno "Base name of containers to build (${anstmp})"
+anstmp=wap-${_SUBDOMAIN}-${S_DOMAIN_NAME//./-} && _askno "Base name of containers to build (${anstmp})"
 ct_base="${_ANSWER:-$anstmp}"
 
 anstmp=1 && _askno "Number of containers to build (${anstmp})"
 ct_num="${_ANSWER:-$anstmp}"
 
+profiles=`lxc profile list -f csv|grep "^cloud.*,"|cut -d, -f1`
+[ "${profiles}" ] && _menu "Select an available cloud profile to apply or none" none ${profiles} || _ANSWER=
+profile_cloud="${_ANSWER/none/}" && profile_cloud_exist=${profile_cloud}
+[ -z "${profile_cloud_exist}" ] && anstmp=cloud.${_DOMAIN_FQDN} && _askno "Name of the new  cloud profile (${anstmp})" && profile_cloud="${_ANSWER:-$anstmp}"
+
 _echoT "----------  data www"
 
-_menu "Select one available image container for WWW base" ${img_all_www}
+_menu "Select one available image container for www service" ${img_all_www}
 ct_www=${_ANSWER}
 
 profiles=`lxc profile list -f csv|grep "^www.*,"|cut -d, -f1`
-[ "${profiles}" ] && _menu "Select an available WWW profile to apply or none" none ${profiles} || _ANSWER=
+[ "${profiles}" ] && _menu "Select an available www profile to apply or none" none ${profiles} || _ANSWER=
 profile_www="${_ANSWER/none/}" && profile_www_exist=${profile_www}
-[ -z "${profile_www_exist}" ] && anstmp=www-${_SUBDOMAIN}.${_DOMAIN_FQDN} && _askno "Name of the new  WWW profile (${anstmp})" && profile_www="${_ANSWER:-$anstmp}"
+[ -z "${profile_www_exist}" ] && anstmp=www-${_SUBDOMAIN}.${_DOMAIN_FQDN} && _askno "Name of the new  www profile (${anstmp})" && profile_www="${_ANSWER:-$anstmp}"
 
 _echoT "----------  data php"
 
@@ -89,74 +93,80 @@ _CT_NAME=${ct_base}-1
 _PATH_DOMAIN=${S_VM_PATH_SHARE}/www/${_SUBDOMAIN}.${_DOMAIN_FQDN}
 _APP_URI=https://${_SUBDOMAIN}.${_DOMAIN_FQDN}
 _APP_DB_PORT=${S_DB_MARIA_PORT}
-_APP_DB_USER=pma
+_APP_DB_NAME=nextcloud
+_APP_DB_USER=nextcloud
 _APP_DB_PWD=`_pwd`
 _APP_BLOWFISH=`_pwd32`
 _APP_PATH_UP=${S_VM_PATH_SHARE}/php/up
 _APP_PATH_DW=${S_VM_PATH_SHARE}/php/down
 
+_APP_DATA_DIR=${S_VM_PATH_SHARE}/cloud
+
+cts_php=`for i in $(seq 1 ${ct_num}); do echo ${ct_base}-${i}; done`
 path_sites=/etc/apache2/sites
-db_app=nextcloud
 
 
 ########################  STORAGE
 
-if [ "${S_STORAGE_DRIVER}" = zfs ]; then
+if [ -z "${profile_cloud_exist}" ]; then
 
-	name=${_SUBDOMAIN}
-	_echoT "----------  zfs ${name}"
-	path=${S_HOST_PATH}/${name}
-	path_zfs=${_ZFS_ROOT}${path}
-	opts="-o mountpoint=${path} -o compression=lz4 -o  acltype=posixacl"
-	_evalr zfs list ${path_zfs} >/dev/null 2>&1 || _evalr zfs create ${opts} ${path_zfs}
+	if [ "${S_STORAGE_DRIVER}" = zfs ]; then
 
-	name=${_DOMAIN_FQDN}
-	_echoT "----------  zfs ${name}"
-	path=${S_HOST_PATH}/${_SUBDOMAIN}/${name}
-	path_zfs=${_ZFS_ROOT}${path}
+		name=cloud
+		_echoT "----------  zfs ${name}"
+		path=${S_HOST_PATH}/${name}
+		path_zfs=${_ZFS_ROOT}${path}
+		opts="-o mountpoint=${path} -o compression=lz4 -o  acltype=posixacl"
+		_evalr zfs list ${path_zfs} >/dev/null 2>&1 || _evalr zfs create ${opts} ${path_zfs}
 
-	# rename
-	if zfs list ${path_zfs} >/dev/null 2>&1; then
-	 	_echoT "----------  unmount  ${path_zfs}"
-	 	_evalr zfs unmount ${path_zfs} || _exite "Unable to unmount ${path_zfs}\nUnbind container using it"
-		_echoI "----------  zfs backup ${path_zfs} to ${path_zfs}.${_SDATE}"
-	 	_evalr zfs rename ${path_zfs} ${path_zfs}.${_SDATE}
-	 fi
+		name=${_DOMAIN_FQDN}
+		_echoT "----------  zfs ${name}"
+		path=${S_HOST_PATH}/cloud/${name}
+		path_zfs=${_ZFS_ROOT}${path}
 
-	_echoT "----------  zfs create ${path_zfs}"
-	_evalr zfs create -o mountpoint=${path} ${path_zfs}
+		# rename
+		if zfs list ${path_zfs} >/dev/null 2>&1; then
+		 	_echoT "----------  unmount  ${path_zfs}"
+		 	_evalr zfs unmount ${path_zfs} || _exite "Unable to unmount ${path_zfs}\nUnbind container using it"
+			_echoI "----------  zfs backup ${path_zfs} to ${path_zfs}.${_SDATE}"
+		 	_evalr zfs rename ${path_zfs} ${path_zfs}.${_SDATE}
+		 fi
 
-	id=1000000
+		_echoT "----------  zfs create ${path_zfs}"
+		_evalr zfs create -o mountpoint=${path} ${path_zfs}
 
-elif [ "${S_STORAGE_DRIVER}" = btrfs ]; then
+		id=1000000
 
-	name=${_SUBDOMAIN}
-	_echoT "----------  btrfs ${name}"
-	path=${S_HOST_PATH}/${name}
-	_evalr ls -1 ${path} >/dev/null 2>&1 || _evalr btrfs subvolume create ${path}
+	elif [ "${S_STORAGE_DRIVER}" = btrfs ]; then
 
-	name=${_DOMAIN_FQDN}
-	_echoT "----------  btrfs ${name}"
-	# rename
-	path=${S_HOST_PATH}/${_SUBDOMAIN}/${name}
-	if _evalr ls -1 ${path} >/dev/null 2>&1; then
-		_echoI "----------  mv ${path} to ${path}.${_SDATE}"
-	 	_evalr mv ${path} ${path}.${_SDATE}
-	 fi
+		name=cloud
+		_echoT "----------  btrfs ${name}"
+		path=${S_HOST_PATH}/${name}
+		_evalr ls -1 ${path} >/dev/null 2>&1 || _evalr btrfs subvolume create ${path}
 
-	_echoT "----------  btrfs create ${path}"
-	_evalr btrfs subvolume create ${path}
+		name=${_DOMAIN_FQDN}
+		_echoT "----------  btrfs ${name}"
+		# rename
+		path=${S_HOST_PATH}/cloud/${name}
+		if _evalr ls -1 ${path} >/dev/null 2>&1; then
+			_echoI "----------  mv ${path} to ${path}.${_SDATE}"
+		 	_evalr mv ${path} ${path}.${_SDATE}
+		 fi
 
-	id=100000
+		_echoT "----------  btrfs create ${path}"
+		_evalr btrfs subvolume create ${path}
 
-else
-	_exite "This part have to be implemented"
+		id=100000
+
+	else
+		_exite "This part have to be implemented"
+	fi
+
+	_echoT "----------  rights ${name}"
+	_evalr chown ${id}:${id} ${path}
+	_evalr setfacl -Rm u:${id}:rwx ${path}
+	_evalr setfacl -Rm d:u:${id}:rwx ${path}
 fi
-
-_echoT "----------  rights ${name}"
-_evalr chown ${id}:${id} ${path}
-_evalr setfacl -Rm u:${id}:rwx ${path}
-_evalr setfacl -Rm d:u:${id}:rwx ${path}
 
 
 ########################  PROFILE
@@ -176,17 +186,19 @@ if [ -z "${profile_www_exist}" ]; then
 	_eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
 fi
 
-# cloud
-profile=${_SUBDOMAIN}.${_DOMAIN_FQDN}
-_echoT "----------  profile ${profile}"
+if [ -z "${profile_cloud_exist}" ]; then
 
-lxc profile list -f csv|grep -q "^${profile}," && _eval lxc profile rename ${profile} ${profile}.${_SDATE}
-_eval lxc profile create ${profile}
+	profile=${profile_cloud}
+	_echoT "----------  profile ${profile}"
 
-path=${S_HOST_PATH}/${_SUBDOMAIN}/${_DOMAIN_FQDN}
-path_ct=${S_VM_PATH_SHARE}/cloud
-[ -d ${path} ] || _evalr mkdir -p ${path}
-_eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
+	lxc profile list -f csv|grep -q "^${profile}," && _eval lxc profile rename ${profile} ${profile}.${_SDATE}
+	_eval lxc profile create ${profile}
+
+	path=${S_HOST_PATH}/cloud/${_DOMAIN_FQDN}
+	path_ct=${_APP_DATA_DIR}
+	[ -d ${path} ] || _evalr mkdir -p ${path}
+	_eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
+fi
 
 
 ########################  INIT
@@ -197,7 +209,7 @@ if lxc list -f csv -c n | grep -q ^${_CT_NAME}$; then
 	lxc list -f csv -c n status=Running| grep -q ^${_CT_NAME}$ && _eval lxc stop ${_CT_NAME}
 	_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
 fi
-_eval lxc init ${ct_www} ${_CT_NAME} -p default -p global -p ${profile_www}  -p ${profile_php} -p ${profile}
+_eval lxc init ${ct_www} ${_CT_NAME} -p default -p global -p ${profile_www}  -p ${profile_php} -p ${profile_cloud}
 
 
 #############  START
@@ -208,11 +220,15 @@ lxc list -f csv -c n status=Stopped | grep -q ^${_CT_NAME}$ && _eval lxc start $
 
 #############  WWW
 
-_echoT "----------  site default keep"
-file=${path_sites}/default.conf
-_lxc_exec ${_CT_NAME} "[ -f ${file} ] && mv ${file} ${file}.keep"
+files=`_lxc_exec ${_CT_NAME} "ls ${path_sites}/*.conf"`
+_menua  "Select apache configuration to desactivate" ${files}
+for file in ${_ANSWER}; do
+	_lxc_exec ${_CT_NAME} "mv ${file} ${file}.keep"
+done
 
 #############  SITE APP
+
+_echoT "\n==========  php ${_CT_NAME}"
 
 domain=${_SUBDOMAIN}.${_DOMAIN_FQDN}
 _echoT "----------  ${domain} path"
@@ -230,8 +246,11 @@ path=${_PATH_DOMAIN}
 _eval lxc file push -q ${file_app_tmp} ${_CT_NAME}/${path}/
 _lxc_exec ${_CT_NAME} "tar xjf ${path}/${file_app} -C ${path}" || _exite "Unable to decompress file: ${file}"
 _lxc_exec ${_CT_NAME} "[ -d ${path}/nextcloud ] && mv ${path}/nextcloud ${path}/${file_app%.tar.bz2}"
+
 _lxc_exec ${_CT_NAME} "[ -h ${path}/${_SUBDOMAIN} ] && rm ${path}/${_SUBDOMAIN}"
 _lxc_exec ${_CT_NAME} "cd ${path} && ln -sv ${file_app%.tar.bz2} ${_SUBDOMAIN}"
+_lxc_exec ${_CT_NAME} "[ -h ${path}/nextcloud ] && rm ${path}/nextcloud"
+_lxc_exec ${_CT_NAME} "cd ${path} && ln -sv ${file_app%.tar.bz2} nextcloud"
 
 
 ########################  RIGHTS
@@ -250,45 +269,40 @@ _echoT "----------  apache2 restart"
 _lxc_exec ${_CT_NAME} "rc-service apache2 restart"
 
 
-_echoI exit && exit
-
-
-
 ########################  MARIADB
 
-_echoT "\n==========  for ${ct_maria}"
+_echoT "\n==========  mariadb ${ct_maria}"
 
 _echoT "----------  ${ct_maria} db create"
-cmd="CREATE DATABASE IF NOT EXISTS ${db_app};"
+cmd="CREATE DATABASE IF NOT EXISTS ${_APP_DB_NAME};"
 _eval "mysql -h${ct_maria} -uroothost -p${pwd_maria} -e \"${cmd}\""
 
-_echoT "----------  ${ct_maria} tables create"
-_eval "mysql -h${ct_maria} -uroothost -p${pwd_maria} < ${file_tables}"
-
-
-_echoT "----------  ${ct_maria} pma strpass"
+_echoT "----------  ${ct_maria} ${_APP_DB_USER} strpass"
 file=${S_PATH_CONF}/mariadb
-str="${_APP_DB_USER} @ ${ct_php}.lxd - ${_APP_DB_PWD}"
+str="${_APP_DB_USER} @ ${_CT_NAME}.lxd - ${_APP_DB_PWD}"
 strpass+="${str}\n"
-cmd="grep -q ^pma ${file} && sed -i '/^pma/c ${str}'  ${file} || sed -i '\$a ${str}' ${file}"
+cmd="grep -q ^${_APP_DB_USER} ${file} && sed -i '/^${_APP_DB_USER}/c ${str}'  ${file} || sed -i '\$a ${str}' ${file}"
 _lxc_exec ${ct_maria} "${cmd}"
 
-_echoT "----------  ${ct_maria} pma grant"
-cmd="GRANT USAGE ON *.* TO '${_APP_DB_USER}'@'${ct_php}.lxd' IDENTIFIED BY '${_APP_DB_PWD}';"
-_eval "mysql -h${ct_maria} -uroothost -p${pwd_maria} -e \"${cmd}\""
-cmd="GRANT ALL PRIVILEGES ON ${db_app}.* TO '${_APP_DB_USER}'@'${ct_php}.lxd';"
-_eval "mysql -h${ct_maria} -uroothost -p${pwd_maria} -e \"${cmd}\""
+for ct_php in ${cts_php}; do
 
-_echoT "----------  ${ct_maria} rootadmin strpass"
-file=${S_PATH_CONF}/mariadb
-str="rootadmin @ ${ct_php}.lxd - ${_MDB_PWD_ADMIN}"
-strpass+="${str}\n"
-cmd="grep -q '^rootadmin @ ${ct_php}.lxd' ${file} && sed -i '/^rootadmin @ ${ct_php}.lxd/c ${str}'  ${file} || sed -i '\$a ${str}' ${file}"
-_lxc_exec ${ct_maria} "${cmd}"
+	_echoT "----------  ${ct_maria} ${_APP_DB_USER} grant"
+	cmd="GRANT USAGE ON *.* TO '${_APP_DB_USER}'@'${ct_php}.lxd' IDENTIFIED BY '${_APP_DB_PWD}';"
+	_eval "mysql -h${ct_maria} -uroothost -p${pwd_maria} -e \"${cmd}\""
+	cmd="GRANT ALL PRIVILEGES ON ${_APP_DB_NAME}.* TO '${_APP_DB_USER}'@'${ct_php}.lxd';"
+	_eval "mysql -h${ct_maria} -uroothost -p${pwd_maria} -e \"${cmd}\""
 
-_echoT "----------  ${ct_maria} rootadmin grant"
-cmd="GRANT ALL PRIVILEGES ON *.* TO rootadmin@'${ct_php}.lxd' IDENTIFIED BY '${_MDB_PWD_ADMIN}' WITH GRANT OPTION"
-_eval "mysql -h${ct_maria} -uroothost -p${pwd_maria} -e \"${cmd}\""
+	_echoT "----------  ${ct_maria} ${_APP_DB_USER} strpass"
+	file=${S_PATH_CONF}/mariadb
+	str="${_APP_DB_USER} @ ${ct_php}.lxd - ${_APP_DB_PWD}"
+	strpass+="${str}\n"
+	cmd="grep -q ^${_APP_DB_USER} ${file} && sed -i '/^${_APP_DB_USER}/c ${str}'  ${file} || sed -i '\$a ${str}' ${file}"
+	_lxc_exec ${ct_maria} "${cmd}"
+
+done
+
+
+
 
 
 ########################  COPY
@@ -310,7 +324,7 @@ done
 ########################  SHOW
 
 _echoT "----------  show privileges ${ct_maria}"
-_eval "mysql -h${ct_maria} -uroothost -p${pwd_maria} -e \"SELECT user,host FROM mysql.user WHERE user like 'pma';\""
+_eval "mysql -h${ct_maria} -uroothost -p${pwd_maria} -e \"SELECT user,host FROM mysql.user WHERE user like '${_APP_DB_USER}';\""
 
 _echoT "----------  show passwords"
 _echoI "Keep this passwords:"
@@ -319,7 +333,8 @@ _echoW "${strpass%\\n}"
 
 ########################  HAPROXY
 
-_echoI "\n----------  Adjust backend for domain ${_DOMAIN_FQDN}"
+_echoI "\nAdjust backend for domain: ${_SUBDOMAIN}.${_DOMAIN_FQDN} with:"
+_echo "${cts_php}"
 
 
 ########################  PUBLISH
