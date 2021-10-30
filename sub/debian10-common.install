@@ -11,7 +11,7 @@ fallback_relay = [admin2.hl.local]
 TODO
 
 
-_echoT "\n==========================================  $S_RELEASE $_PART"
+_echoT "\n==========================================  ${S_RELEASE} ${_PART}"
 
 file_env="${S_PATH_SCRIPT_CONF}/env"
 file_bash_aliases="${S_PATH_SCRIPT_CONF}/.bash_aliases"

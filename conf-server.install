@@ -10,18 +10,18 @@ _echoT "==========================================  ${_PART}"
 _echoT "----------  release"
 
 file="/etc/os-release"
-! [ -f "${file}" ] && exit -e "${redb}error - unable to find file '$file'${cclear}"
+! ${_SUDO} [ -f "${file}" ] && exit -e "${redb}error - unable to find file '$file'${cclear}"
 # base
-eval "$(grep '^VERSION_ID=' "${file}")" # define VERSION_ID
-eval "$(grep '^ID=' "${file}")" # define VERSION_ID
+eval "$(${_SUDO} grep '^VERSION_ID=' "${file}")" # define VERSION_ID
+eval "$(${_SUDO} grep '^ID=' "${file}")" # define ID
 S_RELEASE_ID="$ID"
 S_RELEASE="${ID}${VERSION_ID}"
-S_RELEASE_NAME=`sed -n "/^VERSION=/ s|.*(\(.*\)).*|\1|p" "${file}"`
+S_RELEASE_NAME=`${_SUDO} sed -n "/^VERSION=/ s|.*(\(.*\)).*|\1|p" "${file}"`
 S_RELEASE_NAME=${S_RELEASE_NAME% *}
 if [ "$ID" = "manjaro" ]; then
 	file="/etc/lsb-release"
-	eval "$(grep '^DISTRIB_CODENAME=' "${file}")"
-	S_RELEASE_NAME="$DISTRIB_CODENAME"
+	eval "$(${_SUDO} grep '^DISTRIB_CODENAME=' "${file}")"
+	S_RELEASE_NAME="${DISTRIB_CODENAME}"
 elif [ "$ID" = "alpine" ]; then
 	S_RELEASE=${S_RELEASE%.*}
 fi
@@ -56,16 +56,16 @@ if [[ " ${str} " = *" ${S_SERVER_TYPE} "* ]]; then
 	if [ -z "${S_STORAGE_DEVICE}" ]; then
 		_echoT "----------  S_STORAGE_DEVICE"
 
-		blkid|grep -v squashfs && echo
-		anstmp="/dev/sda5"
-		_askno "Give a device name for ROOT storage (${anstmp})"
+		sudo blkid|grep -v squashfs
+		anstmp=
+		_askno "Give a device name for server ROOT storage (${anstmp})"
 		S_STORAGE_DEVICE=${_ANSWER:-${anstmp}} && _confset S_STORAGE_DEVICE "${S_STORAGE_DEVICE}" "${S_GLOBAL_CONF}"
 	fi
 
 	if [ -z "${S_STORAGE_DRIVER}" ]; then
 		_echoT "----------  S_STORAGE_DRIVER"
 
-		anstmp="zfs"
+		anstmp=zfs
 		_menu "Select a driver for storage (${anstmp})" zfs btrfs
 		S_STORAGE_DRIVER=${_ANSWER} && _confset S_STORAGE_DRIVER "${S_STORAGE_DRIVER}" "${S_GLOBAL_CONF}"
 	fi
@@ -76,7 +76,8 @@ fi
 
 _echoT "----------  S_PATH_INSTALL"
 
-S_PATH_INSTALL=`dirname "$(readlink -e "${BASH_SOURCE[0]}")"`
+first_id="${!BASH_SOURCE[*]}" && first_id="${first_id##* }"
+S_PATH_INSTALL=`dirname "$(readlink -e "${BASH_SOURCE[${first_id}]}")"`
 _confset S_PATH_INSTALL "${S_PATH_INSTALL}" "${S_GLOBAL_CONF}"
 
 S_PATH_INSTALL_CONF="${S_PATH_INSTALL}/conf"
@@ -89,7 +90,7 @@ _confset S_PATH_INSTALL_XTRA "${S_PATH_INSTALL_XTRA}" "${S_GLOBAL_CONF}"
 _echoT "----------  S_PATH_SAVE"
 
 if [ -z "${S_PATH_SAVE}" ]; then
-	anstmp="/save"
+	anstmp=/save
 	_askno "path to save data (${anstmp})"
 	S_PATH_SAVE=${_ANSWER:-${anstmp}} && _confset S_PATH_SAVE "${S_PATH_SAVE}" "${S_GLOBAL_CONF}"
 fi
@@ -105,7 +106,7 @@ fi
 _echoT "----------  S_PATH_LOG"
 
 if [ -z "${S_PATH_LOG}" ]; then
-	anstmp="/var/log"
+	anstmp=/var/log
 	_askno "path to log data (${anstmp})"
 	S_PATH_LOG=${_ANSWER:-${anstmp}} && _confset S_PATH_LOG "${S_PATH_LOG}" "${S_GLOBAL_CONF}"
 
@@ -131,7 +132,7 @@ if [[ " ${str} " = *" ${S_SERVER_TYPE} "* ]]; then
 	_echoT "----------  S_HOST_PATH"
 
 	if [ -z "${S_HOST_PATH}" ]; then
-		anstmp="/vm"
+		anstmp=/vm
 		_askno "host path for VM (${anstmp})"
 		S_HOST_PATH="${_ANSWER:-${anstmp}}" && _confset S_HOST_PATH "${S_HOST_PATH}" "${S_GLOBAL_CONF}"
 	fi
@@ -383,24 +384,25 @@ paths="${S_PATH_SAVE} ${S_PATH_BACKUP} ${S_PATH_LOG} ${S_PATH_LOG_SERVER} ${S_PA
 _echoT "----------  create ${paths}"
 
 for path in ${paths}; do
-	[ -d ${path} ] || _evalq mkdir -p ${path}
+	[ -d ${path} ] || _evalqr mkdir -p ${path}
+	[ ${USER} != root ] && _evalqr chown :1000 ${path} && _evalqr chmod g+rw ${path}
 done
 
 _echoT "----------  create save paths for cluster"
 
 servers_list=${!S_CLUSTER[*]}
 for host in ${servers_list/${HOSTNAME}/}; do
-	[ -d "${S_PATH_SAVE}/${host}" ] || _evalq mkdir "${S_PATH_SAVE}/${host}"
+	[ -d "${S_PATH_SAVE}/${host}" ] || _evalqr mkdir "${S_PATH_SAVE}/${host}"
 done
 
 str="ovh home"
 if [[ " ${str} " = *" ${S_SERVER_TYPE} "* ]]; then
 
-	paths="${S_HOST_PATH} ${S_HOST_PATH_SHARE} ${S_HOST_PATH_LOG} ${S_HOST_PATH_SAVE}"
+	paths="${S_HOST_PATH} ${S_HOST_PATH_SP} ${S_HOST_PATH_SHARE} ${S_HOST_PATH_LOG} ${S_HOST_PATH_SAVE}"
 	_echoT "----------  create ${paths}"
 
 	for path in ${paths}; do
-		[ -d "${path}" ] || _evalq mkdir -p "${path}"
+		[ -d "${path}" ] || _evalqr mkdir -p "${path}"
 	done
 fi
 
@@ -411,7 +413,7 @@ if [[ " ${str} " = *" ${S_SERVER_TYPE} "* ]]; then
 
 	paths="${S_VM_PATH_SHARE} ${S_VM_PATH_SAVE} ${S_VM_PATH_BACKUP}"
 	for path in ${paths}; do
-		[ -d "${path}" ] || _evalq mkdir -p "${path}"
+		[ -d "${path}" ] || _evalqr mkdir -p "${path}"
 	done
 fi
 

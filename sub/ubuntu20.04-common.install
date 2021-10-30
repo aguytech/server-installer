@@ -8,7 +8,7 @@ relayhost = [admin1.hl.local]
 fallback_relay = [admin2.hl.local]
 TODO
 
-_echoT "\n==========================================  $S_RELEASE $_PART"
+_echoT "\n==========================================  ${S_RELEASE}-${_PART}"
 
 file_env=${S_PATH_SCRIPT_CONF}/env
 file_bash_aliases=${S_PATH_SCRIPT_CONF}/.bash_aliases
@@ -194,14 +194,12 @@ fi
 
 
 _echoT "----------  bash-completion"
-
 _evalq cp -a "${path_install_bash_completion}"/* "/usr/share/bash-completion/completions/"
 
 
 if type vim >/dev/null 2>&1 ; then
     _echoT "------------------  links edit"
-
-    file in /etc/alternatives/editor; do
+    for file in /etc/alternatives/editor; do
         [ -e ${file} ] && _evalr rm ${file}
         _evalr ln -sv /usr/bin/vim.basic ${file}
     done
@@ -216,7 +214,6 @@ if [[ " ${str} " = *" ${S_SERVER_TYPE} "* ]]; then
 	if [ "${S_STORAGE_DRIVER}" = zfs ]; then
 
 		_echoT "----------  zfs install"
-
 		_eval apt install -y zfsutils-linux
 
 		path=/zroot

@@ -16,7 +16,7 @@ iptables -nvL --line-number; iptables -nvL -t nat --line-number
 commands
 
 
-_echoT "\n==========================================  $S_RELEASE $_PART"
+_echoT "\n==========================================  ${S_RELEASE} ${_PART}"
 
 file_script=/usr/local/bin/firewall
 file_xtra_script=${S_PATH_INSTALL_XTRA}/firewall

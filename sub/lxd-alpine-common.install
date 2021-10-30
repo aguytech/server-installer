@@ -26,10 +26,10 @@ _CT_NAME=${_CT_NAME_COM}
 
 _echoT "----------  apk profile.d"
 
-_lxc_exec ${_CT_NAME} "[ -e /etc/profile.d/bash-lxc-aliases.sh ] || ln -s /usr/local/bs/conf/bash-lxc-aliases.sh /etc/profile.d/bash-lxc-aliases.sh"
-_lxc_exec ${_CT_NAME} "[ -e /etc/profile.d/bash-lxc-alpine.sh ] || ln -s /usr/local/bs/conf/bash-lxc-alpine.sh /etc/profile.d/bash-lxc-alpine.sh"
-_lxc_exec ${_CT_NAME} "[ -e /etc/profile.d/bash_functions.sh ] || ln -s /usr/local/bs/conf/.bash_functions /etc/profile.d/bash_functions.sh"
-_lxc_exec ${_CT_NAME} "[ -e /etc/profile.d/env.sh ] || ln -s /usr/local/bs/conf/env.conf /etc/profile.d/env.sh"
+_lxc_exec ${_CT_NAME} "[ -e /etc/profile.d/bash-lxc-aliases.sh ] || ln -s ${S_PATH_SCRIPT_CONF}/bash-lxc-aliases.sh /etc/profile.d/bash-lxc-aliases.sh"
+_lxc_exec ${_CT_NAME} "[ -e /etc/profile.d/bash-lxc-alpine.sh ] || ln -s ${S_PATH_SCRIPT_CONF}/bash-lxc-alpine.sh /etc/profile.d/bash-lxc-alpine.sh"
+_lxc_exec ${_CT_NAME} "[ -e /etc/profile.d/bash_functions.sh ] || ln -s ${S_PATH_SCRIPT_CONF}/.bash_functions /etc/profile.d/bash_functions.sh"
+_lxc_exec ${_CT_NAME} "[ -e /etc/profile.d/env.sh ] || ln -s ${S_PATH_SCRIPT_CONF}/env /etc/profile.d/env.sh"
 
 # not for busybox
 #_lxc_exec ${_CT_NAME} "echo -e 'set showmatch\nset tabstop=4\nset shiftwidth=4' | tee -a /etc/vimrc /etc/exrc"
