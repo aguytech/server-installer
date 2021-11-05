@@ -4,7 +4,7 @@
 
 _echoT "\n==========================================  ${_RELEASE} ${_PART}"
 
-grep -q "^# ${_PART#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART}" | _evalqr tee -a ${S_FILE_INSTALL_CONF}
+grep -q "^# ${_PART#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART}" >> ${S_FILE_INSTALL_CONF}
 
 ########################  REQUIRED
 
@@ -36,7 +36,7 @@ _echoT "----------  data domain"
 anstmp=${S_DOMAIN_FQDN} && _askno "Domain name to use (${anstmp})"
 _DOMAIN_FQDN="${_ANSWER:-$anstmp}"
 
-anstmp=admin && _askno "Give the new subdomain for admin (${anstmp})"
+anstmp=admin && _askno "Give the subdomain for admin (${anstmp})"
 _SUBDOMAIN="${_ANSWER:-$anstmp}"
 
 anstmp=wap-${_SUBDOMAIN}-${S_DOMAIN_NAME//./-} && _askno "Base name of containers to build (${anstmp})"
@@ -45,7 +45,7 @@ ct_base="${_ANSWER:-$anstmp}"
 anstmp=2 && _askno "Number of containers to build (${anstmp})"
 ct_num="${_ANSWER:-$anstmp}"
 
-anstmp=pma && _askno "Give the new subdomain for phpmyadmin (${anstmp})"
+anstmp=pma && _askno "Give the subdomain for phpmyadmin (${anstmp})"
 sub_pma="${_ANSWER:-$anstmp}"
 
 _echoT "----------  data www"

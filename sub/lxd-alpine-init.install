@@ -4,6 +4,7 @@
 
 _echoT "\n==========================================  ${_RELEASE_ID} ${_PART}"
 
+grep -q "^# ${_PART#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART}" >> ${S_FILE_INSTALL_CONF}
 
 ########################  DATA
 
@@ -35,7 +36,7 @@ _eval lxc profile create ${profile}
 
 path="${S_HOST_PATH_SHARE}/global"
 path_ct="${S_VM_PATH_SHARE}/global"
-[ -d ${path} ] || _eval mkdir -p ${path}
+[ -d ${path} ] || _evalr mkdir -p ${path}
 _eval lxc profile device add ${profile} global disk source=${path} path=${path_ct}
 
 

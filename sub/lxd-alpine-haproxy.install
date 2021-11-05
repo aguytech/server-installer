@@ -4,7 +4,7 @@
 
 _echoT "\n==========================================  ${_RELEASE} ${_PART}"
 
-grep -q "^# ${_PART}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART}" | _evalqr tee -a ${S_FILE_INSTALL_CONF}
+grep -q "^# ${_PART#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART}" >> ${S_FILE_INSTALL_CONF}
 
 ########################  REQUIRED
 

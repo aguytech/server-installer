@@ -4,7 +4,7 @@
 
 _echoT "\n==========================================  ${_RELEASE} ${_PART}"
 
-grep -q "^# ${_PART#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART}" | _evalqr tee -a ${S_FILE_INSTALL_CONF}
+grep -q "^# ${_PART#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART}" >> ${S_FILE_INSTALL_CONF}
 
 ########################  REQUIRED
 
@@ -135,7 +135,6 @@ if [ -z "${profile_cloud_exist}" ]; then
 		_echoT "----------  zfs create ${path_zfs}"
 		_evalr zfs create -o mountpoint=${path} ${path_zfs}
 
-		id=1000000
 
 	elif [ "${S_STORAGE_DRIVER}" = btrfs ]; then
 
@@ -156,13 +155,12 @@ if [ -z "${profile_cloud_exist}" ]; then
 		_echoT "----------  btrfs create ${path}"
 		_evalr btrfs subvolume create ${path}
 
-		id=100000
-
 	else
 		_exite "This part have to be implemented"
 	fi
 
 	_echoT "----------  rights ${name}"
+	id=1000000
 	_evalr chown ${id}:${id} ${S_HOST_PATH}/cloud/${_DOMAIN_FQDN}
 	_evalr setfacl -Rm u:${id}:rwx ${S_HOST_PATH}/cloud/${_DOMAIN_FQDN}
 	_evalr setfacl -Rm d:u:${id}:rwx ${S_HOST_PATH}/cloud/${_DOMAIN_FQDN}

@@ -10,6 +10,8 @@ TODO
 
 _echoT "\n==========================================  ${S_RELEASE}-${_PART}"
 
+grep -q "^# ${_PART#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART}" >> ${S_FILE_INSTALL_CONF}
+
 file_env=${S_PATH_SCRIPT_CONF}/env
 file_bash_aliases=${S_PATH_SCRIPT_CONF}/.bash_aliases
 file_bash_functions=${S_PATH_SCRIPT_CONF}/.bash_functions
@@ -270,9 +272,9 @@ if [[ " ${str} " = *" ${S_SERVER_TYPE} "* ]]; then
 
 		_echoT "----------  btrfs paths"
 
-		paths="sp share save"
+		paths="${S_HOST_PATH_SP} ${S_HOST_PATH_SHARE} ${S_HOST_PATH_SAVE} ${S_HOST_PATH_LOG} "
 		for path in ${paths}; do
-			[ -d /vm/${path} ] || _eval mkdir /vm/${path}
+			[ -d ${path} ] || _eval mkdir /vm/${path}
 		done
 
 	else
