@@ -4,12 +4,13 @@
 
 _echoT "\n==========================================  ${S_RELEASE}-${_PART}"
 
+grep -q "^# ${_PART#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART}" >> ${S_FILE_INSTALL_CONF}
+
 ########################  DATA
 
 _echoT "----------  data"
 
 [ -z ${_LXD_DHCP_MIN+x} ] && anstmp="20" && _askno "Give minimal range IP for DHCP container (${anstmp})" && _LXD_DHCP_MIN="${_ANSWER:-$anstmp}" && _confset _LXD_DHCP_MIN "${_LXD_DHCP_MIN}"
-
 [ -z ${_LXD_DHCP_MAX+x} ] && anstmp="254" && _askno "Give maximal range IP for DHCP container (${anstmp})" && _LXD_DHCP_MAX="${_ANSWER:-$anstmp}" && _confset _LXD_DHCP_MAX "${_LXD_DHCP_MAX}"
 
 
@@ -59,7 +60,7 @@ link="/lxd"
 
 path="${S_HOST_PATH_SHARE}"
 _echoT "----------  rights ${path}"
-[ "${S_STORAGE_DRIVER}" = zfs ] && id=1000000 || id=100000
+id=1000000
 _evalr setfacl -Rm u:${id}:rwx "${path}"
 _evalr setfacl -Rm d:u:${id}:rwx "${path}"
 _evalr chown ${id}:${id} -R "${path}"
