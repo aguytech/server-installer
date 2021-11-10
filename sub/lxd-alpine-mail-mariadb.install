@@ -1,0 +1,30 @@
+#!/bin/bash
+#
+# write by Aguy
+
+_echoT "\n======================  ${_INSTALL}-${_PARTMAIL}"
+
+grep -q "^# ${_PARTMAIL#++}$" ${_FILE_INSTALL_CONF} || echo  "# ${_PARTMAIL}" >> ${_FILE_INSTALL_CONF}
+
+########################  DATA
+
+cts_maria=`lxc list -f csv -c n| grep '^mdb-'`
+[ -z "${cts_maria}" ] && _exite "Unable to find mariadb container"
+
+_menu "Select a mariadb container" `lxc list -f csv -c n| grep '^mdb-'` && _DBHOST=${_ANSWER} && _confset _DBHOST "${_DBHOST}" ${_FILE_INSTALL_CONF}
+anstmp=${_VMAIL_APP} && _askno "Give name for mail database ($anstmp)"  && _DBNAME=${_ANSWER:-${anstmp}} && _confset _DBNAME "${_DBNAME}" ${_FILE_INSTALL_CONF}
+anstmp=${_VMAIL_ACRO} && _askno "Give name for mail user to access to MariaDB ($anstmp)" && _DBUSER=${_ANSWER:-${anstmp}} && _confset _DBUSER "${_DBUSER}" ${_FILE_INSTALL_CONF}
+anstmp="$(_pwd)" && _askno "Give a password for user '${_DBUSER}' ($anstmp)" && _DBPWD=${_ANSWER:-${anstmp}} && _confset _DBPWD "${_DBPWD}" ${_FILE_INSTALL_CONF}
+
+
+########################  MAIN
+
+_echoT "----------  mariadb install"
+_lxc_exec ${_CT_NAME} apk update
+_lxc_exec ${_CT_NAME} "rc-service -l|grep -q ^mariadb-client && apk add mariadb-client"
+
+
+########################  END
+
+_echoT "===================== ${_PART} end"
+_partadd ${_PARTMAIL#++} ${S_FILE_INSTALL_DONE}
