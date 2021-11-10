@@ -3,13 +3,13 @@
 
 defaults
 	log				global
-	mode			http
-	option			httplog
 	option			dontlognull
-	option			httpchk
 	option			log-health-checks
-	option			forwardfor except 127.0.0.0/8
 	option			http-keep-alive # http-server-close
+	#mode			http
+	#option			httplog
+	#option			httpchk
+	#option			forwardfor except 127.0.0.0/8
 	maxconn		30
 
 	timeout		connect				2000	# Set the maximum time to wait for a connection attempt to a server to succeed

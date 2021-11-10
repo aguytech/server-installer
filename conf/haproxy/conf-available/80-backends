@@ -1,13 +1,27 @@
 # included file for haproxy configuration
 
 backend default
-	default-server		weight 20  maxconn 30  check  inter 4s  fall 2  rise 1  resolvers lxd  resolve-prefer ipv4 # resolve-net 10.0.0.1/24
+	mode			http
+	option			httpchk
+	default-server	weight 20  maxconn 30  check  inter 4s  fall 2  rise 1  resolvers lxd  resolve-prefer ipv4 # resolve-net 10.0.0.1/24
 	server			_SERVER_DEFAULT  _SERVER_DEFAULT:80 maxconn 20 check
 
 backend letsencrypt
+	mode			http
 	server			letsencrypt 127.0.0.1:_HPX_LCRYPT_PORT
 
+backend S_SERVICE[mail]
+	mode			tcp
+	timeout server	60s
+	timeout connect	7s
+
+	option smtpchk
+	default-server	check port 80  inter 4s  fall 2  rise 1  resolvers lxd  resolve-prefer ipv4 # resolve-net 10.0.0.1/24
+	#server S_SERVICE[mail]-1	S_SERVICE[mail]-1 check port 25
+	#server S_SERVICE[mail]-2	S_SERVICE[mail]-2 check port 25 backup
+
 backend S_DOMAIN_FQDN
+	mode			http
 	#option			httpchk GET /ping-monitor "HTTP/1.1\r\nHost: S_DOMAIN_FQDN"
 	option			httpchk GET /ping-monitor
 	http-check		expect string pong
@@ -26,9 +40,11 @@ backend S_DOMAIN_FQDN
 
 	## backup
 	server	_SERVER_DEFAULT		_SERVER_DEFAULT:80
+	#server	wap-_HPX_CT_NAME-1	wap-_HPX_CT_NAME-1:80
 	#server	wap-_HPX_CT_NAME-2	wap-_HPX_CT_NAME-2:80  backup
 
 backend S_DOMAIN_FQDN-cloud
+	mode			http
 	#option			httpchk GET /ping-monitor "HTTP/1.1\r\nHost: S_DOMAIN_FQDN"
 	option			httpchk GET /ping-monitor
 	http-check		expect string pong
@@ -40,6 +56,7 @@ backend S_DOMAIN_FQDN-cloud
 	#server	wap-cloud-_HPX_CT_NAME-2	wap-cloud-_HPX_CT_NAME-2:80  backup
 
 backend _DOMAIN_2_FQDN
+	mode			http
 	#option			httpchk GET /ping-monitor "HTTP/1.1\r\nHost: _DOMAIN_2_FQDN"
 	option			httpchk GET /ping-monitor
 	http-check		expect string pong
@@ -49,6 +66,7 @@ backend _DOMAIN_2_FQDN
 	#server	wap-_HPX_CT_2_NAME2	wap-_HPX_CT_2_NAME-2:80 weight 10 maxconn 30 check inter 4s backup
 
 backend	S_DOMAIN_FQDN-admin
+	mode			http
 	#option			httpchk GET /ping-wap HTTP/1.1\r\nHost:\ admin.S_DOMAIN_FQDN
 	option			httpchk GET /ping-monitor
 	http-check		expect string admin

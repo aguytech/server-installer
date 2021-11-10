@@ -1,8 +1,11 @@
 # included file for haproxy configuration
 
 frontend https
-	bind *:443			ssl crt-list S_PATH_CONF_SSL/private/letsencrypt.pem.lst
-	#bind *:443		ssl crt ambau.ovh.pem
+	bind :443			ssl crt-list S_PATH_CONF_SSL/private/letsencrypt.pem.lst
+	#bind :443			ssl crt ambau.ovh.pem
+	mode http
+	option				httplog
+	option				forwardfor except 127.0.0.0/8
 
 	default_backend		default
 

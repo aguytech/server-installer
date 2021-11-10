@@ -1,8 +1,11 @@
 # included file for haproxy configuration
 
 frontend http
-	bind  *:80
+	bind :80
+	mode http
 	http-request 	set-header X-Forwarded-Protocol http
+	option			forwardfor except 127.0.0.0/8
+	option			httplog
 	default_backend	default
 
 	acl letsencrypt			path_beg /.well-known/acme-challenge/
