@@ -2,7 +2,7 @@
 #
 # write by Aguy
 
-_echoT "\n==========================================  ${_RELEASE} ${_PART}"
+_echoT "\n==========================================  ${_INSTALL}-${_PART}"
 
 grep -q "^# ${_PART#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART}" >> ${S_FILE_INSTALL_CONF}
 
@@ -22,7 +22,7 @@ file_opcache="${S_PATH_INSTALL_CONF}/apache2/opcache.conf"
 file_xdebug="${S_PATH_INSTALL_CONF}/php/xdebug.ini"
 file_rsyslog_client=${S_PATH_INSTALL_CONF}/rsyslog/client-phpfpm7.conf
 file_rsyslog_host=${S_PATH_INSTALL_CONF}/rsyslog/host-phpfpm7.conf
-file_logrotate_client=${S_PATH_INSTALL_CONF}/logrotate/host-phpfpm7
+file_logrotate_client=${S_PATH_INSTALL_CONF}/logrotate/client-phpfpm7
 file_logrotate_host=${S_PATH_INSTALL_CONF}/logrotate/host-phpfpm7
 
 _echoT "------------------ required files"
@@ -46,7 +46,7 @@ ct_num="${_ANSWER:-$anstmp}"
 
 _echoT "----------  data image"
 
-_menu "Select one available image container for WWW base" ${cts_all_www}
+_menu "Select one available image Apache container for www base" ${cts_all_www}
 ct_www=${_ANSWER}
 
 profiles=`lxc profile list -f csv|grep "^www.*,"|cut -d, -f1`
@@ -189,7 +189,6 @@ _echoT "----------  paths ${_PHP_SERVICE}"
 paths="${path_php_share}/tmp ${path_php_share}/sessions ${path_php_share}/soap ${path_xdebug_profile} ${path_xdebug_trace} ${path_fpm_pool}/www ${path_fpm_pool}/www-admin"
 cmd="for path in ${paths}; do [ -d \${path} ] || mkdir -p \${path}; done"
 _lxc_exec ${_CT_NAME} "${cmd}"
-
 
 
 ########################  INSTALL
@@ -439,7 +438,6 @@ _echoT "----------  ${S_SERVICE[log]} host path"
 path=${S_VM_PATH_LOG}/php7
 _lxc_exec ${S_SERVICE[log]} "[ -d ${path} ] || mkdir -p ${path}"
 
-
 _echoT "----------  ${S_SERVICE[log]} host"
 file=/etc/rsyslog.d/${file_rsyslog_host##*/}
 _eval lxc file push ${file_rsyslog_host} ${S_SERVICE[log]}${file}
@@ -529,8 +527,8 @@ _echo "curl ${_CT_NAME}/status-www-admin?full"
 
 ########################  HAPROXY
 
-_echoI "\nAdjust backend for domain: ${_DOMAIN_FQDN} with:"
-_echo `for i in `seq 1 ${ct_num}`; do echo ${ct_base}-${i};done`
+_echoI "\nAdjust backend in proxy for domain: ${_DOMAIN_FQDN} with:"
+_echo $(for i in `seq 1 ${ct_num}`; do echo ${ct_base}-${i};done)
 
 
 ########################  PUBLISH

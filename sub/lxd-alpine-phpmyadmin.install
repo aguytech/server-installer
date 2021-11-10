@@ -2,7 +2,7 @@
 #
 # write by Aguy
 
-_echoT "\n==========================================  ${_RELEASE} ${_PART}"
+_echoT "\n==========================================  ${_INSTALL}-${_PART}"
 
 grep -q "^# ${_PART#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART}" >> ${S_FILE_INSTALL_CONF}
 
@@ -50,7 +50,7 @@ sub_pma="${_ANSWER:-$anstmp}"
 
 _echoT "----------  data www"
 
-_menu "Select one available image container for www service" ${img_all_www}
+_menu "Select one available image container to copy for www service" ${img_all_www}
 ct_www=${_ANSWER}
 
 profiles=`lxc profile list -f csv|grep "^www.*,"|cut -d, -f1`
@@ -60,8 +60,8 @@ profile_www="${_ANSWER/none/}" && profile_www_exist=${profile_www}
 
 _echoT "----------  data php"
 
-_menu "Select an available PHP profile to apply or none" ${profiles_all_php} || _ANSWER=
-profile_php="${_ANSWER/none/}"
+_menu "Select an available PHP profile to apply" ${profiles_all_php} || _ANSWER=
+profile_php="${_ANSWER}"
 
 _echoT "----------  data mariadb"
 
@@ -104,7 +104,7 @@ _APP_PATH_DW=${S_VM_PATH_SHARE}/php/down
 
 cts_php=`for i in $(seq 1 ${ct_num}); do echo ${ct_base}-${i}; done`
 path_sites=/etc/apache2/sites
-
+strpass=
 
 ########################  PROFILE
 
@@ -138,7 +138,7 @@ _eval lxc init ${ct_www} ${_CT_NAME} -p default -p global -p ${profile_www}  -p 
 ########################  METADATA
 
 _echoT "----------  metadata"
-_lxc_meta_add ${_CT_NAME} profilesl ${profile_www} ${profile_php} ${profile}
+_lxc_meta_add ${_CT_NAME} profiles ${profile_www} ${profile_php} ${profile}
 _lxc_meta_add ${_CT_NAME} apps phpmyadmin
 
 
