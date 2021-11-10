@@ -6,11 +6,9 @@ frontend https
 	mode http
 	option				httplog
 	option				forwardfor except 127.0.0.0/8
-
-	default_backend		default
-
 	http-request		set-header X-Forwarded-Protocol https
 	#http-request		set-header X-Forwarded-Port %[dst_port]
+	default_backend		default
 
 	acl S_DOMAIN_FQDN		hdr_end(host) -i S_DOMAIN_FQDN
 	acl _DOMAIN_2_FQDN		hdr_end(host) -i _DOMAIN_2_FQDN
