@@ -212,7 +212,6 @@ fi
 declare -A S_SERVICE
 
 _echoT "----------  S_SERVICE[proxy]"
-
 if [ -z "${S_SERVICE[proxy]}" ]; then
 	anstmp="srv-haproxy"
 	_askno "service name for proxy (${anstmp})"
@@ -220,11 +219,17 @@ if [ -z "${S_SERVICE[proxy]}" ]; then
 fi
 
 _echoT "----------  S_SERVICE[log]"
-
 if [ -z "${S_SERVICE[log]}" ]; then
 	anstmp="srv-rsyslog"
-	_askno "service name to log (${anstmp})"
+	_askno "service name for log (${anstmp})"
 	S_SERVICE[log]=${_ANSWER:-${anstmp}} && _confset_array "S_SERVICE" "log" "${S_SERVICE[log]}" "${S_GLOBAL_CONF}"
+fi
+
+_echoT "----------  S_SERVICE[mail]"
+if [ -z "${S_SERVICE[mail]}" ]; then
+	anstmp="srv-mail"
+	_askno "service name for mail (${anstmp})"
+	S_SERVICE[mail]=${_ANSWER:-${anstmp}} && _confset_array "S_SERVICE" "mail" "${S_SERVICE[mail]}" "${S_GLOBAL_CONF}"
 fi
 
 

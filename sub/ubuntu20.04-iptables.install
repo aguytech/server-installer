@@ -4,30 +4,27 @@
 
 _echoT "\n==========================================  ${S_RELEASE}-${_PART}"
 
+grep -q "^# ${_PART#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART}" >> ${S_FILE_INSTALL_CONF}
 
 ########################  REQUIRED
 
 file_xtra_script=${S_PATH_INSTALL_XTRA}/iptables-firewall
 file_xtra_conf=${S_PATH_INSTALL_CONF}/iptables-firewall.conf
 file_xtra_log=${S_PATH_INSTALL_CONF}/rsyslog/host-iptables.conf
-file_script=/usr/sbin/${file_xtra_script##*/}
 
 _echoT "------------------ required files"
-
 _require ${file_xtra_script} ${file_xtra_conf} ${file_xtra_log}
-
 
 ########################  DATA
 
 _echoT "----------  data"
 
 # host
-[ -z ${_IP_PRE_SSH+x} ] && anstmp="20" && _askno "Give the PREFIX of port for 'SSH' VMs connections (${anstmp})" && _IP_PRE_SSH="${_ANSWER:-$anstmp}" && _confset _IP_PRE_SSH "${_IP_PRE_SSH}"
-
-[ -z ${_IP_PRE_HTTP+x} ] && anstmp="8" && _askno "Give the PREFIX of port for 'HTTP' VMs connections  (${anstmp})" && _IP_PRE_HTTP="${_ANSWER:-$anstmp}" && _confset _IP_PRE_HTTP "${_IP_PRE_HTTP}"
-
-[ -z ${_IP_PRE_HTTPS+x} ] && anstmp="9" && _askno "Give the PREFIX of port for 'HTTP' VMs connections (${anstmp})" && _IP_PRE_HTTPS="${_ANSWER:-$anstmp}" && _confset _IP_PRE_HTTPS "${_IP_PRE_HTTPS}"
-
+_IPT_SERVICE=iptables-firewall && _confset _IPT_SERVICE "${_IPT_SERVICE}"
+_IPT_FILE_CONF=${S_PATH_CONF}/iptables-firewall.conf && _confset _IPT_FILE_CONF "${_IPT_FILE_CONF}"
+anstmp=20 && _askno "PREFIX of port for 'SSH' VMs connections (${anstmp})" && _IPT_PRE_SSH="${_ANSWER:-$anstmp}" && _confset _IPT_PRE_SSH "${_IPT_PRE_SSH}"
+anstmp=8 && _askno "PREFIX of port for 'HTTP' VMs connections  (${anstmp})" && _IPT_PRE_HTTP="${_ANSWER:-$anstmp}" && _confset _IPT_PRE_HTTP "${_IPT_PRE_HTTP}"
+anstmp=9 && _askno "PREFIX of port for 'HTTP' VMs connections (${anstmp})" && _IPT_PRE_HTTPS="${_ANSWER:-$anstmp}" && _confset _IPT_PRE_HTTPS "${_IPT_PRE_HTTPS}"
 
 ########################  SYSCTL
 
@@ -62,17 +59,14 @@ _eval "sed -i 's|^#\?\(net.ipv4.ip_forward\)=.*|\1=1|' ${file}"
 
 ########################  FIREWALL
 
-_echoT "----------  iptables-firewall conf"
-
-file=${S_PATH_CONF}/${file_xtra_conf##*/}
+_echoT "----------  ${_IPT_SERVICE} conf"
 _keepcpts ${file}
-_eval cp ${file_xtra_conf} ${file}
+_eval cp ${file_xtra_conf} ${_IPT_FILE_CONF}
 
 
-_echoT "----------  iptables-firewall bin"
-
-file=${file_script}
-_keepcpts ${file}
+_echoT "----------  ${_IPT_SERVICE} bin"
+file=/usr/bin/${_IPT_SERVICE}
+_keepmvts ${file}
 _eval cp ${file_xtra_script} ${file}
 _eval chown root:root ${file}
 _eval chmod 750 ${file}
@@ -80,7 +74,7 @@ _eval chmod 750 ${file}
 
 _echoT "----------  systemd add service"
 
-file=/etc/systemd/system/iptables-firewall.service
+file=/etc/systemd/system/${_IPT_SERVICE}.service
 echo "[Unit]
 Description=iptables firewall service
 After=network.target
@@ -97,15 +91,15 @@ WantedBy=multi-user.target
 " > ${file}
 _eval chmod 644 ${file}
 
-file=/etc/systemd/system/iptables-firewall-test.service
+file=/etc/systemd/system/${_IPT_SERVICE}-test.service
 echo "[Unit]
 Description=iptables firewall service test
-BindsTo=iptables-firewall.service
-After=iptables-firewall.service
+BindsTo=${_IPT_SERVICE}.service
+After=${_IPT_SERVICE}.service
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/systemd-run --on-active=120 --timer-property=AccuracySec=1s /bin/systemctl stop iptables-firewall.service
+ExecStart=/usr/bin/systemd-run --on-active=120 --timer-property=AccuracySec=1s /bin/systemctl stop ${_IPT_SERVICE}.service
 StandardOutput=journal
 
 [Install]
@@ -115,24 +109,18 @@ _eval chmod 644 ${file}
 
 
 _echoT "----------  systemd reload daemon"
-
 _eval systemctl daemon-reload
 
 
-_echoT "----------  iptables-firewall-test"
-
-_echoI "To launch iptables rules for TEST, run: systemctl start iptables-firewall-test"
+_echoT "----------  ${_IPT_SERVICE}-test"
+_echoI "To launch iptables rules for TEST, run: systemctl start ${_IPT_SERVICE}-test"
 _echoI "You have 2 minutes after to verify iptables rules"
 
-_echoT "----------  systemd iptables-firewall"
-
-_askno "To START the service: iptables-firewall, valid"
-
-_service start iptables-firewall
-
-_askno "To ENABLE the service: iptables-firewall, valid"
-
-_service enable iptables-firewall
+_echoT "----------  systemd ${_IPT_SERVICE}"
+_askno "To START the service: ${_IPT_SERVICE}, valid"
+_service start ${_IPT_SERVICE}
+_askno "To ENABLE the service: ${_IPT_SERVICE}, valid"
+_service enable ${_IPT_SERVICE}
 
 
 ########################  END

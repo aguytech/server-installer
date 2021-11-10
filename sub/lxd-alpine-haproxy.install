@@ -2,7 +2,7 @@
 #
 # write by Aguy
 
-_echoT "\n==========================================  ${_RELEASE} ${_PART}"
+_echoT "\n==========================================  ${_INSTALL}-${_PART}"
 
 grep -q "^# ${_PART#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART}" >> ${S_FILE_INSTALL_CONF}
 
@@ -44,11 +44,8 @@ _SERVER_DEFAULT=${_ANSWER}
 _echoT "----------  data"
 
 anstmp=otokoz.ovh && _askno "A second fqdn second domain name: (${anstmp})" && _DOMAIN_2_FQDN="${_ANSWER:-$anstmp}" && _confset _DOMAIN_2_FQDN "${_DOMAIN_2_FQDN}"
-
- anstmp=admin && _askno "Name for stats access (${anstmp})" && _HPX_ACCESS_USER="${_ANSWER:-$anstmp}" && _confset _HPX_ACCESS_USER "${_HPX_ACCESS_USER}"
-
+anstmp=admin && _askno "Name for stats access (${anstmp})" && _HPX_ACCESS_USER="${_ANSWER:-$anstmp}" && _confset _HPX_ACCESS_USER "${_HPX_ACCESS_USER}"
 anstmp=`_pwd` && _askno "Password to stats access (${anstmp})" && _HPX_ACCESS_PWD="${_ANSWER:-$anstmp}" && _confset _HPX_ACCESS_PWD "${_HPX_ACCESS_PWD}"
-
 anstmp=/haproxy-stats && _askno "URI to access to admin site (${anstmp})" && _HPX_ACCESS_URI="${_ANSWER:-$anstmp}" && _confset _HPX_ACCESS_URI "${_HPX_ACCESS_URI}"
 
 _echoT "----------  data letsencrypt"
@@ -58,10 +55,8 @@ _askyn "Use letsencrypt" && _HPX_LCRYPT_ENABLE="${_ANSWER/n/}"
 if [ "${_HPX_LCRYPT_ENABLE}" ]; then
 
 	anstmp=${S_DOMAIN_EMAIL_TECH} && _askno "Technical email for letsencrypt (${anstmp})" && _HPX_LCRYPT_EMAIL="${_ANSWER:-$anstmp}" && _confset _HPX_LCRYPT_EMAIL "${_HPX_LCRYPT_EMAIL}"
-
 	anstmp="ada admin blog carte chat chiffres cloud cms code compta dev diaspora discord discourse down elastik files forum gestion git gitea gitlab graylog imap info kibana links log mail manage matomo metrics monitor mx nextcloud pfa pma roundcube shaarli smtp snippet social st stats test tuleap vma vmail webmail wiki www zabbix" #  mail10 mx10
 	_askno "Subdomains to register to letsencrypt (${anstmp})" && _HPX_LCRYPT_SUBS="${_ANSWER:-$anstmp}" && _confset _HPX_LCRYPT_SUBS "${_HPX_LCRYPT_SUBS}"
-
 	[ -z ${_HPX_LCRYPT_PORT+x} ] && anstmp=8079 && _askno "Port for letsencrypt (${anstmp})" && _HPX_LCRYPT_PORT="${_ANSWER:-$anstmp}" && _confset _HPX_LCRYPT_PORT "${_HPX_LCRYPT_PORT}"
 fi
 
@@ -79,6 +74,32 @@ _HPX_STATS_PORT=${S_HAPROXY_STATS_PORTS%% *} && _confset _HPX_STATS_PORT "${_HPX
 _HPX_STATS_2_PORT=${S_HAPROXY_STATS_PORTS#* } && _HPX_STATS_2_PORT=${_HPX_STATS_2_PORT%% *} && _confset _HPX_STATS_2_PORT "${_HPX_STATS_2_PORT}"
 
 
+########################  PROFILE
+
+profile=ssl-${_DOMAIN_FQDN}
+_echoT "----------  profile ${profile}"
+
+lxc profile list -f csv|grep -q "^${profile}," && _eval lxc profile rename ${profile} ${profile}.${_SDATE}
+_eval lxc profile create ${profile}
+
+path=${S_HOST_PATH_SHARE}/ssl/${_DOMAIN_FQDN}
+path_ct=${S_VM_PATH_SHARE}/ssl/${_DOMAIN_FQDN}
+[ -d ${path} ] || _evalr mkdir -p ${path}
+_eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
+
+
+profile=ssl-${_DOMAIN_2_FQDN}
+_echoT "----------  profile ${profile}"
+
+lxc profile list -f csv|grep -q "^${profile}," && _eval lxc profile rename ${profile} ${profile}.${_SDATE}
+_eval lxc profile create ${profile}
+
+path=${S_HOST_PATH_SHARE}/ssl/${_DOMAIN_2_FQDN}
+path_ct=${S_VM_PATH_SHARE}/ssl/${_DOMAIN_2_FQDN}
+[ -d ${path} ] || _evalr mkdir -p ${path}
+_eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
+
+
 ########################  INIT
 
 _echoT "----------  init"
@@ -86,7 +107,7 @@ if lxc list -f csv -c n | grep -q ^${_CT_NAME}$; then
 	lxc list -f csv -c n status=Running| grep -q ^${_CT_NAME}$ && _eval lxc stop ${_CT_NAME}
 	_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
 fi
-_eval lxc init ${_CT_NAME_COM} ${_CT_NAME} -p default -p global
+_eval lxc init ${_CT_NAME_COM} ${_CT_NAME} -p default -p global -p ssl-${_DOMAIN_FQDN} -p ssl-${_DOMAIN_2_FQDN}
 
 _echoT "----------  network fixed ip"
 if ! lxc list -f json | jq -r '.[] | select(.name == "'${_CT_NAME}'").devices[].name' | grep -q eth0; then
@@ -103,6 +124,12 @@ _eval lxc start ${_CT_NAME}
 _echoT "----------  metadata"
 _lxc_meta_add ${_CT_NAME} apps haproxy
 
+
+########################  IPTABLES
+
+_echoT "----------  iptables"
+sed -i '/^_NAT_HAPROXY=/ s|=.*$|=true|' ${_IPT_FILE_CONF}
+_service restart ${_IPT_SERVICE}
 
 ########################  SYSCTL
 
@@ -123,10 +150,10 @@ _lxc_exec ${_CT_NAME} "echo '${txt}' > ${file}"
 
 ########################  PROXY
 
-_echoT "----------  proxy httpx"
-for port in 80 443; do
-	_eval lxc config device add ${_CT_NAME} http-${port} proxy listen=tcp:0.0.0.0:${port} connect=tcp:127.0.0.1:${port}
-done
+#_echoT "----------  proxy httpx"
+#for port in 80 443; do
+#	_eval lxc config device add ${_CT_NAME} http-${port} proxy listen=tcp:0.0.0.0:${port} connect=tcp:127.0.0.1:${port}
+#done
 
 _echoT "----------  proxy stats"
 for port in ${S_HAPROXY_STATS_PORTS}; do
@@ -177,7 +204,7 @@ _lxc_var_replace ${_CT_NAME} ${path} haproxy
 _echoT "----------  conf enable"
 
 _lxc_exec ${_CT_NAME} "[ -d ${path}/conf-enabled ] || mkdir -p ${path}/conf-enabled"
-files="00-defaults 02-resolvers-lxd 20-listen-stats 40-frontends-80 80-backends"
+files="00-defaults 02-resolvers-lxd 20-listen-stats 40-frontends-80 70-frontends-mail 80-backends"
 [ ${S_DOMAIN_FQDN##*.} != lxd ] && files+=" 60-frontends-443"
 for str in ${files}; do
 	_lxc_exec ${_CT_NAME} "[ -e ${path}/conf-enabled/${str} ] || ln -s ${path}/conf-available/${str}  ${path}/conf-enabled/${str}"

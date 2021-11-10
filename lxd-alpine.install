@@ -31,16 +31,16 @@ S_FILE_INSTALL_DONE="${S_PATH_CONF}/lxd.done"
 [ -f "${S_FILE_INSTALL_CONF}" ] && . ${S_FILE_INSTALL_CONF}
 
 #don't mix with S_* variables from host
-[ -z ${_RELEASE_ID+x} ] && _RELEASE_ID="alpine" && _confset _RELEASE_ID "${_RELEASE_ID}"
+[ -z ${_RELEASE_ID+x} ] && _RELEASE_ID=alpine && _confset _RELEASE_ID "${_RELEASE_ID}"
+[ -z ${_RELEASE_PART+x} ] && _RELEASE_PART=lxd-${_RELEASE_ID} && _confset _RELEASE_PART "${_RELEASE_PART}"
 _IP_HOST_VM=${_CIDR_VM%/*} && _confset _IP_HOST_VM "${_IP_HOST_VM}"
 
 ########################  mandatory parts
 
-
 # init common
  parts="init common"
 for _PART in ${parts}; do
-	! _parthave "${_PART}" "$S_FILE_INSTALL_DONE" && _source "${_PATH_BASE_SUB}/lxd-${_RELEASE_ID}-${_PART}.install"
+	! _parthave "${_PART}" "$S_FILE_INSTALL_DONE" && _source "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PART}.install"
 done
 
 
@@ -50,7 +50,7 @@ while [ "${_PART}" != "quit" ]; do
 
 	partsall="$(sed -n "s|^\t*\([^)]\+\)) # .*${S_SERVER_TYPE}.*|\1|p" "$0"|xargs)"
 	partsadd="$(sed -n "s|^\t*\([^)]\+\)) # .*${S_SERVER_TYPE}.*|\1|p" "$0"|grep ^++|xargs)"
-	partsrelease=" $(ls -1 "${_PATH_BASE_SUB}"/*lxd-${_RELEASE_ID}*|sed -n "s|.*lxd-${_RELEASE_ID}-\(.*\)\.install|\1|p"|xargs) "
+	partsrelease=" $(ls -1 "${_PATH_BASE_SUB}"/*${_RELEASE_PART}*|sed -n "s|.*${_RELEASE_PART}-\(.*\)\.install|\1|p"|xargs) "
 	partsrelease+="${partsadd} "
 	partsmade=" $(cat ${S_FILE_INSTALL_DONE}|xargs) "
 	parts2do=
@@ -73,46 +73,49 @@ while [ "${_PART}" != "quit" ]; do
 				break
 				;;
 			rsyslog) # ovh home
-				_source "${_PATH_BASE_SUB}/lxd-${_RELEASE_ID}-${_PART#++}.install"
+				_source "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PART#++}.install"
 				;;
 			apache) # ovh home
-				_source "${_PATH_BASE_SUB}/lxd-${_RELEASE_ID}-${_PART#++}.install"
+				_source "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PART#++}.install"
 				;;
 			haproxy) # ovh home
-				_source "${_PATH_BASE_SUB}/lxd-${_RELEASE_ID}-${_PART#++}.install"
+				_source "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PART#++}.install"
 				;;
 			redis) # ovh home
-				_source "${_PATH_BASE_SUB}/lxd-${_RELEASE_ID}-${_PART#++}.install"
+				_source "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PART#++}.install"
 				;;
 			php) # ovh home
-				_source "${_PATH_BASE_SUB}/lxd-${_RELEASE_ID}-${_PART#++}.install"
+				_source "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PART#++}.install"
 				;;
 			mariadb) # ovh home
-				_source "${_PATH_BASE_SUB}/lxd-${_RELEASE_ID}-${_PART#++}.install"
+				_source "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PART#++}.install"
 				;;
 			mariadb-ms) # ovh home
-				_source "${_PATH_BASE_SUB}/lxd-${_RELEASE_ID}-${_PART#++}.install"
+				_source "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PART#++}.install"
 				;;
 			phpmyadmin) # ovh home
-				_source "${_PATH_BASE_SUB}/lxd-${_RELEASE_ID}-${_PART#++}.install"
+				_source "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PART#++}.install"
+				;;
+			mail) # ovh home
+				_source "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PART#++}.install"
 				;;
 			nextcloud) # ovh home
-				_source "${_PATH_BASE_SUB}/lxd-${_RELEASE_ID}-${_PART#++}.install"
+				_source "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PART#++}.install"
 				;;
 			++apache) # ovh home
-				_source "${_PATH_BASE_SUB}/lxd-${_RELEASE_ID}-${_PART#++}.install"
+				_source "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PART#++}.install"
 				;;
 			++php) # ovh home
-				_source "${_PATH_BASE_SUB}/lxd-${_RELEASE_ID}-${_PART#++}.install"
+				_source "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PART#++}.install"
 				;;
 			++mariadb) # ovh home
-				_source "${_PATH_BASE_SUB}/lxd-${_RELEASE_ID}-${_PART#++}.install"
+				_source "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PART#++}.install"
 				;;
 			++mariadb-ms) # ovh home
-				_source "${_PATH_BASE_SUB}/lxd-${_RELEASE_ID}-${_PART#++}.install"
+				_source "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PART#++}.install"
 				;;
 			++phpmyadmin) # ovh home
-				_source "${_PATH_BASE_SUB}/lxd-${_RELEASE_ID}-${_PART#++}.install"
+				_source "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PART#++}.install"
 				;;
 			*)
 				_echoE "Wrong option: '${_PART}'"
@@ -124,5 +127,3 @@ while [ "${_PART}" != "quit" ]; do
 done
 
 _exit
-
-

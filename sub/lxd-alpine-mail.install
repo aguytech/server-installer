@@ -2,535 +2,276 @@
 #
 # write by Aguy
 
-_echoT "\n==========================================  ${_RELEASE} ${_PART}"
-
-grep -q "^# ${_PART#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART}" >> ${S_FILE_INSTALL_CONF}
+_echoT "\n==========================================  ${_INSTALL}-${_PART}"
 
 ########################  REQUIRED
 
+_echoT "------------------ required vm image"
+lxc image list -f csv -c l | grep -q ^${_CT_NAME_COM}$ || _exite "Unable to find image container: '${_CT_NAME_COM}'"
+
 _echoT "------------------ required vm"
-cts_all_www=`lxc image list -f csv -c l| grep -e '^\(wa-\|wn-\)'`
-[ "${cts_all_www}" ] || _exite "unable to find image container start with apa|ngx"
+lxc list -f csv -c n | grep -q ^${S_SERVICE[log]}$ || _exite "Unable to find image container: '${S_SERVICE[log]}'"
 
-imgs_all_rds=`lxc list -f csv -c n| grep '^rds-'`
-[ "${imgs_all_rds}" ] || _exite "unable to find www container"
-
-
-file_phpfpm="${S_PATH_INSTALL_CONF}/apache2/php7-fpm.conf"
-file_monitor="${S_PATH_INSTALL_CONF}/apache2/monitor.conf"
-file_opcache="${S_PATH_INSTALL_CONF}/apache2/opcache.conf"
-file_xdebug="${S_PATH_INSTALL_CONF}/php/xdebug.ini"
-file_rsyslog_client=${S_PATH_INSTALL_CONF}/rsyslog/client-phpfpm7.conf
-file_rsyslog_host=${S_PATH_INSTALL_CONF}/rsyslog/host-phpfpm7.conf
-file_logrotate_client=${S_PATH_INSTALL_CONF}/logrotate/host-phpfpm7
-file_logrotate_host=${S_PATH_INSTALL_CONF}/logrotate/host-phpfpm7
+_echoT "------------------ file required"
+_POSTFIXMASTER=${S_PATH_INSTALL_CONF}/mail/master.cf
+_POSTFIXMAIN=${S_PATH_INSTALL_CONF}/mail/main_add.cf
 
 _echoT "------------------ required files"
-_require ${file_phpfpm} ${file_monitor} ${file_opcache} ${file_xdebug} ${file_rsyslog_host} ${file_rsyslog_client} ${file_logrotate_host}
+_require ${_POSTFIXMASTER} ${_POSTFIXMAIN}
 
 ########################  DATA
 
-#php_version=`_lxc_exec ${S_SERVICE[http]} "apk list php7-fpm | sed -n 's|php7-fpm-\([0-9\.]\+\)-.*|\1|p'"`
-php_modules="php7-bcmath php7-bz2 php7-ctype php7-curl php7-exif php7-fileinfo php7-dom php7-gd php7-gmp php7-iconv php7-imap php7-json php7-mbstring php7-mysqli php7-openssl php7-pdo_mysql php7-opcache php7-pgsql php7-posix php7-session php7-simplexml php7-sqlite3 php7-xmlreader php7-xmlwriter php7-zip php7-xdebug php7-pecl-mcrypt php7-pecl-redis php7-xml" #  php7-pecl-imagick php7-pear
+_DOMAIN_FQDN=${S_DOMAIN_FQDN}
+_MAIL_ADMIN=$S_DOMAIN_EMAIL_ADMIN
+_FILE_INSTALL_CONF=${S_FILE_INSTALL_CONF%/*}/${_PART}-${_DOMAIN_FQDN}.conf 
+[ -f "${_FILE_INSTALL_CONF}" ] && . ${_FILE_INSTALL_CONF}
 
-_echoT "----------  data domain"
+#<<KEEP
+_echoT "------------------ data domain"
 
 anstmp=${S_DOMAIN_FQDN} && _askno "Domain name to use (${anstmp})"
-_DOMAIN_FQDN="${_ANSWER:-$anstmp}"
+_DOMAIN_FQDN="${_ANSWER:-${anstmp}}"
+anstmp=${S_DOMAIN_EMAIL_ADMIN} && _askno "Administration email adress for domain (${anstmp})"
+_MAIL_ADMIN=${_ANSWER:-${anstmp}}
 
-anstmp=wap-${_DOMAIN_FQDN//./-} && _askno "Base name of containers to build (${anstmp})"
-ct_base="${_ANSWER:-$anstmp}"
+_FILE_INSTALL_CONF=${S_FILE_INSTALL_CONF%/*}/${_PART}-${_DOMAIN_FQDN}.conf && _confset _FILE_INSTALL_CONF "${_FILE_INSTALL_CONF}" ${_FILE_INSTALL_CONF}
+grep -q "^# ${_PART#++}$" ${_FILE_INSTALL_CONF} || echo  "# ${_PART}" >> ${_FILE_INSTALL_CONF}
+_confset _DOMAIN_FQDN "${_DOMAIN_FQDN}" ${_FILE_INSTALL_CONF}
+_confset _MAIL_ADMIN "${_MAIL_ADMIN}" ${_FILE_INSTALL_CONF}
+_confset _POSTFIXMASTER "${_POSTFIXMASTER}" ${_FILE_INSTALL_CONF}
+_confset _POSTFIXMAIN "${_POSTFIXMAIN}" ${_FILE_INSTALL_CONF}
 
-anstmp=2 && _askno "Number of containers to build (${anstmp})"
-ct_num="${_ANSWER:-$anstmp}"
+_echoT "------------------ data container"
 
-_echoT "----------  data image"
+anstmp=pdm-${_DOMAIN_FQDN//./-} && _askno "Name of container to build (${anstmp})"
+_CT_NAME="${_ANSWER:-${anstmp}}" && _confset _CT_NAME "${_CT_NAME}" ${_FILE_INSTALL_CONF}
 
-_menu "Select one available image container for WWW base" ${cts_all_www}
-ct_www=${_ANSWER}
+anstmp=mail-${_DOMAIN_FQDN} && _askno "Name of profile to create (${anstmp})"
+profile="${_ANSWER:-${anstmp}}" && _confset profile "${profile}" ${_FILE_INSTALL_CONF}
 
-profiles=`lxc profile list -f csv|grep "^www.*,"|cut -d, -f1`
-[ "${profiles}" ] && _menu "Select an available WWW profile to apply" ${profiles}
-profile_www="${_ANSWER}" || _ANSWER=
+_echoT "------------------ data"
 
-_menu "Select one available container for cache" ${imgs_all_rds}
-ct_rds=${_ANSWER}
+anstmp=y && _askno "Do you want an installation with halts for each parts (${anstmp})"
+_STEP=${_ANSWER:-${anstmp}} && _confset _STEP "${_STEP}" ${_FILE_INSTALL_CONF}
 
-_echoT "----------  data php"
+anstmp=${S_VM_PATH_SHARE}/mail/${_DOMAIN_FQDN} && _askno "path for shared MAIL (${anstmp})"
+_PATH_MAIL=${_ANSWER:-${anstmp}} && _confset _PATH_MAIL "${_PATH_MAIL}" ${_FILE_INSTALL_CONF}
 
-profiles=`lxc profile list -f csv|grep "^php.*,"|cut -d, -f1`
-[ "${profiles}" ] && _menu "Select an available PHP profile to apply or none" none ${profiles} || _ANSWER=
-profile="${_ANSWER/none/}"
-[ -z "${profile}" ] && anstmp=php7-${_DOMAIN_FQDN} && _askno "Name of the new  PHP profile (${anstmp})" && profile="${_ANSWER:-$anstmp}"
+anstmp=${_PATH_MAIL}/ssl && _askno "path for SSL (${anstmp})"
+_PATH_SSL=${_ANSWER:-${anstmp}} && _confset _PATH_SSL "${_PATH_SSL}" ${_FILE_INSTALL_CONF}
 
+anstmp=${_PATH_MAIL}/rspamd && _askno "path for RSPAMD (${anstmp})"
+_PATH_RSPAMD=${_ANSWER:-${anstmp}} && _confset _PATH_RSPAMD "${_PATH_RSPAMD}" ${_FILE_INSTALL_CONF}
 
-anstmp="20" && _askno "max_execution_time (${anstmp})s"
-_PHP_MAX_EXECUTION_TIME="${_ANSWER:-$anstmp}" && _confset _PHP_MAX_EXECUTION_TIME "${_PHP_MAX_EXECUTION_TIME}"
+_echoT "------------------ data vmail"
 
-anstmp="30" && _askno "max_input_time (${anstmp})s"
-_PHP_MAX_INPUT_TIME="${_ANSWER:-$anstmp}" && _confset _PHP_MAX_INPUT_TIME "${_PHP_MAX_INPUT_TIME}"
+#declare -A vmails_acro
+#vmails_acro=( [postfixadmin]="pfa" [vmailmanage]="vmail" [vimbadmin]="vma" )
+#_menu "Select the virtual mail manager you will install (postfixadmin)" `echo ${!vmails_acro[@]}|tr ' ' '\n'|sort`
+#_VMAIL_APP=${_ANSWER} && _confset _VMAIL_APP "${_VMAIL_APP}" ${_FILE_INSTALL_CONF}
+_VMAIL_APP=postfixadmin && _confset _VMAIL_APP "${_VMAIL_APP}" ${_FILE_INSTALL_CONF}
 
-anstmp="128M" && _askno "memory_limit (${anstmp})"
-_PHP_MEMORY_LIMIT="${_ANSWER:-$anstmp}" && _confset _PHP_MEMORY_LIMIT "${_PHP_MEMORY_LIMIT}"
+anstmp=pma && _askno "Please give a acronym for virtualmail (${anstmp})"
+_VMAIL_ACRO=${_ANSWER:-${anstmp}} && _confset _VMAIL_ACRO "${_VMAIL_ACRO}" ${_FILE_INSTALL_CONF}
 
-anstmp="8M" && _askno "post_max_size (${anstmp})"
-_PHP_POST_MAX_SIZE="${_ANSWER:-$anstmp}" && _confset _PHP_POST_MAX_SIZE "${_PHP_POST_MAX_SIZE}"
+anstmp=${_PATH_MAIL}/vmail && _askno "path for VMAIL (${anstmp})" && _PATH_VMAIL=${_ANSWER:-${anstmp}}
+_PATH_VMAIL=${_ANSWER:-${anstmp}} && _confset _PATH_VMAIL "${_PATH_VMAIL}" ${_FILE_INSTALL_CONF}
 
-anstmp="8M" && _askno "upload_max_filesize (${anstmp})"
-_PHP_UPLOAD_MAX_FILESIZE="${_ANSWER:-$anstmp}" && _confset _PHP_UPLOAD_MAX_FILESIZE "${_PHP_UPLOAD_MAX_FILESIZE}"
+anstmp=${_PATH_VMAIL}/sieve && _askno "path for sieve (${anstmp})"
+_PATH_SIEVE=${_ANSWER:-${anstmp}} && _confset _PATH_SIEVE "${_PATH_SIEVE}" ${_FILE_INSTALL_CONF}
 
-anstmp="1" && _askno "session.use_strict_mode (${anstmp})"
-_PHP_SESSION_STRICT_MODE="${_ANSWER:-$anstmp}" && _confset _PHP_SESSION_STRICT_MODE "${_PHP_SESSION_STRICT_MODE}"
+anstmp=vmail && _askno "Give a name of user & group for virtualmail (${anstmp})"
+_VMAIL_USER=${_ANSWER:-${anstmp}} && _confset _VMAIL_USER "${_VMAIL_USER}" ${_FILE_INSTALL_CONF}
 
-anstmp="${php_modules}" && _askno "php modules to install: \n${anstmp}"
-_PHP_MODULES="${_ANSWER:-$anstmp}" && _confset _PHP_MODULES "${_PHP_MODULES}"
-
-_echoT "----------  data php-fpm"
-
-anstmp='30' && _askno "Give value for 'emergency_restart_threshold' (${anstmp})"
-_PHP_RESTART_THRESHOLD="${_ANSWER:-$anstmp}" && _confset _PHP_RESTART_THRESHOLD "${_PHP_RESTART_THRESHOLD}"
-
-anstmp='60s' && _askno "Give value for 'emergency_restart_interval' (${anstmp})"
-_PHP_RESTART_INTERVAL="${_ANSWER:-$anstmp}" && _confset _PHP_RESTART_INTERVAL "${_PHP_RESTART_INTERVAL}"
-
-anstmp='0' && _askno "Give value for 'process_control_timeout' (${anstmp})s"
-_PHP_CONTROL_TIMEOUT="${_ANSWER:-$anstmp}" && _confset _PHP_CONTROL_TIMEOUT "${_PHP_CONTROL_TIMEOUT}"
-
-_echoT "----------  data pool www"
-
-anstmp='20' && _askno "Give value for 'pm.max_children' (${anstmp})"
-_PHP_W_MAX_CHILDREN="${_ANSWER:-$anstmp}" && _confset _PHP_W_MAX_CHILDREN "${_PHP_W_MAX_CHILDREN}"
-
-anstmp='4' && _askno "Give value for 'pm.start_servers' (${anstmp})"
-_PHP_W_START_SERVERS="${_ANSWER:-$anstmp}" && _confset _PHP_W_START_SERVERS "${_PHP_W_START_SERVERS}"
-
-anstmp='4' && _askno "Give value for 'pm.min_spare_servers' (${anstmp})"
-_PHP_W_MIN_SPARE_SERVERS="${_ANSWER:-$anstmp}" && _confset _PHP_W_MIN_SPARE_SERVERS "${_PHP_W_MIN_SPARE_SERVERS}"
-
-anstmp='15' && _askno "Give value for 'pm.max_spare_servers' (${anstmp})"
-_PHP_W_MAX_SPARE_SERVERS="${_ANSWER:-$anstmp}" && _confset _PHP_W_MAX_SPARE_SERVERS "${_PHP_W_MAX_SPARE_SERVERS}"
-
-anstmp='100000' && _askno "Give value for 'pm.max_requests' (${anstmp})"
-_PHP_W_MAX_REQUESTS="${_ANSWER:-$anstmp}" && _confset _PHP_W_MAX_REQUESTS "${_PHP_W_MAX_REQUESTS}"
-
-anstmp='2' && _askno "Give value for 'request_SLOWLOG_TIMEOUT' (${anstmp})"
-_PHP_SLOWLOG_TIMEOUT="${_ANSWER:-$anstmp}" && _confset _PHP_SLOWLOG_TIMEOUT "${_PHP_SLOWLOG_TIMEOUT}"
+anstmp=90 && _askno "Give the uid/gid for vmail user (${anstmp})"
+_VMAIL_UID=${_ANSWER:-${anstmp}} && _confset _VMAIL_UID "${_VMAIL_UID}" ${_FILE_INSTALL_CONF}
 
 
-_PHP_SERVICE=php-fpm7 && _confset _PHP_SERVICE "${_PHP_SERVICE}"
-_PHP_FPM_SOCK=/run/${_PHP_SERVICE}/php-fpm.sock && _confset _PHP_SERVICE "${_PHP_SERVICE}"
-_PHP_FPM_ADMIN_SOCK=/run/${_PHP_SERVICE}/php-fpm-admin.sock && _confset _PHP_SERVICE "${_PHP_SERVICE}"
+_PATH_DKIM="${_PATH_RSPAMD}/dkim" && _confset _PATH_DKIM "${_PATH_DKIM}" ${_FILE_INSTALL_CONF}
+#_IPS_IN=`echo "${S_CLUSTER[*]}"|tr ' ' '\n'|sed -n 's|s_ip=\([^ ]\+\)$|\1|p'|grep -v ${_IPTHIS}|xargs`
+_IPS_IN=`echo "${S_CLUSTER[*]}"|tr ' ' '\n'|sed -n 's|s_ip=\([^ ]\+\)$|\1|p'|xargs` && _confset _IPS_IN "${_IPS_IN}" ${_FILE_INSTALL_CONF}
 
-file_php_conf=/etc/php7/php.ini
-file_fpm_conf=/etc/php7/php-fpm.conf
 
-path_php_conf=/etc/php7/conf.d
-path_fpm_conf=/etc/php7/php-fpm.d
-path_apache_conf=/etc/apache2/conf.d
-
-# shared
-_PATH_DOMAIN=${S_VM_PATH_SHARE}/www/${_DOMAIN_FQDN}
-path_php_share=${S_VM_PATH_SHARE}/php/${_DOMAIN_FQDN}
-path_fpm_pool=${path_php_share}/pools
-path_xdebug_profile=${path_php_share}/xdebug/profile
-path_xdebug_trace=${path_php_share}/xdebug/trace
-
-_CT_NAME=${ct_base}-1
+_PATHSSLKEY=${_PATH_SSL}/private && _confset _PATHSSLKEY "${_PATHSSLKEY}" ${_FILE_INSTALL_CONF}
+_PATHSSLCRT=${_PATH_SSL}/certs && _confset _PATHSSLCRT "${_PATHSSLCRT}" ${_FILE_INSTALL_CONF}
+_FILESSLKEY="${_PATHSSLKEY}/mail.${_DOMAIN_FQDN}.key" && _confset _FILESSLKEY "${_FILESSLKEY}" ${_FILE_INSTALL_CONF}
+_FILESSLCSR="${_PATHSSLKEY}/mail.${_DOMAIN_FQDN}.csr" && _confset _FILESSLCSR "${_FILESSLCSR}" ${_FILE_INSTALL_CONF}
+_FILESSLCRT="${_PATHSSLCRT}/mail.${_DOMAIN_FQDN}.crt" && _confset _FILESSLCRT "${_FILESSLCRT}" ${_FILE_INSTALL_CONF}
+_FILESSLPEM="${_PATHSSLKEY}/mail.${_DOMAIN_FQDN}.pem" && _confset _FILESSLPEM "${_FILESSLPEM}" ${_FILE_INSTALL_CONF}
 
 ########################  PROFILE
 
 if ! lxc profile list -f csv|grep -q "^${profile},"; then
-	_echoT "----------  profile create ${profile}"
+	_echoT "------------------ profile create ${profile}"
 	_eval lxc profile create ${profile}
 
-	path=${S_HOST_PATH_SHARE}/php/${_DOMAIN_FQDN}
-	path_ct=${path_php_share}
+	path=${S_HOST_PATH_SHARE}/mail/${_DOMAIN_FQDN}
+	path_ct=${_PATH_MAIL}
 	[ -d ${path} ] || _evalr mkdir -p ${path}
 	_eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
 else
-	_echoT "----------  existing profile ${profile}"
+	_echoT "------------------ profile exists ${profile}"
 fi
 
 
 ########################  INIT
 
-_echoT "----------  init"
+_echoT "------------------ init"
 
 if lxc list -f csv -c n | grep -q ^${_CT_NAME}$; then
 	lxc list -f csv -c n status=Running| grep -q ^${_CT_NAME}$ && _eval lxc stop ${_CT_NAME}
 	_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
 fi
-_eval lxc init ${ct_www} ${_CT_NAME} -p default -p global -p ${profile_www} -p ${profile}
+_eval lxc init ${_CT_NAME_COM} ${_CT_NAME} -p default -p global -p ${profile}
 
 
-#_echoT "----------  network fixed ip"
-#
-#if ! lxc list -f json | jq -r '.[] | select(.name == "'${_CT_NAME}'").devices[].name' | grep -q eth0; then
-#	_eval lxc network attach ${s_inet} ${_CT_NAME} eth0 eth0
-#fi
-#_eval lxc config device set ${_CT_NAME} eth0 ipv4.address ${_CT_IP}
+_echoT "------------------ network fixed ip"
+
+if ! lxc list -f json | jq -r '.[] | select(.name == "'${_CT_NAME}'").devices[].name' | grep -q eth0; then
+	_CT_IP=${s_base}.${S_SERVICE_BITS[mail]}
+	_eval lxc config device override ${_CT_NAME} eth0 ipv4.address=${_CT_IP}
+fi
 
 
-_echoT "----------  ${_CT_NAME} start"
+_echoT "------------------ ${_CT_NAME} start"
 _eval lxc start ${_CT_NAME}
 
 
 ########################  METADATA
 
-_echoT "----------  metadata"
-_lxc_meta_add ${_CT_NAME} profiles ${profile_www} ${profile}
-_lxc_meta_add ${_CT_NAME} apps php7
+_echoT "------------------ metadata"
+_lxc_meta_add ${_CT_NAME} profiles ${profile}
 
+########################  IPTABLES
 
-########################  PATHS
+_echoT "----------  iptables"
+sed -i '/^_NAT_MAIL=/ s|=.*$|=true|' ${_IPT_FILE_CONF}
+sed -i '/^_NAT_RSPAMD=/ s|=.*$|=true|' ${_IPT_FILE_CONF}
+_service restart ${_IPT_SERVICE}
 
-_echoT "----------  paths ${_PHP_SERVICE}"
+#KEEP
 
-paths="${path_php_share}/tmp ${path_php_share}/sessions ${path_php_share}/soap ${path_xdebug_profile} ${path_xdebug_trace} ${path_fpm_pool}/www ${path_fpm_pool}/www-admin"
+########################  PATH
+
+_echoT "------------------ create paths"
+
+paths="${_PATH_MAIL} ${_PATH_VMAIL} ${_PATH_SIEVE} ${_PATH_SSL}/postfix ${_PATH_RSPAMD} ${_PATH_DKIM} ${_PATH_SSL} ${_PATHSSLKEY} ${_PATHSSLCRT}"
 cmd="for path in ${paths}; do [ -d \${path} ] || mkdir -p \${path}; done"
 _lxc_exec ${_CT_NAME} "${cmd}"
 
+cmds="chmod 644 ${_PATHSSLCRT} && chmod 600 ${_PATHSSLKEY}"
+_lxc_exec ${_CT_NAME} "${cmd}"
 
 
-########################  INSTALL
+####################  TOOLS
 
-_echoT "----------  update"
-_lxc_exec ${_CT_NAME} "apk update"
+_PARTMAIL=mail-init
+if ! _parthave ${_PARTMAIL} ${S_FILE_INSTALL_DONE}; then
+	. "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PARTMAIL}.install" || _exite "Wrong part: ${_PARTMAIL}"
+	[ "$_STEP" ] && _askno "Valid to continue" 
+else
+	_echoW "performed *** ${_PARTMAIL}"
+fi
 
-_echoT "----------  install php7-fpm"
-_lxc_exec ${_CT_NAME} "apk add php7-fpm"
-
-_echoT "----------  install php7 modules"
-_lxc_exec ${_CT_NAME} "apk add ${php_modules}"
-
-_echoT "----------  service set & start"
-service=${_PHP_SERVICE}
-_lxc_exec ${_CT_NAME} "rc-update add ${service}"
-_lxc_exec ${_CT_NAME} "rc-service ${service} start"
-
-
-########################  CONF PHP.INI
-
-_echoT "----------  conf php.ini global"
-
-file=${file_php_conf}
-_lxc_exec ${_CT_NAME} "[ -f ${file} ] && cp -a ${file} ${file}.${_SDATE}"
-
-# global
-cmds=; while read str val; do
-	cmds+="sed -i 's|^;\?\(${str}\s*=\).*|\1 ${val}|' ${file}
-"; done <<< "track_errors Off
-max_execution_time  ${_PHP_MAX_EXECUTION_TIME}
-max_input_time  ${_PHP_MAX_INPUT_TIME}
-memory_limit  ${_PHP_MEMORY_LIMIT}
-post_max_size  ${_PHP_POST_MAX_SIZE}
-file_uploads  On
-upload_max_filesize  ${_PHP_UPLOAD_MAX_FILESIZE}
-date.timezone  'Europe/Paris'
-session.use_strict_mode  ${_PHP_SESSION_STRICT_MODE}
-session.save_handler  redis
-session.save_path  \"tcp://${ct_rds}:${S_CACHE_PORT}\"
-mail.log  syslog"
-#error_log  syslog
-#syslog.ident  php
-#syslog.facility  user
-_lxc_exec ${_CT_NAME} "${cmds}"
-
-_echoT "----------  conf php.ini opcache"
+####################  MARIADB
 
-cmds=; while read str val; do
-	cmds+="sed -i 's|^;\?\(${str}\s*=\).*|\1 ${val}|' ${file}
-"; done <<< "opcache.enable 1
-opcache.enable_cli  0
-opcache.memory_consumption  128
-opcache.interned_strings_buffer  16
-opcache.max_accelerated_files  10000
-validate_timestamps  1
-opcache.revalidate_freq  4
-opcache.save_comments  1"
-_lxc_exec ${_CT_NAME} "${cmds}"
-
-_echoT "----------  conf php.ini paths"
-
-cmds=; while read str val; do
-	cmds+="sed -i 's|^;\?\(${str}\s*=\).*|\1 ${val}|' ${file}
-"; done <<< "upload_tmp_dir  ${path_php_share}/tmp
-sys_temp_dir  ${path_php_share}/tmp
-soap.wsdl_cache_dir  ${path_php_share}/soap"
-_lxc_exec ${_CT_NAME} "${cmds}"
-
-
-########################  CONF PHP-FPM
-
-file=${file_fpm_conf}
-_lxc_exec ${_CT_NAME} "[ -f ${file} ] && cp -a ${file} ${file}.${_SDATE}"
-
-_echoT "----------  conf php.fpm global"
-
-cmds=; while read str val; do
-	cmds+="sed -i 's|^;\?\(${str}\s*=\).*|\1 ${val}|' ${file}
-"; done <<< "emergency_restart_threshold  ${_PHP_RESTART_THRESHOLD}
-emergency_restart_interval  ${_PHP_RESTART_INTERVAL}
-process_control_timeout  ${_PHP_CONTROL_TIMEOUT}
-error_log  syslog
-syslog.facility  daemon
-syslog.ident  ${_PHP_SERVICE}
-log_level  notice
-log_limit  1024
-log_buffering  yes"
-_lxc_exec ${_CT_NAME} "${cmds}"
+_PARTMAIL=mail-mariadb
+if ! _parthave ${_PARTMAIL} ${S_FILE_INSTALL_DONE}; then
+	. "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PARTMAIL}.install" || _exite "Wrong part: ${_PARTMAIL}"
+	[ "$_STEP" ] && _askno "Valid to continue" 
+else
+	_echoW "performed *** ${_PARTMAIL}"
+fi
 
-########################  POOL - WWW
+####################  DOVECOT
 
-pool=www
+_PARTMAIL=mail-dovecot
+if ! _parthave ${_PARTMAIL} ${S_FILE_INSTALL_DONE}; then
+	. "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PARTMAIL}.install" || _exite "Wrong part: ${_PARTMAIL}"
+	[ "$_STEP" ] && _askno "Valid to continue" 
+else
+	_echoW "performed *** ${_PARTMAIL}"
+fi
 
-_echoT "----------  file pool ${pool}"
 
-file=${path_fpm_conf}/${pool}.conf
 
-_lxc_exec ${_CT_NAME} "[ -f ${file} ] && cp -a ${file} ${file}.${_SDATE}"
+exit
 
-_echoT "----------  conf pool ${pool}"
 
-cmds=; while read str val; do
-	cmds+="sed -i 's|^;\?\(${str}\s*=\).*|\1 ${val}|' ${file}
-"; done <<< "prefix  ${path_fpm_pool}/www
-user apache
-group apache
-listen  ${_PHP_FPM_SOCK}
-listen.backlog  $(( ${_APA_MAX_SYN_BACKLOG} / 2 ))
-listen.owner  apache
-listen.group  apache
-listen.mode  0666
-process.priority  0
-process.dumpable  yes
-pm dynamic
-pm.max_children  ${_PHP_W_MAX_CHILDREN}
-pm.start_servers  ${_PHP_W_START_SERVERS}
-pm.min_spare_servers  ${_PHP_W_MIN_SPARE_SERVERS}
-pm.max_spare_servers  ${_PHP_W_MAX_SPARE_SERVERS}
-pm.max_requests  ${_PHP_W_MAX_REQUESTS}
-pm.status_path  /status-www
-ping.path  /ping-www
-ping.response  pong
-access.log  ${S_PATH_LOG}/php7/\$pool.access.info
-slowlog  ${S_PATH_LOG}/php7/\$pool.slow.info
-request_slowlog_timeout  ${_PHP_SLOWLOG_TIMEOUT}
-catch_workers_output  yes"
-_lxc_exec ${_CT_NAME} "${cmds}"
+####################  POSTFIX
 
-_lxc_exec ${_CT_NAME} "sed -i 's|^;\?\(access.format\s*=\).*|\1  \"%R - %u %t \\\\\"%m %r%Q%q\\\\\" %s %f %{mili}d %{kilo}M %C%%\"|' ${file}"
+_PARTMAIL=mail-postfix
+if ! _parthave ${_PARTMAIL} ${S_FILE_INSTALL_DONE}; then
+	. "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PARTMAIL}.install" || _exite "Wrong part: ${_PARTMAIL}"
+	[ "$_STEP" ] && _askno "Valid to continue" 
+else
+	_echoW "performed *** ${_PARTMAIL}"
+fi
 
+####################  RSPAMD
 
-########################  POOL - WWW-ADMIN
+_PARTMAIL=mail-rspamd
+if ! _parthave ${_PARTMAIL} ${S_FILE_INSTALL_DONE}; then
+	. "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PARTMAIL}.install" || _exite "Wrong part: ${_PARTMAIL}"
+	[ "$_STEP" ] && _askno "Valid to continue" 
+else
+	_echoW "performed *** ${_PARTMAIL}"
+fi
 
-pool=www-admin
+####################  _VMAIL_APP
 
-_echoT "----------  file pool ${pool}"
+_PARTMAIL=mail-${_VMAIL_APP}
+if ! _parthave ${_PARTMAIL} ${S_FILE_INSTALL_DONE}; then
+	. "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PARTMAIL}.install" || _exite "Wrong part: ${_PARTMAIL}"
+	[ "$_STEP" ] && _askno "Valid to continue" 
+else
+	_echoW "performed *** ${_PARTMAIL}"
+fi
 
-file=${path_fpm_conf}/${pool}.conf
+########################################  RSYSLOG
 
-_lxc_exec ${_CT_NAME} "[ -f ${file} ] && cp -a ${file} ${file}.${_SDATE}"
-_lxc_exec ${_CT_NAME} "cp -a ${path_fpm_conf}/www.conf.${_SDATE} ${file}"
+STR=" vz lxd "
+if [ "${STR/ "$S_SERVER_TYPE" /}" != "$STR" ]; then
 
+	_echoT "------------------ rsyslog conf mail"
 
-_echoT "----------  conf pool ${pool}"
+	! grep -q "^mail\.\*.*@$S_HOST_IPV4:$S_RSYSLOG_PORT" /etc/rsyslog.conf && sed -i "s|^\(.\?mail\.\*.*\)$|\1\nmail.*\t\t\t\t@$S_HOST_IPV4|" /etc/rsyslog.conf
 
-_lxc_exec ${_CT_NAME} "sed -i 's|^\[.*\]$|[${pool}]|' ${file}"
 
-cmds=; while read str val; do
-	cmds+="sed -i 's|^;\?\(${str}\s*=\).*$|\1 ${val}|' ${file}
-"; done <<< "prefix  ${path_fpm_pool}/www-admin
-user apache
-group apache
-listen  ${_PHP_FPM_ADMIN_SOCK}
-listen.backlog  $(( ${_APA_MAX_SYN_BACKLOG} / 2 ))
-listen.owner  apache
-listen.group  apache
-listen.mode  0666
-process.priority  0
-process.dumpable  yes
-pm static
-pm.max_children  1
-pm.max_requests  100000
-pm.status_path  /status-www-admin
-ping.path  /ping-www-admin
-ping.response  pong"
-_lxc_exec ${_CT_NAME} "${cmds}"
+	_echoT "------------------ rsyslog restart"
 
+	systemctl restart rsyslog.service
+fi
 
-########################  APACHE
 
-_echoT "----------  apache php-fpm"
+####################################  START
 
-file=${path_apache_conf}/${file_phpfpm##*/}
-_eval lxc file push ${file_phpfpm} ${_CT_NAME}${file}
-_lxc_var_replace ${_CT_NAME} ${file} php apache
+_echoT "------------------ postfix start"
+_evalq "systemctl start postfix"
 
 
-_echoT "----------  localhost files"
+_echoT "------------------ dovecot start"
+_evalq "systemctl start dovecot.service"
 
-_lxc_exec ${_CT_NAME} "echo '<?php phpinfo() ?>' > ${_APA_PATH_WWW}/phpinf.php"
 
-file=${_APA_PATH_WWW}/index.php
-_lxc_exec ${_CT_NAME} "echo '<html><body><h1><?php echo \"php works!\" ?></h1></body></html>' > ${file}"
 
-file=${_APA_PATH_WWW}/index.html
-_lxc_exec ${_CT_NAME} "[ -f ${file} ] && mv ${file} ${file}.keep"
+#################################### test mail sending
 
+_echoT "------------------ test mail sending : root -> postmaster@$_DOMAIN_FQDN"
 
-_echoT "----------  ${_DOMAIN_FQDN} files"
-
-_lxc_exec ${_CT_NAME} "echo '<?php phpinfo() ?>' > ${_PATH_DOMAIN}/html/phpinf.php"
-
-file=${_PATH_DOMAIN}/html/index.php
-_lxc_exec ${_CT_NAME} "echo '<html><body><h1>${_DOMAIN_FQDN} php works!</h1></body></html>' > ${file}"
-
-file=${_PATH_DOMAIN}/index.html
-_lxc_exec ${_CT_NAME} "[ -f ${file} ] && mv ${file} ${file}.keep"
-
-
-########################  PING-MONITOR
-
-_echoT "----------  ping-monitor file"
-_lxc_exec ${_CT_NAME} "echo '<?php echo \"pong\"; ?>' > ${_APA_PATH_WWW}/ping-monitor.php"
-
-_echoT "----------  ping-monitor conf"
-file=${path_apache_conf}/${file_monitor##*/}
-_keepcpts ${file}
-_eval lxc file push ${file_monitor} ${_CT_NAME}${file}
-_lxc_var_replace ${_CT_NAME} ${file} apache php
-
-
-########################  OPCACHE
-
-_echoT "----------  opcache file"
-url=https://raw.githubusercontent.com/rlerdorf/opcache-status/master/opcache.php
-file=${_APA_PATH_WWW}/opcache.php
-_lxc_exec ${_CT_NAME} "wget -q ${url} -O ${file}"
-
-_echoT "----------  opcache conf"
-file=${path_apache_conf}/${file_opcache##*/}
-_keepcpts ${file}
-_eval lxc file push ${file_opcache} ${_CT_NAME}${file}
-_lxc_var_replace ${_CT_NAME} ${file} apache php
-
-
-########################  RIGHTS
-
-_echoT "----------  rights"
-_lxc_exec ${_CT_NAME} "chown apache:apache -R ${path_php_share}/*"
-_lxc_exec ${_CT_NAME} "chown apache:apache -R ${_APA_PATH_WWW}"
-_lxc_exec ${_CT_NAME} "chown apache:apache -R ${_PATH_DOMAIN}/*"
-
-
-########################  RESTART
-
-_echoT "----------  ${_PHP_SERVICE} restart"
-_lxc_exec ${_CT_NAME} "rc-service ${_PHP_SERVICE} restart"
-
-_echoT "----------  apache2 restart"
-_lxc_exec ${_CT_NAME} "rc-service apache2 restart"
-
-
-########################  RSYSLOG
-
-_echoT "----------  ${S_SERVICE[log]} host path"
-path=${S_VM_PATH_LOG}/php7
-_lxc_exec ${S_SERVICE[log]} "[ -d ${path} ] || mkdir -p ${path}"
-
-
-_echoT "----------  ${S_SERVICE[log]} host"
-file=/etc/rsyslog.d/${file_rsyslog_host##*/}
-_eval lxc file push ${file_rsyslog_host} ${S_SERVICE[log]}${file}
-_lxc_var_replace ${S_SERVICE[log]} ${file} rsyslog php
-
-_echoT "----------  rsyslog restart ${S_SERVICE[log]}"
-_lxc_exec ${S_SERVICE[log]} "rc-service rsyslog restart"
-
-
-_echoT "----------  ${_CT_NAME} client path"
-path=${S_PATH_LOG}/php7
-_lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
-
-_echoT "----------  ${_CT_NAME} client"
-file=/etc/rsyslog.d/${file_rsyslog_client##*/}
-_eval lxc file push ${file_rsyslog_client} ${_CT_NAME}${file}
-_lxc_var_replace ${_CT_NAME} ${file} rsyslog php
-
-_echoT "----------  rsyslog restart ${_CT_NAME}"
-_lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
-
-
-########################  LOGROTATE
-
-_echoT "----------  ${S_SERVICE[log]} logrotate"
-file=/etc/logrotate.d/${file_logrotate_host##*/}
-_eval lxc file push ${file_logrotate_host} ${S_SERVICE[log]}${file}
-_lxc_var_replace ${S_SERVICE[log]} ${file} logrotate
-
-_echoT "----------  ${S_SERVICE[log]} crond restart"
-_lxc_exec ${S_SERVICE[log]} "rc-service crond restart"
-
-
-_echoT "----------  ${_CT_NAME} logrotate"
-file=/etc/logrotate.d/${file_logrotate_client##*/}
-_eval lxc file push ${file_logrotate_client} ${_CT_NAME}${file}
-_lxc_var_replace ${_CT_NAME} ${file} logrotate
-
-_echoT "----------  ${_CT_NAME} crond restart"
-_lxc_exec ${_CT_NAME} "rc-service crond restart"
-
-
-########################  CLEAN LOG
-
-_echoT "----------  ${_CT_NAME} log clean"
-_lxc_exec ${_CT_NAME} "find ${S_PATH_LOG}/php7 -name *.log -exec rm {} \;"
-
-
-########################  COPY
-
-for i in `seq 2 ${ct_num}`; do
-	ct_name=${ct_base}-${i}
-	_echoT "---------- build ${ct_name}"
-
-	if lxc list -f csv -c n | grep -q ^${ct_name}$; then
-		lxc list -f csv -c n status=Running| grep -q ^${ct_name}$ && _eval lxc stop ${ct_name}
-		_eval lxc rename ${ct_name} ${ct_name}-${_SDATE}
-	fi
-	_eval lxc copy ${_CT_NAME} ${ct_name}
-	_eval lxc start ${ct_name}
-done
-
-
-########################  TEST
-
-_echoT "----------  php test"
-
-_echoW "To verify php configuration, type:"
-_echo "curl ${_IPTHIS}/phpinf.php"
-_echo "curl ${_CT_NAME}/phpinf.php"
-_echo "curl ${_DOMAIN_FQDN}:80"
-
-_echoW "To verify ping response, type:"
-_echo "curl ${_CT_NAME}/ping-monitor"
-
-_echoW "To verify opcache response, type:"
-_echoW "curl ${_CT_NAME}/opcache"
-
-_echoW "To verify 'www' pool informations, type:"
-_echo "curl ${_CT_NAME}/status-www"
-_echo "curl ${_CT_NAME}/status-www?full"
-
-_echoW "To verify 'www-admin' pool informations, type:"
-_echo "curl ${_CT_NAME}/status-www-admin"
-_echo "curl ${_CT_NAME}/status-www-admin?full"
-
-
-########################  HAPROXY
-
-_echoI "\nAdjust backend for domain: ${_DOMAIN_FQDN} with:"
-_echo `for i in `seq 1 ${ct_num}`; do echo ${ct_base}-${i};done`
+# sendmail -v postmaster@$_DOMAIN_FQDN
+_mail "root <root@$_DOMAIN_FQDN>" postmaster@$_DOMAIN_FQDN test "Here is the first email of Postfix from $HOSTNAME / $_IPTHIS\nYes ;o)"
+sleep 1
+_askno "${bblue}Please verify you have received the email test to postmaster@$_DOMAIN_FQDN\n& valid${cclear}"
+
+
+####################################  CONNECT
+
+_echoi "To use your mail manager, follow this informations:"
+_echoi "${yellowb}IMAP-Server${cclear} mail.$_DOMAIN_FQDN | Port: 143 | STARTTLS"
+_echoi "${yellowb}SMTP-Server${cclear} mail.$_DOMAIN_FQDN | Port: 587 | STARTTLS"
+_echoi "${yellowb}Managesieve${cclear} mail.$_DOMAIN_FQDN | Port: 4190 | STARTTLS"
+_echoi "${yellowb}Username${cclear} Complete e-mail address"
 
 
 ########################  PUBLISH
@@ -538,7 +279,7 @@ _echo `for i in `seq 1 ${ct_num}`; do echo ${ct_base}-${i};done`
 for i in `seq 1 ${ct_num}`; do
  	ct_name=${ct_base}-${i}
 
-	_echoT "----------  publish ${ct_name}"
+	_echoT "------------------ publish ${ct_name}"
 	lxc image list -f csv -c l | grep -q ^${ct_name}$ && _eval lxc image alias rename ${ct_name} ${ct_name}-${_SDATE}
 	_eval lxc publish --force ${ct_name} --alias ${ct_name}
 done

@@ -2,7 +2,7 @@
 #
 # write by Aguy
 
-_echoT "\n==========================================  ${_RELEASE} ${_PART}"
+_echoT "\n==========================================  ${_INSTALL}-${_PART}"
 
 grep -q "^# ${_PART#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART}" >> ${S_FILE_INSTALL_CONF}
 
@@ -24,13 +24,6 @@ _askyn "To install a master/slave mariadb cluster, you need to have 2 available 
 ########################  DATA
 
 _echoT "----------  data"
-
-<<KEEP
-ct_master=maria-ambau-m1
-ct_slave=maria-ambau-s1
-pwd_master=a_3MHH4yHYbFgZ
-pwd_slave=mzHeL2eI5DwxQD
-KEEP
 
 # ct_master
 cts_maria=" ${imgs_all_mdb} "
@@ -103,7 +96,7 @@ _eval "mysql -h${ct_name} -uroothost -p${pwd_master} -e \"FLUSH PRIVILEGES;\""
 
 _echoT "----------  ${ct_name} passwd"
 file=${S_PATH_CONF}/mariadb
-strpass="replic @ ${ct_master}.lxd - ${pwd_replic}"
+strpass="replic @ ${ct_slave}.lxd - ${pwd_replic}"
 cmd="grep -q ^replic ${file} && sed -i '/^replic/c ${strpass}'  ${file} || sed -i '\$a ${strpass}' ${file}"
 _lxc_exec ${ct_name} "${cmd}"
 
@@ -168,6 +161,8 @@ _eval "mysql -h${ct_name} -uroothost -p${pwd_slave} -e \"START SLAVE '${ct_maste
 
 
 ########################  SHOW
+
+sleep 2
 
 _echoT "----------  show master privileges"
 _eval "mysql -h${ct_master} -uroothost -p${pwd_master} -e \"SELECT user,host FROM mysql.user WHERE user like 'replic';\""
