@@ -276,14 +276,20 @@ file=${path_sites}/${file_site##*/}
 _eval lxc file push ${file_site} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} apache
 
+file_domain=${S_PATH_INSTALL_CONF}/apache2/${_DOMAIN_FQDN}.conf
+if [ -f "${file_domain}" ]; then
+	file=${path_sites}/${file_domain##*/}
+	_eval lxc file push ${file_domain} ${_CT_NAME}${file}
+	_lxc_var_replace ${_CT_NAME} ${file} apache
+
+	# desactive default virtualhost site
+	file=${path_sites}/${file_site##*/}
+	_lxc_exec ${_CT_NAME} "mv ${file} ${file}.keep"
+fi
 
 _echoT "----------  ${_DOMAIN_FQDN} path"
-
 path=${S_VM_PATH_LOG}/apache2
 _lxc_exec ${S_SERVICE[log]} "[ -d ${path} ] || mkdir -p ${path}"
-
-# desactive default virtualhost site
-#_lxc_exec ${_CT_NAME} "mv ${file} ${file}.keep"
 
 
 ########################  RIGHTS
