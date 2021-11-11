@@ -4,10 +4,12 @@ frontend mail
 # smtp
 	bind :25
 	bind :465
-# imap
 	bind :587
+# imap
 	bind :143
 	bind :993
+#sieve
+	bind :4190
 	mode				tcp
 	option				tcplog
 	timeout client		60s

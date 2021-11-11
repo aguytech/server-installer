@@ -43,6 +43,7 @@ _SERVER_DEFAULT=${_ANSWER}
 
 _echoT "----------  data"
 
+anstmp=${S_DOMAIN_FQDN} && _askno "A first domain name: (${anstmp})" && _DOMAIN_FQDN="${_ANSWER:-$anstmp}" && _confset _DOMAIN_FQDN "${_DOMAIN_FQDN}"
 anstmp=otokoz.ovh && _askno "A second fqdn second domain name: (${anstmp})" && _DOMAIN_2_FQDN="${_ANSWER:-$anstmp}" && _confset _DOMAIN_2_FQDN "${_DOMAIN_2_FQDN}"
 anstmp=admin && _askno "Name for stats access (${anstmp})" && _HPX_ACCESS_USER="${_ANSWER:-$anstmp}" && _confset _HPX_ACCESS_USER "${_HPX_ACCESS_USER}"
 anstmp=`_pwd` && _askno "Password to stats access (${anstmp})" && _HPX_ACCESS_PWD="${_ANSWER:-$anstmp}" && _confset _HPX_ACCESS_PWD "${_HPX_ACCESS_PWD}"
@@ -53,10 +54,9 @@ _echoT "----------  data letsencrypt"
 _askyn "Use letsencrypt" && _HPX_LCRYPT_ENABLE="${_ANSWER/n/}"
 
 if [ "${_HPX_LCRYPT_ENABLE}" ]; then
-
-	anstmp=${S_DOMAIN_EMAIL_TECH} && _askno "Technical email for letsencrypt (${anstmp})" && _HPX_LCRYPT_EMAIL="${_ANSWER:-$anstmp}" && _confset _HPX_LCRYPT_EMAIL "${_HPX_LCRYPT_EMAIL}"
-	anstmp="ada admin blog carte chat chiffres cloud cms code compta dev diaspora discord discourse down elastik files forum gestion git gitea gitlab graylog imap info kibana links log mail manage matomo metrics monitor mx nextcloud pfa pma roundcube shaarli smtp snippet social st stats test tuleap vma vmail webmail wiki www zabbix" #  mail10 mx10
-	_askno "Subdomains to register to letsencrypt (${anstmp})" && _HPX_LCRYPT_SUBS="${_ANSWER:-$anstmp}" && _confset _HPX_LCRYPT_SUBS "${_HPX_LCRYPT_SUBS}"
+	anstmp=tech@${S_DOMAIN_EMAIL_TECH} && _askno "Technical email for letsencrypt (${anstmp})" && _HPX_LCRYPT_EMAIL="${_ANSWER:-$anstmp}" && _confset _HPX_LCRYPT_EMAIL "${_HPX_LCRYPT_EMAIL}"
+	anstmp="ada admin blog carte chat chiffres cloud cms code compta dev diaspora discord discourse down elastik files forum gestion git gitea gitlab graylog info kibana links log manage matomo metrics monitor nextcloud pfa pma roundcube shaarli snippet social st stats test tuleap vma vmail webmail wiki www zabbix" # imap mail mail10 mx mx10 smtp
+	_askno "Subdomains to register to letsencrypt: (${anstmp})" && _HPX_LCRYPT_SUBS="${_ANSWER:-$anstmp}" && _confset _HPX_LCRYPT_SUBS "${_HPX_LCRYPT_SUBS}"
 	[ -z ${_HPX_LCRYPT_PORT+x} ] && anstmp=8079 && _askno "Port for letsencrypt (${anstmp})" && _HPX_LCRYPT_PORT="${_ANSWER:-$anstmp}" && _confset _HPX_LCRYPT_PORT "${_HPX_LCRYPT_PORT}"
 fi
 
@@ -66,7 +66,7 @@ eval ${S_HOST_VM_ETH[default]}
 _CT_IP=${s_base}.${S_SERVICE_BITS[proxy]}
 
 _DOMAIN_2_NAME="${_DOMAIN_2_FQDN%.*}" && _confset _DOMAIN_2_NAME "${_DOMAIN_2_NAME}"
-_HPX_CT_NAME="${S_DOMAIN_FQDN//./-}" && _confset _HPX_CT_NAME "${_HPX_CT_NAME}"
+_HPX_CT_NAME="${_DOMAIN_FQDN//./-}" && _confset _HPX_CT_NAME "${_HPX_CT_NAME}"
 _HPX_CT_2_NAME="${_DOMAIN_2_FQDN//./-}" && _confset _HPX_CT_2_NAME "${_HPX_CT_2_NAME}"
 _HPX_DNS_DEFAULT="${s_base}.1:53" && _confset _HPX_DNS_DEFAULT "${_HPX_DNS_DEFAULT}"
 
@@ -205,7 +205,7 @@ _echoT "----------  conf enable"
 
 _lxc_exec ${_CT_NAME} "[ -d ${path}/conf-enabled ] || mkdir -p ${path}/conf-enabled"
 files="00-defaults 02-resolvers-lxd 20-listen-stats 40-frontends-80 70-frontends-mail 80-backends"
-[ ${S_DOMAIN_FQDN##*.} != lxd ] && files+=" 60-frontends-443"
+[ ${_DOMAIN_FQDN##*.} != lxd ] && files+=" 60-frontends-443"
 for str in ${files}; do
 	_lxc_exec ${_CT_NAME} "[ -e ${path}/conf-enabled/${str} ] || ln -s ${path}/conf-available/${str}  ${path}/conf-enabled/${str}"
 done
@@ -224,8 +224,8 @@ if [ "${_HPX_LCRYPT_ENABLE}" ]; then
 	########################  letsencrypt
 	# cert.pem: Your domain’s certificate
 	# chain.pem: The Let’s Encrypt chain certificate
-	# fullchain.pem: cert.pem and chain.pem combined
 	# privkey.pem: Your certificate’s private key
+	# fullchain.pem: cert.pem and chain.pem combined
 
 	_echoT "----------  haproxy stop"
 	_lxc_exec ${_CT_NAME} "rc-service -s haproxy stop"
@@ -237,16 +237,16 @@ if [ "${_HPX_LCRYPT_ENABLE}" ]; then
 	_echoI "Copy backup of letsencrypt certs and valid" && read str
 
 
-	for domain in ${S_DOMAIN_FQDN} ${_DOMAIN_2_FQDN}; do
+	for domain in ${_DOMAIN_FQDN} ${_DOMAIN_2_FQDN}; do
 
 		if ! _lxc_exec ${_CT_NAME} "[ -d /etc/letsencrypt/live/${domain} ]"; then
 
 			_echoT "----------  letsencrypt cert ${domain}"
-			str="-d ${domain}"
-			for sub in ${_HPX_LCRYPT_SUBS}; do
-				str+=" -d ${sub}.${domain}"
-			done
-			cmd="certbot certonly --standalone --preferred-challenges http --http-01-port 80 --non-interactive --agree-tos --email ${_HPX_LCRYPT_EMAIL} ${str}"
+str="-d ${domain}"
+for sub in ${_HPX_LCRYPT_SUBS}; do
+str+=" -d ${sub}.${domain}"
+done
+cmd="certbot certonly --standalone --preferred-challenges http --http-01-port 80 --non-interactive --agree-tos --email ${_HPX_LCRYPT_EMAIL} ${str}"
 			#cmd="certbot certonly --standalone --preferred-challenges http --http-01-port 80 -d example.com -d www.example.com"
 			_lxc_exec ${_CT_NAME} "${cmd}"
 		else
@@ -363,7 +363,7 @@ _echoT "----------  test ${_CT_NAME}"
 
 _echoI "To test connection type:"
 _echo "curl ${_IPTHIS}:80"
-_echo "curl ${S_DOMAIN_FQDN}:80"
+_echo "curl ${_DOMAIN_FQDN}:80"
 
 
 ########################  END
