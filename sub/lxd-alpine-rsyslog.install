@@ -35,7 +35,7 @@ _CT_IP=${s_base}.${S_SERVICE_BITS[log]}
 
 ########################  PROFILE
 
-profile=log
+profile=${_CT_NAME}
 _echoT "----------  profiles ${profile}"
 
 lxc profile list -f csv|grep -q "^${profile}," && lxc profile rename ${profile} ${profile}.${_SDATE}

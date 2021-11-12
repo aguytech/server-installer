@@ -1,0 +1,11 @@
+S_PATH_LOG/mail/*.err
+S_PATH_LOG/mail/*.warning
+S_PATH_LOG/mail/*.info {
+	daily
+	rotate 2
+	missingok
+	compress
+	delaycompress
+	notifempty
+    create 640 root adm
+}
