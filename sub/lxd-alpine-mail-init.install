@@ -14,9 +14,70 @@ _echoT "------------------ required files"
 _require ${file_rsyslog_client} ${file_rsyslog_host} ${file_logrotate_client} ${file_logrotate_host}
 
 
-########################  MAIN
+########################  PROFILE
+
+profile=${ct_base}
+if ! lxc profile list -f csv|grep -q "^${profile},"; then
+	_echoT "------------------ profile create ${profile}"
+	_eval lxc profile create ${profile}
+
+	path=${S_HOST_PATH_SHARE}/mail/${_DOMAIN_FQDN}
+	path_ct=${_PATH_MAIL}
+	[ -d ${path} ] || _evalr mkdir -p ${path}
+	_eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
+else
+	_echoT "------------------ profile exists ${profile}"
+fi
+
+
+########################  INIT
+
+_echoT "------------------ init"
+if lxc list -f csv -c n | grep -q ^${_CT_NAME}$; then
+	lxc list -f csv -c n status=Running| grep -q ^${_CT_NAME}$ && _eval lxc stop ${_CT_NAME}
+	_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
+fi
+_eval lxc init ${_CT_NAME_COM} ${_CT_NAME} -p default -p global -p ssl-mail -p ${profile}
+
+
+_echoT "------------------ network fixed ip"
+if ! lxc list -f json | jq -r '.[] | select(.name == "'${_CT_NAME}'").devices[].name' | grep -q eth0; then
+	_eval lxc config device override ${_CT_NAME} eth0 ipv4.address=${_CT_IP}
+fi
+
+
+_echoT "------------------ ${_CT_NAME} start"
+_eval lxc start ${_CT_NAME}
+
+
+########################  METADATA
+
+_echoT "------------------ metadata"
+_lxc_meta_add ${_CT_NAME} profiles ${profile}
+
+########################  IPTABLES
+
+_echoT "----------  iptables"
+sed -i '/^_NAT_MAIL=/ s|=.*$|=true|' ${_IPT_FILE_CONF}
+sed -i '/^_NAT_RSPAMD=/ s|=.*$|=true|' ${_IPT_FILE_CONF}
+_service restart ${_IPT_SERVICE}
+
+
+########################  PATH
+
+_echoT "------------------ create paths"
+
+paths="${_PATH_MAIL} ${_PATH_VMAIL} ${_PATH_SIEVE} ${_PATH_RSPAMD} ${_PATH_DKIM} ${_PATH_SSL}"
+cmd="for path in ${paths}; do [ -d \${path} ] || mkdir -p \${path}; done"
+_lxc_exec ${_CT_NAME} "${cmd}"
+
+cmds="chmod 644 ${_PATHSSLCRT} && chmod 600 ${_PATHSSLKEY}"
+_lxc_exec ${_CT_NAME} "${cmd}"
+
 
 <<KEEP
+########################  UNBOUND
+
 _echoT "----------  Unbound install"
 _lxc_exec ${_CT_NAME} "apk add unbound"
 
@@ -48,6 +109,8 @@ _lxc_exec ${_CT_NAME}  "rc-update show default|grep -q unbound || rc-update add 
 _lxc_exec ${_CT_NAME} rc-service -s unbound restart
 _lxc_exec ${_CT_NAME} rc-service -S unbound start
 
+########################  RESOLV
+
 _echoT "----------  resolvconf update"
 _lxc_exec ${_CT_NAME} "echo 'nameserver 127.0.0.1' >> /etc/resolv.conf"
 
@@ -64,8 +127,14 @@ KEEP
 
 ########################  RSYSLOG
 
+# ct
+file=/etc/rsyslog.conf
+_lxc_exec ${_CT_NAME} "sed -i '/^mail/ s|^|#|' ${file}"
+
+
+# host
 _echoT "----------  ${S_SERVICE[log]} host path"
-path=${S_VM_PATH_LOG}/mail
+path=${S_VM_PATH_LOG}
 _lxc_exec ${S_SERVICE[log]} "[ -d ${path} ] || mkdir -p ${path}"
 
 _echoT "----------  ${S_SERVICE[log]} host"
@@ -77,8 +146,9 @@ _echoT "----------  rsyslog restart ${S_SERVICE[log]}"
 _lxc_exec ${S_SERVICE[log]} "rc-service rsyslog restart"
 
 
+# client
 _echoT "----------  ${_CT_NAME} client path"
-path=${S_PATH_LOG}/mail
+path=${S_PATH_LOG}
 _lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
 
 _echoT "----------  ${_CT_NAME} client"

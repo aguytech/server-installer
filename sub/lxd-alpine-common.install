@@ -13,14 +13,11 @@ file_rsyslog_client_auth=${S_PATH_INSTALL_CONF}/rsyslog/client-auth.conf
 file_logrotate_server=${S_PATH_INSTALL_CONF}/logrotate/client-server
 
 _echoT "----------  required files"
-
 _require ${file_rsyslog_cron} ${file_rsyslog_client_auth} ${file_logrotate_server}
-
 
 ########################  DATA
 
 _CT_NAME=${_CT_NAME_COM}
-
 
 ########################  CONF
 
@@ -59,6 +56,43 @@ _lxc_exec ${_CT_NAME} "chmod 700 -R ${S_PATH_CONF}"
 #		echo _lxc_exec ${_CT_NAME} "echo \"${S_SERVICE[$str]}	${str}\" >> ${file}"
 #	done
 #fi
+
+########################  MAIL
+
+_echoT "----------  exim install"
+_eval "apk add exim"
+
+_echoT "----------  exim conf"
+FILE=/etc/exim4/update-exim4.conf.conf
+[ -f "$FILE" ] && [ ! -f "$FILE.$DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
+SCH='dc_eximconfig_configtype'; STR="'satellite'"; sed -i "s|^\($SCH=\).*$|\1$STR|" "$FILE"
+SCH='dc_other_hostnames';       STR="''"; sed -i "s|^\($SCH=\).*$|\1$STR|" "$FILE"
+SCH='dc_local_interfaces';      STR="'127.0.0.1 ; ::1'"; sed -i "s|^\($SCH=\).*$|\1$STR|" "$FILE"
+SCH='dc_readhost';              STR="'$HOSTNAME'"; sed -i "s|^\($SCH=\).*$|\1$STR|" "$FILE"
+SCH='dc_relay_domains';         STR="''"; sed -i "s|^\($SCH=\).*$|\1$STR|" "$FILE"
+SCH='dc_minimaldns';            STR="'false'"; sed -i "s|^\($SCH=\).*$|\1$STR|" "$FILE"
+SCH='dc_relay_nets';            STR="''"; sed -i "s|^\($SCH=\).*$|\1$STR|" "$FILE"
+SCH='dc_smarthost';             STR="'${S_SERVICE_IPS['mail']%% *}::25'"; sed -i "s|^\($SCH=\).*$|\1$STR|" "$FILE"
+SCH='CFILEMODE';                STR="'644'"; sed -i "s|^\($SCH=\).*$|\1$STR|" "$FILE"
+SCH='dc_use_split_config';      STR="'false'"; sed -i "s|^\($SCH=\).*$|\1$STR|" "$FILE"
+SCH='dc_hide_mailname';         STR="'false'"; sed -i "s|^\($SCH=\).*$|\1$STR|" "$FILE"
+SCH='dc_mailname_in_oh';        STR="'true'"; sed -i "s|^\($SCH=\).*$|\1$STR|" "$FILE"
+SCH='dc_localdelivery';         STR="'mail_spool'"; sed -i "s|^\($SCH=\).*$|\1$STR|" "$FILE"
+
+_service restart exim4
+
+########################  CRON
+
+_echoT "----------  cron"
+file="/etc/crontabs/root"
+_lxc_exec ${_CT_NAME} "sed -i '/^\*\/15/ s|^|#|' ${file}"
+_lxc_exec ${_CT_NAME} "rc-service crond restart"
+
+file=/etc/crontabs/mail
+_lxc_exec ${_CT_NAME} "echo 'MAILTO=${S_DOMAIN_EMAIL_TECH}' > ${file}"
+
+_echoT "----------  cron restart"
+_lxc_exec ${_CT_NAME} "rc-service crond restart"
 
 
 ########################  SYSLOG
@@ -129,20 +163,6 @@ _var_replace ${file} logrotate
 
 _echoT "----------  logrotate host restart"
 _service restart rsyslog
-
-
-########################  CRON
-
-_echoT "----------  cron"
-file="/etc/crontabs/root"
-_lxc_exec ${_CT_NAME} "sed -i '/^\*\/15/ s|^|#|' ${file}"
-_lxc_exec ${_CT_NAME} "rc-service crond restart"
-
-file=/etc/crontabs/mail
-_lxc_exec ${_CT_NAME} "echo 'MAILTO=${S_DOMAIN_EMAIL_TECH}' > ${file}"
-
-_echoT "----------  cron restart"
-_lxc_exec ${_CT_NAME} "rc-service crond restart"
 
 
 ########################  PUBLISH

@@ -100,6 +100,18 @@ path_ct=${S_VM_PATH_SHARE}/ssl/${_DOMAIN_2_FQDN}
 _eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
 
 
+profile=ssl-mail
+_echoT "----------  profile ${profile}"
+
+lxc profile list -f csv|grep -q "^${profile}," && _eval lxc profile rename ${profile} ${profile}.${_SDATE}
+_eval lxc profile create ${profile}
+
+path=${S_HOST_PATH_SHARE}/ssl/mail
+path_ct=${S_VM_PATH_SHARE}/ssl/mail
+[ -d ${path} ] || _evalr mkdir -p ${path}
+_eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
+
+
 ########################  INIT
 
 _echoT "----------  init"
@@ -107,7 +119,7 @@ if lxc list -f csv -c n | grep -q ^${_CT_NAME}$; then
 	lxc list -f csv -c n status=Running| grep -q ^${_CT_NAME}$ && _eval lxc stop ${_CT_NAME}
 	_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
 fi
-_eval lxc init ${_CT_NAME_COM} ${_CT_NAME} -p default -p global -p ssl-${_DOMAIN_FQDN} -p ssl-${_DOMAIN_2_FQDN}
+_eval lxc init ${_CT_NAME_COM} ${_CT_NAME} -p default -p global -p ssl-${_DOMAIN_FQDN} -p ssl-${_DOMAIN_2_FQDN} -p ssl-mail
 
 _echoT "----------  network fixed ip"
 if ! lxc list -f json | jq -r '.[] | select(.name == "'${_CT_NAME}'").devices[].name' | grep -q eth0; then
@@ -236,17 +248,16 @@ if [ "${_HPX_LCRYPT_ENABLE}" ]; then
 	_echoT "----------  copy letsencrypt"
 	_echoI "Copy backup of letsencrypt certs and valid" && read str
 
-
 	for domain in ${_DOMAIN_FQDN} ${_DOMAIN_2_FQDN}; do
 
 		if ! _lxc_exec ${_CT_NAME} "[ -d /etc/letsencrypt/live/${domain} ]"; then
 
 			_echoT "----------  letsencrypt cert ${domain}"
-str="-d ${domain}"
-for sub in ${_HPX_LCRYPT_SUBS}; do
-str+=" -d ${sub}.${domain}"
-done
-cmd="certbot certonly --standalone --preferred-challenges http --http-01-port 80 --non-interactive --agree-tos --email ${_HPX_LCRYPT_EMAIL} ${str}"
+			str="-d ${domain}"
+			for sub in ${_HPX_LCRYPT_SUBS}; do
+				str+=" -d ${sub}.${domain}"
+			done
+			cmd="certbot certonly --standalone --preferred-challenges http --http-01-port 80 --non-interactive --agree-tos --email ${_HPX_LCRYPT_EMAIL} ${str}"
 			#cmd="certbot certonly --standalone --preferred-challenges http --http-01-port 80 -d example.com -d www.example.com"
 			_lxc_exec ${_CT_NAME} "${cmd}"
 		else

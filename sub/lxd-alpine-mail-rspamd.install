@@ -6,7 +6,16 @@ _echoT "\n======================  ${_INSTALL}-${_PARTMAIL}"
 
 grep -q "^# ${_PARTMAIL#++}$" ${_FILE_INSTALL_CONF} || echo  "# ${_PARTMAIL}" >> ${_FILE_INSTALL_CONF}
 
+
 ########################  DATA
+
+cts_maria=`lxc list -f csv -c n| grep '^mdb-'`
+[ -z "${cts_maria}" ] && _exite "Unable to find mariadb container"
+
+_menu "Select a mariadb container" `lxc list -f csv -c n| grep '^mdb-'` && _DBHOST=${_ANSWER} && _confset _DBHOST "${_DBHOST}" ${_FILE_INSTALL_CONF}
+anstmp=${_VMAIL_APP} && _askno "Give name for mail database ($anstmp)"  && _DBNAME=${_ANSWER:-${anstmp}} && _confset _DBNAME "${_DBNAME}" ${_FILE_INSTALL_CONF}
+anstmp=${_VMAIL_ACRO} && _askno "Give name for mail user to access to MariaDB ($anstmp)" && _DBUSER=${_ANSWER:-${anstmp}} && _confset _DBUSER "${_DBUSER}" ${_FILE_INSTALL_CONF}
+anstmp="$(_pwd)" && _askno "Give a password for user '${_DBUSER}' ($anstmp)" && _DBPWD=${_ANSWER:-${anstmp}} && _confset _DBPWD "${_DBPWD}" ${_FILE_INSTALL_CONF}
 
 
 ########################  MAIN
@@ -15,18 +24,19 @@ _echoT "----------  path vmail"
 _lxc_exec ${_CT_NAME} "[ -d '${_PATH_VMAIL}/mailboxes' ] || mkdir -p ${_PATH_VMAIL}/mailboxes"
 _lxc_exec ${_CT_NAME} "[ -d '${_PATH_SIEVE}/global' ] || mkdir -p ${_PATH_SIEVE}/global"
 
-_echoT "----------  ${_PARTMAIL} install"
+_echoT "----------  dovecot install"
 _lxc_exec ${_CT_NAME} apk add dovecot-mysql dovecot-lmtpd dovecot-pigeonhole-plugin
 
-_echoT "----------  ${_PARTMAIL} stop"
+_echoT "----------  dovecot stop"
 _lxc_exec ${_CT_NAME} rc-update add dovecot
 _lxc_exec ${_CT_NAME} rc-service -s dovecot stop
 
-######################################## CONF
+
+######################################## DOVECOT-SQL.CONF
 
 eval ${S_HOST_VM_ETH[default]} # get s_inet s_cidr s_base
 
-_echoT "----------  ${_PARTMAIL} conf"
+_echoT "----------  dovecot conf"
 file=/etc/dovecot/dovecot.conf
 _lxc_exec ${_CT_NAME} "[ -f '${file}' ] && cp -a ${file} ${file}.${_SDATE}"
 
@@ -34,7 +44,7 @@ str='login_trusted_networks'; val="127.0.0.1 ${s_cidr} ${_IPS_IN}"
 _lxc_exec ${_CT_NAME} "sed -i 's|^#\?\(${str}\s*=\).*$|\1 ${val}|' ${file}"
 
 
-_echoT "----------  ${_PARTMAIL} conf sql"
+_echoT "----------  dovecot conf sql"
 file=/etc/dovecot/dovecot-sql.conf.ext
 _lxc_exec ${_CT_NAME} "[ -f '${file}' ] && cp -a ${file} ${file}.${_SDATE}"
 
@@ -52,13 +62,11 @@ else
 	_exite "Not yet impemented"
 fi
 
-
-_echoT "----------  ${_PARTMAIL} conf .d"
+_echoT "----------  dovecot conf .d"
 path=/etc/dovecot/conf.d
 _lxc_exec ${_CT_NAME} "[ -e '${path}' ] && cp -a ${path} ${path}.${_SDATE}"
 
-
-_echoT "----------  ${_PARTMAIL} conf 10-auth.conf"
+_echoT "----------  dovecot conf 10-auth.conf"
 file=/etc/dovecot/conf.d/10-auth.conf
 cmds=; while read str val; do
 	cmds+="sed -i \"1,/^#\?${str}\s*=/ s|^#\?${str}\s*=.*|${str} = ${val}|\" ${file}
@@ -69,8 +77,7 @@ _lxc_exec ${_CT_NAME} "${cmds}"
 _lxc_exec ${_CT_NAME} "sed -i '/^#\!include auth-sql.conf.ext/ s|^#||' ${file}"
 _lxc_exec ${_CT_NAME} "sed -i '/^\!include auth-passwdfile.conf.ext/ s|^|#|' ${file}"
 
-
-_echoT "----------  ${_PARTMAIL} conf 10-logging.conf.conf"
+_echoT "----------  dovecot conf 10-logging.conf.conf"
 file=/etc/dovecot/conf.d/10-logging.conf
 cmds=; while read str val; do
 	cmds+="sed -i \"1,/^#\?${str}\s*=/ s|^#\?${str}\s*=.*|${str} = ${val}|\" ${file}

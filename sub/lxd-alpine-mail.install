@@ -10,7 +10,12 @@ _echoT "------------------ required vm image"
 lxc image list -f csv -c l | grep -q ^${_CT_NAME_COM}$ || _exite "Unable to find image container: '${_CT_NAME_COM}'"
 
 _echoT "------------------ required vm"
+lxc list -f csv -c n | grep -q ^${S_SERVICE[proxy]}$ || _exite "Unable to find image container: '${S_SERVICE[proxy]}'"
 lxc list -f csv -c n | grep -q ^${S_SERVICE[log]}$ || _exite "Unable to find image container: '${S_SERVICE[log]}'"
+
+_echoT "------------------ required profile"
+lxc profile list -f csv| grep -q '^ssl-mail,' || _exite "unable to find profile: ${ssl-mail}"
+
 
 _echoT "------------------ file required"
 _POSTFIXMASTER=${S_PATH_INSTALL_CONF}/mail/master.cf
@@ -21,33 +26,39 @@ _require ${_POSTFIXMASTER} ${_POSTFIXMAIN}
 
 ########################  DATA
 
+# TODO remove
 _DOMAIN_FQDN=${S_DOMAIN_FQDN}
-_MAIL_ADMIN=$S_DOMAIN_EMAIL_ADMIN
+_MAIL_ADMIN=${S_DOMAIN_EMAIL_ADMIN}
 _FILE_INSTALL_CONF=${S_FILE_INSTALL_CONF%/*}/${_PART}-${_DOMAIN_FQDN}.conf 
 [ -f "${_FILE_INSTALL_CONF}" ] && . ${_FILE_INSTALL_CONF}
 
 #<<KEEP
+
+_echoT "------------------ data container"
+
+anstmp=${S_SERVICE[mail]} && _askno "Base name of containers to build (${anstmp})"
+ct_base="${_ANSWER:-$anstmp}"
+
+anstmp=2 && _askno "Number of containers to build (${anstmp})"
+ct_num="${_ANSWER:-$anstmp}"
+
 _echoT "------------------ data domain"
 
 anstmp=${S_DOMAIN_FQDN} && _askno "Domain name to use (${anstmp})"
 _DOMAIN_FQDN="${_ANSWER:-${anstmp}}"
 anstmp=${S_DOMAIN_EMAIL_ADMIN} && _askno "Administration email adress for domain (${anstmp})"
 _MAIL_ADMIN=${_ANSWER:-${anstmp}}
+anstmp=otokoz.ovh && _askno "A second fqdn second domain name: (${anstmp})"
+_DOMAIN_2_FQDN="${_ANSWER:-$anstmp}"
+
 
 _FILE_INSTALL_CONF=${S_FILE_INSTALL_CONF%/*}/${_PART}-${_DOMAIN_FQDN}.conf && _confset _FILE_INSTALL_CONF "${_FILE_INSTALL_CONF}" ${_FILE_INSTALL_CONF}
 grep -q "^# ${_PART#++}$" ${_FILE_INSTALL_CONF} || echo  "# ${_PART}" >> ${_FILE_INSTALL_CONF}
 _confset _DOMAIN_FQDN "${_DOMAIN_FQDN}" ${_FILE_INSTALL_CONF}
+_confset _DOMAIN_2_FQDN "${_DOMAIN_2_FQDN}"
 _confset _MAIL_ADMIN "${_MAIL_ADMIN}" ${_FILE_INSTALL_CONF}
 _confset _POSTFIXMASTER "${_POSTFIXMASTER}" ${_FILE_INSTALL_CONF}
 _confset _POSTFIXMAIN "${_POSTFIXMAIN}" ${_FILE_INSTALL_CONF}
-
-_echoT "------------------ data container"
-
-anstmp=pdm-${_DOMAIN_FQDN//./-} && _askno "Name of container to build (${anstmp})"
-_CT_NAME="${_ANSWER:-${anstmp}}" && _confset _CT_NAME "${_CT_NAME}" ${_FILE_INSTALL_CONF}
-
-anstmp=mail-${_DOMAIN_FQDN} && _askno "Name of profile to create (${anstmp})"
-profile="${_ANSWER:-${anstmp}}" && _confset profile "${profile}" ${_FILE_INSTALL_CONF}
 
 _echoT "------------------ data"
 
@@ -57,11 +68,10 @@ _STEP=${_ANSWER:-${anstmp}} && _confset _STEP "${_STEP}" ${_FILE_INSTALL_CONF}
 anstmp=${S_VM_PATH_SHARE}/mail/${_DOMAIN_FQDN} && _askno "path for shared MAIL (${anstmp})"
 _PATH_MAIL=${_ANSWER:-${anstmp}} && _confset _PATH_MAIL "${_PATH_MAIL}" ${_FILE_INSTALL_CONF}
 
-anstmp=${_PATH_MAIL}/ssl && _askno "path for SSL (${anstmp})"
-_PATH_SSL=${_ANSWER:-${anstmp}} && _confset _PATH_SSL "${_PATH_SSL}" ${_FILE_INSTALL_CONF}
-
 anstmp=${_PATH_MAIL}/rspamd && _askno "path for RSPAMD (${anstmp})"
 _PATH_RSPAMD=${_ANSWER:-${anstmp}} && _confset _PATH_RSPAMD "${_PATH_RSPAMD}" ${_FILE_INSTALL_CONF}
+
+_PATH_SSL=${S_VM_PATH_SHARE}/ssl/mail && _confset _PATH_SSL "${_PATH_SSL}" ${_FILE_INSTALL_CONF}
 
 _echoT "------------------ data vmail"
 
@@ -90,82 +100,33 @@ _VMAIL_UID=${_ANSWER:-${anstmp}} && _confset _VMAIL_UID "${_VMAIL_UID}" ${_FILE_
 _PATH_DKIM="${_PATH_RSPAMD}/dkim" && _confset _PATH_DKIM "${_PATH_DKIM}" ${_FILE_INSTALL_CONF}
 #_IPS_IN=`echo "${S_CLUSTER[*]}"|tr ' ' '\n'|sed -n 's|s_ip=\([^ ]\+\)$|\1|p'|grep -v ${_IPTHIS}|xargs`
 _IPS_IN=`echo "${S_CLUSTER[*]}"|tr ' ' '\n'|sed -n 's|s_ip=\([^ ]\+\)$|\1|p'|xargs` && _confset _IPS_IN "${_IPS_IN}" ${_FILE_INSTALL_CONF}
-
-
+_IP6S_IN=`echo "${S_CLUSTER[*]}"|tr ' ' '\n'|sed -n 's|s_ip6=\([^ ]\+\)$|\1|p'|xargs` && _confset _IP6S_IN "${_IP6S_IN}" ${_FILE_INSTALL_CONF}
 _PATHSSLKEY=${_PATH_SSL}/private && _confset _PATHSSLKEY "${_PATHSSLKEY}" ${_FILE_INSTALL_CONF}
 _PATHSSLCRT=${_PATH_SSL}/certs && _confset _PATHSSLCRT "${_PATHSSLCRT}" ${_FILE_INSTALL_CONF}
-_FILESSLKEY="${_PATHSSLKEY}/mail.${_DOMAIN_FQDN}.key" && _confset _FILESSLKEY "${_FILESSLKEY}" ${_FILE_INSTALL_CONF}
-_FILESSLCSR="${_PATHSSLKEY}/mail.${_DOMAIN_FQDN}.csr" && _confset _FILESSLCSR "${_FILESSLCSR}" ${_FILE_INSTALL_CONF}
-_FILESSLCRT="${_PATHSSLCRT}/mail.${_DOMAIN_FQDN}.crt" && _confset _FILESSLCRT "${_FILESSLCRT}" ${_FILE_INSTALL_CONF}
-_FILESSLPEM="${_PATHSSLKEY}/mail.${_DOMAIN_FQDN}.pem" && _confset _FILESSLPEM "${_FILESSLPEM}" ${_FILE_INSTALL_CONF}
-
-########################  PROFILE
-
-if ! lxc profile list -f csv|grep -q "^${profile},"; then
-	_echoT "------------------ profile create ${profile}"
-	_eval lxc profile create ${profile}
-
-	path=${S_HOST_PATH_SHARE}/mail/${_DOMAIN_FQDN}
-	path_ct=${_PATH_MAIL}
-	[ -d ${path} ] || _evalr mkdir -p ${path}
-	_eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
-else
-	_echoT "------------------ profile exists ${profile}"
-fi
-
-
-########################  INIT
-
-_echoT "------------------ init"
-
-if lxc list -f csv -c n | grep -q ^${_CT_NAME}$; then
-	lxc list -f csv -c n status=Running| grep -q ^${_CT_NAME}$ && _eval lxc stop ${_CT_NAME}
-	_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
-fi
-_eval lxc init ${_CT_NAME_COM} ${_CT_NAME} -p default -p global -p ${profile}
-
-
-_echoT "------------------ network fixed ip"
-
-if ! lxc list -f json | jq -r '.[] | select(.name == "'${_CT_NAME}'").devices[].name' | grep -q eth0; then
-	_CT_IP=${s_base}.${S_SERVICE_BITS[mail]}
-	_eval lxc config device override ${_CT_NAME} eth0 ipv4.address=${_CT_IP}
-fi
-
-
-_echoT "------------------ ${_CT_NAME} start"
-_eval lxc start ${_CT_NAME}
-
-
-########################  METADATA
-
-_echoT "------------------ metadata"
-_lxc_meta_add ${_CT_NAME} profiles ${profile}
-
-########################  IPTABLES
-
-_echoT "----------  iptables"
-sed -i '/^_NAT_MAIL=/ s|=.*$|=true|' ${_IPT_FILE_CONF}
-sed -i '/^_NAT_RSPAMD=/ s|=.*$|=true|' ${_IPT_FILE_CONF}
-_service restart ${_IPT_SERVICE}
+_FILE_SSL_CERT="${_PATHSSLKEY}/mail.${_DOMAIN_FQDN}.key" && _confset _FILE_SSL_CERT "${_FILE_SSL_CERT}" ${_FILE_INSTALL_CONF}
+_FILE_SSL_CHAIN="${_PATHSSLKEY}/mail.${_DOMAIN_FQDN}.csr" && _confset _FILE_SSL_CHAIN "${_FILE_SSL_CHAIN}" ${_FILE_INSTALL_CONF}
+_FILE_SSL_PRIV="${_PATHSSLCRT}/mail.${_DOMAIN_FQDN}.crt" && _confset _FILE_SSL_PRIV "${_FILE_SSL_PRIV}" ${_FILE_INSTALL_CONF}
+_FILE_SSL_COMB="${_PATHSSLKEY}/mail.${_DOMAIN_FQDN}.pem" && _confset _FILE_SSL_COMB "${_FILE_SSL_COMB}" ${_FILE_INSTALL_CONF}
 
 #KEEP
 
-########################  PATH
+_CT_NAME=${ct_base}-1
+eval ${S_HOST_VM_ETH[default]}
+_CT_IP=${s_base}.${S_SERVICE_BITS[mail]}
 
-_echoT "------------------ create paths"
-
-paths="${_PATH_MAIL} ${_PATH_VMAIL} ${_PATH_SIEVE} ${_PATH_SSL}/postfix ${_PATH_RSPAMD} ${_PATH_DKIM} ${_PATH_SSL} ${_PATHSSLKEY} ${_PATHSSLCRT}"
-cmd="for path in ${paths}; do [ -d \${path} ] || mkdir -p \${path}; done"
-_lxc_exec ${_CT_NAME} "${cmd}"
-
-cmds="chmod 644 ${_PATHSSLCRT} && chmod 600 ${_PATHSSLKEY}"
-_lxc_exec ${_CT_NAME} "${cmd}"
-
-
-####################  TOOLS
+####################  INIT
 
 _PARTMAIL=mail-init
+if ! _parthave ${_PARTMAIL} ${S_FILE_INSTALL_DONE}; then
+	. "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PARTMAIL}.install" || _exite "Wrong part: ${_PARTMAIL}"
+	[ "$_STEP" ] && _askno "Valid to continue" 
+else
+	_echoW "performed *** ${_PARTMAIL}"
+fi
+
+####################  SSL
+
+_PARTMAIL=mail-ssl
 if ! _parthave ${_PARTMAIL} ${S_FILE_INSTALL_DONE}; then
 	. "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PARTMAIL}.install" || _exite "Wrong part: ${_PARTMAIL}"
 	[ "$_STEP" ] && _askno "Valid to continue" 
@@ -228,31 +189,14 @@ else
 	_echoW "performed *** ${_PARTMAIL}"
 fi
 
-########################################  RSYSLOG
-
-STR=" vz lxd "
-if [ "${STR/ "$S_SERVER_TYPE" /}" != "$STR" ]; then
-
-	_echoT "------------------ rsyslog conf mail"
-
-	! grep -q "^mail\.\*.*@$S_HOST_IPV4:$S_RSYSLOG_PORT" /etc/rsyslog.conf && sed -i "s|^\(.\?mail\.\*.*\)$|\1\nmail.*\t\t\t\t@$S_HOST_IPV4|" /etc/rsyslog.conf
-
-
-	_echoT "------------------ rsyslog restart"
-
-	systemctl restart rsyslog.service
-fi
-
 
 ####################################  START
 
 _echoT "------------------ postfix start"
 _evalq "systemctl start postfix"
 
-
 _echoT "------------------ dovecot start"
 _evalq "systemctl start dovecot.service"
-
 
 
 #################################### test mail sending
@@ -272,6 +216,32 @@ _echoi "${yellowb}IMAP-Server${cclear} mail.$_DOMAIN_FQDN | Port: 143 | STARTTLS
 _echoi "${yellowb}SMTP-Server${cclear} mail.$_DOMAIN_FQDN | Port: 587 | STARTTLS"
 _echoi "${yellowb}Managesieve${cclear} mail.$_DOMAIN_FQDN | Port: 4190 | STARTTLS"
 _echoi "${yellowb}Username${cclear} Complete e-mail address"
+
+
+########################  COPY
+
+for i in `seq 2 ${ct_num}`; do
+	ct_name=${ct_base}-${i}
+	_echoT "---------- build ${ct_name}"
+
+	if lxc list -f csv -c n | grep -q ^${ct_name}$; then
+		lxc list -f csv -c n status=Running| grep -q ^${ct_name}$ && _eval lxc stop ${ct_name}
+		_eval lxc rename ${ct_name} ${ct_name}-${_SDATE}
+	fi
+	_eval lxc copy ${_CT_NAME} ${ct_name}
+	_eval lxc start ${ct_name}
+done
+
+
+########################  TEST
+
+_echoT "----------  mail test"
+
+
+########################  HAPROXY
+
+_echoI "\nAdjust backend in proxy for backend: ${S_SERVICE[mail]} with:"
+_echo $(for i in `seq 1 ${ct_num}`; do echo ${ct_base}-${i};done)
 
 
 ########################  PUBLISH

@@ -1,0 +1,60 @@
+#!/bin/bash
+#
+# write by Aguy
+
+_echoT "\n======================  ${_INSTALL}-${_PARTMAIL}"
+
+grep -q "^# ${_PARTMAIL#++}$" ${_FILE_INSTALL_CONF} || echo  "# ${_PARTMAIL}" >> ${_FILE_INSTALL_CONF}
+
+########################  DATA
+
+
+########################  MAIN
+
+_echoT "----------  ${_PARTMAIL} install"
+_lxc_exec ${_CT_NAME} apk add postfix # mailx
+
+_echoT "----------  ${_PARTMAIL} stop"
+_lxc_exec ${_CT_NAME} rc-update add postfix
+_lxc_exec ${_CT_NAME} rc-service -s postfix stop
+
+######################################## CONF
+
+eval ${S_HOST_VM_ETH[default]} # get s_inet s_cidr s_base
+
+_echoT "----------  ${_PARTMAIL} conf"
+file=/etc/postfix/main.cf
+_lxc_exec ${_CT_NAME} "[ -f '${file}' ] && cp -a ${file} ${file}.${_SDATE}"
+
+# ipv6 #str="mynetworks = hash"; val="mynetworks = 127.0.0.0/8 [::1]/128 ${s_cidr} ${_IPS_IN} ${_IP6S_IN}"
+str='#mynetworks = hash'; val="mynetworks = 127.0.0.0/8 ${s_cidr} ${_IPS_IN}"
+_lxc_exec ${_CT_NAME} "sed -i '/^${str}/ a${val}' ${file}"
+str='#inet_interfaces = $myhostname, localhost'; val="inet_interfaces = all"
+_lxc_exec ${_CT_NAME} "sed -i '/^${str}/ a${val}' ${file}"
+
+# ipv6
+str="inet_protocols "; val="all"
+_lxc_exec ${_CT_NAME} "sed -i '/^#\?${str}.*/ r${str}= ${val}' ${file}"
+
+
+
+
+exit
+
+
+cmds=; while read str val; do
+	cmds+="sed -i \"1,/^#\?${str}\s*=/ s|^#\?${str}\s*=.*|${str} = ${val}|\" ${file}
+"; done <<< "driver mysql
+connect  host=${_DBHOST} dbname=${_DBNAME} user=${_DBUSER} password=${_DBPWD}
+default_pass_scheme  SHA512-CRYPT
+password_query  SELECT username, password, domain FROM mailbox WHERE username = '%u' AND active = true
+user_query  SELECT concat('*:storage=', quota) AS quota_rule FROM mailbox WHERE username = '%u' AND active = true
+iterate_query  SELECT username, domain FROM mailbox WHERE active = true"
+_lxc_exec ${_CT_NAME} "${cmds}"
+
+
+
+########################  END
+
+_echoT "===================== ${_PART} end"
+_partadd ${_PARTMAIL#++} ${S_FILE_INSTALL_DONE}

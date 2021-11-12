@@ -1,0 +1,70 @@
+#!/bin/bash
+#
+# write by Aguy
+
+_echoT "\n======================  ${_INSTALL}-${_PARTMAIL}"
+
+grep -q "^# ${_PARTMAIL#++}$" ${_FILE_INSTALL_CONF} || echo  "# ${_PARTMAIL}" >> ${_FILE_INSTALL_CONF}
+
+########################  DATA
+
+_echoT "----------  data letsencrypt"
+
+_askyn "Use letsencrypt" && _MEL_LCRYPT_ENABLE="${_ANSWER/n/}"
+
+if ! [ "${_MEL_LCRYPT_ENABLE}" ]; then
+	_echoT "----------  No letsencrypt"
+	_partadd ${_PARTMAIL#++} ${S_FILE_INSTALL_DONE}
+	return
+fi
+
+anstmp=${S_DOMAIN_EMAIL_TECH} && _askno "Technical email for letsencrypt (${anstmp})" && _MEL_LCRYPT_EMAIL="${_ANSWER:-$anstmp}" && _confset _MEL_LCRYPT_EMAIL "${_MEL_LCRYPT_EMAIL}" ${_FILE_INSTALL_CONF}
+anstmp="imap smtp mx"
+_askno "Subdomains to register to letsencrypt: (${anstmp})" && _MEL_LCRYPT_SUBS="${_ANSWER:-$anstmp}" && _confset _MEL_LCRYPT_SUBS "${_MEL_LCRYPT_SUBS}" ${_FILE_INSTALL_CONF}
+[ -z ${_MEL_LCRYPT_PORT+x} ] && anstmp=8079 && _askno "Port for letsencrypt (${anstmp})" && _MEL_LCRYPT_PORT="${_ANSWER:-$anstmp}" && _confset _MEL_LCRYPT_PORT "${_MEL_LCRYPT_PORT}" ${_FILE_INSTALL_CONF}
+
+_FILE_SSL_CERT="${_PATHSSL}/mail.${_DOMAIN_FQDN}.key" && _confset _FILE_SSL_CERT "${_FILE_SSL_CERT}" ${_FILE_INSTALL_CONF}
+_FILE_SSL_CHAIN="${_PATHSSL}/mail.${_DOMAIN_FQDN}.csr" && _confset _FILE_SSL_CHAIN "${_FILE_SSL_CHAIN}" ${_FILE_INSTALL_CONF}
+_FILE_SSL_PRIV="${_PATHSSL}/mail.${_DOMAIN_FQDN}.crt" && _confset _FILE_SSL_PRIV "${_FILE_SSL_PRIV}" ${_FILE_INSTALL_CONF}
+_FILE_SSL_COMB="${_PATHSSL}/mail.${_DOMAIN_FQDN}.pem" && _confset _FILE_SSL_COMB "${_FILE_SSL_COMB}" ${_FILE_INSTALL_CONF}
+
+########################  LETSENCRYPT
+
+#### letsencrypt
+# cert.pem: Your domain’s certificate
+# chain.pem: The CA (letsencrypt) chain certificate
+# fullchain.pem: cert.pem and chain.pem combined
+# privkey.pem: Your certificate’s private key
+
+_echoT "----------  letsencrypt install"
+_lxc_exec ${_CT_NAME} "apk add certbot"
+
+_echoT "----------  copy letsencrypt"
+_echoI "Copy backup of letsencrypt certs and valid" && read str
+
+domain=mail.${_DOMAIN_FQDN}
+if ! _lxc_exec ${_CT_NAME} "[ -d /etc/letsencrypt/live/mail.${_DOMAIN_FQDN} ]"; then
+
+	_echoT "----------  letsencrypt cert ${domain}"
+	str=
+	for domain in ${_DOMAIN_FQDN} ${_DOMAIN_2_FQDN}; do
+		str+="-d ${domain}"
+		for sub in ${_MEL_LCRYPT_SUBS}; do
+			str+=" -d ${sub}.${_DOMAIN_FQDN}"
+		done
+	done
+	cmd="certbot certonly --standalone --preferred-challenges http --http-01-port 80 --non-interactive --agree-tos --email ${_MEL_LCRYPT_EMAIL} ${str}"
+	#cmd="certbot certonly --standalone --preferred-challenges http --http-01-port 80 -d example.com -d www.example.com"
+	_lxc_exec ${_CT_NAME} "${cmd}"
+else
+	_echoT "----------  letsencrypt skip ${domain}"
+fi
+
+_echoT "----------  letsencrypt unify"
+_lxc_exec ${_CT_NAME} "${S_PATH_SCRIPT}/scripts/letsencrypt-unify.sh"
+
+
+########################  END
+
+_echoT "===================== ${_PART} end"
+_partadd ${_PARTMAIL#++} ${S_FILE_INSTALL_DONE}
