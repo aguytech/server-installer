@@ -100,7 +100,7 @@ echo -e "${blueb}----------  fd open${cclear}"
 _redirect
 
 
-_echoT "----------  server settings"
+_echoT "------------------  server settings"
 
 . "${file_conf_server}"
 

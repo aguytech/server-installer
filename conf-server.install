@@ -7,7 +7,7 @@ _echoT "==========================================  ${_PART}"
 
 ########################  MAIN
 
-_echoT "----------  release"
+_echoT "------------------  release"
 
 file="/etc/os-release"
 ! ${_SUDO} [ -f "${file}" ] && exit -e "${redb}error - unable to find file '$file'${cclear}"
@@ -32,50 +32,44 @@ for str in S_RELEASE S_RELEASE_ID S_RELEASE_NAME; do
 	_confset ${str} "${!str}" "${S_GLOBAL_CONF}"
 done
 
-
 ###################  SERVER
 
-_echoT "----------  S_ETH"
+_echoT "------------------  S_ETH"
 
 S_ETH=`ip -4 -o route show to default|cut -d' ' -f5`
 _confset S_ETH "${S_ETH}" "${S_GLOBAL_CONF}"
 
-_echoT "----------  S_SERVER_TYPE"
+_echoT "------------------  S_SERVER_TYPE"
 
 if [ -z "${S_SERVER_TYPE}" ]; then
 	_menu "Select the server type for this server" home ovh docker kvm lxd
 	S_SERVER_TYPE=${_ANSWER} && _confset S_SERVER_TYPE "${S_SERVER_TYPE}" "${S_GLOBAL_CONF}"
 fi
 
-
 ########################  STORAGE
 
 str="ovh home"
 if [[ " ${str} " = *" ${S_SERVER_TYPE} "* ]]; then
 
-	if [ -z "${S_STORAGE_DEVICE}" ]; then
-		_echoT "----------  S_STORAGE_DEVICE"
-
-		sudo blkid|grep -v squashfs
-		anstmp=
-		_askno "Give a device name for server ROOT storage (${anstmp})"
-		S_STORAGE_DEVICE=${_ANSWER:-${anstmp}} && _confset S_STORAGE_DEVICE "${S_STORAGE_DEVICE}" "${S_GLOBAL_CONF}"
-	fi
-
 	if [ -z "${S_STORAGE_DRIVER}" ]; then
-		_echoT "----------  S_STORAGE_DRIVER"
+		_echoT "------------------  S_STORAGE_DRIVER"
 
 		anstmp=zfs
 		_menu "Select a driver for storage (${anstmp})" zfs btrfs
 		S_STORAGE_DRIVER=${_ANSWER} && _confset S_STORAGE_DRIVER "${S_STORAGE_DRIVER}" "${S_GLOBAL_CONF}"
 	fi
+	if [ "${S_STORAGE_DRIVER}" = zfs ] && [ -z "${S_STORAGE_DEVICE}" ]; then
+		_echoT "------------------  S_STORAGE_DEVICE"
+		sudo lsblk -o NAME,PATH,FSTYPE,FSUSED,SIZE,TYPE,MOUNTPOINT|grep -v ^loop
+		anstmp=
+		_askno "Give the PATH name of selected device for server ROOT storage (${anstmp})"
+		S_STORAGE_DEVICE=${_ANSWER:-${anstmp}} && _confset S_STORAGE_DEVICE "${S_STORAGE_DEVICE}" "${S_GLOBAL_CONF}"
+	fi
 fi
-
 
 ###################  PATH
 
-_echoT "----------  S_PATH_INSTALL"
-
+_echoT "------------------  S_PATH_INSTALL"
 first_id="${!BASH_SOURCE[*]}" && first_id="${first_id##* }"
 S_PATH_INSTALL=`dirname "$(readlink -e "${BASH_SOURCE[${first_id}]}")"`
 _confset S_PATH_INSTALL "${S_PATH_INSTALL}" "${S_GLOBAL_CONF}"
@@ -83,28 +77,21 @@ _confset S_PATH_INSTALL "${S_PATH_INSTALL}" "${S_GLOBAL_CONF}"
 S_PATH_INSTALL_CONF="${S_PATH_INSTALL}/conf"
 _confset S_PATH_INSTALL_CONF "${S_PATH_INSTALL_CONF}" "${S_GLOBAL_CONF}"
 
-S_PATH_INSTALL_XTRA="${S_PATH_INSTALL}/xtra"
-_confset S_PATH_INSTALL_XTRA "${S_PATH_INSTALL_XTRA}" "${S_GLOBAL_CONF}"
-
-
-_echoT "----------  S_PATH_SAVE"
-
+_echoT "------------------  S_PATH_SAVE"
 if [ -z "${S_PATH_SAVE}" ]; then
 	anstmp=/save
 	_askno "path to save data (${anstmp})"
 	S_PATH_SAVE=${_ANSWER:-${anstmp}} && _confset S_PATH_SAVE "${S_PATH_SAVE}" "${S_GLOBAL_CONF}"
 fi
 
-_echoT "----------  S_PATH_BACKUP"
-
+_echoT "------------------  S_PATH_BACKUP"
 if [ -z "${S_PATH_BACKUP}" ]; then
 	anstmp="${S_PATH_SAVE}/backup"
 	_askno "path to backup data (${anstmp})"
 	S_PATH_BACKUP=${_ANSWER:-${anstmp}} && _confset S_PATH_BACKUP "${S_PATH_BACKUP}" "${S_GLOBAL_CONF}"
 fi
 
-_echoT "----------  S_PATH_LOG"
-
+_echoT "------------------  S_PATH_LOG"
 if [ -z "${S_PATH_LOG}" ]; then
 	anstmp=/var/log
 	_askno "path to log data (${anstmp})"
@@ -122,84 +109,72 @@ fi
 str="ovh home"
 if [[ " ${str} " = *" ${S_SERVER_TYPE} "* ]]; then
 
-	_echoT "----------  S_HOST_TYPE"
-
+	_echoT "------------------  S_HOST_TYPE"
 	if [ -z "${S_HOST_TYPE}" ]; then
 		_menu "type of VM hosting" lxd docker kvm
 		S_HOST_TYPE=$_ANSWER && _confset S_HOST_TYPE "${S_HOST_TYPE}" "${S_GLOBAL_CONF}"
 	fi
 
-	_echoT "----------  S_HOST_PATH"
-
+	_echoT "------------------  S_HOST_PATH"
 	if [ -z "${S_HOST_PATH}" ]; then
 		anstmp=/vm
 		_askno "host path for VM (${anstmp})"
 		S_HOST_PATH="${_ANSWER:-${anstmp}}" && _confset S_HOST_PATH "${S_HOST_PATH}" "${S_GLOBAL_CONF}"
 	fi
 
-	_echoT "----------  S_HOST_PATH_SP"
-
+	_echoT "------------------  S_HOST_PATH_SP"
 	if [ -z "${S_HOST_PATH_SP}" ]; then
 		anstmp="${S_HOST_PATH}/sp"
 		_askno "host path to storage VM (${anstmp})"
 		S_HOST_PATH_SP="${_ANSWER:-${anstmp}}" && _confset S_HOST_PATH_SP "${S_HOST_PATH_SP}" "${S_GLOBAL_CONF}"
 	fi
 
-		_echoT "----------  S_HOST_PATH_SHARE"
-
+		_echoT "------------------  S_HOST_PATH_SHARE"
 	if [ -z "${S_HOST_PATH_SHARE}" ]; then
 		anstmp="${S_HOST_PATH}/share"
 		_askno "host path to VM sharing (${anstmp})"
 		S_HOST_PATH_SHARE="${_ANSWER:-${anstmp}}" && _confset S_HOST_PATH_SHARE "${S_HOST_PATH_SHARE}" "${S_GLOBAL_CONF}"
 	fi
 
-		_echoT "----------  S_HOST_PATH_SAVE"
-
+		_echoT "------------------  S_HOST_PATH_SAVE"
 	if [ -z "${S_HOST_PATH_SAVE}" ]; then
 		anstmp="${S_HOST_PATH}/save"
 		_askno "host path to VM saving (${anstmp})"
 		S_HOST_PATH_SAVE="${_ANSWER:-${anstmp}}" && _confset S_HOST_PATH_SAVE "${S_HOST_PATH_SAVE}" "${S_GLOBAL_CONF}"
 	fi
 
-		_echoT "----------  S_HOST_PATH_LOG"
-
+		_echoT "------------------  S_HOST_PATH_LOG"
 	if [ -z "${S_HOST_PATH_LOG}" ]; then
 		anstmp="${S_HOST_PATH_SHARE}/log"
 		_askno "host path to VM loging (${anstmp})"
 		S_HOST_PATH_LOG="${_ANSWER:-${anstmp}}" && _confset S_HOST_PATH_LOG "${S_HOST_PATH_LOG}" "${S_GLOBAL_CONF}"
 	fi
-
 fi
-
 
 ###################  VM
 
-_echoT "----------  S_VM_PATH_SHARE"
-
+_echoT "------------------  S_VM_PATH_SHARE"
 if [ -z "${S_VM_PATH_SHARE}" ]; then
 	anstmp="/var/share"
 	_askno "VM sharing path (${anstmp})"
 	S_VM_PATH_SHARE=${_ANSWER:-${anstmp}} && _confset S_VM_PATH_SHARE "${S_VM_PATH_SHARE}" "${S_GLOBAL_CONF}"
 fi
 
-_echoT "----------  S_VM_PATH_LOG"
-
+_echoT "------------------  S_VM_PATH_LOG"
 if [ -z "${S_VM_PATH_LOG}" ]; then
 	anstmp="${S_VM_PATH_SHARE}/log"
 	_askno "VM shared path for logs (${anstmp})"
 	S_VM_PATH_LOG=${_ANSWER:-${anstmp}} && _confset S_VM_PATH_LOG "${S_VM_PATH_LOG}" "${S_GLOBAL_CONF}"
 fi
 
-_echoT "----------  S_VM_PATH_SAVE"
-
+_echoT "------------------  S_VM_PATH_SAVE"
 if [ -z "${S_VM_PATH_SAVE}" ]; then
 	anstmp="/save"
 	_askno "VM saving path (${anstmp})"
 	S_VM_PATH_SAVE=${_ANSWER:-${anstmp}} && _confset S_VM_PATH_SAVE "${S_VM_PATH_SAVE}" "${S_GLOBAL_CONF}"
 fi
 
-_echoT "----------  S_VM_PATH_BACKUP"
-
+_echoT "------------------  S_VM_PATH_BACKUP"
 if [ -z "${S_VM_PATH_BACKUP}" ]; then
 	anstmp="${S_PATH_SAVE}/backup"
 	_askno "VM backing up path (${anstmp})"
@@ -211,56 +186,51 @@ fi
 
 declare -A S_SERVICE
 
-_echoT "----------  S_SERVICE[proxy]"
+_echoT "------------------  S_SERVICE[proxy]"
 if [ -z "${S_SERVICE[proxy]}" ]; then
 	anstmp="srv-haproxy"
 	_askno "service name for proxy (${anstmp})"
 	S_SERVICE[proxy]=${_ANSWER:-${anstmp}} && _confset_array "S_SERVICE" "proxy" "${S_SERVICE[proxy]}" "${S_GLOBAL_CONF}"
 fi
 
-_echoT "----------  S_SERVICE[log]"
+_echoT "------------------  S_SERVICE[log]"
 if [ -z "${S_SERVICE[log]}" ]; then
 	anstmp="srv-rsyslog"
 	_askno "service name for log (${anstmp})"
 	S_SERVICE[log]=${_ANSWER:-${anstmp}} && _confset_array "S_SERVICE" "log" "${S_SERVICE[log]}" "${S_GLOBAL_CONF}"
 fi
 
-_echoT "----------  S_SERVICE[mail]"
+_echoT "------------------  S_SERVICE[mail]"
 if [ -z "${S_SERVICE[mail]}" ]; then
 	anstmp="srv-mail"
 	_askno "service name for mail (${anstmp})"
 	S_SERVICE[mail]=${_ANSWER:-${anstmp}} && _confset_array "S_SERVICE" "mail" "${S_SERVICE[mail]}" "${S_GLOBAL_CONF}"
 fi
 
-
 ###################  DOMAIN
 
-_echoT "----------  S_DOMAIN_FQDN"
-
+_echoT "------------------  S_DOMAIN_FQDN"
 if [ -z "${S_DOMAIN_FQDN}" ]; then
 	anstmp="ambau.ovh"
 	_askno "FQDN of principal domain (${anstmp})"
 	S_DOMAIN_FQDN=${_ANSWER:-${anstmp}} && _confset S_DOMAIN_FQDN "${S_DOMAIN_FQDN}" "${S_GLOBAL_CONF}"
 fi
 
-_echoT "----------  S_DOMAIN_NAME"
-
+_echoT "------------------  S_DOMAIN_NAME"
 if [ -z "${S_DOMAIN_NAME}" ]; then
 	anstmp="${S_DOMAIN_FQDN%%.*}"
 	_askno "Simple name of principal domain (${anstmp})"
 	S_DOMAIN_NAME=${_ANSWER:-${anstmp}} && _confset S_DOMAIN_NAME "${S_DOMAIN_NAME}" "${S_GLOBAL_CONF}"
 fi
 
-_echoT "----------  S_DOMAIN_EMAIL_ADMIN"
-
+_echoT "------------------  S_DOMAIN_EMAIL_ADMIN"
 if [ -z "${S_DOMAIN_EMAIL_ADMIN}" ]; then
 	anstmp="admin@${S_DOMAIN_FQDN}"
 	_askno "Administration email of principal domain (${anstmp})"
 	S_DOMAIN_EMAIL_ADMIN="${_ANSWER:-${anstmp}}" && _confset S_DOMAIN_EMAIL_ADMIN "${S_DOMAIN_EMAIL_ADMIN}" "${S_GLOBAL_CONF}"
 fi
 
-_echoT "----------  S_DOMAIN_EMAIL_TECH"
-
+_echoT "------------------  S_DOMAIN_EMAIL_TECH"
 if [ -z "${S_DOMAIN_EMAIL_TECH}" ]; then
 	anstmp="tech@${S_DOMAIN_FQDN}"
 	_askno "Technical email of principal domain (${anstmp})"
@@ -270,8 +240,7 @@ fi
 
 ########################  USERS
 
-_echoT "----------  S_IPS_ADMIN"
-
+_echoT "------------------  S_IPS_ADMIN"
 if [ -z "${S_IPS_ADMIN}" ]; then
 	#anstmp="92.154.29.60 129.20.228.3 129.20.228.19 129.20.228.20 129.20.228.21"
 	anstmp="92.154.29.60 129.20.228.1/27"
@@ -279,8 +248,7 @@ if [ -z "${S_IPS_ADMIN}" ]; then
 	S_IPS_ADMIN=${_ANSWER:-${anstmp}} && _confset S_IPS_ADMIN "${S_IPS_ADMIN}" "${S_GLOBAL_CONF}"
 fi
 
-_echoT "----------  S_IPS_DEV"
-
+_echoT "------------------  S_IPS_DEV"
 if [ -z "${S_IPS_DEV}" ]; then
 	#anstmp="92.154.29.60 129.20.228.3 129.20.228.19 129.20.228.20 129.20.228.21"
 	anstmp="92.154.29.60 129.20.228.1/27"
@@ -288,19 +256,16 @@ if [ -z "${S_IPS_DEV}" ]; then
 	S_IPS_DEV=${_ANSWER:-${anstmp}} && _confset S_IPS_DEV "${S_IPS_DEV}" "${S_GLOBAL_CONF}"
 fi
 
-
 ########################  RSYSLOG
 
-_echoT "----------  S_RSYSLOG_PTC"
-
+_echoT "------------------  S_RSYSLOG_PTC"
 if [ -z "${S_RSYSLOG_PTC}" ]; then
 	anstmp="udp"
 	_menu "Select the protocol to use for rsyslog centralisation (${anstmp})" udp tcp
 	S_RSYSLOG_PTC=$_ANSWER && _confset S_RSYSLOG_PTC "${S_RSYSLOG_PTC}" "${S_GLOBAL_CONF}"
 fi
 
-_echoT "----------  S_RSYSLOG_PORT"
-
+_echoT "------------------  S_RSYSLOG_PORT"
 if [ -z "${S_RSYSLOG_PORT}" ]; then
 	anstmp="514"
 	_askno "Port to use for rsyslog (${anstmp})"
@@ -309,8 +274,7 @@ fi
 
 ########################  HAPROXY
 
-_echoT "----------  S_HAPROXY_STATS_PORTS"
-
+_echoT "------------------  S_HAPROXY_STATS_PORTS"
 if [ -z "${S_HAPROXY_STATS_PORTS}" ]; then
 	anstmp="1777 1778"
 	_askno "ports for haproxy statistics (${anstmp})"
@@ -319,8 +283,7 @@ fi
 
 ########################  LXD
 
-_echoT "----------  S_LXD_PORT"
-
+_echoT "------------------  S_LXD_PORT"
 if [ -z "${S_LXD_PORT}" ]; then
 	anstmp="8443"
 	_askno "port for remote lxd acces (${anstmp})"
@@ -329,35 +292,30 @@ fi
 
 ########################  RSPAMD
 
-_echoT "----------  S_RSPAMD_PORT[proxy]"
-
+_echoT "------------------  S_RSPAMD_PORT[proxy]"
 if [ -z "${S_RSPAMD_PORT[proxy]}" ]; then
 	anstmp="11332"
 	_askno "Port number' for RSPAMD proxy, normal and controller (${anstmp})"
 	S_RSPAMD_PORT[proxy]=${_ANSWER:-${anstmp}} && _confset_array "S_RSPAMD_PORT" "proxy" "${S_RSPAMD_PORT[proxy]}" "${S_GLOBAL_CONF}"
 fi
 
-_echoT "----------  S_RSPAMD_PORT[normal]"
-
+_echoT "------------------  S_RSPAMD_PORT[normal]"
 if [ -z "${S_RSPAMD_PORT[normal]}" ]; then
 	anstmp="11333"
 	_askno "Port number' for RSPAMD normal (${anstmp})"
 	S_RSPAMD_PORT[normal]=${_ANSWER:-${anstmp}} && _confset_array "S_RSPAMD_PORT" "normal" "${S_RSPAMD_PORT[normal]}" "${S_GLOBAL_CONF}"
 fi
 
-_echoT "----------  S_RSPAMD_PORT[controller]"
-
+_echoT "------------------  S_RSPAMD_PORT[controller]"
 if [ -z "${S_RSPAMD_PORT[controller]}" ]; then
 	anstmp="11334"
 	_askno "Port number' for RSPAMD controller (${anstmp})"
 	S_RSPAMD_PORT[controller]=${_ANSWER:-${anstmp}} && _confset_array "S_RSPAMD_PORT" "controller" "${S_RSPAMD_PORT[controller]}" "${S_GLOBAL_CONF}"
 fi
 
-
 ########################  CACHE
 
-_echoT "----------  S_CACHE_PORT"
-
+_echoT "------------------  S_CACHE_PORT"
 if [ -z "${S_CACHE_PORT}" ]; then
 	anstmp="6379"
 	_askno "port for redis connection (${anstmp})"
@@ -366,62 +324,54 @@ fi
 
 ########################  DB
 
-_echoT "----------  S_DB_MARIA_PORT"
-
+_echoT "------------------  S_DB_MARIA_PORT"
 if [ -z "${S_DB_MARIA_PORT}" ]; then
 	anstmp="3306"
 	_askno "connections port for mariadb (${anstmp})"
 	S_DB_MARIA_PORT=${_ANSWER:-${anstmp}} && _confset S_DB_MARIA_PORT "${S_DB_MARIA_PORT}" "${S_GLOBAL_CONF}"
 fi
 
-_echoT "----------  S_DB_PGSQL_PORT"
-
+_echoT "------------------  S_DB_PGSQL_PORT"
 if [ -z "${S_DB_PGSQL_PORT}" ]; then
 	anstmp="5432"
 	_askno "connections ports for postgresql (${anstmp})"
 	S_DB_PGSQL_PORT=${_ANSWER:-${anstmp}} && _confset S_DB_PGSQL_PORT "${S_DB_PGSQL_PORT}" "${S_GLOBAL_CONF}"
 fi
 
-
 ########################  PATHS
 
 paths="${S_PATH_SAVE} ${S_PATH_BACKUP} ${S_PATH_LOG} ${S_PATH_LOG_SERVER} ${S_PATH_LOG_INSTALL}"
-_echoT "----------  create ${paths}"
-
+_echoT "------------------  create ${paths}"
 for path in ${paths}; do
-	[ -d ${path} ] || _evalqr mkdir -p ${path}
-	[ ${USER} != root ] && _evalqr chown :1000 ${path} && _evalqr chmod g+rw ${path}
+	[ -d ${path} ] || _evalrq mkdir -p ${path}
+	[ ${USER} != root ] && _evalrq chown :1000 ${path} && _evalrq chmod g+rw ${path}
 done
 
-_echoT "----------  create save paths for cluster"
-
+_echoT "------------------  create save paths for cluster"
 servers_list=${!S_CLUSTER[*]}
 for host in ${servers_list/${HOSTNAME}/}; do
-	[ -d "${S_PATH_SAVE}/${host}" ] || _evalqr mkdir "${S_PATH_SAVE}/${host}"
+	[ -d "${S_PATH_SAVE}/${host}" ] || _evalrq mkdir "${S_PATH_SAVE}/${host}"
 done
 
 str="ovh home"
 if [[ " ${str} " = *" ${S_SERVER_TYPE} "* ]]; then
 
 	paths="${S_HOST_PATH} ${S_HOST_PATH_SP} ${S_HOST_PATH_SHARE} ${S_HOST_PATH_LOG} ${S_HOST_PATH_SAVE}"
-	_echoT "----------  create ${paths}"
-
+	_echoT "------------------  create ${paths}"
 	for path in ${paths}; do
-		[ -d "${path}" ] || _evalqr mkdir -p "${path}"
+		[ -d "${path}" ] || _evalrq mkdir -p "${path}"
 	done
 fi
 
 str="docker kvm lxd"
 if [[ " ${str} " = *" ${S_SERVER_TYPE} "* ]]; then
 
-	_echoT "----------  create shared paths for VMS"
-
+	_echoT "------------------  create shared paths for VMS"
 	paths="${S_VM_PATH_SHARE} ${S_VM_PATH_SAVE} ${S_VM_PATH_BACKUP}"
 	for path in ${paths}; do
-		[ -d "${path}" ] || _evalqr mkdir -p "${path}"
+		[ -d "${path}" ] || _evalrq mkdir -p "${path}"
 	done
 fi
-
 
 ########################  END
 
