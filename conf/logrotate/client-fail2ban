@@ -1,0 +1,13 @@
+S_PATH_LOG/fail2ban/*.emerg
+S_PATH_LOG/fail2ban/*.err
+S_PATH_LOG/fail2ban/*.warning
+S_PATH_LOG/fail2ban/*.notice
+S_PATH_LOG/fail2ban/*.info {
+	daily
+	rotate 14
+	missingok
+	compress
+	delaycompress
+	notifempty
+    create 640 root adm
+}
