@@ -1,0 +1,11 @@
+# global configuration to override fail2ban.conf
+
+[DEFAULT]
+ignoreip = IPS_IGNORED
+bantime  = 60m
+findtime  = 10m
+maxretry = 5
+
+# mail
+destemail = S_DOMAIN_EMAIL_TECH
+sender    = fail2ban@S_DOMAIN_FQDN
