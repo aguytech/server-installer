@@ -1,0 +1,19 @@
+whiteb="\e[1;1m"; redb="\e[1;31m"; greenb="\e[1;32m"; blueb="\e[1;34m"; magentab="\e[1;35m";cclear="\e[0;m"
+
+echo -e "${whiteb}stop tuleap && http${cclear}"
+/etc/init.d/tuleap stop
+service httpd stop
+
+echo -e "${whiteb}upgrade packages${cclear}"
+# yum update tuleap\*
+yum update
+
+echo -e "${whiteb}apply upgrade for tuleap${cclear}"
+/usr/lib/forgeupgrade/bin/forgeupgrade --config=/etc/tuleap/forgeupgrade/config.ini update
+
+echo -e "${whiteb}clean all${cclear}"
+yum -y clean all
+
+echo -e "${whiteb}stop tuleap && http${cclear}"
+service httpd restart
+service tuleap start
