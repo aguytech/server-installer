@@ -19,17 +19,27 @@ path_install_bash_completion=${S_PATH_INSTALL_CONF}/bash-completion
 
 file_rsyslog_cron=${S_PATH_INSTALL_CONF}/rsyslog/cron.conf
 file_rsyslog_client_auth=${S_PATH_INSTALL_CONF}/rsyslog/client-auth.conf
-file_logrotate_server=${S_PATH_INSTALL_CONF}/logrotate/host-server
+file_logrotate_server=${S_PATH_INSTALL_CONF}/logrotate/server
+
 file_vim=${S_PATH_SCRIPT_CONF}/.vimrc
 file_tmux=${S_PATH_SCRIPT_CONF}/.tmux.conf
 
-_echoT "----------  required files"
-_require ${file_env} ${file_bash_aliases} ${file_bash_functions} ${file_rsyslog_cron} ${file_rsyslog_client_auth} ${file_logrotate_server} ${file_vim} ${file_tmux}
-
+_echoT "------------------  required files"
+_require ${file_env} ${file_bash_aliases} ${file_bash_functions}
+_require ${file_rsyslog_cron} ${file_rsyslog_client_auth} ${file_logrotate_server}
+_require ${file_vim} ${file_tmux}
+_requirep ${path_install_bash_completion}
 
 ########################  DATA
 
-_echoT "----------  data sysctl.conf"
+if [ "${S_STORAGE_DRIVER}" = zfs ]; then
+	_echoT "------------------  data zfs"
+	anstmp="root"
+	_askno "Give the name of zfs root for device ${S_STORAGE_DEVICE} (${anstmp})"
+	_ZFS_ROOT=${_ANSWER:-$anstmp} && _confset _ZFS_ROOT "${_ZFS_ROOT}"
+fi
+
+_echoT "------------------  data sysctl.conf"
 
 # host
 [ -z ${_SOMAXCONN+x} ] && anstmp="4096" && _askno "Set $(sysctl net.core.somaxconn) - (${anstmp})" && _SOMAXCONN="${_ANSWER:-$anstmp}" && _confset _SOMAXCONN "${_SOMAXCONN}"
@@ -47,22 +57,11 @@ _echoT "----------  data sysctl.conf"
 # sysctl net.ipv4.tcp_max_syn_backlog net.ipv4.tcp_max_tw_buckets
 # sysctl net.ipv4.tcp_fin_timeout net.ipv4.tcp_keepalive_time net.ipv4.tcp_keepalive_intvl net.ipv4.tcp_keepalive_probes
 
-
-if [ "${S_STORAGE_DRIVER}" = zfs ]; then
-
-	_echoT "----------  _ZFS_ROOT"
-	anstmp="root"
-	_askno "Give the name of zfs root for device ${S_STORAGE_DEVICE} (${anstmp})"
-	_ZFS_ROOT=${_ANSWER:-$anstmp} && _confset _ZFS_ROOT "${_ZFS_ROOT}"
-fi
-
-
 ########################  MAIN
 
-_echoT "----------  sysctl conf"
-
+_echoT "------------------  sysctl conf"
 file=/etc/sysctl.d/20-server.conf
-
+_keepcpts ${file}
 echo "# server configuration
 net.ipv4.ip_forward = 1
 net.core.somaxconn = ${_SOMAXCONN}
@@ -74,12 +73,13 @@ net.ipv4.tcp_keepalive_time = ${_KEEPALIVE_TIME}
 net.ipv4.tcp_keepalive_intvl = ${_KEEPALIVE_INTVL}
 net.ipv4.tcp_keepalive_probes = ${_KEEPALIVE_PROBES}" > ${file}
 
-_echoT "----------  sysctl restart"
-
+_echoT "------------------  sysctl restart"
 _service restart systemd-sysctl
 
-_echoT "----------  root password change"
+_echoT "------------------ bs link"
+! [ -e /bs ] && sudo ln -s /usr/local/bs /bs
 
+_echoT "------------------  root password change"
 _askyn "Do you change the default root password"
 if [ "${_ANSWER}" = y ]; then
 	_ask "Please enter a root password"
@@ -88,116 +88,87 @@ ${_ANSWER}
 "
 fi
 
+_echoT "------------------  .bash_aliases"
+file=~/.bash_aliases
+[ -e ${file} ] && _eval rm ${file}
+_eval ln -s ${file_bash_aliases} ${file}
 
-_echoT "----------  .bashrc"
+_echoT "------------------  .bash_functions"
+file=~/.bash_functions
+[ -e ${file} ] && _eval rm ${file}
+_eval ln -s ${file_bash_functions} ${file}
+
+_echoT "------------------  bash-completion"
+_evalr "cp -a ${S_PATH_INSTALL_CONF}/bash-completion/* /usr/share/bash-completion/completions/"
+
+_echoT "------------------  .bashrc"
 
 file=~/.bashrc
 _keepcpts ${file}
-
-_eval "sed -i 's|^\(HISTSIZE\)=.*$|\1=2000|' ${file}"
-_eval "sed -i 's|^\(HISTFILESIZE\)=.*$|\1=10000|' ${file}"
+_eval "sed -i 's|^\(HISTSIZE\)=.*$|\1=4000|' ${file}"
+_eval "sed -i 's|^\(HISTFILESIZE\)=.*$|\1=20000|' ${file}"
 _eval "sed -i '/^#force_color_prompt/ s|^#||' ${file}"
 
-color_root="\033[01;31m"
 case "${S_SERVER_TYPE}" in
 	home)	color='\\[\\033[01;34m\\]' ;;
 	ovh)	color='\\[\\033[01;32m\\]' ;;
 	docker)	color='\\[\\033[01;33m\\]' ;;
 	kvm)	color='"\\[\\033[01;38;5;172m\\]' ;;
 	lxd)	color='\\[\\033[01;33m\\]' ;;
-	*)		color='\\[\\033[01;34m\\]'; color_root=$color ;;
+	*)		color='\\[\\033[01;34m\\]'; color_root=${color} ;;
 esac
-
+color_root="\033[01;31m"
 # PS1
 ps1='${debian_chroot:+($debian_chroot)}'${color}'\\h\\[\\033[00m\\]\\w\\[\\033[01;31m\\]\\$\\[\\033[00m\\]'
 # no root
 #ps1='${debian_chroot:+($debian_chroot)}\\[\\033[01;31m\\]\\u\\[\\033[00m\\]@\\[\\033[01;32m\\]\\h\\[\\033[00m\\]:\\w\\[\\033[01;31m\\]\\$\\[\\033[00m\\]'
-sed -i "\|if \[ \"\$color_prompt\" = yes \]|{n;s|=.*|='$ps1'|}" ${file}
+sed -i "\|if \[ \"\${color}_prompt\" = yes \]|{n;s|=.*|='$ps1'|}" ${file}
 
 # env
 grep -q "${file_env}" ${file} || echo "
-
 # source global variables
 [ -f ${file_env} ] && . ${file_env}
-
-# aliases
-[ -f ~/.bash_aliases ] && . ~/.bash_aliases
 
 # functions
 [ -f ~/.bash_functions ] && . ~/.bash_functions
 " >> ${file}
+# aliases
+grep -q '. ~/.bash_aliases' ${file} || echo "[ -f ~/.bash_aliases ] && . ~/.bash_aliases
+"  >> ${file}
 
 _source ${file}
 
-_echoT "----------  .bash_aliases"
-
-file=~/.bash_aliases
-[ -e ${file} ] || _evalq ln -s ${file_bash_aliases} ${file}
-
-# user
-if [ "${USER}" != root ]; then
-	file=${HOME}/.bash_aliases
-	[ -e ${file} ] || _evalq ln -s ${file_bash_aliases} ${file}
-fi
-
-_echoT "----------  .bash_functions"
-
-file=~/.bash_functions
-[ -e ${file} ] || _evalq ln -s ${file_bash_functions} ${file}
-
-# user
-if [ "${USER}" != root ]; then
-	file=${HOME}/.bash_functions
-	[ -e ${file} ] || _evalq ln -s ${file_bash_aliases} ${file}
-fi
-
-
-_echoT "----------  mariadb repos"
-
+_echoT "------------------  mariadb repos"
 #apt-key adv --recv-keys --keyserver hkp://keyserver.ubuntu.com:80 0xF1656F24C74CD1D8
 #apt-key adv --recv-keys --keyserver keyserver.ubuntu.com 0xF1656F24C74CD1D8
 apt-key adv --fetch-keys "https://mariadb.org/mariadb_release_signing_key.asc"
-
 file=/etc/apt/sources.list.d/mariadb.list
 echo "# MariaDB 10.6
 # http://downloads.mariadb.org/mariadb/repositories/
 deb [arch=amd64] http://mariadb.mirrors.ovh.net/MariaDB/repo/10.6/ubuntu ${S_RELEASE_NAME} main
 deb-src http://mariadb.mirrors.ovh.net/MariaDB/repo/10.6/ubuntu ${S_RELEASE_NAME} main" > "${file}"
 
-_echoT "----------  pgsql repos"
-
+_echoT "------------------  pgsql repos"
 file=/etc/apt/sources.list.d/pgdg.list
 echo "#https://www.postgresql.org/download/linux/ubuntu/
 deb http://apt.postgresql.org/pub/repos/apt/ ${S_RELEASE_NAME}-pgdg main" > "${file}"
-
 wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
-
 
 ########################  INSTALL
 
-_echoT "----------  upgrade"
-
+_echoT "------------------  upgrade"
 _eval "upgrade"
 
-
-_echoT "----------  install base"
-
+_echoT "------------------  install base"
 _eval "apt install -y bsdmainutils cron curl less logrotate"
-
 
 str=" ovh home "
 if [ "${str/ ${S_SERVER_TYPE} /}" != "${str}" ]; then
 
-	_echoT "----------  install tools"
-
-	_eval "apt-get install -y man openssh-server apt-utils net-tools rsync bash-completion htop iotop tree gnupg vim lnav multitail git" # acpid apt-file apt-utils dstat hdparm iputils-tracepath jwhois mlocate mtop p7zip p7zip-plugins netcat lsb-release pciutils rcconf sysstat wget telnet dirmngr mariadb-client postgresql-client
-
+	_echoT "------------------  install tools"
+	_eval "apt-get install -y man openssh-server apt-utils net-tools rsync bash-completion htop iotop tree gnupg vim lnav multitail git"
+	# acpid apt-file apt-utils dstat hdparm iputils-tracepath jwhois mlocate mtop p7zip p7zip-plugins netcat lsb-release pciutils rcconf sysstat wget telnet dirmngr mariadb-client postgresql-client
 fi
-
-
-_echoT "----------  bash-completion"
-_evalq cp -a "${path_install_bash_completion}"/* "/usr/share/bash-completion/completions/"
-
 
 if type vim >/dev/null 2>&1 ; then
     _echoT "------------------  links edit"
@@ -207,7 +178,6 @@ if type vim >/dev/null 2>&1 ; then
     done
 fi
 
-
 ########################  STORAGE
 
 str="ovh home"
@@ -215,63 +185,56 @@ if [[ " ${str} " = *" ${S_SERVER_TYPE} "* ]]; then
 
 	if [ "${S_STORAGE_DRIVER}" = zfs ]; then
 
-		_echoT "----------  zfs install"
+		_echoT "------------------  zfs install"
 		_eval apt install -y zfsutils-linux
 
 		path=/zroot
-		_echoT "----------  zfs zpool ${path}"
+		_echoT "------------------  zfs zpool ${path}"
 		[ -d ${path} ] && rm -fR ${path}
 		_evalq zpool create root ${S_STORAGE_DEVICE} -m ${path}
 
 		path=${S_PATH_SAVE}
-		_echoT "----------  zfs ${path}"
+		_echoT "------------------  zfs ${path}"
 		[ -d ${path} ] && rm -fR ${path}
 		_eval zfs create -o mountpoint=${path} -o compression=lz4 ${_ZFS_ROOT}${S_PATH_SAVE}
 
-
 		path=${S_HOST_PATH}
-		_echoT "----------  zfs ${path}"
+		_echoT "------------------  zfs ${path}"
 		[ -d ${path} ] && rm -fR ${path}
 		_eval zfs create -o mountpoint=${path} -o compression=lz4 ${_ZFS_ROOT}${S_HOST_PATH}
 
 		path=${S_HOST_PATH_SP}
-		_echoT "----------  zfs ${path}"
+		_echoT "------------------  zfs ${path}"
 		[ -d ${path} ] && rm -fR ${path}
 		_eval zfs create -o mountpoint=${path} -o compression=lz4 ${_ZFS_ROOT}${S_HOST_PATH_SP}
 
 		path=${S_HOST_PATH_SHARE}
-		_echoT "----------  zfs ${path}"
+		_echoT "------------------  zfs ${path}"
 		[ -d ${path} ] && rm -fR ${path}
 		_eval zfs create -o mountpoint=${path} -o compression=lz4 -o  acltype=posixacl ${_ZFS_ROOT}${S_HOST_PATH_SHARE}
 
 		path=${S_HOST_PATH_SAVE}
-		_echoT "----------  zfs ${path}"
+		_echoT "------------------  zfs ${path}"
 		[ -d ${path} ] && rm -fR ${path}
 		_eval zfs create -o mountpoint=${path} -o compression=lz4 ${_ZFS_ROOT}${S_HOST_PATH_SAVE}
 
-
-		_echoT "----------  zfs zpool list"
-
+		_echoT "------------------  zfs zpool list"
 		zpool list -v
 
-		_echoT "----------  zfs list"
-
+		_echoT "------------------  zfs list"
 		zfs list
 
 	elif [ "${S_STORAGE_DRIVER}" = btrfs ]; then
 
-		_echoT "----------  btrfs storage"
-
+		_echoT "------------------  btrfs storage"
 		path=${S_HOST_PATH}
 		_echoI "Create a btrfs subvolume: /lxd-${S_RELEASE_NAME} and mount it in ${path}"
 		_echo "Continue after that: " && read str
-
 		[ -d ${path} ] || _exite "Unable to find path: ${path}"
 
 		btrfs subvolume list .
 
-		_echoT "----------  btrfs paths"
-
+		_echoT "------------------  btrfs paths"
 		paths="${S_HOST_PATH_SP} ${S_HOST_PATH_SHARE} ${S_HOST_PATH_SAVE} ${S_HOST_PATH_LOG} "
 		for path in ${paths}; do
 			[ -d ${path} ] || _eval mkdir /vm/${path}
@@ -283,35 +246,29 @@ if [[ " ${str} " = *" ${S_SERVER_TYPE} "* ]]; then
 
 fi
 
-
 ########################  PATHS
 
 str=" ovh home "
 if [ "${str/ ${S_SERVER_TYPE} /}" != "${str}" ]; then
 
-	paths="${S_HOST_PATH} ${S_HOST_PATH_SHARE} ${S_HOST_PATH_LOG} ${S_HOST_PATH_SAVE}"
-	_echoT "----------  create ${paths}"
-
+	paths="${S_HOST_PATH} ${S_HOST_PATH_SP} ${S_HOST_PATH_SHARE} ${S_HOST_PATH_LOG} ${S_HOST_PATH_SAVE}"
+	_echoT "------------------  create ${paths}"
 	for path in ${paths}; do
 		[ -d "${path}" ] || _evalq mkdir -p "${path}"
 	done
 fi
 
-
 ########################  MAIL
 
-_echoT "----------  mail"
-
-_echoI "MAIL part ha	ve to be implemented"
-
+_echoT "------------------  mail"
+_echoI "MAIL part have to be implemented"
 
 ########################  CONF
 
 str=" ovh home "
 if [ "${str/ ${S_SERVER_TYPE} /}" != "${str}" ]; then
 
-	_echoT "----------  conf tmux"
-
+	_echoT "------------------  conf tmux"
 	file="${HOME}/.tmux.conf"
 	_keepmvts "${file}"
 	_eval ln -s "${file_tmux}" "${file}"
@@ -319,19 +276,16 @@ if [ "${str/ ${S_SERVER_TYPE} /}" != "${str}" ]; then
 	# colorscheme
 	_eval cp ${S_PATH_INSTALL_CONF}/vim/*.vim /usr/share/vim/vim*/colors/
 
-	_echoT "----------  conf vim"
-
+	_echoT "------------------  conf vim"
 	file="${HOME}/.vimrc"
 	_keepmvts "${file}"
 	_eval ln -s "${file_vim}" "${file}"
 
 	# colorscheme
 	_eval cp ${S_PATH_INSTALL_CONF}/vim/*.vim /usr/share/vim/vim*/colors/
-
 fi
 
-
-_echoT "----------  conf nano"
+_echoT "------------------  conf nano"
 
 for str in conf install; do
 	cp -a /usr/share/nano/sh.nanorc /usr/share/nano/${str}.nanorc
@@ -355,25 +309,16 @@ for opt in $opts; do
 	_eval "sed -i 's|^.*\(set ${opt}.*\)$|\1|' ${file}"
 done
 
-
-_echoT "----------  cron conf"
-
-file=/etc/crontab
-_keepcpts ${file}
-str="MAILTO=${S_DOMAIN_EMAIL_TECH}"
-grep -q '^MAILTO' "${file}" || _eval "sed -i '/^PATH=.*/ a ${str}' ${file}"
-
-
 ########################  NTP
 
 str=" ovh "
 if [ "${str/ "${S_SERVER_TYPE}" /}" != "${str}" ]; then
 
-	_echoT "----------  install ntp"
+	_echoT "------------------  install ntp"
 
 	_eval "apt-get install -y ntp"
 
-	_echoT "----------  conf ntp"
+	_echoT "------------------  conf ntp"
 
 	file=/etc/ntp.conf
 	_keepcpts "${file}"
@@ -382,34 +327,18 @@ if [ "${str/ "${S_SERVER_TYPE}" /}" != "${str}" ]; then
 	_service start ntp
 fi
 
+########################  CRON
 
-########################  CERTIFICATE
+_echoT "------------------  cron conf"
 
-#_echoT "----------  certbot install"
-#_eval "apt install -y certbot"
-#_echoT "----------  generate certificates for mail. imap. smtp. "
-#_eval "certbot certonly --standalone --rsa-key-size 4096 -d mail.${S_DOMAIN_FQDN} -d imap.${S_DOMAIN_FQDN} -d smtp.${S_DOMAIN_FQDN}"
-
-
-_echoT "----------  openssl conf multi-domains"
-
-_eval "apt install -y openssl"
-
-file='/etc/ssl/openssl.cnf'
-_keepcpts "${file}"
-
-sed -i "/countryName_default/ s|=.*|= FR|" "${file}"
-sed -i "/stateOrProvinceName_default/ s|=.*|= Britain|" "${file}"
-sed -i "/0\.organizationName_default/ s|=.*|= ${S_DOMAIN_NAME}|" "${file}"
-sed -i "/#\?organizationalUnitName_default/ {s|^#||;s|=.*|= ${S_DOMAIN_NAME}|}" "${file}"
-sed -i "/localityName\s*= Locality Name/ a localityName_default\t\t= Nantes" "${file}"
-sed -i "/commonName\s*= Common Name/ a commonName_default\t\t= ${S_DOMAIN_FQDN}" "${file}"
-sed -i "/emailAddress\s*= Email Address/ a emailAddress_default\t\t= ${S_DOMAIN_EMAIL_ADMIN}" "${file}"
-
+file=/etc/crontab
+_keepcpts ${file}
+str="MAILTO=${S_DOMAIN_EMAIL_TECH}"
+grep -q '^MAILTO' "${file}" || _eval "sed -i '/^PATH=.*/ a ${str}' ${file}"
 
 ########################  RSYSLOG
 
-_echoT "----------  rsyslog conf"
+_echoT "------------------  rsyslog conf"
 
 file="/etc/rsyslog.conf"
 _keepcpts "${file}"
@@ -424,105 +353,48 @@ elif [ "${S_RSYSLOG_PTC}" = tcp ]; then
 	_eval "sed -i 's|^#\?\(input(type=\"imtcp\"\).*$|\1 port=\"${S_RSYSLOG_PORT}\")|' ${file}"
 fi
 
+_echoT "------------------  rsyslog restart"
+_service restart rsyslog
 
-_echoT "----------  rsyslog cron"
+_echoT "------------------  rsyslog conf"
+sed -i '/^auth.*/ s|^|#|' /etc/rsyslog.d/50-default.conf
+sed -i '/^cron.*/ s|^|#|' /etc/rsyslog.d/50-default.conf
 
-file=/etc/rsyslog.d/30-${file_rsyslog_cron##*/}
+_echoT "------------------  rsyslog cron"
+file=/etc/rsyslog.d/70-${file_rsyslog_cron##*/}
 _evalq cp -a ${file_rsyslog_cron} ${file}
 _var_replace ${file} rsyslog
 
-
-_echoT "----------  rsyslog client-auth"
-
-file=/etc/rsyslog.d/32-${file_rsyslog_client_auth##*/}
+_echoT "------------------  rsyslog client-auth"
+file=/etc/rsyslog.d/72-${file_rsyslog_client_auth##*/}
 _evalq cp -a ${file_rsyslog_client_auth} ${file}
 _var_replace ${file} rsyslog
 
-
 #TODO add rsyslog mail
 <<KEEP
-_echoT "----------  rsyslog mail conf"
-
-file="/etc/rsyslog.d/50-default.conf"
+_echoT "------------------  rsyslog client-mail conf"
+file="/etc/rsyslog.d/70-default.conf"
 # stop mail logs for syslog
 ! grep -q "mail\.\*\s*stop" "${file}" && sed -i '/^mail\.err/ amail.*              stop' "${file}"
 KEEP
 
-
-_echoT "----------  rsyslog restart"
-
-_service restart rsyslog
-
-
 ########################  LOGROTATE
 
-_echoT "----------  logrotate global"
-
+_echoT "------------------  logrotate global"
 file=/etc/logrotate.conf
 _eval  "sed -i '/^#dateext/ s|^#||' ${file}"
 
-_echoT "----------  logrotate server"
-
+_echoT "------------------  logrotate server"
 file=/etc/logrotate.d/${file_logrotate_server##*/}
 _eval cp -a ${file_logrotate_server} ${file}
 _var_replace ${file} logrotate
 
-
 ########################  CLEAN
 
-_echoT "----------  clean"
-
-_evalq "apt-get -y autoremove; apt-get clean; apt-get autoclean"
-
+_echoT "------------------  upgrade"
+_evalq "upgrade"
 
 ########################  END
 
 _echoT "===================== ${_PART} end"
 _partadd ${_PART} ${S_FILE_INSTALL_DONE}
-
-
-<<KEEP
-_echoT "----------  logrotate rsyslog"
-
-file=/etc/logrotate.d/rsyslog
-_keepcpts ${file}
- [ -f "${file}" ] && _eval "sed -i 's/\(\t\+rotate\) 4/\1 5/' ${file}"
-
- rotate weekly to daily
-_eval "sed -i '\|${S_PATH_LOG}/auth.log|d' ${file}"
-_eval "sed -i '1i${S_PATH_LOG}/auth.log' ${file}"
-_eval "sed -i '\|${S_PATH_LOG}/cron.log|d' ${file}"
-_eval "sed -i '1i${S_PATH_LOG}/cron.log' ${file}"
-KEEP
-
-<<KEEP
-
-_echoT "----------  pam remove log"
-
-! grep -q 'pam_succeed_if.so' /etc/pam.d/common-session-noninteractive && sed -i "s/^\(session[[:blank:]]required[[:blank:]]*pam_unix\.so.*\)$/session\t\t\t[success=1 default=ignore] pam_succeed_if.so service in cron quiet use_uid\n\1/" /etc/pam.d/common-session-noninteractive
-
-_service restart cron
-
-
-	_echoT "----------  mtop install"
-
-	_eval "apt-get install -y libncurses5-dev make gcc libmariadbclient-dev"
-	_eval "perl -MCPAN -e 'install Curses'"
-	_eval "perl -MCPAN -e 'install Getopt::Long'"
-	_eval "perl -MCPAN -e 'install Net::Domain'"
-	_eval "perl -MCPAN -e 'install DBI'"
-	_eval "perl -MCPAN -e 'install DBD::mysql'"
-
-	version='0.6.6'
-	_askno "Give the version of mtop to download from 'http://downloads.sourceforge.net/project/mtop/mtop' ($version) "
-	version=${_ANSWER:-$version}
-	cd /tmp
-	wget -q "http://downloads.sourceforge.net/project/mtop/mtop/v$version/mtop-$version.tar.gz"
-	tar xzf "mtop-$version.tar.gz"
-	cd "mtop-$version"
-	_eval "perl Makefile.PL"
-	_eval "make"
-	_eval "make install"
-
-KEEP
-

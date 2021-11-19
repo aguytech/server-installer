@@ -4,16 +4,16 @@
 
 _echoT "\n==========================================  ${S_RELEASE}-${_PART}"
 
-grep -q "^# ${_PART#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART}" >> ${S_FILE_INSTALL_CONF}
+! [ -f "${S_FILE_INSTALL_CONF}" ] || ! grep -q "^# ${_PART#++}$" ${S_FILE_INSTALL_CONF} && echo  "# ${_PART}" >> ${S_FILE_INSTALL_CONF}
 
 ########################  MAIN
 
-_echoT "----------  timezone"
+_echoT "------------------  timezone"
 [ -e /etc/localtime ] && rm /etc/localtime
 ln -s /usr/share/zoneinfo/posix/Europe/Paris /etc/localtime
 
 
-_echoT "----------  grub"
+_echoT "------------------  grub"
 file=/etc/default/grub
 # grub timeout
 sed -i "/^GRUB_TIMEOUT=/ s|=.*|=0|" "${file}"
@@ -23,27 +23,25 @@ update-grub
 
 ###################  CLUSTER
 
-_echoT "----------  hosts S_CLUSTER"
+_echoT "------------------  hosts S_CLUSTER"
 
 file=/etc/hosts
 _keepcpts "${file}"
 
 _echo "Here is the servers list actually declared :\n${!S_CLUSTER[*]}"
 _askyn "y to continue or modify file:${S_GLOBAL_CONF}"
+_source ${S_GLOBAL_CONF}
 
-! grep -q "# ${S_DOMAIN_NAME} cluster" "${file}" && echo -e "# ${S_DOMAIN_NAME} cluster" >> "${file}"
-for host in ${!S_CLUSTER[*]}; do
-	eval ${S_CLUSTER[$host]}
-	[ "${s_ip}" ] && sed -i "/${s_ip}/d" ${file}
-	! grep -q "^${s_ip}" ${file} && echo -e "${s_ip}\t${host}\t${s_name}" >> ${file}
+! sudo grep -q "# ${S_DOMAIN_NAME} cluster" ${file} && sudo sh -c "echo '\n# ${S_DOMAIN_NAME} cluster' >> ${file}"
+for host in ${servers_list}; do
+	eval ${S_CLUSTER[${host}]}
+	[ "${s_ip}" ] && sudo sed -i "/${s_ip}/d" ${file}
+	! grep -q "${host}" ${file} && [ "${s_ip}" ] && sudo sh -c "echo '${s_ip}\t${host}\t${s_name}' >> ${file}"
 done
 _eval "sed -i 's|^\(${_IPTHIS}.*\)$|#\1|' ${file}"
 
-
-file=/etc/hosts
 if ! grep -q '^# services' ${file}; then
-	_echoT "----------  hosts S_SERVICE_BITS"
-
+	_echoT "------------------  hosts S_SERVICE_BITS"
 	_keepcpts $file
 	echo -e "\n# services" >> ${file}
 	for str in ${!S_SERVICE_BITS[*]}; do
@@ -51,20 +49,7 @@ if ! grep -q '^# services' ${file}; then
 	done
 fi
 
-
 ########################  END
 
 _echoT "===================== ${_PART} end"
 _partadd ${_PART} ${S_FILE_INSTALL_DONE}
-
-<<KEEP
-color_root="\\e[1;91m"
-case "${S_SERVER_TYPE}" in
-	home)	color="\\e[1;34m" ;;
-	ovh)	color="\\e[1;32m" ;;
-	docker)	color="\\e[1;33m" ;;
-	kvm)	color="\\e[1;38;5;172m" ;;
-	lxd)	color="\\e[1;33m" ;;
-	*)		color="\\e[1;34m"; color_root=$color ;;
-esac
-KEEP

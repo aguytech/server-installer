@@ -5,7 +5,7 @@
 <<MANUALLY
 # HOME
 server=node1; host=ns388803; ssh_port=2002 # server=node2; host=ns364584; ssh_port=2002
-sed -i "/${server}/d" ~/.ssh/known_hosts && sed -i "/${host}/d" ~/.ssh/known_hosts # rm ~/.ssh/known_hosts
+for i in  ${server} ${host}; do sed -i "/${i}/d" ~/.ssh/known_hosts; done
 
 cmds="sudo apt install rsync
 sudo  cp -a /root/.ssh/authorized_keys /root/.ssh/authorized_keys.$(date +%s)
@@ -15,16 +15,15 @@ sudo sed -i 's|^#\?\(Port\) .*$|\1 ${ssh_port}|' /etc/ssh/sshd_config
 echo '-------------- restart ssh' && sudo systemctl restart ssh.service"
 ssh ubuntu@${server} -p22 "${cmds}"
 
-rsync -e "ssh -p${ssh_port}" /home/shared/dev/bs/ root@${server}:/usr/local/bs/ --exclude=/.git* --delete -rltv && rsync -e "ssh -p${ssh_port}" /home/shared/dev/install/ root@${server}:/usr/local/install/ --exclude=/.git* --delete -rltv
-
-# HOST
+rsync -e "ssh -p${ssh_port}" /home/shared/dev/bs/ root@${server}:/usr/local/bs/ --exclude=.git* --delete -rltv && rsync -e "ssh -p${ssh_port}" /home/shared/dev/install/ root@${server}:/usr/local/install/ --exclude=.git* --delete -rltv
 ssh root@${server} -p${ssh_port}
+# HOST
 
-blkid|grep -v squashfs
+lshw -class disk -short
+parted /dev/sda print free
 fdisk /dev/sda # m p F n w | extend with lxd:+50G / save:available
-blkid|grep -v squashfs
 
-apt update && apt -y dist-upgrade
+#apt update && apt -y dist-upgrade
 /usr/local/install/ubuntu.install # sed -i 's|ambau|ggj|g' /etc/server/server.conf && grep ggj /etc/server/server.conf
 MANUALLY
 
@@ -40,7 +39,6 @@ S_GLOBAL_FUNCTIONS=${S_GLOBAL_FUNCTIONS:-/usr/local/bs/inc-functions.sh}
 
 [ -f "${S_FILE_INSTALL_CONF}" ] && . "${S_FILE_INSTALL_CONF}"
 
-
 ########################  MANDATORY
 
 # common + ssh
@@ -48,7 +46,6 @@ parts="init common ssh"
 for _PART in $parts; do
 	! _parthave "${_PART}" "${S_FILE_INSTALL_DONE}" && _source "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
 done
-
 
 ########################  MENU
 
@@ -76,6 +73,9 @@ while [ "${_PART}" != "quit" ]; do
 			iptables) # ovh
 				_source "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
 				;;
+			fail2ban) # ovh home
+				_source "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
+				;;
 			lxd) # ovh home
 				_source "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
 				;;
@@ -89,22 +89,6 @@ while [ "${_PART}" != "quit" ]; do
 done
 
 _exit
-
-<<KEEP
-# wipe free disk space
-
-file=/tmp/wipe.$(date +%s)
-paths="$(df -l | grep ^/dev/ | sed 's|.* \([^ ]\+\)$|\1|' | sed '/save/d')"
-#paths='/ /var'
-echo '#!/bin/bash' > "$file"
-for path in $paths
-do
-	echo "# $path" >> "$file"
-	echo "(echo \"start $path - pid $! - \$(date +\"%T - %N\")\"; cd $path; dd if=/dev/zero of=free2zero; rm free2zero; echo \"end $path \$(date +\"%T - %N\")\"; exit) &" >> "$file"
-done
-chmod +x "$file"
-sh "$file"
-KEEP
 
 <<KEEP
 # rescue LVM

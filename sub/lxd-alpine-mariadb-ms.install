@@ -9,8 +9,8 @@ grep -q "^# ${_PART#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART}" >> ${S_FI
 ########################  REQUIRED
 
 _echoT "------------------ required vm"
-imgs_all_mdb=`lxc list -f csv -c n| grep '^mdb-'|xargs`
-[ "${imgs_all_mdb}" ] || _exite "unable to find mariadb container"
+cts_all_mdb=`lxc list -f csv -c n| grep '^mdb-'|xargs`
+[ "${cts_all_mdb}" ] || _exite "unable to find mariadb container"
 
 
 file_master="${S_PATH_INSTALL_CONF}/mariadb/mariadb-master.cnf"
@@ -23,11 +23,10 @@ _askyn "To install a master/slave mariadb cluster, you need to have 2 available 
 
 ########################  DATA
 
-_echoT "----------  data"
+_echoT "------------------  data"
 
 # ct_master
-cts_maria=" ${imgs_all_mdb} "
-[ "${cts_maria}" ] && _menu "Select one available mariadb container for MASTER" ${cts_maria} || _exite "Unable to find container maria-* to use"
+_menu "Select one available mariadb container for MASTER " ${cts_all_mdb}
 ct_master=${_ANSWER}
 
 # ct_slave
@@ -52,12 +51,24 @@ ok=false; while ! ${ok}; do
 done
 pwd_slave=${_ANSWER}
 
-anstmp=256M && _askno "max_binlog_size (${anstmp})" && _MDB_MAX_BIN_SIZE="${_ANSWER:-$anstmp}"
-anstmp=30 && _askno "expire_logs_days (${anstmp})" && _MDB_EXPIRE_LOGS_DAYS="${_ANSWER:-$anstmp}"
-anstmp=1 && _askno "the server id for master (${anstmp})" && _MDB_MASTER_ID="${_ANSWER:-$anstmp}"
-anstmp=100 && _askno "the server id for slave (${anstmp})" && _MDB_SLAVE_ID="${_ANSWER:-$anstmp}"
-anstmp="information_schema, mysql, performance_schema" && _askno "databases name to IGNORE for replication: all except these (${anstmp})" && _MDB_REPLICATE_EXCEPT="${_ANSWER:-$anstmp}"
-anstmp="" && _askno "databases name to USE for replication: only these, not others (${anstmp})" && _MDB_REPLICATE_ONLY="${_ANSWER:-$anstmp}"
+anstmp=256M && _askno "max_binlog_size (${anstmp})"
+_MDB_MAX_BIN_SIZE="${_ANSWER:-$anstmp}"
+
+anstmp=30 && _askno "expire_logs_days (${anstmp})"
+_MDB_EXPIRE_LOGS_DAYS="${_ANSWER:-$anstmp}"
+
+anstmp=1 && _askno "the server id for master (${anstmp})"
+_MDB_MASTER_ID="${_ANSWER:-$anstmp}"
+
+anstmp=100 && _askno "the server id for slave (${anstmp})"
+_MDB_SLAVE_ID="${_ANSWER:-$anstmp}"
+
+anstmp="information_schema, mysql, performance_schema"
+_askno "databases name to IGNORE for replication: all except these (${anstmp})"
+_MDB_REPLICATE_EXCEPT="${_ANSWER:-$anstmp}"
+
+anstmp="" && _askno "databases name to USE for replication: only these, not others (${anstmp})"
+_MDB_REPLICATE_ONLY="${_ANSWER:-$anstmp}"
 
 pwd_replic=`_pwd`
 
@@ -67,50 +78,50 @@ pwd_replic=`_pwd`
 ct_name=${ct_master}
 
 #  METADATA
-_echoT "----------  metadata"
+_echoT "------------------  metadata"
 _lxc_meta_add ${ct_name} apps mariadb-master
 
 if lxc list -f csv -c n status=Stopped | grep -q ^${ct_name}$; then
-	_echoT "----------  ${ct_name} start"
+	_echoT "------------------  ${ct_name} start"
 	_eval lxc start ${ct_name}
 fi
 
-_echoT "----------  ${ct_name} conf"
+_echoT "------------------  ${ct_name} conf"
 file=${_MDB_PATH_CONF}/${file_master##*/}
 _lxc_exec ${ct_name} "[ -f ${file} ] && cp -a ${file} ${file}.${_SDATE}"
-_eval lxc file push ${file_master} ${ct_name}${file}
+_eval lxc file push -q ${file_master} ${ct_name}${file}
 
 [ "${_MDB_REPLICATE_EXCEPT}" ] && _lxc_exec ${ct_name} "sed -i '/_MDB_REPLICATE_EXCEPT/ s|^#||' ${file}"
 [ "${_MDB_REPLICATE_ONLY}" ] && _lxc_exec ${ct_name} "sed -i '/_MDB_REPLICATE_ONLY/ s|^#||' ${file}"
 _lxc_var_replace ${ct_name} ${file} mariadb
 
-_echoT "----------  ${ct_name} restart"
+_echoT "------------------  ${ct_name} restart"
 _lxc_exec ${ct_name} "rc-service ${_MDB_SERVICE} restart"
 
-_echoT "----------  ${ct_name} replic"
+_echoT "------------------  ${ct_name} replic"
 cmd="CREATE OR REPLACE USER 'replic'@'${ct_slave}.lxd' IDENTIFIED BY '${pwd_replic}';
 GRANT REPLICATION SLAVE ON *.* TO 'replic'@'${ct_slave}.lxd';"
 _eval "mysql -h${ct_name} -uroothost -p${pwd_master} -e \"${cmd}\""
 _eval "mysql -s -h${ct_name} -uroothost -p${pwd_master} -e \"SELECT user,host FROM mysql.user WHERE user like 'replic';\""
 _eval "mysql -h${ct_name} -uroothost -p${pwd_master} -e \"FLUSH PRIVILEGES;\""
 
-_echoT "----------  ${ct_name} passwd"
+_echoT "------------------  ${ct_name} passwd"
 file=${S_PATH_CONF}/mariadb
 strpass="replic @ ${ct_slave}.lxd - ${pwd_replic}"
 cmd="grep -q ^replic ${file} && sed -i '/^replic/c ${strpass}'  ${file} || sed -i '\$a ${strpass}' ${file}"
 _lxc_exec ${ct_name} "${cmd}"
 
-_echoT "----------  ${ct_name} lock"
+_echoT "------------------  ${ct_name} lock"
 _eval "mysql -h${ct_name} -uroothost -p${pwd_master} -e \"FLUSH TABLES WITH READ LOCK;\""
 _eval "mysql -s -h${ct_name} -uroothost -p${pwd_master} -e \"SHOW MASTER STATUS;\""
-_echoT "----------  ${ct_name} pos"
+_echoT "------------------  ${ct_name} pos"
 master_file=`mysql -s -h${ct_name} -uroothost -p${pwd_master} -e "SHOW MASTER STATUS;"|tail -n1|cut -f1`
 master_pos=`mysql -s -h${ct_name} -uroothost -p${pwd_master} -e "SHOW MASTER STATUS;"|tail -n1|cut -f2`
 
-_echoT "----------  ${ct_name} backup"
+_echoT "------------------  ${ct_name} backup"
 _askno "Backup data from master & valid to continue"
 
-_echoT "----------  ${ct_name} unlock"
+_echoT "------------------  ${ct_name} unlock"
 _eval "mysql -h${ct_name} -uroothost -p${pwd_master} -e \"UNLOCK TABLES;\""
 
 
@@ -119,30 +130,30 @@ _eval "mysql -h${ct_name} -uroothost -p${pwd_master} -e \"UNLOCK TABLES;\""
 ct_name=${ct_slave}
 
 #  METADATA
-_echoT "----------  metadata"
+_echoT "------------------  metadata"
 _lxc_meta_add ${ct_name} apps mariadb-slave
 
 if lxc list -f csv -c n status=Stopped | grep -q ^${ct_name}$; then
-	_echoT "----------  ${ct_name} start"
+	_echoT "------------------  ${ct_name} start"
 	_eval lxc start ${ct_name}
 fi
 
-_echoT "----------  ${ct_name} restore"
+_echoT "------------------  ${ct_name} restore"
 _askno "Restore backuped data from master to slave & continue"
 
-_echoT "----------  ${ct_name} conf"
+_echoT "------------------  ${ct_name} conf"
 file=${_MDB_PATH_CONF}/${file_slave##*/}
 _lxc_exec ${ct_name} "[ -f ${file} ] && cp -a ${file} ${file}.${_SDATE}"
-_eval lxc file push ${file_slave} ${ct_name}${file}
+_eval lxc file push -q ${file_slave} ${ct_name}${file}
 
 [ "${_MDB_REPLICATE_EXCEPT}" ] && _lxc_exec ${ct_name} "sed -i '/_MDB_REPLICATE_EXCEPT/ s|^#||' ${file}"
 [ "${_MDB_REPLICATE_ONLY}" ] && _lxc_exec ${ct_name} "sed -i '/_MDB_REPLICATE_ONLY/ s|^#||' ${file}"
 _lxc_var_replace ${ct_name} ${file} mariadb
 
-_echoT "----------  ${ct_name} ${_MDB_SERVICE} restart"
+_echoT "------------------  ${ct_name} ${_MDB_SERVICE} restart"
 _lxc_exec ${ct_name} "rc-service ${_MDB_SERVICE} restart"
 
-_echoT "----------  ${ct_name} conf master"
+_echoT "------------------  ${ct_name} conf master"
 _eval "mysql -h${ct_name} -uroothost -p${pwd_slave} -e \"SET default_master_connection = '${ct_master}';\""
 _eval "mysql -h${ct_name} -uroothost -p${pwd_slave} -e \"STOP SLAVE;\""
 
@@ -156,7 +167,7 @@ MASTER_LOG_POS=${master_pos},
 MASTER_CONNECT_RETRY=10;"
 _eval "mysql -h${ct_name} -uroothost -p${pwd_slave} -e \"${cmd}\""
 
-_echoT "----------  ${ct_name} start slave"
+_echoT "------------------  ${ct_name} start slave"
 _eval "mysql -h${ct_name} -uroothost -p${pwd_slave} -e \"START SLAVE '${ct_master}';\""
 
 
@@ -164,16 +175,16 @@ _eval "mysql -h${ct_name} -uroothost -p${pwd_slave} -e \"START SLAVE '${ct_maste
 
 sleep 2
 
-_echoT "----------  show master privileges"
+_echoT "------------------  show master privileges"
 _eval "mysql -h${ct_master} -uroothost -p${pwd_master} -e \"SELECT user,host FROM mysql.user WHERE user like 'replic';\""
 
-_echoT "----------  status master"
+_echoT "------------------  status master"
 _eval "mysql -h${ct_master} -uroothost -p${pwd_master} -e \"SHOW MASTER STATUS;\""
 
-_echoT "----------  status slave"
+_echoT "------------------  status slave"
 _eval "mysql -h${ct_slave} -uroothost -p${pwd_slave} -e \"SHOW SLAVE STATUS \G;\" | head -n19"
 
-_echoT "----------  show passwords"
+_echoT "------------------  show passwords"
 _echoI "Keep this passwords:"
 _echoW "${strpass%\\n}"
 
@@ -181,7 +192,7 @@ _echoW "${strpass%\\n}"
 ########################  PUBLISH
 
 for ct_name in ${ct_master} ${ct_slave}; do
-	_echoT "----------  publish ${ct_name}"
+	_echoT "------------------  publish ${ct_name}"
 
 	lxc image list -f csv -c l | grep -q ^${ct_name}$ && _eval lxc image alias rename ${ct_name} ${ct_name}-${_SDATE}
 	_eval lxc publish --force ${ct_name} --alias ${ct_name}

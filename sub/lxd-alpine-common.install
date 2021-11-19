@@ -10,10 +10,11 @@ grep -q "^# ${_PART#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART}" >> ${S_FI
 
 file_rsyslog_cron=${S_PATH_INSTALL_CONF}/rsyslog/cron.conf
 file_rsyslog_client_auth=${S_PATH_INSTALL_CONF}/rsyslog/client-auth.conf
-file_logrotate_server=${S_PATH_INSTALL_CONF}/logrotate/client-server
+file_rsyslog_client_mail=${S_PATH_INSTALL_CONF}/rsyslog/client-mail.conf
+file_logrotate_server=${S_PATH_INSTALL_CONF}/logrotate/server
 
-_echoT "----------  required files"
-_require ${file_rsyslog_cron} ${file_rsyslog_client_auth} ${file_logrotate_server}
+_echoT "------------------  required files"
+_require ${file_rsyslog_cron} ${file_rsyslog_client_auth} ${file_rsyslog_client_mail} ${file_logrotate_server}
 
 ########################  DATA
 
@@ -21,7 +22,7 @@ _CT_NAME=${_CT_NAME_COM}
 
 ########################  CONF
 
-_echoT "----------  apk profile.d"
+_echoT "------------------  apk profile.d"
 
 _lxc_exec ${_CT_NAME} "[ -e /etc/profile.d/bash-lxc-aliases.sh ] || ln -s ${S_PATH_SCRIPT_CONF}/bash-lxc-aliases.sh /etc/profile.d/bash-lxc-aliases.sh"
 _lxc_exec ${_CT_NAME} "[ -e /etc/profile.d/bash-lxc-alpine.sh ] || ln -s ${S_PATH_SCRIPT_CONF}/bash-lxc-alpine.sh /etc/profile.d/bash-lxc-alpine.sh"
@@ -40,13 +41,13 @@ _evalr "sed -i 's|^\(S_ETH\)=.*$|\1=\"eth0\"|' ${file}"
 _evalr "sed -i 's|^\(S_SERVER_TYPE\)=.*$|\1=\"lxd\"|' ${file}"
 _evalr "sed -i 's|^\(S_PATH_INSTALL\)=.*$|\1=\"/usr/local/install\"|' ${file}"
 
-_eval lxc file push ${file} ${_CT_NAME}${S_PATH_CONF}/server.conf
+_eval lxc file push -q ${file} ${_CT_NAME}${S_PATH_CONF}/server.conf
 _lxc_exec ${_CT_NAME} "chmod 700 -R ${S_PATH_CONF}"
 
 
 ########################  HOSTS
 
-#_echoT "----------  hosts"
+#_echoT "------------------  hosts"
 
 #file=" /etc/hosts"
 #if ! [ "$(_lxc_exec ${_CT_NAME} "grep '\ssrv-' ${file}")" ]; then
@@ -59,10 +60,106 @@ _lxc_exec ${_CT_NAME} "chmod 700 -R ${S_PATH_CONF}"
 
 ########################  MAIL
 
-_echoT "----------  exim install"
+# TODO impements relay mail
+
+########################  CRON
+
+_echoT "------------------  cron"
+file="/etc/crontabs/root"
+_lxc_exec ${_CT_NAME} "sed -i '/^\*\/15/ s|^|#|' ${file}"
+_lxc_exec ${_CT_NAME} rc-service -S crond start
+
+file=/etc/crontabs/mail
+_lxc_exec ${_CT_NAME} "echo 'MAILTO=${S_DOMAIN_EMAIL_TECH}' > ${file}"
+
+_echoT "------------------  cron restart"
+_lxc_exec ${_CT_NAME} "rc-service crond restart"
+
+########################  SYSLOG
+
+_echoT "------------------  syslog remove"
+_lxc_exec ${_CT_NAME} "rc-service syslog stop"
+_lxc_exec ${_CT_NAME} "rc-status boot|grep -q '^\s*syslog\s' && rc-update del syslog boot"
+
+########################  RSYSLOG
+
+_echoT "------------------  rsyslog install"
+_lxc_exec ${_CT_NAME} "apk list -I|grep -q ^rsyslog || apk add rsyslog"
+path="/etc/rsyslog.d"
+_lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir ${path}"
+
+_echoT "------------------  rsyslog vm enable"
+service="rsyslog"
+_lxc_exec ${_CT_NAME} "rc-update add ${service}"
+
+_echoT "------------------  rsyslog conf"
+
+file="/etc/rsyslog.conf"
+_lxc_exec ${_CT_NAME} "[ -f ${file} ] && cp -a ${file} ${file}.${_SDATE}"
+
+_lxc_exec ${_CT_NAME} "sed -i 's|^.\?\(module(load=\"immark\").*\)|\1|' ${file}"
+_lxc_exec ${_CT_NAME} "sed -i 's|^.\?\(module(load=\"imklog\").*\)|#\1|' ${file}"
+_lxc_exec ${_CT_NAME} "sed -i 's|^.\?\(module(load=\"imuxsock\").*\)|\1|' ${file}"
+
+_echoT "------------------  rsyslog cron & mail"
+
+file=/etc/rsyslog.conf
+_lxc_exec ${_CT_NAME} "sed -i '/^cron/ s|^|#|' ${file}"
+file=/etc/rsyslog.conf
+_lxc_exec ${_CT_NAME} "sed -i '/^mail/ s|^|#|' ${file}"
+
+file=/etc/rsyslog.d/${file_rsyslog_cron##*/}
+_eval lxc file push -q ${file_rsyslog_cron} ${_CT_NAME}${file}
+_lxc_var_replace ${_CT_NAME} ${file} rsyslog
+
+_echoT "------------------  rsyslog client-auth"
+file=/etc/rsyslog.d/${file_rsyslog_client_auth##*/}
+_eval lxc file push -q ${file_rsyslog_client_auth} ${_CT_NAME}${file}
+_lxc_var_replace ${_CT_NAME} ${file} rsyslog
+
+_echoT "------------------  rsyslog client-mail"
+file=/etc/rsyslog.d/${file_rsyslog_client_mail##*/}
+_eval lxc file push -q ${file_rsyslog_client_mail} ${_CT_NAME}${file}
+_lxc_var_replace ${_CT_NAME} ${file} rsyslog
+
+_echoT "------------------  rsyslog vm start"
+_lxc_exec ${_CT_NAME} "rc-update add rsyslog"
+_lxc_exec ${_CT_NAME} "rc-service -S rsyslog start"
+
+########################  LOGROTATE
+
+_echoT "------------------  logrotate install"
+_lxc_exec ${_CT_NAME} "apk list -I | grep -q ^logrotate || apk add logrotate"
+
+_echoT "------------------  logrotate global"
+file=/etc/logrotate.conf
+_lxc_exec ${_CT_NAME} "sed -i '/^#dateext/ s|^#||' ${file}"
+
+_echoT "------------------  logrotate conf server"
+file=/etc/logrotate.d/${file_logrotate_server##*/}
+_eval lxc file push -q ${file_logrotate_server} ${_CT_NAME}${file}
+_lxc_var_replace ${_CT_NAME} ${file} logrotate
+
+_echoT "------------------  logrotate start"
+_lxc_exec ${_CT_NAME} rc-service -s rsyslog restart
+_lxc_exec ${_CT_NAME} rc-service -S rsyslog start
+
+########################  PUBLISH
+
+_echoT "------------------  publish ${_CT_NAME}"
+lxc image list -f csv -c l | grep -q ^${_CT_NAME_COM}$ && _eval lxc image alias rename ${_CT_NAME_COM} ${_CT_NAME_COM}-${_SDATE}
+_eval lxc publish --force ${_CT_NAME} --alias ${_CT_NAME_COM}
+
+########################  END
+
+_echoT "===================== ${_PART} end"
+_partadd ${_PART} ${S_FILE_INSTALL_DONE}
+
+<<KEEP
+_echoT "------------------  exim install"
 _eval "apk add exim"
 
-_echoT "----------  exim conf"
+_echoT "------------------  exim conf"
 FILE=/etc/exim4/update-exim4.conf.conf
 [ -f "$FILE" ] && [ ! -f "$FILE.$DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
 SCH='dc_eximconfig_configtype'; STR="'satellite'"; sed -i "s|^\($SCH=\).*$|\1$STR|" "$FILE"
@@ -80,99 +177,4 @@ SCH='dc_mailname_in_oh';        STR="'true'"; sed -i "s|^\($SCH=\).*$|\1$STR|" "
 SCH='dc_localdelivery';         STR="'mail_spool'"; sed -i "s|^\($SCH=\).*$|\1$STR|" "$FILE"
 
 _service restart exim4
-
-########################  CRON
-
-_echoT "----------  cron"
-file="/etc/crontabs/root"
-_lxc_exec ${_CT_NAME} "sed -i '/^\*\/15/ s|^|#|' ${file}"
-_lxc_exec ${_CT_NAME} "rc-service crond restart"
-
-file=/etc/crontabs/mail
-_lxc_exec ${_CT_NAME} "echo 'MAILTO=${S_DOMAIN_EMAIL_TECH}' > ${file}"
-
-_echoT "----------  cron restart"
-_lxc_exec ${_CT_NAME} "rc-service crond restart"
-
-
-########################  SYSLOG
-
-_echoT "----------  syslog remove"
-_lxc_exec ${_CT_NAME} "rc-service syslog stop"
-_lxc_exec ${_CT_NAME} "rc-status boot|grep -q '^\s*syslog\s' && rc-update del syslog boot"
-
-
-########################  RSYSLOG
-
-_echoT "----------  rsyslog install"
-_lxc_exec ${_CT_NAME} "apk list -I|grep -q ^rsyslog || apk add rsyslog"
-path="/etc/rsyslog.d"
-_lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir ${path}"
-
-
-_echoT "----------  rsyslog vm enable"
-service="rsyslog"
-_lxc_exec ${_CT_NAME} "rc-update add ${service}"
-
-
-_echoT "----------  rsyslog conf"
-
-file="/etc/rsyslog.conf"
-_lxc_exec ${_CT_NAME} "[ -f ${file} ] && cp -a ${file} ${file}.${_SDATE}"
-
-_lxc_exec ${_CT_NAME} "sed -i 's|^.\?\(module(load=\"immark\").*\)|\1|' ${file}"
-_lxc_exec ${_CT_NAME} "sed -i 's|^.\?\(module(load=\"imklog\").*\)|#\1|' ${file}"
-_lxc_exec ${_CT_NAME} "sed -i 's|^.\?\(module(load=\"imuxsock\").*\)|\1|' ${file}"
-
-
-_echoT "----------  rsyslog cron"
-
-file=/etc/rsyslog.conf
-_lxc_exec ${_CT_NAME} "sed -i '/^cron.*/ s|^|#|' ${file}"
-
-file=/etc/rsyslog.d/${file_rsyslog_cron##*/}
-_eval lxc file push ${file_rsyslog_cron} ${_CT_NAME}${file}
-_lxc_var_replace ${_CT_NAME} ${file} rsyslog
-
-
-_echoT "----------  rsyslog client-auth"
-file=/etc/rsyslog.d/${file_rsyslog_client_auth##*/}
-_eval lxc file push ${file_rsyslog_client_auth} ${_CT_NAME}${file}
-_lxc_var_replace ${_CT_NAME} ${file} rsyslog
-
-
-_echoT "----------  rsyslog vm start"
-_lxc_exec ${_CT_NAME} "rc-service rsyslog start"
-
-
-########################  LOGROTATE
-
-_echoT "----------  logrotate install"
-_lxc_exec ${_CT_NAME} "apk list -I | grep -q ^logrotate || apk add logrotate"
-
-
-_echoT "----------  logrotate global"
-file=/etc/logrotate.conf
-_lxc_exec ${_CT_NAME} "sed -i '/^#dateext/ s|^#||' ${file}"
-
-
-_echoT "----------  logrotate host_server"
-file=/etc/logrotate.d/${file_logrotate_server##*/}
-_evalr cp -a ${file_logrotate_server} ${file}
-_var_replace ${file} logrotate
-
-_echoT "----------  logrotate host restart"
-_service restart rsyslog
-
-
-########################  PUBLISH
-
-_echoT "----------  publish ${_CT_NAME}"
-lxc image list -f csv -c l | grep -q ^${_CT_NAME_COM}$ && _eval lxc image alias rename ${_CT_NAME_COM} ${_CT_NAME_COM}-${_SDATE}
-_eval lxc publish --force ${_CT_NAME} --alias ${_CT_NAME_COM}
-
-
-########################  END
-
-_echoT "===================== ${_PART} end"
-_partadd ${_PART} ${S_FILE_INSTALL_DONE}
+KEEP

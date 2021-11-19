@@ -12,7 +12,7 @@ _echoT "------------------ required vm image"
 lxc image list -f csv -c l | grep -q ^${_CT_NAME_COM}$ || _exite "Unable to find image container: '${_CT_NAME_COM}'"
 
 _echoT "------------------ required vm"
-lxc list -f csv -c n | grep -q ^${S_SERVICE[log]}$ || _exite "Unable to find image container: '${S_SERVICE[log]}'"
+lxc list -f csv -c n | grep -q ^${S_SERVICE[log]}$ || _exite "Unable to find container: '${S_SERVICE[log]}'"
 
 file_rsyslog_host=${S_PATH_INSTALL_CONF}/rsyslog/host-redis.conf
 file_rsyslog_client=${S_PATH_INSTALL_CONF}/rsyslog/client-redis.conf
@@ -24,7 +24,7 @@ _require ${file_rsyslog_host} ${file_rsyslog_client} ${file_logrotate_host} ${fi
 
 ########################  DATA
 
-_echoT "----------  data domain"
+_echoT "------------------  data domain"
 
 anstmp=rds-${S_DOMAIN_NAME//./-} && _askno "Base name of containers to build (${anstmp})"
 ct_base="${_ANSWER:-$anstmp}"
@@ -32,11 +32,11 @@ ct_base="${_ANSWER:-$anstmp}"
 anstmp=1 && _askno "Number of containers to build (${anstmp})"
 ct_num="${_ANSWER:-$anstmp}"
 
-_echoT "----------  data"
+_echoT "------------------  data"
 
 [ -z ${_RDS_CLIENT+x} ] && anstmp=y && _askno "Install redis-client on Host (${anstmp})" && _RDS_CLIENT="${_ANSWER:-$anstmp}" && _confset _RDS_CLIENT "${_RDS_CLIENT}"
 
-_echoT "----------  data sysctl.conf"
+_echoT "------------------  data sysctl.conf"
 
 [ -z ${_RDS_MAX_SYN_BACKLOG+x} ] && anstmp="${_MAX_SYN_BACKLOG}" && _askno "Set $(sysctl net.ipv4.tcp_max_syn_backlog) - (${anstmp})" && _RDS_MAX_SYN_BACKLOG="${_ANSWER:-$anstmp}" && _confset _RDS_MAX_SYN_BACKLOG "${_RDS_MAX_SYN_BACKLOG}"
 
@@ -50,7 +50,7 @@ _echoT "----------  data sysctl.conf"
 
 [ -z ${_RDS_KEEPALIVE_PROBES+x} ] && anstmp=9 && _askno "Set $(sysctl net.ipv4.tcp_keepalive_probes) - (${anstmp})" && _RDS_KEEPALIVE_PROBES="${_ANSWER:-$anstmp}" && _confset _RDS_KEEPALIVE_PROBES "${_RDS_KEEPALIVE_PROBES}"
 
-_echoT "----------  data redis"
+_echoT "------------------  data redis"
 
 anstmp="$(( ${_RDS_MAX_SYN_BACKLOG} / 2 ))" && _askno "Give a value for 'tcp-backlog', if change adjust sysctl parameters... (${anstmp})" && _RDS_BACKLOG="${_ANSWER:-$anstmp}" && _confset _RDS_BACKLOG "${_RDS_BACKLOG}"
 
@@ -65,32 +65,29 @@ anstmp=notice && _askno "Give the log level 'loglevel': debug/verbose/notice/war
 
 _CT_NAME=${ct_base}-1
 
-
 ########################  INIT
 
-_echoT "----------  init"
+_echoT "------------------  init"
 
 if lxc list -f csv -c n | grep -q ^${_CT_NAME}$; then
 	lxc list -f csv -c n status=Running| grep -q ^${_CT_NAME}$ && _eval lxc stop ${_CT_NAME}
+	_echoT "------------------ rename ${_CT_NAME} -> ${_CT_NAME}-${_SDATE}"
 	_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
 fi
 
 _eval lxc init ${_CT_NAME_COM} ${_CT_NAME} -p default -p global
 
-
-_echoT "----------  ${_CT_NAME} start"
+_echoT "------------------  ${_CT_NAME} start"
 _eval lxc start ${_CT_NAME}
-
 
 ########################  METADATA
 
-_echoT "----------  metadata"
+_echoT "------------------  metadata"
 _lxc_meta_add ${_CT_NAME} apps redis
-
 
 ########################  SYSCTL
 
-_echoT "----------  conf sysctl.conf"
+_echoT "------------------  conf sysctl.conf"
 
 file=/etc/sysctl.d/20-lxd.conf
 txt="# apache2 php-fpm
@@ -102,20 +99,18 @@ net.ipv4.tcp_keepalive_intvl = ${_RDS_KEEPALIVE_INTVL}
 net.ipv4.tcp_keepalive_probes = ${_RDS_KEEPALIVE_PROBES}"
 _lxc_exec ${_CT_NAME} "echo '${txt}' > ${file}"
 
-
 ########################  INSTALL
 
 if [ "${_RDS_CLIENT}" = y ]; then
-	_echoT "----------  host install"
+	_echoT "------------------  host install"
 	_install redis-tools
 fi
 
-
-_echoT "----------  install"
+_echoT "------------------  install"
 _lxc_exec ${_CT_NAME} "apk update"
 _lxc_exec ${_CT_NAME} "apk add redis"
 
-_echoT "----------  service set"
+_echoT "------------------  service set"
 service=redis
 _lxc_exec ${_CT_NAME} "rc-update add ${service}"
 _lxc_exec ${_CT_NAME} "rc-service ${service} start"
@@ -123,7 +118,7 @@ _lxc_exec ${_CT_NAME} "rc-service ${service} start"
 
 ########################  CONF
 
-_echoT "----------  conf"
+_echoT "------------------  conf"
 
 file=/etc/redis.conf
 
@@ -144,70 +139,70 @@ syslog-facility  local7"
 _lxc_exec ${_CT_NAME} "${cmds}"
 
 
-_echoT "----------  restart redis"
+_echoT "------------------  restart redis"
 _lxc_exec ${_CT_NAME} "rc-service redis restart"
 
 
 ########################  RSYSLOG
 
-_echoT "----------  ${S_SERVICE[log]} host path"
+_echoT "------------------  ${S_SERVICE[log]} host path"
 path=${S_VM_PATH_LOG}/redis
 _lxc_exec ${S_SERVICE[log]} "[ -d ${path} ] || mkdir -p ${path}"
 
 
-_echoT "----------  ${S_SERVICE[log]} host-redis"
+_echoT "------------------  ${S_SERVICE[log]} host-redis"
 file=/etc/rsyslog.d/${file_rsyslog_host##*/}
-_eval lxc file push ${file_rsyslog_host} ${S_SERVICE[log]}${file}
+_eval lxc file push -q ${file_rsyslog_host} ${S_SERVICE[log]}${file}
 _lxc_var_replace ${S_SERVICE[log]} ${file} rsyslog
 
-_echoT "----------  restart rsyslog ${S_SERVICE[log]}"
+_echoT "------------------  restart rsyslog ${S_SERVICE[log]}"
 _lxc_exec ${S_SERVICE[log]} "rc-service rsyslog restart"
 
 
-_echoT "----------  ${S_SERVICE[log]} client path"
+_echoT "------------------  ${S_SERVICE[log]} client path"
 path=${S_PATH_LOG}/redis
 _lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
 _lxc_exec ${_CT_NAME} "rm ${path}/redis.log 2>/dev/null"
 
 
-_echoT "----------  ${S_SERVICE[log]} client-redis"
+_echoT "------------------  ${S_SERVICE[log]} client-redis"
 file=/etc/rsyslog.d/${file_rsyslog_client##*/}
-_eval lxc file push ${file_rsyslog_client} ${_CT_NAME}${file}
+_eval lxc file push -q ${file_rsyslog_client} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} rsyslog
 
-_echoT "----------  rsyslog restart ${_CT_NAME}"
+_echoT "------------------  rsyslog restart ${_CT_NAME}"
 _lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
 
 
 ########################  LOGROTATE
 
-_echoT "----------  ${S_SERVICE[log]} logrotate"
+_echoT "------------------  ${S_SERVICE[log]} logrotate"
 file=/etc/logrotate.d/${file_logrotate_host##*/}
-_eval lxc file push ${file_logrotate_host} ${S_SERVICE[log]}${file}
+_eval lxc file push -q ${file_logrotate_host} ${S_SERVICE[log]}${file}
 _lxc_var_replace ${S_SERVICE[log]} ${file} logrotate
 
-_echoT "----------  ${S_SERVICE[log]} crond restart"
+_echoT "------------------  ${S_SERVICE[log]} crond restart"
 _lxc_exec ${S_SERVICE[log]} "rc-service crond restart"
 
 
-_echoT "----------  ${_CT_NAME} logrotate"
+_echoT "------------------  ${_CT_NAME} logrotate"
 file=/etc/logrotate.d/${file_logrotate_client##*/}
-_eval lxc file push ${file_logrotate_client} ${_CT_NAME}${file}
+_eval lxc file push -q ${file_logrotate_client} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} logrotate
 
-_echoT "----------  ${_CT_NAME} crond restart"
+_echoT "------------------  ${_CT_NAME} crond restart"
 _lxc_exec ${_CT_NAME} "rc-service crond restart"
 
 
 ########################  CLEAN LOG
 
-_echoT "----------  ${_CT_NAME} log clean"
+_echoT "------------------  ${_CT_NAME} log clean"
 _lxc_exec ${_CT_NAME} "find ${S_PATH_LOG}/redis -name *.log -exec rm {} \;"
 
 
 ########################  TEST
 
-_echoT "----------  redis test access"
+_echoT "------------------  redis test access"
 
 _echo "timeout 3 redis-cli -h ${_CT_NAME} ping"
 _eval "timeout 3 redis-cli -h ${_CT_NAME} ping 2>/dev/null"
@@ -221,7 +216,7 @@ _echo "redis-cli -h ${_CT_NAME} -p ${S_CACHE_PORT} --latency-dist"
 
 ########################  PUBLISH
 
-_echoT "----------  publish ${_CT_NAME}"
+_echoT "------------------  publish ${_CT_NAME}"
 
 lxc image list -f csv -c l | grep -q ^${_CT_NAME}$ && _eval lxc image alias rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
 _eval lxc publish --force ${_CT_NAME} --alias ${_CT_NAME}
