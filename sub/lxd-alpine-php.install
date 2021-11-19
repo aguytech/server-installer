@@ -174,7 +174,7 @@ _eval lxc start ${_CT_NAME}
 ########################  METADATA
 
 _echoT "------------------  metadata"
-_lxc_meta_add ${_CT_NAME} profiles ${profile_www} ${profile}
+_lxc_meta_set ${_CT_NAME} profiles default global ${profile_www} ${profile}
 _lxc_meta_add ${_CT_NAME} apps php7
 
 ########################  PATHS

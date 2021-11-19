@@ -13,6 +13,11 @@ _require ${file_conf_main_dovecot}
 
 ########################  DATA
 
+########################  METADATA
+
+_echoT "------------------ metadata"
+_lxc_meta_add ${_CT_NAME} apps dovecot
+
 ########################  MAIN
 
 _echoT "------------------  path vmail"

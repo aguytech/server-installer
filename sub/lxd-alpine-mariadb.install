@@ -139,7 +139,7 @@ _eval lxc start ${_CT_NAME}
 ########################  METADATA
 
 _echoT "------------------  metadata"
-_lxc_meta_add ${_CT_NAME} profiles ${profile}
+_lxc_meta_set ${_CT_NAME} profiles default global ${profile}
 _lxc_meta_add ${_CT_NAME} apps mariadb
 
 ########################  IPTABLES

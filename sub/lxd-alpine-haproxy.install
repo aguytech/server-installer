@@ -60,7 +60,6 @@ if [ "${_HPX_LCRYPT_ENABLE}" ]; then
 	[ -z ${_HPX_LCRYPT_PORT+x} ] && anstmp=8079 && _askno "Port for letsencrypt (${anstmp})" && _HPX_LCRYPT_PORT="${_ANSWER:-${anstmp}}" && _confset _HPX_LCRYPT_PORT "${_HPX_LCRYPT_PORT}"
 fi
 
-
 _CT_NAME=${S_SERVICE[proxy]}
 eval ${S_HOST_VM_ETH[default]}
 _CT_IP=${s_base}.${S_SERVICE_BITS[proxy]}
@@ -72,7 +71,6 @@ _HPX_DNS_DEFAULT="${s_base}.1:53" && _confset _HPX_DNS_DEFAULT "${_HPX_DNS_DEFAU
 
 _HPX_STATS_PORT=${S_HAPROXY_STATS_PORTS%% *} && _confset _HPX_STATS_PORT "${_HPX_STATS_PORT}"
 _HPX_STATS_2_PORT=${S_HAPROXY_STATS_PORTS#* } && _HPX_STATS_2_PORT=${_HPX_STATS_2_PORT%% *} && _confset _HPX_STATS_2_PORT "${_HPX_STATS_2_PORT}"
-
 
 ########################  PROFILE
 
@@ -99,7 +97,6 @@ path_ct=${S_VM_PATH_SHARE}/ssl/${_HPX_DOMAIN_2_FQDN}
 [ -d ${path} ] || _evalr mkdir -p ${path}
 _eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
 
-
 ########################  INIT
 
 _echoT "------------------  init"
@@ -119,12 +116,11 @@ fi
 _echoT "------------------  ${_CT_NAME} start"
 _eval lxc start ${_CT_NAME}
 
-
 ########################  METADATA
 
 _echoT "------------------  metadata"
+_lxc_meta_set ${_CT_NAME} profiles default global ssl-${_HPX_DOMAIN_FQDN} ssl-${_HPX_DOMAIN_2_FQDN}
 _lxc_meta_add ${_CT_NAME} apps haproxy
-
 
 ########################  IPTABLES
 

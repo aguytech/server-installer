@@ -52,6 +52,11 @@ if lxc list -f csv -c n status=Stopped | grep -q ^${_CT_NAME_COM}$; then
 	_eval lxc start ${_CT_NAME_COM}
 fi
 
+########################  METADATA
+
+_echoT "------------------  metadata"
+_lxc_meta_set ${_CT_NAME} profiles stock global
+
 ########################  CONF
 
 _echoT "------------------  apk update"

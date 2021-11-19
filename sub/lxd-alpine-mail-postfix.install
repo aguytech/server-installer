@@ -19,6 +19,11 @@ _requirep ${path_sql}
 
 _PFA_PATH_SQL=/etc/postfix/sql && _confset _PFA_PATH_SQL "${_PFA_PATH_SQL}" ${_FILE_INSTALL_CONF}
 
+########################  METADATA
+
+_echoT "------------------ metadata"
+_lxc_meta_add ${_CT_NAME} apps postfix
+
 ########################  MAIN
 
 _echoT "------------------  postfix start"

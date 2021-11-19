@@ -164,7 +164,6 @@ if [ -z "${profile_cloud_exist}" ]; then
 	_evalr setfacl -Rm d:u:${_LXD_UID}:rwx ${S_HOST_PATH}/cloud/${_DOMAIN_FQDN}
 fi
 
-
 ########################  PROFILE
 
 # www
