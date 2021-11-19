@@ -1,0 +1,12 @@
+[Unit]
+Description=iptables firewall service test
+BindsTo=iptables-firewall.service
+After=iptables-firewall.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/systemd-run --on-active=120 --timer-property=AccuracySec=1s /bin/systemctl stop iptables-firewall.service
+StandardOutput=journal
+
+[Install]
+WantedBy=multi-user.target

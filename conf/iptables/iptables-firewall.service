@@ -1,0 +1,13 @@
+[Unit]
+Description=iptables firewall service
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/iptables-firewall start
+RemainAfterExit=true
+ExecStop=/usr/sbin/iptables-firewall stop
+StandardOutput=journal
+
+[Install]
+WantedBy=multi-user.target
