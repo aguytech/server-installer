@@ -10,19 +10,19 @@ frontend https
 	#http-request		set-header X-Forwarded-Port %[dst_port]
 	default_backend		default
 
-	acl _DOMAIN_FQDN		hdr_end(host) -i _DOMAIN_FQDN
-	acl _DOMAIN_2_FQDN		hdr_end(host) -i _DOMAIN_2_FQDN
-	acl _DOMAIN_FQDN-admin	hdr(host) admin._DOMAIN_FQDN matomo._DOMAIN_FQDN monitor._DOMAIN_FQDN pfa._DOMAIN_FQDN pma._DOMAIN_FQDN
-	#acl _DOMAIN_FQDN-cloud	hdr(host) cloud._DOMAIN_FQDN nextcloud._DOMAIN_FQDN
+	acl _HPX_DOMAIN_FQDN		hdr_end(host) -i _HPX_DOMAIN_FQDN
+	acl _HPX_DOMAIN_2_FQDN		hdr_end(host) -i _HPX_DOMAIN_2_FQDN
+	acl _HPX_DOMAIN_FQDN-admin	hdr(host) admin._HPX_DOMAIN_FQDN matomo._HPX_DOMAIN_FQDN monitor._HPX_DOMAIN_FQDN pfa._HPX_DOMAIN_FQDN pma._HPX_DOMAIN_FQDN
+	#acl _HPX_DOMAIN_FQDN-cloud	hdr(host) cloud._HPX_DOMAIN_FQDN nextcloud._HPX_DOMAIN_FQDN
 
-	#acl _DOMAIN_2_FQDN-admin	hdr(host) admin._DOMAIN_2_FQDN matomo._DOMAIN_2_FQDN monitor._DOMAIN_2_FQDN pfa._DOMAIN_2_FQDN pma._DOMAIN_2_FQDN
+	#acl _HPX_DOMAIN_2_FQDN-admin	hdr(host) admin._HPX_DOMAIN_2_FQDN matomo._HPX_DOMAIN_2_FQDN monitor._HPX_DOMAIN_2_FQDN pfa._HPX_DOMAIN_2_FQDN pma._HPX_DOMAIN_2_FQDN
 	#acl admin-dev		src 92.154.29.60 129.20.228.3 129.20.228.19 129.20.228.20 129.20.228.21
 
-	#redirect  prefix  https://info.otokoz.ovh code 301 if { hdr(host) -i info._DOMAIN_FQDN }
+	#redirect  prefix  https://info.otokoz.ovh code 301 if { hdr(host) -i info._HPX_DOMAIN_FQDN }
 
-	use_backend		_DOMAIN_FQDN-admin if _DOMAIN_FQDN-admin
-	#use_backend		_DOMAIN_FQDN-cloud if _DOMAIN_FQDN-cloud
-	#use_backend		_DOMAIN_FQDN-admin if _DOMAIN_FQDN-admin or _DOMAIN_2_FQDN-admin
-	use_backend		_DOMAIN_FQDN if _DOMAIN_FQDN
-	#use_backend		_DOMAIN_FQDN if { hdr_end(host) -i _DOMAIN_FQDN }
-	use_backend		_DOMAIN_2_FQDN if _DOMAIN_2_FQDN
+	use_backend		_HPX_DOMAIN_FQDN-admin if _HPX_DOMAIN_FQDN-admin
+	#use_backend		_HPX_DOMAIN_FQDN-cloud if _HPX_DOMAIN_FQDN-cloud
+	#use_backend		_HPX_DOMAIN_FQDN-admin if _HPX_DOMAIN_FQDN-admin or _HPX_DOMAIN_2_FQDN-admin
+	use_backend		_HPX_DOMAIN_FQDN if _HPX_DOMAIN_FQDN
+	#use_backend		_HPX_DOMAIN_FQDN if { hdr_end(host) -i _HPX_DOMAIN_FQDN }
+	use_backend		_HPX_DOMAIN_2_FQDN if _HPX_DOMAIN_2_FQDN
