@@ -6,19 +6,23 @@ _echoT "\n======================  ${_INSTALL}-${_PARTMAIL}"
 
 grep -q "^# ${_PARTMAIL#++}$" ${_FILE_INSTALL_CONF} || echo  "# ${_PARTMAIL}" >> ${_FILE_INSTALL_CONF}
 
-########################  DATA
+file_conf_main_dovecot=${S_PATH_INSTALL_CONF}/mail/main_dovecot.cf
 
+_echoT "------------------ required files"
+_require ${file_conf_main_dovecot}
+
+########################  DATA
 
 ########################  MAIN
 
-_echoT "----------  path vmail"
+_echoT "------------------  path vmail"
 _lxc_exec ${_CT_NAME} "[ -d '${_PATH_VMAIL}/mailboxes' ] || mkdir -p ${_PATH_VMAIL}/mailboxes"
 _lxc_exec ${_CT_NAME} "[ -d '${_PATH_SIEVE}/global' ] || mkdir -p ${_PATH_SIEVE}/global"
 
-_echoT "----------  ${_PARTMAIL} install"
-_lxc_exec ${_CT_NAME} apk add dovecot-mysql dovecot-lmtpd dovecot-pigeonhole-plugin
+#_echoT "------------------  ${_PARTMAIL} install"
+#_lxc_exec ${_CT_NAME} apk add dovecot dovecot-mysql dovecot-lmtpd dovecot-pigeonhole-plugin
 
-_echoT "----------  ${_PARTMAIL} stop"
+_echoT "------------------  ${_PARTMAIL} stop"
 _lxc_exec ${_CT_NAME} rc-update add dovecot
 _lxc_exec ${_CT_NAME} rc-service -s dovecot stop
 
@@ -26,15 +30,38 @@ _lxc_exec ${_CT_NAME} rc-service -s dovecot stop
 
 eval ${S_HOST_VM_ETH[default]} # get s_inet s_cidr s_base
 
-_echoT "----------  ${_PARTMAIL} conf"
-file=/etc/dovecot/dovecot.conf
-_lxc_exec ${_CT_NAME} "[ -f '${file}' ] && cp -a ${file} ${file}.${_SDATE}"
+_echoT "------------------  conf ${_PARTMAIL} keep"
+path=/etc/dovecot
+_lxc_exec ${_CT_NAME} "[ -d '${path}' ] && cp -a ${path} ${path}.${_SDATE}"
 
+_echoT "------------------  conf postfix"
+_lxc_exec ${_CT_NAME} "sed -i '/#*-o smtpd_sasl_type=dovecot/ s|#||' /etc/postfix/master.cf"
+
+_echoT "------------------  conf postfix main_dovecot.cf"
+if ! _lxc_exec ${_CT_NAME} "grep -q '#* *ADD DOVECOT$' /etc/postfix/main.cf"; then
+	file=/etc/postfix/${file_conf_main_dovecot##*/}
+	_eval lxc file push -q ${file_conf_main_dovecot} ${_CT_NAME}${file}
+	_lxc_var_replace ${_CT_NAME} ${file} mail
+	_lxc_exec ${_CT_NAME} "cat ${file} >> /etc/postfix/main.cf"
+	_lxc_exec ${_CT_NAME} "rm ${file}"
+fi
+
+_echoT "------------------  postfix restart"
+_lxc_exec_e ${_CT_NAME} chown -R 0.0 /etc/postfix
+_lxc_exec_e ${_CT_NAME} rc-service postfix restart
+
+
+
+
+
+
+_echoT "------------------  conf ${_PARTMAIL} keep"
+file=/etc/dovecot/dovecot.conf
 str='login_trusted_networks'; val="127.0.0.1 ${s_cidr} ${_IPS_IN}"
 _lxc_exec ${_CT_NAME} "sed -i 's|^#\?\(${str}\s*=\).*$|\1 ${val}|' ${file}"
 
 
-_echoT "----------  ${_PARTMAIL} conf sql"
+_echoT "------------------  ${_PARTMAIL} conf sql"
 file=/etc/dovecot/dovecot-sql.conf.ext
 _lxc_exec ${_CT_NAME} "[ -f '${file}' ] && cp -a ${file} ${file}.${_SDATE}"
 
@@ -42,7 +69,7 @@ if [ "${_VMAIL_APP}" = postfixadmin ]; then
 	cmds=; while read str val; do
 		cmds+="sed -i \"1,/^#\?${str}\s*=/ s|^#\?${str}\s*=.*|${str} = ${val}|\" ${file}
 "; done <<< "driver mysql
-connect  host=${_DBHOST} dbname=${_DBNAME} user=${_DBUSER} password=${_DBPWD}
+connect  host=${_DB_HOST} dbname=${_DB_NAME} user=${_DB_USER} password=${_DB_PWD}
 default_pass_scheme  SHA512-CRYPT
 password_query  SELECT username, password, domain FROM mailbox WHERE username = '%u' AND active = true
 user_query  SELECT concat('*:storage=', quota) AS quota_rule FROM mailbox WHERE username = '%u' AND active = true
@@ -53,12 +80,12 @@ else
 fi
 
 
-_echoT "----------  ${_PARTMAIL} conf .d"
+_echoT "------------------  ${_PARTMAIL} conf .d"
 path=/etc/dovecot/conf.d
 _lxc_exec ${_CT_NAME} "[ -e '${path}' ] && cp -a ${path} ${path}.${_SDATE}"
 
 
-_echoT "----------  ${_PARTMAIL} conf 10-auth.conf"
+_echoT "------------------  ${_PARTMAIL} conf 10-auth.conf"
 file=/etc/dovecot/conf.d/10-auth.conf
 cmds=; while read str val; do
 	cmds+="sed -i \"1,/^#\?${str}\s*=/ s|^#\?${str}\s*=.*|${str} = ${val}|\" ${file}
@@ -70,7 +97,7 @@ _lxc_exec ${_CT_NAME} "sed -i '/^#\!include auth-sql.conf.ext/ s|^#||' ${file}"
 _lxc_exec ${_CT_NAME} "sed -i '/^\!include auth-passwdfile.conf.ext/ s|^|#|' ${file}"
 
 
-_echoT "----------  ${_PARTMAIL} conf 10-logging.conf.conf"
+_echoT "------------------  ${_PARTMAIL} conf 10-logging.conf.conf"
 file=/etc/dovecot/conf.d/10-logging.conf
 cmds=; while read str val; do
 	cmds+="sed -i \"1,/^#\?${str}\s*=/ s|^#\?${str}\s*=.*|${str} = ${val}|\" ${file}
@@ -136,8 +163,8 @@ SCH="ssl"; STR="yes"; sed -i "/^\s*${begin}/,/^\s*${end}/s/^\(\s*\)#\?\(${SCH}\s
 # 10-ssl.conf
 FILE="$PATHCONF/10-ssl.conf"
 SCH='ssl'; STR="required"; sed -i "s|^\(\s*${SCH}\s*= \).*|\1${STR}|" "$FILE"
-SCH='ssl_cert'; STR="\<$_FILE_SSL_PRIV"; sed -i "s|^#\?\(${SCH}\s*= \).*|\1${STR}|" "$FILE"
-SCH='ssl_key'; STR="\<$_FILE_SSL_CERT"; sed -i "s|^#\?\(${SCH}\s*= \).*|\1${STR}|" "$FILE"
+SCH='ssl_cert'; STR="\<${_FILE_SSL_FULL}"; sed -i "s|^#\?\(${SCH}\s*= \).*|\1${STR}|" "$FILE"
+SCH='ssl_key'; STR="\<${_FILE_SSL_KEY}"; sed -i "s|^#\?\(${SCH}\s*= \).*|\1${STR}|" "$FILE"
 SCH='ssl_dh_parameters_length'; STR="2048"; sed -i "s|^#\?\(${SCH}\s*= \).*|\1${STR}|" "$FILE"
 SCH='ssl_protocols'; STR='!SSLv3'; sed -i "s|^#\?\(${SCH}\s*= \).*|\1${STR}|" "$FILE"
 SCH='ssl_cipher_list'; STR='EDH+CAMELLIA:EDH+aRSA:EECDH+aRSA+AESGCM:EECDH+aRSA+SHA256:EECDH:+CAMELLIA128:+AES128:+SSLv3:!aNULL:!eNULL:!LOW:!3DES:!MD5:!EXP:!PSK:!DSS:!RC4:!SEED:!IDEA:!ECDSA:kEDH:CAMELLIA128-SHA:AES128-SHA'; sed -i "s|^#\?\(${SCH}\s*= \).*|\1${STR}|" "$FILE"
@@ -231,7 +258,7 @@ KEEP
 ########################################  SIEVE
 #_PATH_SIEVE
 
-_echoT "----------  Sieve conf"
+_echoT "------------------  Sieve conf"
 
 FILE="${_PATH_SIEVE}/global/spam-global.sieve"
 cat > $FILE << EOF
@@ -262,11 +289,9 @@ EOF
 _evalq "sievec $FILE"
 
 
-_echoT "----------  right on vmail"
+_echoT "------------------  right on vmail"
 
 _evalq chown "$_VMAIL_USER":"$_VMAIL_USER" "$_PATH_SSL"
-_evalq chown "$_VMAIL_USER":"$_VMAIL_USER" -R  "$_PATHSSLKEY" "$_PATHSSLCRT"
-
 _evalq chown "$_VMAIL_USER":"$_VMAIL_USER" -R "$_PATH_MAIL" "$_PATH_VMAIL" "$_PATH_SIEVE"
 _evalq chmod g-rwx -R "$_PATH_VMAIL"
 _evalq "find '$_PATH_VMAIL' -type f -exec chmod 640 '{}' \;"
@@ -274,5 +299,5 @@ _evalq "find '$_PATH_VMAIL' -type f -exec chmod 640 '{}' \;"
 
 ########################  END
 
-_echoT "===================== ${_PART} end"
+_echoT "====================== ${_INSTALL}-${_PARTMAIL} end"
 _partadd ${_PARTMAIL#++} ${S_FILE_INSTALL_DONE}

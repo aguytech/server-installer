@@ -6,25 +6,66 @@ _echoT "\n======================  ${_INSTALL}-${_PARTMAIL}"
 
 grep -q "^# ${_PARTMAIL#++}$" ${_FILE_INSTALL_CONF} || echo  "# ${_PARTMAIL}" >> ${_FILE_INSTALL_CONF}
 
-########################  DATA
+########################  REQUIRED
 
+_echoT "------------------ required vm"
 cts_maria=`lxc list -f csv -c n| grep '^mdb-'`
 [ -z "${cts_maria}" ] && _exite "Unable to find mariadb container"
 
-_menu "Select a mariadb container" `lxc list -f csv -c n| grep '^mdb-'` && _DBHOST=${_ANSWER} && _confset _DBHOST "${_DBHOST}" ${_FILE_INSTALL_CONF}
-anstmp=${_VMAIL_APP} && _askno "Give name for mail database ($anstmp)"  && _DBNAME=${_ANSWER:-${anstmp}} && _confset _DBNAME "${_DBNAME}" ${_FILE_INSTALL_CONF}
-anstmp=${_VMAIL_ACRO} && _askno "Give name for mail user to access to MariaDB ($anstmp)" && _DBUSER=${_ANSWER:-${anstmp}} && _confset _DBUSER "${_DBUSER}" ${_FILE_INSTALL_CONF}
-anstmp="$(_pwd)" && _askno "Give a password for user '${_DBUSER}' ($anstmp)" && _DBPWD=${_ANSWER:-${anstmp}} && _confset _DBPWD "${_DBPWD}" ${_FILE_INSTALL_CONF}
+########################  DATA
 
+_echoT "------------------  data mariadb"
+
+_menu "Select a 'mariadb' container to use" ${cts_maria}
+_DB_HOST=${_ANSWER} && _confset _DB_HOST "${_DB_HOST}" ${_FILE_INSTALL_CONF}
+
+ok=false; while ! ${ok}; do
+	_askno "Password for user: 'roothost' @ ${_DB_HOST}"
+	[ "${_ANSWER}" ] && mysql -s -h${_DB_HOST} -uroothost -p${_ANSWER} -e '' && ok=true || _echo "Unable to connect to: ${_DB_HOST}"
+done
+_DB_HOST_PWD=${_ANSWER}&& _confset _DB_HOST_PWD "${_DB_HOST_PWD}" ${_FILE_INSTALL_CONF}
+
+_echoT "------------------  data"
+
+anstmp=${_VMAIL_APP} && _askno "Database name for mail management (${anstmp})"
+_DB_NAME=${_ANSWER:-${anstmp}} && _confset _DB_NAME "${_DB_NAME}" ${_FILE_INSTALL_CONF}
+
+anstmp=vmail && _askno "User name to access to: ${_DB_NAME} (${anstmp})"
+_DB_USER=${_ANSWER:-${anstmp}} && _confset _DB_USER "${_DB_USER}" ${_FILE_INSTALL_CONF}
+
+anstmp="$(_pwd)" && _askno "User password for: ${_DB_USER} (${anstmp})"
+_DB_PWD=${_ANSWER:-${anstmp}} && _confset _DB_PWD "${_DB_PWD}" ${_FILE_INSTALL_CONF}
 
 ########################  MAIN
 
-_echoT "----------  mariadb install"
-_lxc_exec ${_CT_NAME} apk update
-_lxc_exec ${_CT_NAME} "rc-service -l|grep -q ^mariadb-client && apk add mariadb-client"
+_echoT "------------------  install"
+_lxc_exec ${_CT_NAME} "rc-service -l | grep -q ^mariadb-client && apk add mariadb-client"
 
+_echoT "------------------  db create"
+cmd="CREATE DATABASE IF NOT EXISTS ${_DB_NAME};"
+_eval "mysql -h${_DB_HOST} -uroothost -p${_DB_HOST_PWD} -e \"${cmd}\""
+
+_echoT "------------------  Rights"
+strpass=
+for ct in ${_CT_ALL_NAME}; do
+	_echoT "------------------  grant ${_DB_USER}"
+	cmd="GRANT USAGE ON *.* TO '${_DB_USER}'@'${ct}.lxd' IDENTIFIED BY '${_DB_PWD}';"
+	_eval "mysql -h${_DB_HOST} -uroothost -p${_DB_HOST_PWD} -e \"${cmd}\""
+	cmd="GRANT SELECT ON ${_DB_NAME}.* TO '${_DB_USER}'@'${ct}.lxd';"
+	_eval "mysql -h${_DB_HOST} -uroothost -p${_DB_HOST_PWD} -e \"${cmd}\""
+	strpass+="${_DB_USER} @ ${ct} - ${_DB_PWD}\n"
+done
+
+_echoT "------------------  flush privileges"
+_eval "mysql -h${_DB_HOST} -uroothost -p${_DB_HOST_PWD} -e \"FLUSH PRIVILEGES;\""
+
+########################  SHOW
+
+_echoT "------------------  show passwords"
+_echoI "Keep this passwords:"
+_echoW "${strpass}"
 
 ########################  END
 
-_echoT "===================== ${_PART} end"
+_echoT "====================== ${_INSTALL}-${_PARTMAIL} end"
 _partadd ${_PARTMAIL#++} ${S_FILE_INSTALL_DONE}

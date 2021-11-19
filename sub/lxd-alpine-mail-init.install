@@ -16,72 +16,121 @@ _require ${file_rsyslog_client} ${file_rsyslog_host} ${file_logrotate_client} ${
 
 ########################  PROFILE
 
-profile=${ct_base}
+profile=${_SSL_PROFILE_MAIL}
 if ! lxc profile list -f csv|grep -q "^${profile},"; then
 	_echoT "------------------ profile create ${profile}"
 	_eval lxc profile create ${profile}
 
-	path=${S_HOST_PATH_SHARE}/mail/${_DOMAIN_FQDN}
-	path_ct=${_PATH_MAIL}
+	path=${S_HOST_PATH_SHARE}/ssl/mail
+	path_ct=${_PATH_SSL}
 	[ -d ${path} ] || _evalr mkdir -p ${path}
+	_evalr chown ${_LXD_UID}:${_LXD_UID} -R ${S_HOST_PATH_SHARE}/ssl
 	_eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
 else
 	_echoT "------------------ profile exists ${profile}"
 fi
 
+profile=${_CT_NAME}
+if ! lxc profile list -f csv|grep -q "^${profile},"; then
+	_echoT "------------------ profile create ${profile}"
+	_eval lxc profile create ${profile}
+
+	path=${S_HOST_PATH_SHARE}/mail
+	path_ct=${_PATH_MAIL}
+	[ -d ${path} ] || _evalr mkdir -p ${path}
+	_evalr chown ${_LXD_UID}:${_LXD_UID} -R ${S_HOST_PATH_SHARE}/mail
+	_eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
+else
+	_echoT "------------------ profile exists ${profile}"
+fi
+
+if ! lxc list -f json ${S_SERVICE[proxy]}|jq -r '.[].profiles[]' | grep -q ^${_SSL_PROFILE_MAIL}$; then
+	_echoT "------------------ profile add ${_SSL_PROFILE_MAIL} to ${S_SERVICE[proxy]}"
+	_eval lxc profile add ${S_SERVICE[proxy]} ${_SSL_PROFILE_MAIL}
+fi
 
 ########################  INIT
 
 _echoT "------------------ init"
 if lxc list -f csv -c n | grep -q ^${_CT_NAME}$; then
 	lxc list -f csv -c n status=Running| grep -q ^${_CT_NAME}$ && _eval lxc stop ${_CT_NAME}
+	_echoT "------------------ rename ${_CT_NAME} -> ${_CT_NAME}-${_SDATE}"
 	_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
 fi
 _eval lxc init ${_CT_NAME_COM} ${_CT_NAME} -p default -p global -p ssl-mail -p ${profile}
 
 
-_echoT "------------------ network fixed ip"
-if ! lxc list -f json | jq -r '.[] | select(.name == "'${_CT_NAME}'").devices[].name' | grep -q eth0; then
-	_eval lxc config device override ${_CT_NAME} eth0 ipv4.address=${_CT_IP}
-fi
-
-
 _echoT "------------------ ${_CT_NAME} start"
 _eval lxc start ${_CT_NAME}
-
 
 ########################  METADATA
 
 _echoT "------------------ metadata"
 _lxc_meta_add ${_CT_NAME} profiles ${profile}
 
+########################  UPDATE
+
+_lxc_exec ${_CT_NAME} apk update
+
+########################  INSTALL
+
+_echoT "------------------  install postfix"
+_lxc_exec ${_CT_NAME} apk add postfix postfix-mysql mailx
+
+_echoT "------------------  install dovecot"
+_lxc_exec ${_CT_NAME} apk add dovecot dovecot-mysql dovecot-lmtpd dovecot-pigeonhole-plugin
+
+_echoT "------------------  install rspamd"
+_lxc_exec ${_CT_NAME} apk add rspamd rspamd-proxy
+
+########################  PATH
+
+_echoT "------------------ c reate paths"
+paths="${_PATH_MAIL} ${_PATH_LMAIL} ${_PATH_VMAIL} ${_PATH_SIEVE} ${_PATH_RSPAMD} ${_PATH_DKIM} ${_PATH_SSL}"
+cmd="for path in ${paths}; do [ -d \${path} ] || mkdir -p \${path}; done"
+_lxc_exec ${_CT_NAME} "${cmd}"
+
+cmds="chmod 640 ${_PATHSSL}"
+_lxc_exec ${_CT_NAME} "${cmd}"
+
+########################  DATA
+
+file=/etc/passwd
+_VMAIL_USER=vmail
+if ! _lxc_exec ${_CT_NAME} grep -q "${_VMAIL_USER}" ${file}; then
+	_VMAIL_UID=2000
+	_VMAIL_GID=2000
+	_lxc_exec_e ${_CT_NAME} addgroup -g ${_VMAIL_GID} ${_VMAIL_USER}
+	_lxc_exec_e ${_CT_NAME} adduser -u ${_VMAIL_UID} -G ${_VMAIL_USER} -D -h ${_PATH_VMAIL} -s/sbin/nologin -g ${_VMAIL_USER} ${_VMAIL_USER}
+else
+	str=`lxc exec ${_CT_NAME} -- grep ^vmail: ${file}`
+	_VMAIL_UID=`echo ${str}|cut -d: -f3`
+	_VMAIL_GID=`echo ${str}|cut -d: -f4`
+	path=`echo ${str}|cut -d: -f6`
+	_lxc_exec_e ${_CT_NAME} "sed -i '/^${_VMAIL_USER}:/ s|:${path}:|:${_PATH_VMAIL}:|' ${file}"
+fi
+_confset _VMAIL_USER "${_VMAIL_USER}" ${_FILE_INSTALL_CONF}
+_confset _VMAIL_UID "${_VMAIL_UID}" ${_FILE_INSTALL_CONF}
+_confset _VMAIL_GID "${_VMAIL_GID}" ${_FILE_INSTALL_CONF}
+
+_echoT "------------------  rights path ${_VMAIL_USER}"
+_lxc_exec_e ${_CT_NAME} "chown ${_VMAIL_UID}:${_VMAIL_GID} ${_PATH_VMAIL}"
+
 ########################  IPTABLES
 
-_echoT "----------  iptables"
+_echoT "------------------  iptables"
 sed -i '/^_NAT_MAIL=/ s|=.*$|=true|' ${_IPT_FILE_CONF}
 sed -i '/^_NAT_RSPAMD=/ s|=.*$|=true|' ${_IPT_FILE_CONF}
 _service restart ${_IPT_SERVICE}
 
 
-########################  PATH
-
-_echoT "------------------ create paths"
-
-paths="${_PATH_MAIL} ${_PATH_VMAIL} ${_PATH_SIEVE} ${_PATH_RSPAMD} ${_PATH_DKIM} ${_PATH_SSL}"
-cmd="for path in ${paths}; do [ -d \${path} ] || mkdir -p \${path}; done"
-_lxc_exec ${_CT_NAME} "${cmd}"
-
-cmds="chmod 644 ${_PATHSSLCRT} && chmod 600 ${_PATHSSLKEY}"
-_lxc_exec ${_CT_NAME} "${cmd}"
-
-
 <<KEEP
 ########################  UNBOUND
 
-_echoT "----------  Unbound install"
+_echoT "------------------  Unbound install"
 _lxc_exec ${_CT_NAME} "apk add unbound"
 
-_echoT "----------  Unbound configuration"
+_echoT "------------------  Unbound configuration"
 file=/etc/unbound/unbound.conf
 _lxc_exec ${_CT_NAME}  "unbound-anchor"
 # global
@@ -99,19 +148,19 @@ control-enable  yes"
 _lxc_exec ${_CT_NAME} "${cmds}"
 
 
-_echoT "----------  Unbound test"
+_echoT "------------------  Unbound test"
 _lxc_exec ${_CT_NAME} unbound-checkconf || _exite "Configuration error(s) in file: ${file}"
 _lxc_exec ${_CT_NAME}  dig @127.0.0.1 ${_DOMAIN_FQDN} +short +dnssec
 _askno "${yellow}Please verify the above outgoing & valid${cclear}"
 
-_echoT "----------  Unbound enable"
+_echoT "------------------  Unbound enable"
 _lxc_exec ${_CT_NAME}  "rc-update show default|grep -q unbound || rc-update add unbound"
 _lxc_exec ${_CT_NAME} rc-service -s unbound restart
 _lxc_exec ${_CT_NAME} rc-service -S unbound start
 
 ########################  RESOLV
 
-_echoT "----------  resolvconf update"
+_echoT "------------------  resolvconf update"
 _lxc_exec ${_CT_NAME} "echo 'nameserver 127.0.0.1' >> /etc/resolv.conf"
 
 _evalq apt install -y resolvconf
@@ -120,82 +169,86 @@ _eval "nslookup ${_DOMAIN_FQDN} | grep Server"
 _askno "${yellow}Please verify the above outgoing (127.0.0.1) & valid${cclear}"
 
 
-#_echoT "----------  resolvconf conf"
+#_echoT "------------------  resolvconf conf"
 #[ ! "$(grep 'mail\.' /etc/hosts)" ] && echo "127.0.1.1   mail.${_DOMAIN_FQDN}  mail" >> /etc/hosts
 KEEP
 
 
 ########################  RSYSLOG
 
-# ct
-file=/etc/rsyslog.conf
-_lxc_exec ${_CT_NAME} "sed -i '/^mail/ s|^|#|' ${file}"
-
-
 # host
-_echoT "----------  ${S_SERVICE[log]} host path"
+_echoT "------------------  ${S_SERVICE[log]} host path"
 path=${S_VM_PATH_LOG}
 _lxc_exec ${S_SERVICE[log]} "[ -d ${path} ] || mkdir -p ${path}"
 
-_echoT "----------  ${S_SERVICE[log]} host"
+_echoT "------------------  ${S_SERVICE[log]} host"
 file=/etc/rsyslog.d/${file_rsyslog_host##*/}
-_eval lxc file push ${file_rsyslog_host} ${S_SERVICE[log]}${file}
+_eval lxc file push -q ${file_rsyslog_host} ${S_SERVICE[log]}${file}
 _lxc_var_replace ${S_SERVICE[log]} ${file} rsyslog
 
-_echoT "----------  rsyslog restart ${S_SERVICE[log]}"
+_echoT "------------------  rsyslog restart ${S_SERVICE[log]}"
 _lxc_exec ${S_SERVICE[log]} "rc-service rsyslog restart"
 
 
 # client
-_echoT "----------  ${_CT_NAME} client path"
+_echoT "------------------  ${_CT_NAME} client path"
 path=${S_PATH_LOG}
 _lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
 
-_echoT "----------  ${_CT_NAME} client"
+_echoT "------------------  ${_CT_NAME} client"
 file=/etc/rsyslog.d/${file_rsyslog_client##*/}
-_eval lxc file push ${file_rsyslog_client} ${_CT_NAME}${file}
+_eval lxc file push -q ${file_rsyslog_client} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} rsyslog
 
-_echoT "----------  rsyslog restart ${_CT_NAME}"
+_echoT "------------------  rsyslog restart ${_CT_NAME}"
 _lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
 
 
 ########################  LOGROTATE
 
-_echoT "----------  ${S_SERVICE[log]} logrotate"
+_echoT "------------------  ${S_SERVICE[log]} logrotate"
 file=/etc/logrotate.d/${file_logrotate_host##*/}
-_eval lxc file push ${file_logrotate_host} ${S_SERVICE[log]}${file}
+_eval lxc file push -q ${file_logrotate_host} ${S_SERVICE[log]}${file}
 _lxc_var_replace ${S_SERVICE[log]} ${file} logrotate
 
-_echoT "----------  ${S_SERVICE[log]} crond restart"
+_echoT "------------------  ${S_SERVICE[log]} crond restart"
 _lxc_exec ${S_SERVICE[log]} "rc-service crond restart"
 
 
-_echoT "----------  ${_CT_NAME} logrotate"
+_echoT "------------------  ${_CT_NAME} logrotate"
 file=/etc/logrotate.d/${file_logrotate_client##*/}
-_eval lxc file push ${file_logrotate_client} ${_CT_NAME}${file}
+_eval lxc file push -q ${file_logrotate_client} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} logrotate
 
-_echoT "----------  ${_CT_NAME} crond restart"
+_echoT "------------------  ${_CT_NAME} crond restart"
 _lxc_exec ${_CT_NAME} "rc-service crond restart"
 
 
 ########################  MANUAL CONF
 
-_echoT "----------  DNS conf"
-_echoI "    IN MX 1   $_DOMAIN_FQDN.
-    IN TXT 'v=spf1 a mx ~all'
-imap             IN CNAME  $_DOMAIN_FQDN.
-mail             IN CNAME  $_DOMAIN_FQDN.
-smtp             IN CNAME  $_DOMAIN_FQDN.
-"
+_echoT "------------------  DNS conf"
+_echoI "IN MX 1   ${_DOMAIN_FQDN}.
+IN TXT 'v=spf1 a mx ~all'
+imap				IN CNAME  ${_DOMAIN_FQDN}.
+mail				IN CNAME  ${_DOMAIN_FQDN}.
+smtp				IN CNAME  ${_DOMAIN_FQDN}.
 
+${_DOMAIN_FQDN}  3600 IN TXT v=spf1 a:mx.${_DOMAIN_FQDN} ?all
+# for each domain in: ${_DOMAIN_2_FQDN}
+${_DOMAIN_2_FQDN%% *}. 3600 IN TXT v=spf1 include:${_DOMAIN_FQDN} ?all
+
+# for each domain in: ${_DOMAIN_FQDN} ${_DOMAIN_2_FQDN}
+_dmarc.${_DOMAIN_2_FQDN}. 'v=DMARC1; p=none; sp=none; aspf=r;''
+"
 _askno "Verify the configuration of your DNS server about MAIL\nand confirm"
 
-_askno "Verify that the reverse DNS is setting: mail.${_DOMAIN_FQDN} is ${_IPTHIS}\nand confirm"
+_echoT "------------------  reverse DNS conf"
+_askno "Verify that the reverse DNS of your machine: ${_IPTHIS} is set to:\n
+mail.${_DOMAIN_FQDN}\n
+and confirm"
 
 
-_echoT "----------  firewall conf"
+_echoT "------------------  firewall conf"
 file=${S_PATH_CONF}/iptables-firewall.conf
 if [ -f "${file}" ]; then
 	_echo "Verify that the following ports are corrects for mails: $(sed -n 's|^_PORTS_MAIL="\(.*\)"$|\1|p' ${file})"
@@ -207,5 +260,5 @@ fi
 
 ########################  END
 
-_echoT "===================== ${_PART} end"
+_echoT "====================== ${_INSTALL}-${_PARTMAIL} end"
 _partadd ${_PARTMAIL#++} ${S_FILE_INSTALL_DONE}

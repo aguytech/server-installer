@@ -1,0 +1,7 @@
+#!/bin/sh
+#
+# copy certificates from shared ssl path to local ssl path
+cp _PATH_SSL/* S_PATH_CONF_SSL/private
+chmod 644 -R S_PATH_CONF_SSL/private
+rc-service -s postfix reload
+rc-service -s dovecot reload

@@ -10,109 +10,31 @@ _echoT "------------------ required vm image"
 lxc image list -f csv -c l | grep -q ^${_CT_NAME_COM}$ || _exite "Unable to find image container: '${_CT_NAME_COM}'"
 
 _echoT "------------------ required vm"
-lxc list -f csv -c n | grep -q ^${S_SERVICE[proxy]}$ || _exite "Unable to find image container: '${S_SERVICE[proxy]}'"
-lxc list -f csv -c n | grep -q ^${S_SERVICE[log]}$ || _exite "Unable to find image container: '${S_SERVICE[log]}'"
+lxc list -f csv -c n | grep -q ^${S_SERVICE[proxy]}$ || _exite "Unable to find container: '${S_SERVICE[proxy]}'"
+lxc list -f csv -c n | grep -q ^${S_SERVICE[log]}$ || _exite "Unable to find container: '${S_SERVICE[log]}'"
 
-_echoT "------------------ required profile"
-lxc profile list -f csv| grep -q '^ssl-mail,' || _exite "unable to find profile: ${ssl-mail}"
+####################  SELECT
 
-
-_echoT "------------------ file required"
-_POSTFIXMASTER=${S_PATH_INSTALL_CONF}/mail/master.cf
-_POSTFIXMAIN=${S_PATH_INSTALL_CONF}/mail/main_add.cf
-
-_echoT "------------------ required files"
-_require ${_POSTFIXMASTER} ${_POSTFIXMAIN}
-
-########################  DATA
-
-# TODO remove
-_DOMAIN_FQDN=${S_DOMAIN_FQDN}
-_MAIL_ADMIN=${S_DOMAIN_EMAIL_ADMIN}
-_FILE_INSTALL_CONF=${S_FILE_INSTALL_CONF%/*}/${_PART}-${_DOMAIN_FQDN}.conf 
-[ -f "${_FILE_INSTALL_CONF}" ] && . ${_FILE_INSTALL_CONF}
-
-#<<KEEP
-
-_echoT "------------------ data container"
-
-anstmp=${S_SERVICE[mail]} && _askno "Base name of containers to build (${anstmp})"
-ct_base="${_ANSWER:-$anstmp}"
-
-anstmp=2 && _askno "Number of containers to build (${anstmp})"
-ct_num="${_ANSWER:-$anstmp}"
-
-_echoT "------------------ data domain"
+_echoT "------------------ select"
 
 anstmp=${S_DOMAIN_FQDN} && _askno "Domain name to use (${anstmp})"
 _DOMAIN_FQDN="${_ANSWER:-${anstmp}}"
-anstmp=${S_DOMAIN_EMAIL_ADMIN} && _askno "Administration email adress for domain (${anstmp})"
-_MAIL_ADMIN=${_ANSWER:-${anstmp}}
-anstmp=otokoz.ovh && _askno "A second fqdn second domain name: (${anstmp})"
-_DOMAIN_2_FQDN="${_ANSWER:-$anstmp}"
-
-
-_FILE_INSTALL_CONF=${S_FILE_INSTALL_CONF%/*}/${_PART}-${_DOMAIN_FQDN}.conf && _confset _FILE_INSTALL_CONF "${_FILE_INSTALL_CONF}" ${_FILE_INSTALL_CONF}
-grep -q "^# ${_PART#++}$" ${_FILE_INSTALL_CONF} || echo  "# ${_PART}" >> ${_FILE_INSTALL_CONF}
+_DOMAIN_NAME=${_DOMAIN_FQDN%.lxd} && _DOMAIN_NAME=${_DOMAIN_NAME%.*}
+_FILE_INSTALL_CONF=${S_PATH_CONF}/${_PART}-${_DOMAIN_FQDN}.conf
+_confset _FILE_INSTALL_CONF "${_FILE_INSTALL_CONF}" ${_FILE_INSTALL_CONF}
 _confset _DOMAIN_FQDN "${_DOMAIN_FQDN}" ${_FILE_INSTALL_CONF}
-_confset _DOMAIN_2_FQDN "${_DOMAIN_2_FQDN}"
-_confset _MAIL_ADMIN "${_MAIL_ADMIN}" ${_FILE_INSTALL_CONF}
-_confset _POSTFIXMASTER "${_POSTFIXMASTER}" ${_FILE_INSTALL_CONF}
-_confset _POSTFIXMAIN "${_POSTFIXMAIN}" ${_FILE_INSTALL_CONF}
+_confset _DOMAIN_NAME "${_DOMAIN_NAME}" ${_FILE_INSTALL_CONF}
 
-_echoT "------------------ data"
+####################  DATA
 
-anstmp=y && _askno "Do you want an installation with halts for each parts (${anstmp})"
-_STEP=${_ANSWER:-${anstmp}} && _confset _STEP "${_STEP}" ${_FILE_INSTALL_CONF}
-
-anstmp=${S_VM_PATH_SHARE}/mail/${_DOMAIN_FQDN} && _askno "path for shared MAIL (${anstmp})"
-_PATH_MAIL=${_ANSWER:-${anstmp}} && _confset _PATH_MAIL "${_PATH_MAIL}" ${_FILE_INSTALL_CONF}
-
-anstmp=${_PATH_MAIL}/rspamd && _askno "path for RSPAMD (${anstmp})"
-_PATH_RSPAMD=${_ANSWER:-${anstmp}} && _confset _PATH_RSPAMD "${_PATH_RSPAMD}" ${_FILE_INSTALL_CONF}
-
-_PATH_SSL=${S_VM_PATH_SHARE}/ssl/mail && _confset _PATH_SSL "${_PATH_SSL}" ${_FILE_INSTALL_CONF}
-
-_echoT "------------------ data vmail"
-
-#declare -A vmails_acro
-#vmails_acro=( [postfixadmin]="pfa" [vmailmanage]="vmail" [vimbadmin]="vma" )
-#_menu "Select the virtual mail manager you will install (postfixadmin)" `echo ${!vmails_acro[@]}|tr ' ' '\n'|sort`
-#_VMAIL_APP=${_ANSWER} && _confset _VMAIL_APP "${_VMAIL_APP}" ${_FILE_INSTALL_CONF}
-_VMAIL_APP=postfixadmin && _confset _VMAIL_APP "${_VMAIL_APP}" ${_FILE_INSTALL_CONF}
-
-anstmp=pma && _askno "Please give a acronym for virtualmail (${anstmp})"
-_VMAIL_ACRO=${_ANSWER:-${anstmp}} && _confset _VMAIL_ACRO "${_VMAIL_ACRO}" ${_FILE_INSTALL_CONF}
-
-anstmp=${_PATH_MAIL}/vmail && _askno "path for VMAIL (${anstmp})" && _PATH_VMAIL=${_ANSWER:-${anstmp}}
-_PATH_VMAIL=${_ANSWER:-${anstmp}} && _confset _PATH_VMAIL "${_PATH_VMAIL}" ${_FILE_INSTALL_CONF}
-
-anstmp=${_PATH_VMAIL}/sieve && _askno "path for sieve (${anstmp})"
-_PATH_SIEVE=${_ANSWER:-${anstmp}} && _confset _PATH_SIEVE "${_PATH_SIEVE}" ${_FILE_INSTALL_CONF}
-
-anstmp=vmail && _askno "Give a name of user & group for virtualmail (${anstmp})"
-_VMAIL_USER=${_ANSWER:-${anstmp}} && _confset _VMAIL_USER "${_VMAIL_USER}" ${_FILE_INSTALL_CONF}
-
-anstmp=90 && _askno "Give the uid/gid for vmail user (${anstmp})"
-_VMAIL_UID=${_ANSWER:-${anstmp}} && _confset _VMAIL_UID "${_VMAIL_UID}" ${_FILE_INSTALL_CONF}
-
-
-_PATH_DKIM="${_PATH_RSPAMD}/dkim" && _confset _PATH_DKIM "${_PATH_DKIM}" ${_FILE_INSTALL_CONF}
-#_IPS_IN=`echo "${S_CLUSTER[*]}"|tr ' ' '\n'|sed -n 's|s_ip=\([^ ]\+\)$|\1|p'|grep -v ${_IPTHIS}|xargs`
-_IPS_IN=`echo "${S_CLUSTER[*]}"|tr ' ' '\n'|sed -n 's|s_ip=\([^ ]\+\)$|\1|p'|xargs` && _confset _IPS_IN "${_IPS_IN}" ${_FILE_INSTALL_CONF}
-_IP6S_IN=`echo "${S_CLUSTER[*]}"|tr ' ' '\n'|sed -n 's|s_ip6=\([^ ]\+\)$|\1|p'|xargs` && _confset _IP6S_IN "${_IP6S_IN}" ${_FILE_INSTALL_CONF}
-_PATHSSLKEY=${_PATH_SSL}/private && _confset _PATHSSLKEY "${_PATHSSLKEY}" ${_FILE_INSTALL_CONF}
-_PATHSSLCRT=${_PATH_SSL}/certs && _confset _PATHSSLCRT "${_PATHSSLCRT}" ${_FILE_INSTALL_CONF}
-_FILE_SSL_CERT="${_PATHSSLKEY}/mail.${_DOMAIN_FQDN}.key" && _confset _FILE_SSL_CERT "${_FILE_SSL_CERT}" ${_FILE_INSTALL_CONF}
-_FILE_SSL_CHAIN="${_PATHSSLKEY}/mail.${_DOMAIN_FQDN}.csr" && _confset _FILE_SSL_CHAIN "${_FILE_SSL_CHAIN}" ${_FILE_INSTALL_CONF}
-_FILE_SSL_PRIV="${_PATHSSLCRT}/mail.${_DOMAIN_FQDN}.crt" && _confset _FILE_SSL_PRIV "${_FILE_SSL_PRIV}" ${_FILE_INSTALL_CONF}
-_FILE_SSL_COMB="${_PATHSSLKEY}/mail.${_DOMAIN_FQDN}.pem" && _confset _FILE_SSL_COMB "${_FILE_SSL_COMB}" ${_FILE_INSTALL_CONF}
-
-#KEEP
-
-_CT_NAME=${ct_base}-1
-eval ${S_HOST_VM_ETH[default]}
-_CT_IP=${s_base}.${S_SERVICE_BITS[mail]}
+_PARTMAIL=mail-data
+if ! _parthave ${_PARTMAIL} ${S_FILE_INSTALL_DONE}; then
+	. "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PARTMAIL}.install" || _exite "Wrong part: ${_PARTMAIL}"
+	[ "$_STEP" ] && _askno "Valid to continue" 
+else
+	. ${_FILE_INSTALL_CONF}
+	_echoW "performed *** ${_PARTMAIL}"
+fi
 
 ####################  INIT
 
@@ -144,9 +66,19 @@ else
 	_echoW "performed *** ${_PARTMAIL}"
 fi
 
-####################  DOVECOT
+####################  _VMAIL_APP
 
-_PARTMAIL=mail-dovecot
+_PARTMAIL=mail-${_VMAIL_APP}
+if ! _parthave ${_PARTMAIL} ${S_FILE_INSTALL_DONE}; then
+	. "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PARTMAIL}.install" || _exite "Wrong part: ${_PARTMAIL}"
+	[ "$_STEP" ] && _askno "Valid to continue" 
+else
+	_echoW "performed *** ${_PARTMAIL}"
+fi
+
+####################  POSTFIX
+
+_PARTMAIL=mail-postfix
 if ! _parthave ${_PARTMAIL} ${S_FILE_INSTALL_DONE}; then
 	. "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PARTMAIL}.install" || _exite "Wrong part: ${_PARTMAIL}"
 	[ "$_STEP" ] && _askno "Valid to continue" 
@@ -155,13 +87,12 @@ else
 fi
 
 
-
 exit
 
 
-####################  POSTFIX
+####################  DOVECOT
 
-_PARTMAIL=mail-postfix
+_PARTMAIL=mail-dovecot
 if ! _parthave ${_PARTMAIL} ${S_FILE_INSTALL_DONE}; then
 	. "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PARTMAIL}.install" || _exite "Wrong part: ${_PARTMAIL}"
 	[ "$_STEP" ] && _askno "Valid to continue" 
@@ -179,17 +110,6 @@ else
 	_echoW "performed *** ${_PARTMAIL}"
 fi
 
-####################  _VMAIL_APP
-
-_PARTMAIL=mail-${_VMAIL_APP}
-if ! _parthave ${_PARTMAIL} ${S_FILE_INSTALL_DONE}; then
-	. "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PARTMAIL}.install" || _exite "Wrong part: ${_PARTMAIL}"
-	[ "$_STEP" ] && _askno "Valid to continue" 
-else
-	_echoW "performed *** ${_PARTMAIL}"
-fi
-
-
 ####################################  START
 
 _echoT "------------------ postfix start"
@@ -197,7 +117,6 @@ _evalq "systemctl start postfix"
 
 _echoT "------------------ dovecot start"
 _evalq "systemctl start dovecot.service"
-
 
 #################################### test mail sending
 
@@ -208,7 +127,6 @@ _mail "root <root@$_DOMAIN_FQDN>" postmaster@$_DOMAIN_FQDN test "Here is the fir
 sleep 1
 _askno "${bblue}Please verify you have received the email test to postmaster@$_DOMAIN_FQDN\n& valid${cclear}"
 
-
 ####################################  CONNECT
 
 _echoi "To use your mail manager, follow this informations:"
@@ -217,11 +135,10 @@ _echoi "${yellowb}SMTP-Server${cclear} mail.$_DOMAIN_FQDN | Port: 587 | STARTTLS
 _echoi "${yellowb}Managesieve${cclear} mail.$_DOMAIN_FQDN | Port: 4190 | STARTTLS"
 _echoi "${yellowb}Username${cclear} Complete e-mail address"
 
-
 ########################  COPY
 
-for i in `seq 2 ${ct_num}`; do
-	ct_name=${ct_base}-${i}
+for i in `seq 2 ${_CT_NUM}`; do
+	ct_name=${_CT_NAME}-${i}
 	_echoT "---------- build ${ct_name}"
 
 	if lxc list -f csv -c n | grep -q ^${ct_name}$; then
@@ -232,28 +149,33 @@ for i in `seq 2 ${ct_num}`; do
 	_eval lxc start ${ct_name}
 done
 
+########################  FIX IP
+
+_echoT "------------------ network fixed ip"
+if ! lxc list -f json | jq -r '.[] | select(.name == "'${_CT_NAME}'").devices[].name' | grep -q eth0; then
+	_eval lxc config device override ${_CT_NAME} eth0 ipv4.address=${_CT_IP}
+fi
+
 
 ########################  TEST
 
-_echoT "----------  mail test"
+_echoT "------------------  mail test"
+
+
 
 
 ########################  HAPROXY
 
 _echoI "\nAdjust backend in proxy for backend: ${S_SERVICE[mail]} with:"
-_echo $(for i in `seq 1 ${ct_num}`; do echo ${ct_base}-${i};done)
-
+_echo $(for i in `seq 1 ${_CT_NUM}`; do echo ${_CT_NAME}-${i};done)
 
 ########################  PUBLISH
 
-for i in `seq 1 ${ct_num}`; do
- 	ct_name=${ct_base}-${i}
-
+for ct_name in ${_CT_ALL_NAME}
 	_echoT "------------------ publish ${ct_name}"
 	lxc image list -f csv -c l | grep -q ^${ct_name}$ && _eval lxc image alias rename ${ct_name} ${ct_name}-${_SDATE}
 	_eval lxc publish --force ${ct_name} --alias ${ct_name}
 done
-
 
 ########################  END
 

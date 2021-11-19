@@ -1,0 +1,179 @@
+#!/bin/bash
+#
+# write by Aguy
+
+_echoT "\n======================  ${_INSTALL}-${_PARTMAIL}"
+
+grep -q "^# ${_PARTMAIL#++}$" ${_FILE_INSTALL_CONF} || echo  "# ${_PARTMAIL}" >> ${_FILE_INSTALL_CONF}
+
+########################  REQUIRED
+
+_echoT "------------------ required vm"
+cts_admin=`lxc list -f csv -c n | grep '\-admin-'`
+[ -z "${cts_admin}" ] && _exite "Unable to find an 'admin' container"
+
+file_conf=${S_PATH_INSTALL_CONF}/mail/postfixadmin/config.local.php
+file_conf_apache=${S_PATH_INSTALL_CONF}/apache2/sub-admin.conf
+
+_echoT "------------------ required files"
+_require ${file_conf} ${file_conf_apache}
+
+########################  DATA
+
+_echoT "------------------  data container"
+# ct_master
+_menua "Select all available 'admin' containers to use" ${cts_admin}
+cts_name=`echo ${_ANSWER}`
+ct_name=${cts_name%% *}
+
+_echoT "------------------  data db"
+anstmp=pfa && _askno "User name to access to: ${_DB_NAME} (${anstmp})"
+_DB_PFA_USER=${_ANSWER:-${anstmp}} && _confset _DB_PFA_USER "${_DB_PFA_USER}" ${_FILE_INSTALL_CONF}
+
+anstmp="$(_pwd)" && _askno "User password for ${_DB_PFA_USER} ! 2 digit at least ! (${anstmp})"
+_DB_PFA_PWD=${_ANSWER:-${anstmp}} && _confset _DB_PFA_PWD "${_DB_PFA_PWD}" ${_FILE_INSTALL_CONF}
+
+_echoT "------------------  data"
+pfa_tmp=
+while ! [ -f "${pfa_file}" ]; do
+	anstmp=3.3.8 && _askno "Version to install? (${anstmp})"
+	pfa_ver=${_ANSWER:-${anstmp}} 
+	pfa_file=postfixadmin-${pfa_ver}.tar.gz
+	pfa_tmp=/tmp/${pfa_file}
+	! [ -f "${pfa_tmp}" ] && wget -qO ${pfa_tmp} https://github.com/postfixadmin/postfixadmin/archive/refs/tags/${pfa_file}
+done
+
+_echoI "Default policy to use for postfix"
+_echo "none: Don’t use encryption
+- may: Encrypt, if supported by other server. Self-signed certificates
+   are accepted, because there is no certificate verification.
+- encrypt: Always encrypt. Self-signed certificates are accepted,
+   because there is no certificate verification.
+- dane: If there are valid TLSA-records in the DNS, encryption is mandatory.
+   The certificate is then verified via DANE. If invalid TLSA records are found,
+   fallback is “encrypt”. If no TLSA-records are found, fallback is “may”.
+- dane-only: Encrypted connections only. Certificate verification via DANE.
+   No fallback to weaker methods.
+- verify: Encrypted connections only. Certificate must be issued by an accepted CA.
+   Hostname given in MX record must match hostname in certificate.
+- secure: Encrypted connections only. Certificate must be issued by an accepted CA.
+   Hostname in certificate must by domain or subdomain of e-mail domain. No DNS used.
+" && sleep 0.4
+_menu "Select a global default policy of security (none)" none may encrypt dane dane-only verify secure
+_PFA_POLICY="${_ANSWER}" && _confset _PFA_POLICY "${_PFA_POLICY}"
+
+pfa_path=${pfa_file%.tar.gz}
+path_admin=${S_VM_PATH_SHARE}/www/admin.${_DOMAIN_FQDN}
+_SUBDOMAIN=pfa
+
+########################  MARIADB
+
+strpass=
+for ct in ${cts_name}; do
+	_echoT "------------------  grant ${_DB_PFA_USER} for ${ct}"
+	cmd="GRANT USAGE ON *.* TO '${_DB_PFA_USER}'@'${ct}.lxd' IDENTIFIED BY '${_DB_PFA_PWD}';"
+	_eval "mysql -h${_DB_HOST} -uroothost -p${_DB_HOST_PWD} -e \"${cmd}\""
+	cmd="GRANT ALL PRIVILEGES ON ${_DB_NAME}.* TO '${_DB_PFA_USER}'@'${ct}.lxd';"
+	_eval "mysql -h${_DB_HOST} -uroothost -p${_DB_HOST_PWD} -e \"${cmd}\""
+	strpass+="${_DB_PFA_USER} @ ${ct} - ${_DB_PFA_PWD}\n"
+done
+
+_echoT "------------------  flush privileges"
+_eval "mysql -h${_DB_HOST} -uroothost -p${_DB_HOST_PWD} -e \"FLUSH PRIVILEGES;\""
+
+########################  MAIN
+
+_echoT "------------------  create path ${path_admin}"
+_lxc_exec ${ct_name} "[ -d ${path_admin} ] || mkdir -p ${path_admin}"
+
+_echoT "------------------  install"
+_eval lxc file push -q ${pfa_tmp} ${ct_name}/${path_admin}/
+
+cmds="cd ${path_admin}
+[ -e ${pfa_path} ] && mv ${pfa_path} ${pfa_path}.${_SDATE}
+tar -xzf ${pfa_file}
+[ -e postfixadmin-${pfa_path} ] && mv postfixadmin-${pfa_path} ${pfa_path}
+[ -e '${_SUBDOMAIN}' ] && rm ${_SUBDOMAIN}
+ln -s ${pfa_path} ${_SUBDOMAIN}
+chown -R apache.apache ../"
+_lxc_exec ${ct_name} "${cmds}"
+
+<<KEEP
+_echoT "------------------  conf ${_PARTMAIL}"
+file=${path_admin}/${_SUBDOMAIN}/config.inc.php
+_lxc_exec ${ct_name} "[ -e '${file}' ]"
+cmds="cp -a ${file} ${file}.${_SDATE}
+sed -i \"/^.CONF\['database_type'\]/ s|=.*|= 'mysqli';|\" ${file}
+sed -i \"/^.CONF\['database_host'\]/ s|=.*|= '${_DB_HOST}.lxd';|\" ${file}
+sed -i \"/^.CONF\['database_user'\]/ s|=.*|= '${_DB_PFA_USER}';|\" ${file}
+sed -i \"/^.CONF\['database_password'\]/ s|=.*|= '${_DB_PFA_PWD}';|\" ${file}
+sed -i \"/^.CONF\['database_name'\]/ s|=.*|= '${_DB_NAME}';|\" ${file}
+sed -i \"/^.CONF\['database_use_ssl'\]/ s|=.*|= false;|\" ${file}
+sed -i \"/^.CONF\['configured'\]/ s|=.*|= true;|\" ${file}"
+_lxc_exec ${ct_name} "${cmds}"
+KEEP
+
+_echoT "------------------  conf local"
+file=${path_admin}/${_SUBDOMAIN}/${file_conf##*/}
+_lxc_exec ${ct_name} "[ -e '${file}' ] && mv ${file} ${file}.${_SDATE}"
+_eval lxc file push -q ${file_conf} ${ct_name}${file}
+_lxc_var_replace ${ct_name} ${file} mail
+
+_echoT "------------------  path templates_c"
+path=${path_admin}/${pfa_path}/templates_c
+_lxc_exec ${ct_name} "[ -d '${path}' ] || mkdir ${path}"
+_lxc_exec ${ct_name} "chown apache.apache -R ${path}"
+
+########################  APACHE
+
+_echoT "------------------  conf apache2"
+file=/etc/apache2/sites/${_SUBDOMAIN}.conf
+_lxc_exec ${ct_name} "[ -e '${file}' ] && mv ${file} ${file}.${_SDATE}"
+_eval lxc file push -q ${file_conf_apache} ${ct_name}${file}
+_lxc_var_replace ${ct_name} ${file} apache
+_lxc_exec ${ct_name} "sed -i 's|/${_APA_ADMIN}.${_DOMAIN_FQDN}/${_SUBDOMAIN}|/${_APA_ADMIN}.${_DOMAIN_FQDN}/${_SUBDOMAIN}/public|' ${file}"
+
+_echoT "------------------  apache2 restart"
+_lxc_exec ${ct_name} "rc-service apache2 restart"
+
+########################  MANUAL
+
+_echoT "------------------  manually app password"
+_echoI "Go to address: ${_SUBDOMAIN}.${_DOMAIN_FQDN}/setup.php"
+_echo "Use this password to configrure postfixadmin: ${_DB_PFA_PWD}"
+_echo "after this, paste to this terminal the text given by postfixadmin to configure it:"
+str=
+while [ -z "${str}" ]; do read -r str; done
+file=${path_admin}/${_SUBDOMAIN}/config.local.php
+lxc exec ${ct_name} -- sed -i "/^.CONF..setup_password/ c${str}" ${file}
+
+_echoT "------------------  manually admin password"
+_echoI "Refresh page: ${_SUBDOMAIN}.${_DOMAIN_FQDN}/setup.php"
+_echo "and enter setup password: ${_DB_PFA_PWD} to continue"
+_echo "After creation of tables succeed you have to setup an account for administration"
+_askno "and valid after this"
+
+########################  DB ADD
+
+_evalq "mysql -h'${_DB_HOST}' -uroothost -p'${_DB_HOST_PWD}' ${_DB_NAME} -e \"
+ALTER TABLE domain ADD COLUMN IF NOT EXISTS policy enum('none', 'may', 'encrypt', 'dane', 'dane-only', 'fingerprint', 'verify', 'secure') NOT NULL DEFAULT '${_PFA_POLICY}' AFTER modified;
+ALTER TABLE domain ADD COLUMN IF NOT EXISTS params varchar(255) DEFAULT NULL AFTER policy;
+\""
+
+########################  SHOW
+
+_echoT "------------------  show passwords"
+_echoI "Keep this passwords:"
+_echoW "${strpass}"
+
+########################  COUNTS
+
+_echoT "------------------  domain & email account"
+_echoI "Now use this address: ${_SUBDOMAIN}.${_DOMAIN_FQDN}/"
+_echo "Logging you and create at least one domain & an email with the domain: ${_DOMAIN_FQDN}"
+_askno "and valid after this"
+
+########################  END
+
+_echoT "====================== ${_INSTALL}-${_PARTMAIL} end"
+_partadd ${_PARTMAIL#++} ${S_FILE_INSTALL_DONE}

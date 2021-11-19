@@ -1,0 +1,71 @@
+#!/bin/bash
+#
+# write by Aguy
+
+_echoT "\n======================  ${_INSTALL}-${_PARTMAIL}"
+
+########################  DATA
+
+_echoT "------------------ data container"
+
+anstmp=${S_SERVICE[mail]} && _askno "Base name of containers to build (${anstmp})"
+_CT_NAME="${_ANSWER:-${anstmp}}" && _confset _CT_NAME "${_CT_NAME}" ${_FILE_INSTALL_CONF}
+eval ${S_HOST_VM_ETH[default]}
+_CT_IP=${s_base}.${S_SERVICE_BITS[mail]} && _confset _CT_IP "${_CT_IP}" ${_FILE_INSTALL_CONF}
+
+anstmp=2 && _askno "Number of containers to build (${anstmp})"
+_CT_NUM="${_ANSWER:-${anstmp}}" && _confset _CT_NUM "${_CT_NUM}" ${_FILE_INSTALL_CONF}
+_CT_ALL_NAME="${_CT_NAME} $(for i in `seq 2 ${_CT_NUM}`; do echo ${_CT_NAME}-${i}; done)"
+_confset _CT_ALL_NAME "${_CT_ALL_NAME}" ${_FILE_INSTALL_CONF}
+
+_echoT "------------------ data domain"
+
+[ "${_DOMAIN_FQDN%.lxd}" = "${_DOMAIN_FQDN}" ] && anstmp="17112018.fr ggj.fr otokoz.ovh" || anstmp="17112018.fr.lxd ggj.fr.lxd otokoz.ovh.lxd"
+_askno "Others fqdn domain (${anstmp})"
+_DOMAIN_OTHERS="${_ANSWER:-${anstmp}}" && _confset _DOMAIN_OTHERS "${_DOMAIN_OTHERS}" ${_FILE_INSTALL_CONF}
+_DOMAIN_ALL_FQDN="${_DOMAIN_FQDN} ${_DOMAIN_OTHERS}" && _confset _DOMAIN_ALL_FQDN "${_DOMAIN_ALL_FQDN}" ${_FILE_INSTALL_CONF}
+
+_menu "A second fqdn domain (otokoz.ovh)" ${_DOMAIN_OTHERS}
+_DOMAIN_2_FQDN="${_ANSWER:-${anstmp}}" && _confset _DOMAIN_2_FQDN "${_DOMAIN_2_FQDN}" ${_FILE_INSTALL_CONF}
+
+anstmp=${S_DOMAIN_EMAIL_ADMIN} && _askno "Administration email adress (${anstmp})"
+_MAIL_ADMIN=${_ANSWER:-${anstmp}} && _confset _MAIL_ADMIN "${_MAIL_ADMIN}" ${_FILE_INSTALL_CONF}
+
+anstmp=${S_DOMAIN_EMAIL_TECH} && _askno "Technical email adress (${anstmp})"
+_MAIL_TECH=${_ANSWER:-${anstmp}} && _confset _MAIL_TECH "${_MAIL_TECH}" ${_FILE_INSTALL_CONF}
+
+_echoT "------------------ data"
+
+anstmp=${S_VM_PATH_SHARE}/mail && _askno "shared path for mail (${anstmp})"
+_PATH_MAIL=${_ANSWER:-${anstmp}} && _confset _PATH_MAIL "${_PATH_MAIL}" ${_FILE_INSTALL_CONF}
+
+anstmp=${_PATH_MAIL}/local && _askno "path for shared local mail (${anstmp})"
+_PATH_LMAIL=${_ANSWER:-${anstmp}} && _confset _PATH_LMAIL "${_PATH_LMAIL}" ${_FILE_INSTALL_CONF}
+
+anstmp=${_PATH_MAIL}/vmail && _askno "path for shared virtual mail (${anstmp})" && _PATH_VMAIL=${_ANSWER:-${anstmp}}
+_PATH_VMAIL=${_ANSWER:-${anstmp}} && _confset _PATH_VMAIL "${_PATH_VMAIL}" ${_FILE_INSTALL_CONF}
+
+anstmp=${_PATH_VMAIL}/sieve && _askno "path for sieve (${anstmp})"
+_PATH_SIEVE=${_ANSWER:-${anstmp}} && _confset _PATH_SIEVE "${_PATH_SIEVE}" ${_FILE_INSTALL_CONF}
+
+anstmp=${_PATH_MAIL}/rspamd && _askno "path for RSPAMD (${anstmp})"
+_PATH_RSPAMD=${_ANSWER:-${anstmp}} && _confset _PATH_RSPAMD "${_PATH_RSPAMD}" ${_FILE_INSTALL_CONF}
+
+anstmp=y && _askno "Do you want an installation with halts for each parts (${anstmp})"
+_STEP=${_ANSWER:-${anstmp}} && _confset _STEP "${_STEP}" ${_FILE_INSTALL_CONF}
+
+
+_VMAIL_APP=postfixadmin && _confset _VMAIL_APP "${_VMAIL_APP}" ${_FILE_INSTALL_CONF}
+_SSL_SCHEME=SHA512 && _confset _SSL_SCHEME "${_SSL_SCHEME}" ${_FILE_INSTALL_CONF}
+
+_PATH_SSL=${S_VM_PATH_SHARE}/ssl/mail && _confset _PATH_SSL "${_PATH_SSL}" ${_FILE_INSTALL_CONF}
+_PATH_DKIM="${_PATH_RSPAMD}/dkim" && _confset _PATH_DKIM "${_PATH_DKIM}" ${_FILE_INSTALL_CONF}
+#_IPS_IN=`echo "${S_CLUSTER[*]}"|tr ' ' '\n'|sed -n 's|s_ip=\([^ ]\+\)$|\1|p'|grep -v ${_IPTHIS}|xargs`
+_IPS_IN=`echo "${S_CLUSTER[*]}"|tr ' ' '\n'|sed -n 's|s_ip=\([^ ]\+\)$|\1|p'|xargs` && _confset _IPS_IN "${_IPS_IN}" ${_FILE_INSTALL_CONF}
+_IP6S_IN=`echo "${S_CLUSTER[*]}"|tr ' ' '\n'|sed -n 's|s_ip6=\([^ ]\+\)$|\1|p'|xargs` && _confset _IP6S_IN "${_IP6S_IN}" ${_FILE_INSTALL_CONF}
+_SSL_PROFILE_MAIL=ssl-mail
+
+########################  END
+
+_echoT "====================== ${_INSTALL}-${_PARTMAIL} end"
+_partadd ${_PARTMAIL#++} ${S_FILE_INSTALL_DONE}
