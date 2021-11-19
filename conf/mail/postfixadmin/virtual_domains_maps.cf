@@ -1,0 +1,7 @@
+user = _DB_USER
+password = _DB_PWD
+hosts = _DB_HOST
+dbname = _DB_NAME
+#query = SELECT domain FROM domain WHERE domain = '%s'
+#optional query to use when relaying for backup MX
+query = SELECT domain FROM domain WHERE domain = '%s' AND active = true AND backupmx = false

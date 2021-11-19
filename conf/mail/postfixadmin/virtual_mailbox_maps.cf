@@ -1,0 +1,5 @@
+user = _DB_USER
+password = _DB_PWD
+hosts = _DB_HOST
+dbname = _DB_NAME
+query = SELECT maildir FROM mailbox WHERE username='%s'   AND active = true AND backupmx = false
