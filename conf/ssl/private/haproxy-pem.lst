@@ -1,7 +1,0 @@
-# otokoz
-/etc/server/ssl/private/otokoz.ovh.pem
-/etc/server/ssl/private/otokoz.ovh-admin.pem
-
-#ambau.ovh
-/etc/server/ssl/private/ambau.ovh.pem
-/etc/server/ssl/private/ambau.ovh-admin.pem
