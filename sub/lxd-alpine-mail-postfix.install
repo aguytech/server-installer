@@ -11,11 +11,15 @@ grep -q "^# ${_PARTMAIL#++}$" ${_FILE_INSTALL_CONF} || echo  "# ${_PARTMAIL}" >>
 file_conf_master=${S_PATH_INSTALL_CONF}/mail/master.cf
 file_conf_main=${S_PATH_INSTALL_CONF}/mail/main.cf
 file_conf_main_add=${S_PATH_INSTALL_CONF}/mail/main_add.cf
+file_conf_subcleanup=${S_PATH_INSTALL_CONF}/mail/subcleanup
 path_sql=${S_PATH_INSTALL_CONF}/mail/${_VMAIL_APP}
 
 _echoT "------------------ required files"
-_require ${file_conf_master} ${file_conf_main} ${file_conf_main_add} ${file_conf_policy}
+_require ${file_conf_master} ${file_conf_main} ${file_conf_main_add} ${file_conf_policy} ${file_conf_subcleanup}
 _requirep ${path_sql}
+
+anstmp=tech@${_DOMAIN_FQDN} && _askno "Created email in domain ${_DOMAIN_FQDN} to test mysql settings (${anstmp})"
+_PFA_EMAIL_TEST=${_ANSWER:-${anstmp}} && _confset _PFA_EMAIL_TEST "${_PFA_EMAIL_TEST}" ${_FILE_INSTALL_CONF}
 
 _PFA_PATH_SQL=/etc/postfix/sql && _confset _PFA_PATH_SQL "${_PFA_PATH_SQL}" ${_FILE_INSTALL_CONF}
 
@@ -42,13 +46,13 @@ _echoT "------------------  conf main.cf"
 file=/etc/postfix/${file_conf_main##*/}
 _eval lxc file push -q ${file_conf_main} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} mail
+_lxc_exec_e ${_CT_NAME} chown -R 0.0 /etc/postfix
 
 # ipv4 # str='mynetworks = hash'; val="mynetworks = 127.0.0.0/8 ${s_cidr} ${_IPS_IN}"
 str="mynetworks ="; val="mynetworks = 127.0.0.0/8 [::1]/128 ${s_cidr} ${_IPS_IN} ${_IP6S_IN}"
 _lxc_exec ${_CT_NAME} "sed -i '/^${str}/ c${val}' ${file}"
 
 _echoT "------------------  postfix start"
-_lxc_exec_e ${_CT_NAME} chown -R 0.0 /etc/postfix
 _lxc_exec_e ${_CT_NAME} rc-service postfix restart
 
 ########################  ADD
@@ -68,26 +72,26 @@ if ! _lxc_exec ${_CT_NAME} "grep -q '#* *ADD$' /etc/postfix/main.cf"; then
 fi
 
 _echoT "------------------  conf subcleanup"
-file=/etc/postfix/subcleanup
-cmd="echo '### Removes headers of MUAs for privacy reasons
+file=/etc/postfix/${file_conf_subcleanup##*/}
+_eval lxc file push -q ${file_conf_main_add} ${_CT_NAME}${file}
 
-/^Received:/		IGNORE
-/^X-Originating-IP:/	IGNORE
-/^X-Mailer:/		IGNORE
-/^User-Agent:/		IGNORE
-' > ${file}"
-_lxc_exec ${_CT_NAME} "${cmd}"
+_echoT "------------------  right /etc/postfix"
+_lxc_exec_e ${_CT_NAME} chown -R 0.0 /etc/postfix
 
 _echoT "------------------  sql files"
 _lxc_exec_e ${_CT_NAME} "[ -d '${_PFA_PATH_SQL}' ] || mkdir -p ${_PFA_PATH_SQL}"
+_lxc_exec_e ${_CT_NAME} chmod 755 ${_PFA_PATH_SQL}
 for file in `ls ${path_sql}/*.cf`; do
 	_echo ${file##*/}
 	_eval lxc file push -q ${file} ${_CT_NAME}/${_PFA_PATH_SQL}/ || _exite "unable to push file"
 	_lxc_var_replace ${_CT_NAME} ${_PFA_PATH_SQL}/${file##*/} mail
 done
 
+_echoT "------------------  right ${_PFA_PATH_SQL}"
+_lxc_exec_e ${_CT_NAME} chown root:postfix ${_PFA_PATH_SQL}/*
+_lxc_exec_e ${_CT_NAME} chmod 640 ${_PFA_PATH_SQL}/*
+
 _echoT "------------------  postfix restart"
-_lxc_exec_e ${_CT_NAME} chown -R 0.0 /etc/postfix
 _lxc_exec_e ${_CT_NAME} rc-service postfix restart
 
 _echoT "------------------  conf mynetworks"
@@ -100,7 +104,7 @@ queries=`_lxc_exec ${_CT_NAME} "sed -n 's|^[^#].*\(mysql:.*\)$|\1|p' /etc/postfi
 queries+=`_lxc_exec ${_CT_NAME} "sed -n 's|^[^#].*\(mysql:.*\)$|\n\1|p' /etc/postfix/master.cf"`
 for query in ${queries}; do
 	_echo ${query}
-	_lxc_exec ${_CT_NAME} postmap -q ${_DOMAIN_FQDN} ${query}
+	_lxc_exec ${_CT_NAME} postmap -q ${_PFA_EMAIL_TEST} ${query}
 done
 
 _echoT "------------------  mail root test"

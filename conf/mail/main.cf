@@ -118,7 +118,7 @@ mydomain = _DOMAIN_FQDN
 #
 #myorigin = $myhostname
 #myorigin = $mydomain
-myorigin = $myhostname
+myorigin = $mydomain
 
 # RECEIVING MAIL
 

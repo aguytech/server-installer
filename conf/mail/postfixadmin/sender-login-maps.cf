@@ -2,4 +2,4 @@ user = _DB_USER
 password = _DB_PWD
 hosts = _DB_HOST
 dbname = _DB_NAME
-query = SELECT username AS 'owns' FROM mailbox WHERE username = '%s' AND domain = '%d'  AND active = true AND backupmx = false UNION SELECT address AS 'owns' FROM alias WHERE address = '%s' AND domain = '%d'   AND active = true AND backupmx = false
+query = SELECT username AS 'username' FROM mailbox WHERE username = '%s' AND domain = '%d' AND active = true UNION SELECT address AS 'username' FROM alias WHERE address = '%s' AND domain = '%d' AND active = true
