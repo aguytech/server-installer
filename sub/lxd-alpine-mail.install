@@ -110,6 +110,16 @@ else
 	_echoW "performed *** ${_PARTMAIL}"
 fi
 
+####################  FAIL2BAN
+
+_PARTMAIL=mail-fail2ban
+if ! _parthave ${_PARTMAIL} ${S_FILE_INSTALL_DONE}; then
+	. "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PARTMAIL}.install" || _exite "Wrong part: ${_PARTMAIL}"
+	[ "$_STEP" ] && _askno "Valid to continue" 
+else
+	_echoW "performed *** ${_PARTMAIL}"
+fi
+
 ####################################  START
 
 _echoT "------------------ postfix start"

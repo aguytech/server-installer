@@ -6,11 +6,12 @@ _echoT "\n======================  ${_INSTALL}-${_PARTMAIL}"
 
 ########################  DATA
 
+eval ${S_HOST_VM_ETH[default]} # get s_inet s_cidr s_base
+
 _echoT "------------------ data container"
 
 anstmp=${S_SERVICE[mail]} && _askno "Base name of containers to build (${anstmp})"
 _CT_NAME="${_ANSWER:-${anstmp}}" && _confset _CT_NAME "${_CT_NAME}" ${_FILE_INSTALL_CONF}
-eval ${S_HOST_VM_ETH[default]}
 _CT_IP=${s_base}.${S_SERVICE_BITS[mail]} && _confset _CT_IP "${_CT_IP}" ${_FILE_INSTALL_CONF}
 
 anstmp=2 && _askno "Number of containers to build (${anstmp})"
@@ -29,10 +30,10 @@ _menu "A second fqdn domain (otokoz.ovh)" ${_DOMAIN_OTHERS}
 _DOMAIN_2_FQDN="${_ANSWER:-${anstmp}}" && _confset _DOMAIN_2_FQDN "${_DOMAIN_2_FQDN}" ${_FILE_INSTALL_CONF}
 
 anstmp=${S_DOMAIN_EMAIL_ADMIN} && _askno "Administration email adress (${anstmp})"
-_MAIL_ADMIN=${_ANSWER:-${anstmp}} && _confset _MAIL_ADMIN "${_MAIL_ADMIN}" ${_FILE_INSTALL_CONF}
+_EMAIL_ADMIN=${_ANSWER:-${anstmp}} && _confset _EMAIL_ADMIN "${_EMAIL_ADMIN}" ${_FILE_INSTALL_CONF}
 
 anstmp=${S_DOMAIN_EMAIL_TECH} && _askno "Technical email adress (${anstmp})"
-_MAIL_TECH=${_ANSWER:-${anstmp}} && _confset _MAIL_TECH "${_MAIL_TECH}" ${_FILE_INSTALL_CONF}
+_EMAIL_TECH=${_ANSWER:-${anstmp}} && _confset _EMAIL_TECH "${_EMAIL_TECH}" ${_FILE_INSTALL_CONF}
 
 _echoT "------------------ data"
 
@@ -54,12 +55,13 @@ _PATH_RSPAMD=${_ANSWER:-${anstmp}} && _confset _PATH_RSPAMD "${_PATH_RSPAMD}" ${
 anstmp=y && _askno "Do you want an installation with halts for each parts (${anstmp})"
 _STEP=${_ANSWER:-${anstmp}} && _confset _STEP "${_STEP}" ${_FILE_INSTALL_CONF}
 
-
+_VMAIL_USER=vmail && _confset _VMAIL_USER "${_VMAIL_USER}" ${_FILE_INSTALL_CONF}
 _VMAIL_APP=postfixadmin && _confset _VMAIL_APP "${_VMAIL_APP}" ${_FILE_INSTALL_CONF}
 _SSL_SCHEME=SHA512 && _confset _SSL_SCHEME "${_SSL_SCHEME}" ${_FILE_INSTALL_CONF}
 
 _PATH_SSL=${S_VM_PATH_SHARE}/ssl/mail && _confset _PATH_SSL "${_PATH_SSL}" ${_FILE_INSTALL_CONF}
 _PATH_DKIM="${_PATH_RSPAMD}/dkim" && _confset _PATH_DKIM "${_PATH_DKIM}" ${_FILE_INSTALL_CONF}
+_CIDR=`echo ${S_HOST_VM_ETH[default]}|sed -n 's|.*s_cidr=\([^ ]\+\).*|\1|p'` && _CIDR=${_CIDR/1\//0\/} && _confset _CIDR "${_CIDR}" ${_FILE_INSTALL_CONF}
 #_IPS_IN=`echo "${S_CLUSTER[*]}"|tr ' ' '\n'|sed -n 's|s_ip=\([^ ]\+\)$|\1|p'|grep -v ${_IPTHIS}|xargs`
 _IPS_IN=`echo "${S_CLUSTER[*]}"|tr ' ' '\n'|sed -n 's|s_ip=\([^ ]\+\)$|\1|p'|xargs` && _confset _IPS_IN "${_IPS_IN}" ${_FILE_INSTALL_CONF}
 _IP6S_IN=`echo "${S_CLUSTER[*]}"|tr ' ' '\n'|sed -n 's|s_ip6=\([^ ]\+\)$|\1|p'|xargs` && _confset _IP6S_IN "${_IP6S_IN}" ${_FILE_INSTALL_CONF}

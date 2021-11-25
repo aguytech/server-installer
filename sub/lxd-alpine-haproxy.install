@@ -31,7 +31,6 @@ _require ${file_haproxy_initd} ${file_vim}  ${file_cron_letsencrypt} ${file_rsys
 _echoT "------------------ required paths"
 _requirep ${path_haproxy}
 
-
 ########################  DATA
 
 _echoT "------------------  data domain"
@@ -54,7 +53,7 @@ _echoT "------------------  data letsencrypt"
 _askyn "Use letsencrypt" && _HPX_LCRYPT_ENABLE="${_ANSWER/n/}"
 
 if [ "${_HPX_LCRYPT_ENABLE}" ]; then
-	anstmp=tech@${S_DOMAIN_EMAIL_TECH} && _askno "Technical email for letsencrypt (${anstmp})" && _HPX_LCRYPT_EMAIL="${_ANSWER:-${anstmp}}" && _confset _HPX_LCRYPT_EMAIL "${_HPX_LCRYPT_EMAIL}"
+	anstmp=${S_DOMAIN_EMAIL_TECH} && _askno "Technical email for letsencrypt (${anstmp})" && _HPX_LCRYPT_EMAIL="${_ANSWER:-${anstmp}}" && _confset _HPX_LCRYPT_EMAIL "${_HPX_LCRYPT_EMAIL}"
 	anstmp="ada admin blog carte chat chiffres cloud cms code compta dev diaspora discord discourse down elastik files forum gestion git gitea gitlab graylog info kibana links log manage matomo metrics monitor nextcloud pfa pma roundcube shaarli snippet social st stats test tuleap vma vmail webmail wiki www zabbix" # imap mail mail10 mx mx10 smtp
 	_askno "Subdomains to register to letsencrypt: (${anstmp})" && _HPX_LCRYPT_SUBS="${_ANSWER:-${anstmp}}" && _confset _HPX_LCRYPT_SUBS "${_HPX_LCRYPT_SUBS}"
 	[ -z ${_HPX_LCRYPT_PORT+x} ] && anstmp=8079 && _askno "Port for letsencrypt (${anstmp})" && _HPX_LCRYPT_PORT="${_ANSWER:-${anstmp}}" && _confset _HPX_LCRYPT_PORT "${_HPX_LCRYPT_PORT}"
@@ -144,7 +143,6 @@ net.ipv4.tcp_keepalive_probes = ${_KEEPALIVE_PROBES}"
 
 _lxc_exec ${_CT_NAME} "echo '${txt}' > ${file}"
 
-
 ########################  PROXY
 
 #_echoT "------------------  proxy httpx"
@@ -157,23 +155,19 @@ for port in ${S_HAPROXY_STATS_PORTS}; do
 	_eval lxc config device add ${_CT_NAME} stats-${port} proxy listen=tcp:0.0.0.0:${port} connect=tcp:127.0.0.1:${port}
 done
 
-
 ########################  INSTALL
 
 _echoT "------------------  install"
 _lxc_exec ${_CT_NAME} "apk update"
 _lxc_exec ${_CT_NAME} "apk add haproxy bash bash-completion vim curl" # lnav
 
-
 _echoT "------------------  service set"
 service=haproxy
 _lxc_exec ${_CT_NAME} "rc-update add ${service}"
 
-
 ########################  CONF
 
 _echoT "------------------  conf bash"
-
 _lxc_exec ${_CT_NAME} "sed -i 's|^\(root.*\):[^:]*$|\1:/bin/bash|' /etc/passwd"
 _eval lxc file push -q ${S_PATH_INSTALL_CONF}/bash-completion/haconf ${_CT_NAME}/usr/share/bash-completion/completions/
 
@@ -183,9 +177,7 @@ _eval "lxc file push -q ${S_PATH_INSTALL_CONF}/vim/* ${_CT_NAME}${path}/"
 file=/root/.vimrc
 _lxc_exec ${_CT_NAME} "[ -e ${file} ] || ln -s ${file_vim} ${file}"
 
-
 _echoT "------------------  conf haproxy"
-
 path=/etc/haproxy
 _lxc_exec ${_CT_NAME} "[ -d ${path} ] && mv ${path} ${path}.${_SDATE}"
 _eval lxc file push -rq ${path_haproxy} ${_CT_NAME}/etc
@@ -194,12 +186,10 @@ _eval lxc file push -rq ${path_haproxy} ${_CT_NAME}/etc
 _lxc_exec ${_CT_NAME} "sed -i 's|^\(\s*\)#\(.*\) # alpine$|\1\2|' ${path}/haproxy.cfg"
 
 _echoT "------------------  conf variables"
-
 # replace variables
 _lxc_var_replace ${_CT_NAME} ${path} haproxy
 
 _echoT "------------------  conf enable"
-
 _lxc_exec ${_CT_NAME} "[ -d ${path}/conf-enabled ] || mkdir -p ${path}/conf-enabled"
 files="00-defaults 02-resolvers-lxd 20-listen-stats 40-frontends-80 70-frontends-mail 80-backends"
 [ ${_HPX_DOMAIN_FQDN##*.} != lxd ] && files+=" 60-frontends-443"
@@ -207,17 +197,13 @@ for str in ${files}; do
 	_lxc_exec ${_CT_NAME} "[ -e ${path}/conf-enabled/${str} ] || ln -s ${path}/conf-available/${str}  ${path}/conf-enabled/${str}"
 done
 
-
 _echoT "------------------  conf init.d"
-
 file=/etc/init.d/${file_haproxy_initd##*/}
 _lxc_exec ${_CT_NAME} "[ -f ${file} ] && mv ${file} ${file}.${_SDATE} && chmod -x ${file}.${_SDATE}"
 _eval lxc file push -q ${file_haproxy_initd} ${_CT_NAME}/etc/init.d/haproxy
 _lxc_exec ${_CT_NAME} "chmod +x ${file}"
 
-
 if [ "${_HPX_LCRYPT_ENABLE}" ]; then
-
 	########################  LETSENCRYPT
 	# cert.pem: Your domain’s certificate
 	# chain.pem: The Let’s Encrypt chain certificate

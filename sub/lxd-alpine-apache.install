@@ -99,7 +99,6 @@ if lxc list -f csv -c n | grep -q ^${_CT_NAME}$; then
 fi
 _eval lxc init ${_CT_NAME_COM} ${_CT_NAME} -p default -p global -p ${profile}
 
-
 #_echoT "------------------  network fixed ip"
 #
 #if ! lxc list -f json | jq -r '.[] | select(.name == "'${_CT_NAME}'").devices[].name' | grep -q eth0; then
@@ -107,17 +106,14 @@ _eval lxc init ${_CT_NAME_COM} ${_CT_NAME} -p default -p global -p ${profile}
 #fi
 #_eval lxc config device set ${_CT_NAME} eth0 ipv4.address ${_CT_IP}
 
-
 _echoT "------------------  ${_CT_NAME} start"
 _eval lxc start ${_CT_NAME}
-
 
 ########################  METADATA
 
 _echoT "------------------  metadata"
 _lxc_meta_set ${_CT_NAME} profiles default global ${profile}
 _lxc_meta_add ${_CT_NAME} apps apache2
-
 
 ########################  IPTABLES
 
@@ -141,29 +137,23 @@ net.ipv4.tcp_keepalive_probes = ${_APA_KEEPALIVE_PROBES}"
 
 _lxc_exec ${_CT_NAME} "echo '${txt}' > ${file}"
 
-
 ########################  INSTALL
 
 _echoT "------------------  install"
-
 _lxc_exec ${_CT_NAME} "apk update"
 _lxc_exec ${_CT_NAME} "apk add apache2-proxy"
 
 _echoT "------------------  conf ServerName"
-
 _lxc_exec ${_CT_NAME} "sed -i 's|^.\?\(ServerName\) .*$|\1 localhost|' ${file_conf_http}"
 
 _echoT "------------------  service set & start"
-
 service=apache2
 _lxc_exec ${_CT_NAME} "rc-update add ${service}"
 _lxc_exec ${_CT_NAME} "rc-service ${service} start"
 
-
 ########################  CONF
 
 _echoT "------------------  conf.d default"
-
 file=${path_conf}/default.conf
 _lxc_exec ${_CT_NAME} "[ -f ${file} ] && cp -a ${file} ${file}.${_SDATE}"
 
@@ -173,16 +163,13 @@ sed -i 's|^.\?\(MaxKeepAliveRequests\) .*$|\1 ${_APA_KEEPALIVE_REQUEST}|' ${file
 sed -i 's|^.\?\(KeepAliveTimeout\) .*$|\1 ${_APA_KEEPALIVE_TIMEOUT}|' ${file}"
 _lxc_exec ${_CT_NAME} "${cmds}"
 
-
 _echoT "------------------  conf httpd module root"
-
 _lxc_exec ${_CT_NAME} "[ -d ${path_sites} ] || mkdir -p ${path_sites}"
 path=/var/www/localhost/htdocs
 _lxc_exec ${_CT_NAME} "[ -d /var/www/localhost/htdocs ] && mv /var/www/localhost/htdocs ${_APA_PATH_WWW}"
 #_lxc_exec ${_CT_NAME} "chown -R apache/apache ${path_sites}"
 
 _echoT "------------------  conf httpd module"
-
 _lxc_exec ${_CT_NAME} "[ -f ${file_conf_http} ] && cp -a ${file_conf_http} ${file_conf_http}.${_SDATE}"
 
 # conf.d/default
@@ -196,7 +183,6 @@ sed -i 's|^.\?\(LoadModule rewrite_module.*\)$|\1|' ${file_conf_http}"
 _lxc_exec ${_CT_NAME} "${cmds}"
 
 _echoT "------------------  conf mpm"
-
 file=${path_conf}/mpm.conf
 _lxc_exec ${_CT_NAME} "[ ! -f '${file}.${_SDATE}' ] && cp -a '${file}' '${file}.${_SDATE}'"
 
@@ -208,9 +194,7 @@ sed -i '/<IfModule mpm_event_module>/,/<\/IfModule>/ s|^\(\s*MaxRequestWorkers\s
 sed -i '/<IfModule mpm_event_module>/,/<\/IfModule>/ s|^\(\s*MaxConnectionsPerChild\s*\).*|\1 ${_APA_MAX_CONNECTIONS_PER_CHILD}|' ${file}"
 _lxc_exec ${_CT_NAME} "${cmds}"
 
-
 _echoT "------------------  conf httpd"
-
 # IncludeOptional
 _lxc_exec ${_CT_NAME} "grep -q ${path_sites} ${file_conf_http} || echo 'IncludeOptional ${path_sites}/*.conf' >>  ${file_conf_http}"
 
@@ -234,7 +218,6 @@ file=${path_conf}/${file_log##*/}
 _eval lxc file push -q ${file_log} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} apache
 
-
 _echoT "------------------  conf info & status"
 
 file=${path_conf}/info.conf
@@ -244,12 +227,10 @@ _lxc_exec ${_CT_NAME} "sed -i '/<Location \/server-status>/,/<\/Location>/ {s|^\
 # optimize require for status
 _lxc_exec ${_CT_NAME} "sed -i '/<Location \/server-info>/,/<\/Location>/ {s|^\(\s*\)\(Require host\).*|\1\2 ${_DOMAIN_FQDN}\n\1Require ip ${_IPS_AUTH}|}' ${file}"
 
-
 ########################  PING-MONITOR
 
 _echoT "------------------  ping-monitor"
 _lxc_exec ${_CT_NAME} "echo 'pong' > ${_APA_PATH_WWW}/ping-monitor.html"
-
 cmd="echo 'Alias \"/ping-monitor\" \"${_APA_PATH_WWW}/ping-monitor.html
 <Files ping-monitor.html>
 	SetEnvIf X-Forwarded-For ^$ notforwarded
@@ -257,22 +238,17 @@ cmd="echo 'Alias \"/ping-monitor\" \"${_APA_PATH_WWW}/ping-monitor.html
 </Files>' >  ${path_conf}/monitor.conf"
 _lxc_exec ${_CT_NAME} "${cmd}"
 
-
 ########################  _DOMAIN_FQDN
 
 _echoT "------------------  ${_DOMAIN_FQDN} path"
-
 path=${_PATH_DOMAIN}/html
 _lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
 
 _echoT "------------------  ${_DOMAIN_FQDN} index.html"
-
 file=${_PATH_DOMAIN}/html/index.html
 _lxc_exec ${_CT_NAME} "echo '<html><body><h1>${_DOMAIN_FQDN} works!</h1></body></html>' > ${file}"
 
-
 _echoT "------------------  ${_DOMAIN_FQDN} conf"
-
 file=${path_sites}/${file_site##*/}
 _eval lxc file push -q ${file_site} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} apache

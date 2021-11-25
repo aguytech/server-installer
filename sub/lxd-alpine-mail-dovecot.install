@@ -6,10 +6,33 @@ _echoT "\n======================  ${_INSTALL}-${_PARTMAIL}"
 
 grep -q "^# ${_PARTMAIL#++}$" ${_FILE_INSTALL_CONF} || echo  "# ${_PARTMAIL}" >> ${_FILE_INSTALL_CONF}
 
-file_conf_main_dovecot=${S_PATH_INSTALL_CONF}/mail/main_dovecot.cf
+file_conf_dovecot_main=${S_PATH_INSTALL_CONF}/mail/main_dovecot.cf
+file_conf_dovecot=${S_PATH_INSTALL_CONF}/mail/dovecot/dovecot.conf
+file_conf_dovecot_sql=${S_PATH_INSTALL_CONF}/mail/dovecot/dovecot-sql.conf.ext
+
+file_conf_dovecot_auth=${S_PATH_INSTALL_CONF}/mail/dovecot/10-auth.conf
+file_conf_dovecot_auth_sql=${S_PATH_INSTALL_CONF}/mail/dovecot/auth-sql.conf.ext
+file_conf_dovecot_log=${S_PATH_INSTALL_CONF}/mail/dovecot/10-logging.conf
+file_conf_dovecot_mail=${S_PATH_INSTALL_CONF}/mail/dovecot/10-mail.conf
+file_conf_dovecot_master=${S_PATH_INSTALL_CONF}/mail/dovecot/10-master.conf
+file_conf_dovecot_ssl=${S_PATH_INSTALL_CONF}/mail/dovecot/10-ssl.conf
+file_conf_dovecot_lda=${S_PATH_INSTALL_CONF}/mail/dovecot/15-lda.conf
+file_conf_dovecot_mail=${S_PATH_INSTALL_CONF}/mail/dovecot/15-mailboxes.conf
+file_conf_dovecot_imap=${S_PATH_INSTALL_CONF}/mail/dovecot/20-imap.conf
+file_conf_dovecot_lmtp=${S_PATH_INSTALL_CONF}/mail/dovecot/20-lmtp.conf
+file_conf_dovecot_sieve_man=${S_PATH_INSTALL_CONF}/mail/dovecot/20-managesieve.conf
+file_conf_dovecot_quota=${S_PATH_INSTALL_CONF}/mail/dovecot/90-quota.conf
+file_conf_dovecot_plugin=${S_PATH_INSTALL_CONF}/mail/dovecot/90-plugin.conf
+file_conf_dovecot_sieve=${S_PATH_INSTALL_CONF}/mail/dovecot/90-sieve.conf
+file_conf_dovecot_sieve_ext=${S_PATH_INSTALL_CONF}/mail/dovecot/90-sieve-extprograms.conf
+
+file_conf_sieve_global=${S_PATH_INSTALL_CONF}/mail/sieve/spam-global.sieve
+file_conf_sieve_spam=${S_PATH_INSTALL_CONF}/mail/sieve/learn-spam.sieve
+file_conf_sieve_ham=${S_PATH_INSTALL_CONF}/mail/sieve/learn-ham.sieve
 
 _echoT "------------------ required files"
-_require ${file_conf_main_dovecot}
+_require `( set -o posix; set )|grep ^file_conf_dovecot_|cut -d= -f1`
+_require `( set -o posix; set )|grep ^file_conf_sieve_|cut -d= -f1`
 
 ########################  DATA
 
@@ -20,98 +43,133 @@ _lxc_meta_add ${_CT_NAME} apps dovecot
 
 ########################  MAIN
 
-_echoT "------------------  path vmail"
-_lxc_exec ${_CT_NAME} "[ -d '${_PATH_VMAIL}/mailboxes' ] || mkdir -p ${_PATH_VMAIL}/mailboxes"
-_lxc_exec ${_CT_NAME} "[ -d '${_PATH_SIEVE}/global' ] || mkdir -p ${_PATH_SIEVE}/global"
+_echoT "------------------  path create"
+for path in ${_PATH_VMAIL}/mailboxes ${_PATH_SIEVE}/global; do
+	_lxc_exec ${_CT_NAME} "[ -d '${path}' ] || mkdir -p ${path}"
+done
 
 #_echoT "------------------  ${_PARTMAIL} install"
 #_lxc_exec ${_CT_NAME} apk add dovecot dovecot-mysql dovecot-lmtpd dovecot-pigeonhole-plugin
 
-_echoT "------------------  ${_PARTMAIL} stop"
+_echoT "------------------  services stop"
 _lxc_exec ${_CT_NAME} rc-update add dovecot
 _lxc_exec ${_CT_NAME} rc-service -s dovecot stop
 
-######################################## CONF
+######################## POSTFIX
 
-eval ${S_HOST_VM_ETH[default]} # get s_inet s_cidr s_base
+_echoT "------------------  postfix conf alias"
+#_lxc_exec ${_CT_NAME} "sed -i '/^#\?root:.*/ croot: ${_EMAIL_TECH}' /etc/postfix/aliases"
+_lxc_exec ${_CT_NAME} newaliases
+_echoI "test postmap -q root lmdb:/etc/postfix/aliases"
+_lxc_exec ${_CT_NAME} postmap -q root lmdb:/etc/postfix/aliases
 
-_echoT "------------------  conf ${_PARTMAIL} keep"
-path=/etc/dovecot
-_lxc_exec ${_CT_NAME} "[ -d '${path}' ] && cp -a ${path} ${path}.${_SDATE}"
-
-_echoT "------------------  conf postfix"
+_echoT "------------------  postfix conf dovecot"
 _lxc_exec ${_CT_NAME} "sed -i '/#*-o smtpd_sasl_type=dovecot/ s|#||' /etc/postfix/master.cf"
 
-_echoT "------------------  conf postfix main_dovecot.cf"
+_echoT "------------------  postfix conf main_dovecot.cf"
 if ! _lxc_exec ${_CT_NAME} "grep -q '#* *ADD DOVECOT$' /etc/postfix/main.cf"; then
-	file=/etc/postfix/${file_conf_main_dovecot##*/}
-	_eval lxc file push -q ${file_conf_main_dovecot} ${_CT_NAME}${file}
+	file=/etc/postfix/${file_conf_dovecot_main##*/}
+	_eval lxc file push -q ${file_conf_dovecot_main} ${_CT_NAME}${file}
 	_lxc_var_replace ${_CT_NAME} ${file} mail
 	_lxc_exec ${_CT_NAME} "cat ${file} >> /etc/postfix/main.cf"
 	_lxc_exec ${_CT_NAME} "rm ${file}"
 fi
 
-_echoT "------------------  postfix restart"
+_echoT "------------------  postfix rights"
 _lxc_exec_e ${_CT_NAME} chown -R 0.0 /etc/postfix
-_lxc_exec_e ${_CT_NAME} rc-service postfix restart
+
+######################## DOVECOT
+
+_echoT "------------------  conf keep"
+path=/etc/dovecot
+_lxc_exec ${_CT_NAME} "[ -d '${path}' ] && cp -a ${path} ${path}.${_SDATE}"
+
+_echoT "------------------  conf dovecot"
+file=/etc/dovecot/${file_conf_dovecot##*/}
+_eval lxc file push -q ${file_conf_dovecot} ${_CT_NAME}${file}
+_lxc_var_replace ${_CT_NAME} ${file} mail
+_lxc_exec_e ${_CT_NAME} chown -R 0.0 ${file}
+
+_echoT "------------------  conf sql"
+file=/etc/dovecot/${file_conf_dovecot_sql##*/}
+_eval lxc file push -q ${file_conf_dovecot_sql} ${_CT_NAME}${file}
+_lxc_var_replace ${_CT_NAME} ${file} mail
+_lxc_exec_e ${_CT_NAME} chown -R 0.0 ${file}
+
+_echoT "------------------  conf conf.d"
+for file_from in ${file_conf_dovecot_auth} ${file_conf_dovecot_auth_sql} ${file_conf_dovecot_log} \
+${file_conf_dovecot_master} ${file_conf_dovecot_lda} ${file_conf_dovecot_mail} ${file_conf_dovecot_imap} \
+${file_conf_dovecot_sieve_man} ${file_conf_dovecot_quota} ${file_conf_dovecot_plugin} ${file_conf_dovecot_sieve_ext}; do
+	file=/etc/dovecot/conf.d/${file_from##*/}
+	_echo ${file_from##*/}
+	_eval lxc file push -q ${file_from} ${_CT_NAME}${file}
+done
+_lxc_exec_e ${_CT_NAME} chown -R 0.0 /etc/dovecot/conf.d
+
+for file_from in ${file_conf_dovecot_mail} ${file_conf_dovecot_ssl} ${file_conf_dovecot_lmtp} ${file_conf_dovecot_sieve}; do
+	file=/etc/dovecot/conf.d/${file_from##*/}
+	_echo ${file_from##*/}
+	_eval lxc file push -q ${file_from} ${_CT_NAME}${file}
+	_lxc_var_replace ${_CT_NAME} ${file} mail
+done
+
+######################## SIEVE
+
+_echoT "------------------  conf sieve"
+for file_from in ${file_conf_sieve_global} ${file_conf_sieve_spam} ${file_conf_sieve_ham}; do
+	file=${_PATH_SIEVE}/global/${file_from##*/}
+	_echo ${file_from##*/}
+	_eval lxc file push -q ${file_from} ${_CT_NAME}${file}
+	_lxc_exec ${_CT_NAME} sievec ${file}
+done
+
+_echoT "------------------  right on vmail"
+
+_lxc_exec ${_CT_NAME}  chown ${_VMAIL_USER}:${_VMAIL_USER} -R ${_PATH_VMAIL} ${_PATH_SIEVE}
+_lxc_exec ${_CT_NAME}  chmod o-rwx -R ${_PATH_VMAIL} ${_PATH_SIEVE}
+
+_lxc_exec ${_CT_NAME}  chown ${_VMAIL_USER}:postfix ${S_PATH_CONF_SSL}
+_lxc_exec ${_CT_NAME}  "find ${S_PATH_CONF_SSL} -type f -exec chmod 550 {} \;"
+_lxc_exec ${_CT_NAME}  "find ${S_PATH_CONF_SSL} -type f -exec chmod 440 {} \;"
+
+########################  TEST
+
+_echoT "------------------  postmap test mysql"
+queries=`_lxc_exec ${_CT_NAME} "sed -n 's|^[^#].*\(mysql:.*\)$|\1|p' /etc/postfix/main.cf"`
+queries+=`_lxc_exec ${_CT_NAME} "sed -n 's|^[^#].*\(mysql:.*\)$|\n\1|p' /etc/postfix/master.cf"`
+for query in ${queries}; do
+	_echo "- ${query}"
+	_lxc_exec ${_CT_NAME} postmap -q ${_PFA_EMAIL_TEST} ${query}
+done
+
+_echoT "------------------  postmap test cidr"
+queries=`_lxc_exec ${_CT_NAME} "sed -n 's|^[^#].*\(cidr:.*\)$|\1|p' /etc/postfix/main.cf"`
+queries+=`_lxc_exec ${_CT_NAME} "sed -n 's|^[^#].*\(cidr:.*\)$|\n\1|p' /etc/postfix/master.cf"`
+for query in ${queries}; do
+	_echo "- ${query}"
+	_lxc_exec ${_CT_NAME} postmap -q ${_CIDR%.*}.1 ${query%,}
+done
+_askno "valid to continue"
+
+_echoT "------------------  services start"
+_lxc_exec ${_CT_NAME} rc-service -S dovecot start
+_lxc_exec ${_CT_NAME} rc-service postfix restart
 
 
 
 
 
 
-_echoT "------------------  conf ${_PARTMAIL} keep"
-file=/etc/dovecot/dovecot.conf
-str='login_trusted_networks'; val="127.0.0.1 ${s_cidr} ${_IPS_IN}"
-_lxc_exec ${_CT_NAME} "sed -i 's|^#\?\(${str}\s*=\).*$|\1 ${val}|' ${file}"
+########################  TEST
 
+_echoT "------------------  mail root test"
+_lxc_exec_e ${_CT_NAME} "echo test | mail -s test root"
+_echoI "Verify the following content of the email received (in 4s)"
+sleep 4
+_lxc_exec ${_CT_NAME} cat ${_PATH_LMAIL}/root
+_askno "valid to continue"
 
-_echoT "------------------  ${_PARTMAIL} conf sql"
-file=/etc/dovecot/dovecot-sql.conf.ext
-_lxc_exec ${_CT_NAME} "[ -f '${file}' ] && cp -a ${file} ${file}.${_SDATE}"
-
-if [ "${_VMAIL_APP}" = postfixadmin ]; then
-	cmds=; while read str val; do
-		cmds+="sed -i \"1,/^#\?${str}\s*=/ s|^#\?${str}\s*=.*|${str} = ${val}|\" ${file}
-"; done <<< "driver mysql
-connect  host=${_DB_HOST} dbname=${_DB_NAME} user=${_DB_USER} password=${_DB_PWD}
-default_pass_scheme  SHA512-CRYPT
-password_query  SELECT username, password, domain FROM mailbox WHERE username = '%u' AND active = true
-user_query  SELECT concat('*:storage=', quota) AS quota_rule FROM mailbox WHERE username = '%u' AND active = true
-iterate_query  SELECT username, domain FROM mailbox WHERE active = true"
-	_lxc_exec ${_CT_NAME} "${cmds}"
-else
-	_exite "Not yet impemented"
-fi
-
-
-_echoT "------------------  ${_PARTMAIL} conf .d"
-path=/etc/dovecot/conf.d
-_lxc_exec ${_CT_NAME} "[ -e '${path}' ] && cp -a ${path} ${path}.${_SDATE}"
-
-
-_echoT "------------------  ${_PARTMAIL} conf 10-auth.conf"
-file=/etc/dovecot/conf.d/10-auth.conf
-cmds=; while read str val; do
-	cmds+="sed -i \"1,/^#\?${str}\s*=/ s|^#\?${str}\s*=.*|${str} = ${val}|\" ${file}
-"; done <<< "disable_plaintext_auth  yes
-auth_mechanisms  plain"
-_lxc_exec ${_CT_NAME} "${cmds}"
-
-_lxc_exec ${_CT_NAME} "sed -i '/^#\!include auth-sql.conf.ext/ s|^#||' ${file}"
-_lxc_exec ${_CT_NAME} "sed -i '/^\!include auth-passwdfile.conf.ext/ s|^|#|' ${file}"
-
-
-_echoT "------------------  ${_PARTMAIL} conf 10-logging.conf.conf"
-file=/etc/dovecot/conf.d/10-logging.conf
-cmds=; while read str val; do
-	cmds+="sed -i \"1,/^#\?${str}\s*=/ s|^#\?${str}\s*=.*|${str} = ${val}|\" ${file}
-"; done <<< "log_path  syslog
-syslog_facility  mail"
-# info_log_path  ${S_PATH_LOG}/dovecot.log
-# debug_log_path  ${S_PATH_LOG}/dovecot.debug
-_lxc_exec ${_CT_NAME} "${cmds}"
-
+########################  END
 
 
 
@@ -120,186 +178,6 @@ exit
 
 
 
-
-######################################## DOVECOT CONF
-
-
-# 10-mail.conf
-FILE="$PATHCONF/10-mail.conf"
-begin='namespace inbox {'; end='}'
-SCH="type"; STR="private"; sed -i "/^\s*${begin}/,/^\s*${end}/s/^\(\s*\)#\?\(${SCH}\s*=\).*/\1\2 ${STR}/" "$FILE"
-SCH="prefix"; STR=""; sed -i "/^\s*${begin}/,/^\s*${end}/s/^\(\s*\)#\?\(${SCH}\s*=\).*/\1\2 ${STR}/" "$FILE"
-SCH="location"; STR=""; sed -i "/^\s*${begin}/,/^\s*${end}/s/^\(\s*\)#\?\(${SCH}\s*=\).*/\1\2 ${STR}/" "$FILE"
-SCH="inbox"; STR="yes"; sed -i "/^\s*${begin}/,/^\s*${end}/s/^\(\s*\)#\?\(${SCH}\s*=\).*/\1\2 ${STR}/" "$FILE"
-
-SCH='mail_uid'; STR='vmail'; sed -i "s|^#\?\(${SCH}\s*=\).*|\1 ${STR}|" "$FILE"
-SCH='mail_gid'; STR='vmail'; sed -i "s|^#\?\(${SCH}\s*=\).*|\1 ${STR}|" "$FILE"
-SCH='mail_privileged_group'; STR='vmail'; sed -i "s|^#\?\(${SCH}\s*=\).*|\1 ${STR}|" "$FILE"
-SCH='mail_location'; STR="maildir:~/mail:LAYOUT=fs\nmail_home = ${_PATH_VMAIL}/mailboxes/%d/%n"; sed -i "s|^#\?\(${SCH}\s*=\).*|\1 ${STR}|" "$FILE"
-SCH='mail_plugin_dir'; STR='/usr/lib/dovecot/modules'; sed -i "s|^\(\s*\)#\?\(${SCH}\s*=\).*|\1\2 ${STR}|" "$FILE"
-
-begin='namespace inbox {'; end='}'
-SCH='inbox'; STR='yes'; sed -i "/^${begin}/,/^${end}/s|^\(\s*${SCH}\s*=\).*|\1 ${STR}|" "$FILE"
-
-
-# 10-master.conf
-FILE="$PATHCONF/10-master.conf"
-sed -i "/^\s*unix_listener lmtp/,/^\s*}/s/^\(  \)\(.*\)/\1#\2/" "$FILE"
-SCH='service lmtp {'
-STR="  unix_listener /var/spool/postfix/private/dovecot-lmtp {\n    mode = 0660\n    group = postfix\n    user = postfix\n  }\n  user = vmail\n"
-sed -i "s|^\(\s*$SCH.*\)$|\1\n$STR|" "$FILE"
-
-begin='unix_listener auth-userdb {'; end='}'
-SCH="mode"; STR="0660"; sed -i "/^\s*${begin}/,/^\s*${end}/s/^\(\s*\)#\?\(${SCH}\s*= \).*/\1\2${STR}/" "$FILE"
-SCH="user"; STR="vmail"; sed -i "/^\s*${begin}/,/^\s*${end}/s/^\(\s*\)#\?\(${SCH}\s*= \).*/\1\2${STR}/" "$FILE"
-SCH="group"; STR="vmail"; sed -i "/^\s*${begin}/,/^\s*${end}/s/^\(\s*\)#\?\(${SCH}\s*= \).*/\1\2${STR}/" "$FILE"
-
-begin='unix_listener /var/spool/postfix/private/auth'; end='}'
-sed -i "\|^\s*#${begin}|,/^\s*#${end}/s|#||" "$FILE"
-SCH="mode = 0666"; STR="    mode = 0660\n    user = postfix\n    group = postfix"; sed -i "\|^\s*${begin}|,/^\s*}/s|^\s*${SCH}|${STR}|" "$FILE"
-
-begin='inet_listener imap {'; end='}'
-SCH="port"; STR="143"; sed -i "/^\s*${begin}/,/^\s*${end}/s/^\(\s*\)#\?\(${SCH}\s*= \).*/\1\2${STR}/" "$FILE"
-begin='inet_listener imaps {'; end='}'
-SCH="port"; STR="993"; sed -i "/^\s*${begin}/,/^\s*${end}/s/^\(\s*\)#\?\(${SCH}\s*= \).*/\1\2${STR}/" "$FILE"
-SCH="ssl"; STR="yes"; sed -i "/^\s*${begin}/,/^\s*${end}/s/^\(\s*\)#\?\(${SCH}\s*= \).*/\1\2${STR}/" "$FILE"
-
-
-# 10-ssl.conf
-FILE="$PATHCONF/10-ssl.conf"
-SCH='ssl'; STR="required"; sed -i "s|^\(\s*${SCH}\s*= \).*|\1${STR}|" "$FILE"
-SCH='ssl_cert'; STR="\<${_FILE_SSL_FULL}"; sed -i "s|^#\?\(${SCH}\s*= \).*|\1${STR}|" "$FILE"
-SCH='ssl_key'; STR="\<${_FILE_SSL_KEY}"; sed -i "s|^#\?\(${SCH}\s*= \).*|\1${STR}|" "$FILE"
-SCH='ssl_dh_parameters_length'; STR="2048"; sed -i "s|^#\?\(${SCH}\s*= \).*|\1${STR}|" "$FILE"
-SCH='ssl_protocols'; STR='!SSLv3'; sed -i "s|^#\?\(${SCH}\s*= \).*|\1${STR}|" "$FILE"
-SCH='ssl_cipher_list'; STR='EDH+CAMELLIA:EDH+aRSA:EECDH+aRSA+AESGCM:EECDH+aRSA+SHA256:EECDH:+CAMELLIA128:+AES128:+SSLv3:!aNULL:!eNULL:!LOW:!3DES:!MD5:!EXP:!PSK:!DSS:!RC4:!SEED:!IDEA:!ECDSA:kEDH:CAMELLIA128-SHA:AES128-SHA'; sed -i "s|^#\?\(${SCH}\s*= \).*|\1${STR}|" "$FILE"
-SCH='ssl_prefer_server_ciphers'; STR="yes"; sed -i "s|^#\?\(${SCH}\s*= \).*|\1${STR}|" "$FILE"
-
-
-# 15-lda.conf
-#FILE="$PATHCONF/15-lda.conf"
-#SCH='postmaster_address'; STR="postmaster@${_DOMAIN_FQDN}"; sed -i "s|^#\?\s*\(${SCH}\s*=\).*|\1 ${STR}|" "$FILE"
-#SCH='sendmail_path'; STR="/usr/sbin/sendmail"; sed -i "s|^#\?\s*\(${SCH}\s*=\).*|\1 ${STR}|" "$FILE"
-
-
-# 15-mailboxes.conf
-FILE="$PATHCONF/15-mailboxes.conf"
-SCH='mailbox Trash {'; STR="  mailbox Spam {\n    special_use = \\\\Junk\n  }"
-sed -i "s|^\(\s*${SCH}.*\)|${STR}\n\1|" "$FILE"
-
-# auto create
-SCH='special_use ='; STR="    auto = create"; sed -i "s|^\(\s*${SCH}.*\)|\1\n${STR}|" "$FILE"
-begin='mailbox Junk {'; end='}'
-sed -i "\|^\s*#\?${begin}|,/^\s*#\?${end}/s|^\( *auto = create.*\)|#\1|" "$FILE"
-begin="mailbox \"Sent Messages\" {"; end='}'
-sed -i "\|^\s*#\?${begin}|,/^\s*#\?${end}/s|^\( *auto = create.*\)|#\1|" "$FILE"
-
-
-# 20-imap.conf
-FILE="$PATHCONF/20-imap.conf"
-SCH='mail_plugins'; STR='$mail_plugins quota imap_quota imap_sieve imap_zlib zlib'; sed -i "s|^\(\s*\)#\?\(${SCH}\s*= \).*|\1\2${STR}|" "$FILE"
-SCH='mail_max_userip_connections'; STR='20'; sed -i "s|^\(\s*\)#\?\(${SCH}\s*= \).*|\1\2${STR}|" "$FILE"
-SCH='imap_idle_notify_interval'; STR='2 mins'; sed -i "s|^\(\s*\)#\?\(${SCH}\s*= \).*|\1\2${STR}|" "$FILE"
-
-
-# 20-lmtp.conf
-FILE="$PATHCONF/20-lmtp.conf"
-SCH='protocol lmtp {'
-STR="  postmaster_address = postmaster@ambau.ovh"
-sed -i "s|^\(${SCH}.*\)$|\1\n${STR}|" "$FILE"
-SCH='mail_plugins'; STR="\$mail_plugins sieve zlib"; sed -i "s|^\(\s*\)#\?\(${SCH}\s*= \).*$|\1\2${STR}|" "$FILE"
-
-# 20-managesieve.conf
-FILE="$PATHCONF/20-managesieve.conf"
-SCH='protocols'; STR="\$protocols imap lmtp sieve"; sed -i "s|^#\?\s*\(${SCH}\s*=\).*$|\1 ${STR}|" "$FILE"
-#service managesieve-login {
-begin='service managesieve-login {'; end='}'
-sed -i "\|^#${begin}|,/^#${end}/s|^#||" "$FILE"
-begin='inet_listener sieve {'; end='}'
-sed -i "\|^\s*#${begin}|,/^\s*#${end}/s|#||" "$FILE"
-
-# 90-quota.conf
-FILE="$PATHCONF/90-quota.conf"
-SCH='quota = maildir:User quota'; STR="quota_exceeded_message = User %u has exhausted allowed storage space."; sed -i "s|^\(\s*\)#\?\(${SCH}.*\)$|\1\2\n\1${STR}|" "$FILE"
-
-
-# 90-plugin.conf
-FILE="$PATHCONF/90-plugin.conf"
-sed -i "/zlib_save_level/d" "$FILE"
-sed -i "/zlib_save/d" "$FILE"
-SCH='plugin {'; STR="plugin {\n  zlib_save_level = 6\n  zlib_save = gz"; sed -i "s|^\($SCH\)$|$STR|" "$FILE"
-
-
-# 90-sieve.conf
-FILE="$PATHCONF/90-sieve.conf"
-SCH='sieve_plugins'; STR="sieve_imapsieve sieve_extprograms"; sed -i "s|^\(\s*\)#\?\(${SCH}\s*=.*\)$|\1\2 ${STR}|" "$FILE"
-SCH='sieve_before3'; STR="sieve_before = ${_PATH_SIEVE}/global/spam-global.sieve"; sed -i "s|^\(\s*\)\(#\?${SCH}\s*=.*\)$|\1\2\n\1${STR}|" "$FILE"
-SCH='sieve'; STR="file:${_PATH_SIEVE}/%d/%n/scripts;active=${_PATH_SIEVE}/%d/%n/active-script.sieve"; sed -i "s|^\(\s*\)#\?\(${SCH}\s*=\).*$|\1\2 ${STR}|" "$FILE"
-SCH='sieve_global_extensions'; STR="+vnd.dovecot.pipe"; sed -i "s|^\(\s*\)#\?\(${SCH}\s*=\).*$|\1\2 ${STR}|" "$FILE"
-SCH='}'; STR="\n  ## Spam learning\n  # From elsewhere to Spam folder\n  imapsieve_mailbox1_name = Spam\n  imapsieve_mailbox1_causes = COPY\n  imapsieve_mailbox1_before = file:${_PATH_SIEVE}/global/learn-spam.sieve\n\n  # From Spam folder to elsewhere\n  imapsieve_mailbox2_name = *\n  imapsieve_mailbox2_from = Spam\n  imapsieve_mailbox2_causes = COPY\n  imapsieve_mailbox2_before = file:${_PATH_SIEVE}/global/learn-ham.sieve"; sed -i "s|^\(${SCH}.*\)|${STR}\n\1|" "$FILE"
-
-
-# 90-sieve-extprograms.conf
-FILE="$PATHCONF/90-sieve-extprograms.conf"
-SCH='sieve_pipe_socket_dir'; STR="sieve-pipe"; sed -i "s|^\(\s*\)#\?\(${SCH}\s*=\).*$|\1\2 ${STR}|" "$FILE"
-SCH='sieve_filter_socket_dir'; STR="sieve-filter"; sed -i "s|^\(\s*\)#\?\(${SCH}\s*=\).*$|\1\2 ${STR}|" "$FILE"
-SCH='sieve_execute_socket_dir'; STR="sieve-execute"; sed -i "s|^\(\s*\)#\?\(${SCH}\s*=\).*$|\1\2 ${STR}|" "$FILE"
-SCH='sieve_pipe_bin_dir'; STR="/usr/bin"; sed -i "s|^\(\s*\)#\?\(${SCH}\s*=\).*$|\1\2 ${STR}|" "$FILE"
-SCH='sieve_filter_bin_dir'; STR="/usr/bin"; sed -i "s|^\(\s*\)#\?\(${SCH}\s*=\).*$|\1\2 ${STR}|" "$FILE"
-SCH='sieve_execute_bin_dir'; STR="/usr/bin"; sed -i "s|^\(\s*\)#\?\(${SCH}\s*=\).*$|\1\2 ${STR}|" "$FILE"
-
-
-<<KEEP
-# auth-sql.conf.ext
-FILE='auth-sql.conf.ext'
-begin='userdb {'; end='}'
-sed -i "/^${begin}/,/^${end}/ s/^\(.*\)/#\1/" "$FILE"
-echo "userdb {
-  driver = prefetch
-}" >> "$FILE"
-KEEP
-
-
-########################################  SIEVE
-#_PATH_SIEVE
-
-_echoT "------------------  Sieve conf"
-
-FILE="${_PATH_SIEVE}/global/spam-global.sieve"
-cat > $FILE << EOF
-require "fileinto";
-
-if header :contains "X-Spam-Flag" "YES" {
-	fileinto "Spam";
-}
-
-if header :is "X-Spam" "Yes" {
-	fileinto "Spam";
-}
-EOF
-_evalq "sievec $FILE"
-
-FILE="${_PATH_SIEVE}/global/learn-spam.sieve"
-cat > $FILE << EOF
-require ["vnd.dovecot.pipe", "copy", "imapsieve"];
-pipe :copy "rspamc" ["learn_spam"];
-EOF
-_evalq "sievec $FILE"
-
-FILE="${_PATH_SIEVE}/global/learn-ham.sieve"
-cat > $FILE << EOF
-require ["vnd.dovecot.pipe", "copy", "imapsieve"];
-pipe :copy "rspamc" ["learn_ham"];
-EOF
-_evalq "sievec $FILE"
-
-
-_echoT "------------------  right on vmail"
-
-_evalq chown "$_VMAIL_USER":"$_VMAIL_USER" "$_PATH_SSL"
-_evalq chown "$_VMAIL_USER":"$_VMAIL_USER" -R "$_PATH_MAIL" "$_PATH_VMAIL" "$_PATH_SIEVE"
-_evalq chmod g-rwx -R "$_PATH_VMAIL"
-_evalq "find '$_PATH_VMAIL' -type f -exec chmod 640 '{}' \;"
 
 
 ########################  END

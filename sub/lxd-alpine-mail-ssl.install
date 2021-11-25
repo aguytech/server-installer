@@ -8,9 +8,9 @@ grep -q "^# ${_PARTMAIL#++}$" ${_FILE_INSTALL_CONF} || echo  "# ${_PARTMAIL}" >>
 
 ########################  REQUIRED
 
-file_cron=${S_PATH_INSTALL_CONF}/cron/certificate-copy
+file_cron_certificate=${S_PATH_INSTALL_CONF}/cron/certificate-copy
 _echoT "------------------ required files"
-_require ${file_cron}
+_require ${file_cron_certificate}
 
 ########################  DATA
 
@@ -44,9 +44,6 @@ if [ "${lcrypt_enabled}" ]; then
 	# fullchain.pem: cert.pem and chain.pem combined / mailserver certificate + CA certificate
 	# privkey.pem: Your certificate’s private key / Private key for mailserver certificate
 
-	_echoT "------------------  letsencrypt install"
-	_lxc_exec ${ct_proxy} "apk add certbot"
-
 	_echoT "------------------  copy letsencrypt"
 	_echoI "Copy backup of letsencrypt certs and valid" && read str
 
@@ -65,13 +62,6 @@ if [ "${lcrypt_enabled}" ]; then
 
 	_echoT "------------------  letsencrypt unify"
 	_lxc_exec ${ct_proxy} "${S_PATH_SCRIPT}/scripts/letsencrypt-unify.sh"
-
-	_echoT "------------------  letsencrypt cron"
-	file=/etc/periodic/weekly/${file_cron##*/}
-	_eval lxc file push -q ${file_cron} ${_CT_NAME}${file}
-	_lxc_var_replace ${_CT_NAME} ${file} mail
-	_lxc_exec ${_CT_NAME} "sed -i '/run-parts.*weekly/ s|3|4|' /etc/crontabs/root" # shift the haproxy cron by one hour
-	_lxc_exec ${_CT_NAME} "sh ${file}"
 
 elif [ -z "${lcrypt_enabled}" ] && [ "${_DOMAIN_FQDN%.lxd}" != "${_DOMAIN_FQDN}" ]; then
 
@@ -112,12 +102,20 @@ elif [ -z "${lcrypt_enabled}" ] && [ "${_DOMAIN_FQDN%.lxd}" != "${_DOMAIN_FQDN}"
 	# Create pem file
 	_lxc_exec ${ct_proxy} "cat ${file_ssl_crt} ${_FILE_SSL_KEY} > ${_FILE_SSL_FULL}"
 
-	_echoT "------------------  copy to ssl path"
-	cmds="cp -a ${_FILE_SSL_KEY} ${S_PATH_CONF_SSL}/private/
-	cp -a ${_FILE_SSL_FULL} ${S_PATH_CONF_SSL}/private/"
-	_lxc_exec ${ct_proxy} "${cmds}"
-
 fi
+
+_echoT "------------------  certificate copy"
+file=/etc/periodic/weekly/${file_cron_certificate##*/}
+_eval lxc file push -q ${file_cron_certificate} ${_CT_NAME}${file}
+_lxc_var_replace ${_CT_NAME} ${file} mail
+_lxc_exec ${_CT_NAME} "chmod +x ${file}" # shift the haproxy cron by one hour
+_lxc_exec ${_CT_NAME} "sed -i '/run-parts.*weekly/ s|3|4|' /etc/crontabs/root" # shift the haproxy cron by one hour
+_lxc_exec ${_CT_NAME} "sh ${file}"
+
+_echoT "------------------  copy certificate"
+cmds="cp -a ${_FILE_SSL_KEY} ${S_PATH_CONF_SSL}/private/
+cp -a ${_FILE_SSL_FULL} ${S_PATH_CONF_SSL}/private/"
+_lxc_exec ${ct_proxy} "${cmds}"
 
 ########################  END
 

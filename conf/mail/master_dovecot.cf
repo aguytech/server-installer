@@ -9,33 +9,38 @@
 # service type  private unpriv  chroot  wakeup  maxproc command + args
 #               (yes)   (yes)   (no)    (never) (100)
 # ==========================================================================
+#smtp     inet  n       -       n       -       -       smtpd
 smtp      inet  n       -       y       -       1       postscreen
-	-o smtpd_sasl_auth_enable=no
+  -o smtpd_sasl_auth_enable=no
 smtpd     pass  -       -       y       -       -       smtpd
 dnsblog   unix  -       -       y       -       0       dnsblog
 tlsproxy  unix  -       -       y       -       0       tlsproxy
+# Choose one: enable submission for loopback clients only, or for any client.
+#127.0.0.1:submission inet n -   n       -       -       smtpd
 submission inet n       -       y       -       -       smtpd
-    -o syslog_name=postfix/submission
-	-o smtpd_tls_security_level=encrypt
-	-o smtpd_sasl_auth_enable=yes
-	-o smtpd_sasl_type=dovecot
-#	-o smtpd_reject_unlisted_recipient=no
-	-o smtpd_sasl_path=private/auth
-	-o smtpd_sasl_security_options=noanonymous
-	-o smtpd_client_restrictions=$mua_client_restrictions
-	-o smtpd_helo_restrictions=$mua_helo_restrictions
-	-o smtpd_sender_restrictions=$mua_sender_restrictions
-	-o smtpd_relay_restrictions=$mua_relay_restrictions
-	-o milter_macro_daemon_name=ORIGINATING
-	-o smtpd_sender_login_maps=mysql:/etc/postfix/sql/sender-login-maps.cf
-	-o smtpd_helo_required=no
-	-o smtpd_helo_restrictions=
-	-o cleanup_service_name=subcleanup
-#	-o smtpd_recipient_restrictions=
+  -o syslog_name=postfix/submission
+  -o smtpd_tls_security_level=encrypt
+  -o smtpd_sasl_auth_enable=yes
+  -o smtpd_sasl_type=dovecot
+  -o smtpd_sasl_path=private/auth
+  -o smtpd_sasl_security_options=noanonymous
+#  -o smtpd_tls_auth_only=yes
+#  -o smtpd_reject_unlisted_recipient=no
+  -o smtpd_client_restrictions=$mua_client_restrictions
+  -o smtpd_helo_restrictions=$mua_helo_restrictions
+  -o smtpd_sender_restrictions=$mua_sender_restrictions
+  -o smtpd_relay_restrictions=$mua_relay_restrictions
+  -o milter_macro_daemon_name=ORIGINATING
+  -o smtpd_sender_login_maps=mysql:/etc/postfix/sql/sender_login_maps.cf
+  -o smtpd_helo_required=no
+  -o smtpd_helo_restrictions=
+  -o cleanup_service_name=subcleanup
+#  -o smtpd_recipient_restrictions=
 #  -o smtpd_relay_restrictions=permit_sasl_authenticated,reject
 #  -o milter_macro_daemon_name=ORIGINATING
-#smtps     inet  n       -       y       -       -       smtpd
-#  -o syslog_name=postfix/smtps
+smtps     inet  n       -       y       -       -       smtpd
+  -o syslog_name=postfix/smtps
+  -o smtpd_tls_security_level=encrypt
 #  -o smtpd_tls_wrappermode=yes
 #  -o smtpd_sasl_auth_enable=yes
 #  -o smtpd_reject_unlisted_recipient=no
@@ -61,7 +66,8 @@ proxymap  unix  -       -       n       -       -       proxymap
 proxywrite unix -       -       n       -       1       proxymap
 smtp      unix  -       -       y       -       -       smtp
 relay     unix  -       -       y       -       -       smtp
-#       -o smtp_helo_timeout=5 -o smtp_connect_timeout=5
+  -o syslog_name=postfix/$service_name
+#  -o smtp_helo_timeout=5 -o smtp_connect_timeout=5
 showq     unix  n       -       y       -       -       showq
 error     unix  -       -       y       -       -       error
 retry     unix  -       -       y       -       -       error
@@ -71,9 +77,10 @@ virtual   unix  -       n       n       -       -       virtual
 lmtp      unix  -       -       y       -       -       lmtp
 anvil     unix  -       -       y       -       1       anvil
 scache    unix  -       -       y       -       1       scache
+postlog   unix-dgram n  -       n       -       1       postlogd
 subcleanup unix n       -       -       -       0       cleanup
-    -o syslog_name=postfix/submission
-	-o header_checks=regexp:/etc/postfix/subcleanup
+  -o syslog_name=postfix/submission
+  -o header_checks=regexp:/etc/postfix/subcleanup
 #
 # ====================================================================
 # Interfaces to non-Postfix software. Be sure to examine the manual
@@ -88,7 +95,7 @@ subcleanup unix n       -       -       -       0       cleanup
 # Also specify in main.cf: maildrop_destination_recipient_limit=1
 #
 #maildrop  unix  -       n       n       -       -       pipe
-#  flags=DRhu user=vmail argv=/usr/bin/maildrop -d ${recipient}
+#  flags=DRXhu user=vmail argv=/usr/bin/maildrop -d ${recipient}
 #
 # ====================================================================
 #
@@ -107,9 +114,10 @@ subcleanup unix n       -       -       -       0       cleanup
 # Also specify in main.cf: cyrus_destination_recipient_limit=1
 #
 #cyrus     unix  -       n       n       -       -       pipe
-#  user=cyrus argv=/cyrus/bin/deliver -e -r ${sender} -m ${extension} ${user}
+#  flags=DRX user=cyrus argv=/cyrus/bin/deliver -e -r ${sender} -m ${extension} ${user}
 #
 # ====================================================================
+#
 # Old example of delivery via Cyrus.
 #
 #old-cyrus unix  -       n       n       -       -       pipe
@@ -122,14 +130,20 @@ subcleanup unix n       -       -       -       0       cleanup
 #uucp      unix  -       n       n       -       -       pipe
 #  flags=Fqhu user=uucp argv=uux -r -n -z -a$sender - $nexthop!rmail ($recipient)
 #
+# ====================================================================
+#
 # Other external delivery methods.
 #
 #ifmail    unix  -       n       n       -       -       pipe
 #  flags=F user=ftn argv=/usr/lib/ifmail/ifmail -r $nexthop ($recipient)
+#
 #bsmtp     unix  -       n       n       -       -       pipe
-#  flags=Fq. user=bsmtp argv=/usr/lib/bsmtp/bsmtp -t$nexthop -f$sender $recipient
-#scalemail-backend unix	-	n	n	-	2	pipe
-#  flags=R user=scalemail argv=/usr/lib/scalemail/bin/scalemail-store ${nexthop} ${user} ${extension}
+#  flags=Fq. user=bsmtp argv=/usr/sbin/bsmtp -f $sender $nexthop $recipient
+#
+#scalemail-backend unix -       n       n       -       2       pipe
+#  flags=R user=scalemail argv=/usr/lib/scalemail/bin/scalemail-store
+#  ${nexthop} ${user} ${extension}
+#
 #mailman   unix  -       n       n       -       -       pipe
-#  flags=FR user=list argv=/usr/lib/mailman/bin/postfix-to-mailman.py
+#  flags=FRX user=list argv=/usr/lib/mailman/bin/postfix-to-mailman.py
 #  ${nexthop} ${user}

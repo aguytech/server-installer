@@ -1,0 +1,22 @@
+#!/bin/bash
+#
+# write by Aguy
+
+_echoT "\n======================  ${_INSTALL}-${_PARTMAIL}"
+
+grep -q "^# ${_PARTMAIL#++}$" ${_FILE_INSTALL_CONF} || echo  "# ${_PARTMAIL}" >> ${_FILE_INSTALL_CONF}
+
+########################  MAIN
+
+_echoT "------------------  proxy enable ${_CT_NAME}"
+file=/etc/haproxy/conf-available/80-backends
+_lxc_exec ${S_SERVICE[proxy]} "ls ${file}>/dev/null" || _exite "Unable to find file: ${file}"
+_lxc_exec ${S_SERVICE[proxy]} "sed-i '/^\s*#server ${S_SERVICE[mail]}/ s|#server|server|' ${file}"
+
+_echoT "------------------  proxy reload"
+_lxc_exec ${S_SERVICE[proxy]} "rc-service -s haproxy reload"
+
+########################  END
+
+_echoT "====================== ${_INSTALL}-${_PARTMAIL} end"
+_partadd ${_PARTMAIL#++} ${S_FILE_INSTALL_DONE}

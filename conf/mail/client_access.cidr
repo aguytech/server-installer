@@ -1,0 +1,16 @@
+# Implicite action for given IPs
+# OK
+#		Accept the address etc. that matches the pattern
+# REJECT optional text...
+#		Reject the address etc. that matches  the  pattern
+# DEFER optional text...
+#		Reject  the  address  etc.  that matches the pattern
+# DEFER_IF_REJECT optional text...
+#		Defer the request if some later restriction would  result  in  a REJECT action
+# DEFER_IF_PERMIT optional text...
+#		Defer the request if some later restriction would result in a anexplicit or implicit PERMIT action
+#
+# See: http://www.postfix.org/access.5.html
+#
+_CIDR OK
+# 1.2.3.4 REJECT

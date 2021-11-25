@@ -1,0 +1,7 @@
+# Implicite action for given IPs
+# permit: giving grant access
+# reject: reject
+# See: http://www.postfix.org/postconf.5.html#postscreen_access_list
+#
+_CIDR permit
+# 1.2.3.4 reject

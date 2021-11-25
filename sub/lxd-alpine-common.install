@@ -44,20 +44,6 @@ _evalr "sed -i 's|^\(S_PATH_INSTALL\)=.*$|\1=\"/usr/local/install\"|' ${file}"
 _eval lxc file push -q ${file} ${_CT_NAME}${S_PATH_CONF}/server.conf
 _lxc_exec ${_CT_NAME} "chmod 700 -R ${S_PATH_CONF}"
 
-
-########################  HOSTS
-
-#_echoT "------------------  hosts"
-
-#file=" /etc/hosts"
-#if ! [ "$(_lxc_exec ${_CT_NAME} "grep '\ssrv-' ${file}")" ]; then
-#	_lxc_exec ${_CT_NAME} "echo >> ${file}"
-#	_lxc_exec ${_CT_NAME} "echo \"# DNS for services\" >> ${file}"
-#	for str in ${!S_SERVICE[*]}; do
-#		echo _lxc_exec ${_CT_NAME} "echo \"${S_SERVICE[$str]}	${str}\" >> ${file}"
-#	done
-#fi
-
 ########################  MAIL
 
 # TODO impements relay mail
@@ -97,9 +83,10 @@ _echoT "------------------  rsyslog conf"
 file="/etc/rsyslog.conf"
 _lxc_exec ${_CT_NAME} "[ -f ${file} ] && cp -a ${file} ${file}.${_SDATE}"
 
-_lxc_exec ${_CT_NAME} "sed -i 's|^.\?\(module(load=\"immark\").*\)|\1|' ${file}"
-_lxc_exec ${_CT_NAME} "sed -i 's|^.\?\(module(load=\"imklog\").*\)|#\1|' ${file}"
-_lxc_exec ${_CT_NAME} "sed -i 's|^.\?\(module(load=\"imuxsock\").*\)|\1|' ${file}"
+_lxc_exec ${_CT_NAME} "sed -i '/#module(load=.immark/ s|^#||' ${file}"
+_lxc_exec ${_CT_NAME} "sed -i '/^module(load=.imklog/ s|^|#|' ${file}"
+_lxc_exec ${_CT_NAME} "sed -i '/#module(load=.imuxsock/ s|^#||' ${file}"
+_lxc_exec ${_CT_NAME} "sed -i '/module(load=.imuxsock/ s|=.*|=\"imuxsock\" SysSock.RateLimit.Interval=\"5\" SysSock.RateLimit.Burst=\"200\")|' ${file}"
 
 _echoT "------------------  rsyslog cron & mail"
 

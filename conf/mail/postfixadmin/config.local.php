@@ -1,5 +1,8 @@
 <?php
 
+// DNS check when creating mailboxes or aliases,
+// $CONF['emailcheck_resolve_domain']='NO';
+
 // configuration
 $CONF['configured'] = true;
 // password for www access
@@ -48,11 +51,11 @@ $CONF['smtp_sendmail_tls'] = 'NO';
 // Mailboxes
 // The default aliases that need to be created for all domains
 $CONF['default_aliases'] = array (
-    'abuse' => 'postmaster@_DOMAIN_FQDN',
-    'hostmaster' => 'postmaster@_DOMAIN_FQDN',
-    'webmaster' => 'postmaster@_DOMAIN_FQDN',
-    'postmaster' => 'tech@_DOMAIN_FQDN',
-    'root' => 'tech@_DOMAIN_FQDN',
+    'abuse' => 'postmaster',
+    'hostmaster' => 'postmaster',
+    'webmaster' => 'postmaster',
+    'postmaster' => '_EMAIL_TECH',
+    'root' => '_EMAIL_TECH',
 );
 // If you want to store the mailboxes per domain set this to 'YES'.
 $CONF['domain_path'] = 'YES';

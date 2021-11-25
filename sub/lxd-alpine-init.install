@@ -85,6 +85,19 @@ _lxc_exec ${_CT_NAME_COM} "chmod 700 -R ${S_PATH_CONF_SSL}/private"
 
 _lxc_exec ${_CT_NAME_COM} "[ -h /server ] || ln -s /etc/server /server"
 
+########################  HOSTS
+
+#_echoT "------------------  hosts"
+
+#file=" /etc/hosts"
+#if ! [ "$(_lxc_exec ${_CT_NAME} "grep '\ssrv-' ${file}")" ]; then
+#	_lxc_exec ${_CT_NAME} "echo >> ${file}"
+#	_lxc_exec ${_CT_NAME} "echo \"# DNS for services\" >> ${file}"
+#	for str in ${!S_SERVICE[*]}; do
+#		echo _lxc_exec ${_CT_NAME} "echo \"${S_SERVICE[$str]}	${str}\" >> ${file}"
+#	done
+#fi
+
 ########################  END
 
 _echoT "===================== ${_PART} end"

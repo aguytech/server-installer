@@ -32,7 +32,7 @@ anstmp="127.0.0.0/8 [::1]/128 ${s_cidr}"
 anstmp+=" $(echo "${S_CLUSTER[*]}"|tr ' ' '\n'|sed -n 's|s_ip=\([^ ]\+\)$|\1|p'|xargs)"
 anstmp+=" $(echo "${S_CLUSTER[*]}"|tr ' ' '\n'|sed -n 's|s_ip6=\([^ ]\+\)$|\1|p'|xargs)"
 _askno "ignored IPs (${anstmp})"
-IPS_IGNORED="${_ANSWER:-$anstmp}" && _confset IPS_IGNORED "${IPS_IGNORED}"
+_IPS_IGNORED="${_ANSWER:-$anstmp}" && _confset _IPS_IGNORED "${_IPS_IGNORED}"
 
 ########################  INSTALL
 

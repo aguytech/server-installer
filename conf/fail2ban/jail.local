@@ -1,7 +1,7 @@
 # global configuration to override fail2ban.conf
 
 [DEFAULT]
-ignoreip = IPS_IGNORED
+ignoreip = _IPS_IGNORED
 bantime  = 60m
 findtime  = 10m
 maxretry = 5

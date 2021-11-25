@@ -59,6 +59,12 @@ if lxc list -f csv -c n | grep -q ^${_CT_NAME}$; then
 fi
 _eval lxc init ${_CT_NAME_COM} ${_CT_NAME} -p default -p global -p ssl-mail -p ${profile}
 
+_echoT "------------------  network fixed ip"
+if ! lxc list -f json | jq -r '.[] | select(.name == "'${_CT_NAME}'").devices[].name' | grep -q eth0; then
+	#_eval lxc network attach ${s_inet} ${_CT_NAME} eth0 eth0
+	eval ${S_HOST_VM_ETH[default]}
+	_eval lxc config device override ${_CT_NAME} eth0 ipv4.address=${s_base}.${S_SERVICE_BITS[mail]}
+fi
 
 _echoT "------------------ ${_CT_NAME} start"
 _eval lxc start ${_CT_NAME}
@@ -95,26 +101,30 @@ _lxc_exec ${_CT_NAME} "${cmd}"
 
 ########################  DATA
 
+# group
+file=/etc/group
+cmd="addgroup -S ${_VMAIL_USER}"
+_lxc_exec ${_CT_NAME} "grep -q ^${_VMAIL_USER} ${file} || ${cmd}"
+_VMAIL_GID=`_lxc_exec ${_CT_NAME} grep ^${_VMAIL_USER} ${file}|cut -d: -f3`
+# user
 file=/etc/passwd
-_VMAIL_USER=vmail
-if ! _lxc_exec ${_CT_NAME} grep -q "${_VMAIL_USER}" ${file}; then
-	_VMAIL_UID=2000
-	_VMAIL_GID=2000
-	_lxc_exec_e ${_CT_NAME} addgroup -g ${_VMAIL_GID} ${_VMAIL_USER}
-	_lxc_exec_e ${_CT_NAME} adduser -u ${_VMAIL_UID} -G ${_VMAIL_USER} -D -h ${_PATH_VMAIL} -s/sbin/nologin -g ${_VMAIL_USER} ${_VMAIL_USER}
-else
-	str=`lxc exec ${_CT_NAME} -- grep ^vmail: ${file}`
-	_VMAIL_UID=`echo ${str}|cut -d: -f3`
-	_VMAIL_GID=`echo ${str}|cut -d: -f4`
-	path=`echo ${str}|cut -d: -f6`
-	_lxc_exec_e ${_CT_NAME} "sed -i '/^${_VMAIL_USER}:/ s|:${path}:|:${_PATH_VMAIL}:|' ${file}"
-fi
-_confset _VMAIL_USER "${_VMAIL_USER}" ${_FILE_INSTALL_CONF}
+cmd="adduser -S -G ${_VMAIL_USER} -D -h ${_PATH_VMAIL} -s/sbin/nologin -g ${_VMAIL_USER} ${_VMAIL_USER}"
+_lxc_exec ${_CT_NAME} "grep -q ^${_VMAIL_USER} ${file} || ${cmd}"
+_VMAIL_UID=`_lxc_exec ${_CT_NAME} grep ^${_VMAIL_USER} ${file}|cut -d: -f3`
+# path
+str=`_lxc_exec ${_CT_NAME} grep ^${_VMAIL_USER} ${file}|cut -d: -f6`
+_lxc_exec_e ${_CT_NAME} "sed -i '/^${_VMAIL_USER}/ s|${str}|${_PATH_VMAIL}|' ${file}"
+# gid
+str=`_lxc_exec ${_CT_NAME} grep ^${_VMAIL_USER} ${file}|cut -d: -f4`
+_lxc_exec_e ${_CT_NAME} "sed -i '/^${_VMAIL_USER}/ s|${str}|${_VMAIL_GID}|' ${file}"
+# group
+_lxc_exec_e ${_CT_NAME} "sed -i '/^${_VMAIL_USER}/ s|^\(.*:.*:.*:\).*$|\1${_VMAIL_UID}|' /etc/group"
+
 _confset _VMAIL_UID "${_VMAIL_UID}" ${_FILE_INSTALL_CONF}
 _confset _VMAIL_GID "${_VMAIL_GID}" ${_FILE_INSTALL_CONF}
 
 _echoT "------------------  rights path ${_VMAIL_USER}"
-_lxc_exec_e ${_CT_NAME} "chown ${_VMAIL_UID}:${_VMAIL_GID} ${_PATH_VMAIL}"
+_lxc_exec_e ${_CT_NAME} "chown ${_VMAIL_USER}:${_VMAIL_USER} -R ${_PATH_VMAIL}"
 
 ########################  IPTABLES
 
