@@ -8,7 +8,7 @@ grep -q "^# ${_PART#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART}" >> ${S_FI
 
 ########################  REQUIRED
 
-_echoT "------------------ required vm image"
+_echot "------------------ required vm image"
 lxc image list -f csv -c l | grep -q ^${_CT_NAME_COM}$ || _exite "Unable to find image container: '${_CT_NAME_COM}'"
 
 file_rsyslog_host_auth=${S_PATH_INSTALL_CONF}/rsyslog/host-auth.conf
@@ -23,7 +23,7 @@ file_logrotate_host_fail2ban=${S_PATH_INSTALL_CONF}/logrotate/host-fail2ban
 file_rsyslog_host_lxd=${S_PATH_INSTALL_CONF}/rsyslog/host-lxd.conf
 file_logrotate_host_lxd=${S_PATH_INSTALL_CONF}/logrotate/host-lxd
 
-_echoT "------------------ required files"
+_echot "------------------ required files"
 _require ${file_rsyslog_host_auth} ${file_logrotate_host_rsyslog}
 _require ${file_rsyslog_host_iptables} ${file_logrotate_host_iptables}
 _require ${file_rsyslog_host_fail2ban} ${file_logrotate_host_fail2ban}
@@ -39,7 +39,7 @@ _CT_IP=${s_base}.${S_SERVICE_BITS[log]}
 ########################  PROFILE
 
 profile=${_CT_NAME}
-_echoT "------------------  profiles ${profile}"
+_echot "------------------  profiles ${profile}"
 
 lxc profile list -f csv|grep -q "^${profile}," && lxc profile rename ${profile} ${profile}.${_SDATE}
 _eval lxc profile create ${profile}
@@ -51,54 +51,54 @@ _eval lxc profile device add ${profile} ${profile} disk source=${path} path=${pa
 
 ########################  INIT
 
-_echoT "------------------  init"
+_echot "------------------  init"
 if lxc list -f csv -c n | grep -q ^${_CT_NAME}$; then
 	lxc list -f csv -c n status=Running| grep -q ^${_CT_NAME}$ && _eval lxc stop ${_CT_NAME}
-	_echoT "------------------ rename ${_CT_NAME} -> ${_CT_NAME}-${_SDATE}"
+	_echot "------------------ rename ${_CT_NAME} -> ${_CT_NAME}-${_SDATE}"
 	_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
 fi
 _eval lxc init ${_CT_NAME_COM} ${_CT_NAME} -p default -p global -p ${profile}
 
-_echoT "------------------  network fixed ip"
+_echot "------------------  network fixed ip"
 if ! lxc list -f json | jq -r '.[] | select(.name == "'${_CT_NAME}'").devices[].name' | grep -q eth0; then
 	_eval lxc config device override ${_CT_NAME} eth0 ipv4.address=${_CT_IP}
 fi
 
-_echoT "------------------  ${_CT_NAME} start"
+_echot "------------------  ${_CT_NAME} start"
 _eval lxc start ${_CT_NAME}
 
 ########################  METADATA
 
-_echoT "------------------  metadata"
+_echot "------------------  metadata"
 _lxc_meta_set ${_CT_NAME} profiles default global ${profile}
 _lxc_meta_add ${_CT_NAME} apps rsyslog
 
 ########################  IPTABLES
 
-_echoT "------------------  iptables"
+_echot "------------------  iptables"
 sed -i '/^_NAT_RSYSLOG=/ s|=.*$|=true|' ${_IPT_FILE_CONF}
 _service restart ${_IPT_SERVICE}
 
 ########################  CONF
 
 if [ "${S_RSYSLOG_PTC}" = udp ]; then
-	_echoT "------------------  conf udp"
+	_echot "------------------  conf udp"
 
 	file=/etc/rsyslog.conf
 	_lxc_exec ${_CT_NAME} "sed -i '/#module(load=.imudp/,/#)/ s|^#||' ${file}"
 	_lxc_exec ${_CT_NAME} "sed -i '/^\s*port=/ s|=.*|=\"${S_RSYSLOG_PORT}\"|' ${file}"
 
-	_echoT "------------------  restart rsyslog ${_CT_NAME}"
+	_echot "------------------  restart rsyslog ${_CT_NAME}"
 
 	_lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
 fi
 
-_echoT "------------------  conf client-auth"
+_echot "------------------  conf client-auth"
 
 file=/etc/rsyslog.d/client-auth.conf
 _lxc_exec ${_CT_NAME} "[ -f ${file} ] && rm ${file}"
 
-_echoT "------------------  conf host-auth"
+_echot "------------------  conf host-auth"
 
 file=/etc/rsyslog.d/${file_rsyslog_host_auth##*/}
 _eval lxc file push -q ${file_rsyslog_host_auth} ${_CT_NAME}${file}
@@ -106,7 +106,7 @@ _lxc_var_replace ${_CT_NAME} ${file} rsyslog
 
 ########################  RSYSLOG IPTABLES
 
-_echoT "------------------  iptables host conf"
+_echot "------------------  iptables host conf"
 path=${S_VM_PATH_LOG}/iptables
 _lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
 
@@ -114,15 +114,15 @@ file=/etc/rsyslog.d/${file_rsyslog_host_iptables##*/}
 _eval lxc file push -q ${file_rsyslog_host_iptables} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} rsyslog
 
-_echoT "------------------  iptables host restart"
+_echot "------------------  iptables host restart"
 _lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
 
-_echoT "------------------  iptables client restart"
+_echot "------------------  iptables client restart"
 _service restart rsyslog
 
 ########################  RSYSLOG FAIL2BAN
 
-_echoT "------------------  fail2ban host conf"
+_echot "------------------  fail2ban host conf"
 path=${S_VM_PATH_LOG}/fail2ban
 _lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
 
@@ -130,15 +130,15 @@ file=/etc/rsyslog.d/${file_rsyslog_host_lxd##*/}
 _eval lxc file push -q ${file_rsyslog_host_lxd} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} rsyslog
 
-_echoT "------------------  fail2ban host restart"
+_echot "------------------  fail2ban host restart"
 _lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
 
-_echoT "------------------  fail2ban client restart"
+_echot "------------------  fail2ban client restart"
 _service restart rsyslog
 
 ########################  RSYSLOG LXD
 
-_echoT "------------------  lxd host conf"
+_echot "------------------  lxd host conf"
 
 path=${S_VM_PATH_LOG}/lxd
 _lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
@@ -147,35 +147,35 @@ file=/etc/rsyslog.d/${file_rsyslog_host_lxd##*/}
 _eval lxc file push -q ${file_rsyslog_host_lxd} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} rsyslog
 
-_echoT "------------------  lxd host restart"
+_echot "------------------  lxd host restart"
 _lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
 
-_echoT "------------------  lxd client restart"
+_echot "------------------  lxd client restart"
 _service restart rsyslog
 
 ########################  LOGROTATE HOST
 
-_echoT "------------------  logrotate rsyslog host"
+_echot "------------------  logrotate rsyslog host"
 file=/etc/logrotate.d/${file_logrotate_host_rsyslog##*/}
 _eval lxc file push -q ${file_logrotate_host_rsyslog} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} logrotate
 
-_echoT "------------------  logrotate iptables host"
+_echot "------------------  logrotate iptables host"
 file=/etc/logrotate.d/${file_logrotate_host_iptables##*/}
 _eval lxc file push -q ${file_logrotate_host_iptables} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} logrotate
 
-_echoT "------------------  logrotate lxd host"
+_echot "------------------  logrotate lxd host"
 file=/etc/logrotate.d/${file_logrotate_host_lxd##*/}
 _eval lxc file push -q ${file_logrotate_host_lxd} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} logrotate
 
-_echoT "------------------  ${_CT_NAME} crond restart"
+_echot "------------------  ${_CT_NAME} crond restart"
 _lxc_exec ${_CT_NAME} "rc-service crond restart"
 
 ########################  PUBLISH
 
-_echoT "------------------  publish ${_CT_NAME}"
+_echot "------------------  publish ${_CT_NAME}"
 
 lxc image list -f csv -c l | grep -q ^${_CT_NAME}$ && _eval lxc image alias rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
 _eval lxc publish --force ${_CT_NAME} --alias ${_CT_NAME}

@@ -10,17 +10,17 @@ grep -q "^# ${_PART#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART}" >> ${S_FI
 
 file_conf_aliases=${S_PATH_INSTALL_CONF}/mail/postfix/aliases
 
-_echoT "------------------ required files"
+_echot "------------------ required files"
 _require ${file_conf_aliases}
 
 ########################  MAIN
 
-_echoT "------------------  postfix install"
+_echot "------------------  postfix install"
 _echo "Choose 'Internet Site' and just valid for all default values"
 _askno "valid to continue"
 _eval apt install -y postfix
 
-_echoT "------------------  postfix conf"
+_echot "------------------  postfix conf"
 file=/etc/postfix/main.cf
 _keepcpts ${file}
 _eval "sed -i /^my/d ${file}"
@@ -38,12 +38,12 @@ smtpd_relay_restrictions  permit_mynetworks
 alias_database  hash:${file_aliases}
 alias_maps  hash:${file_aliases}"
 
-_echoT "------------------  postfix aliases"
+_echot "------------------  postfix aliases"
 _eval cp -a ${file_conf_aliases} ${file_aliases}
 _eval "sed -i '/_EMAIL_TECH/ {s|_EMAIL_TECH|${S_DOMAIN_EMAIL_TECH}|;s|^#||}' ${file_aliases}"
 newaliases
 
-_echoT "------------------  postfix enable"
+_echot "------------------  postfix enable"
 systemctl is-enabled postfix || _eval systemctl enable postfix
 _eval systemctl restart postfix
 

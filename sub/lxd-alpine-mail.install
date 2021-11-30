@@ -6,16 +6,16 @@ _echoT "\n==========================================  ${_INSTALL}-${_PART}"
 
 ########################  REQUIRED
 
-_echoT "------------------ required vm image"
+_echot "------------------ required vm image"
 lxc image list -f csv -c l | grep -q ^${_CT_NAME_COM}$ || _exite "Unable to find image container: '${_CT_NAME_COM}'"
 
-_echoT "------------------ required vm"
+_echot "------------------ required vm"
 lxc list -f csv -c n | grep -q ^${S_SERVICE[proxy]}$ || _exite "Unable to find container: '${S_SERVICE[proxy]}'"
 lxc list -f csv -c n | grep -q ^${S_SERVICE[log]}$ || _exite "Unable to find container: '${S_SERVICE[log]}'"
 
 ####################  SELECT
 
-_echoT "------------------ select"
+_echot "------------------ select"
 
 anstmp=${S_DOMAIN_FQDN} && _askno "Domain name to use (${anstmp})"
 _DOMAIN_FQDN="${_ANSWER:-${anstmp}}"
@@ -125,7 +125,7 @@ fi
 
 for i in `seq 2 ${_CT_NUM}`; do
 	ct_name=${_CT_NAME}-${i}
-	_echoT "---------- build ${ct_name}"
+	_echot "---------- build ${ct_name}"
 
 	if lxc list -f csv -c n | grep -q ^${ct_name}$; then
 		lxc list -f csv -c n status=Running| grep -q ^${ct_name}$ && _eval lxc stop ${ct_name}
@@ -137,7 +137,7 @@ done
 
 ########################  FIX IP
 
-_echoT "------------------ network fixed ip"
+_echot "------------------ network fixed ip"
 if ! lxc list -f json | jq -r '.[] | select(.name == "'${_CT_NAME}'").devices[].name' | grep -q eth0; then
 	_eval lxc config device override ${_CT_NAME} eth0 ipv4.address=${_CT_IP}
 fi
@@ -145,7 +145,7 @@ fi
 
 ########################  TEST
 
-_echoT "------------------  mail test"
+_echot "------------------  mail test"
 
 
 
@@ -158,7 +158,7 @@ _echo $(for i in `seq 1 ${_CT_NUM}`; do echo ${_CT_NAME}-${i};done)
 ########################  PUBLISH
 
 for ct_name in ${_CT_ALL_NAME}
-	_echoT "------------------ publish ${ct_name}"
+	_echot "------------------ publish ${ct_name}"
 	lxc image list -f csv -c l | grep -q ^${ct_name}$ && _eval lxc image alias rename ${ct_name} ${ct_name}-${_SDATE}
 	_eval lxc publish --force ${ct_name} --alias ${ct_name}
 done

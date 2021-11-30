@@ -8,13 +8,13 @@ grep -q "^# ${_PARTMAIL#++}$" ${_FILE_INSTALL_CONF} || echo  "# ${_PARTMAIL}" >>
 
 ########################  REQUIRED
 
-_echoT "------------------ required vm"
+_echot "------------------ required vm"
 cts_maria=`lxc list -f csv -c n| grep '^mdb-'`
 [ -z "${cts_maria}" ] && _exite "Unable to find mariadb container"
 
 ########################  DATA
 
-_echoT "------------------  data mariadb"
+_echot "------------------  data mariadb"
 
 _menu "Select a 'mariadb' container to use" ${cts_maria}
 _DB_HOST=${_ANSWER} && _confset _DB_HOST "${_DB_HOST}" ${_FILE_INSTALL_CONF}
@@ -25,7 +25,7 @@ ok=false; while ! ${ok}; do
 done
 _DB_HOST_PWD=${_ANSWER}&& _confset _DB_HOST_PWD "${_DB_HOST_PWD}" ${_FILE_INSTALL_CONF}
 
-_echoT "------------------  data"
+_echot "------------------  data"
 
 anstmp=${_VMAIL_APP} && _askno "Database name for mail management (${anstmp})"
 _DB_NAME=${_ANSWER:-${anstmp}} && _confset _DB_NAME "${_DB_NAME}" ${_FILE_INSTALL_CONF}
@@ -38,17 +38,17 @@ _DB_PWD=${_ANSWER:-${anstmp}} && _confset _DB_PWD "${_DB_PWD}" ${_FILE_INSTALL_C
 
 ########################  MAIN
 
-_echoT "------------------  install"
+_echot "------------------  install"
 _lxc_exec ${_CT_NAME} "rc-service -l | grep -q ^mariadb-client && apk add mariadb-client"
 
-_echoT "------------------  db create"
+_echot "------------------  db create"
 cmd="CREATE DATABASE IF NOT EXISTS ${_DB_NAME};"
 _eval "mysql -h${_DB_HOST} -uroothost -p${_DB_HOST_PWD} -e \"${cmd}\""
 
-_echoT "------------------  Rights"
+_echot "------------------  Rights"
 strpass=
 for ct in ${_CT_ALL_NAME}; do
-	_echoT "------------------  grant ${_DB_USER}"
+	_echot "------------------  grant ${_DB_USER}"
 	cmd="GRANT USAGE ON *.* TO '${_DB_USER}'@'${ct}.lxd' IDENTIFIED BY '${_DB_PWD}';"
 	_eval "mysql -h${_DB_HOST} -uroothost -p${_DB_HOST_PWD} -e \"${cmd}\""
 	cmd="GRANT SELECT ON ${_DB_NAME}.* TO '${_DB_USER}'@'${ct}.lxd';"
@@ -56,12 +56,12 @@ for ct in ${_CT_ALL_NAME}; do
 	strpass+="${_DB_USER} @ ${ct} - ${_DB_PWD}\n"
 done
 
-_echoT "------------------  flush privileges"
+_echot "------------------  flush privileges"
 _eval "mysql -h${_DB_HOST} -uroothost -p${_DB_HOST_PWD} -e \"FLUSH PRIVILEGES;\""
 
 ########################  SHOW
 
-_echoT "------------------  show passwords"
+_echot "------------------  show passwords"
 _echoI "Keep this passwords:"
 _echoW "${strpass}"
 

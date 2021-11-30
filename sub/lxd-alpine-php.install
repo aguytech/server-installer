@@ -8,7 +8,7 @@ grep -q "^# ${_PART#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART}" >> ${S_FI
 
 ########################  REQUIRED
 
-_echoT "------------------ required vm"
+_echot "------------------ required vm"
 cts_all_www=`lxc image list -f csv -c l| grep -e '^\(wa-\|wn-\)'`
 [ "${cts_all_www}" ] || _exite "Unable to find image container start with wa-|wn-"
 
@@ -24,7 +24,7 @@ file_rsyslog_host=${S_PATH_INSTALL_CONF}/rsyslog/host-phpfpm7.conf
 file_logrotate_client=${S_PATH_INSTALL_CONF}/logrotate/client-phpfpm7
 file_logrotate_host=${S_PATH_INSTALL_CONF}/logrotate/host-phpfpm7
 
-_echoT "------------------ required files"
+_echot "------------------ required files"
 _require ${file_phpfpm} ${file_monitor} ${file_opcache} ${file_xdebug} ${file_rsyslog_host} ${file_rsyslog_client} ${file_logrotate_host}
 
 ########################  DATA
@@ -32,7 +32,7 @@ _require ${file_phpfpm} ${file_monitor} ${file_opcache} ${file_xdebug} ${file_rs
 #php_version=`_lxc_exec ${S_SERVICE[http]} "apk list php7-fpm | sed -n 's|php7-fpm-\([0-9\.]\+\)-.*|\1|p'"`
 php_modules="php7-bcmath php7-bz2 php7-ctype php7-curl php7-exif php7-fileinfo php7-dom php7-gd php7-gmp php7-iconv php7-imap php7-json php7-mbstring php7-mysqli php7-openssl php7-pdo_mysql php7-opcache php7-pgsql php7-posix php7-session php7-simplexml php7-sqlite3 php7-xmlreader php7-xmlwriter php7-zip php7-xdebug php7-pecl-mcrypt php7-pecl-redis php7-xml" #  php7-pecl-imagick php7-pear
 
-_echoT "------------------  data domain"
+_echot "------------------  data domain"
 
 anstmp=${S_DOMAIN_FQDN} && _askno "Domain name to use (${anstmp})"
 _DOMAIN_FQDN="${_ANSWER:-$anstmp}"
@@ -43,7 +43,7 @@ ct_base="${_ANSWER:-$anstmp}"
 anstmp=2 && _askno "Number of containers to build (${anstmp})"
 ct_num="${_ANSWER:-$anstmp}"
 
-_echoT "------------------  data image"
+_echot "------------------  data image"
 
 _menu "Select one available image Apache container for www base" ${cts_all_www}
 ct_www=${_ANSWER}
@@ -55,7 +55,7 @@ profile_www="${_ANSWER}" || _ANSWER=
 _menu "Select one available container for cache" ${imgs_all_rds}
 ct_rds=${_ANSWER}
 
-_echoT "------------------  data php"
+_echot "------------------  data php"
 
 profiles=`lxc profile list -f csv|grep "^php.*,"|cut -d, -f1`
 [ "${profiles}" ] && _menu "Select an available PHP profile to apply or none" none ${profiles} || _ANSWER=
@@ -84,7 +84,7 @@ _PHP_SESSION_STRICT_MODE="${_ANSWER:-$anstmp}" && _confset _PHP_SESSION_STRICT_M
 anstmp="${php_modules}" && _askno "php modules to install: \n${anstmp}"
 _PHP_MODULES="${_ANSWER:-$anstmp}" && _confset _PHP_MODULES "${_PHP_MODULES}"
 
-_echoT "------------------  data php-fpm"
+_echot "------------------  data php-fpm"
 
 anstmp='30' && _askno "Give value for 'emergency_restart_threshold' (${anstmp})"
 _PHP_RESTART_THRESHOLD="${_ANSWER:-$anstmp}" && _confset _PHP_RESTART_THRESHOLD "${_PHP_RESTART_THRESHOLD}"
@@ -95,7 +95,7 @@ _PHP_RESTART_INTERVAL="${_ANSWER:-$anstmp}" && _confset _PHP_RESTART_INTERVAL "$
 anstmp='0' && _askno "Give value for 'process_control_timeout' (${anstmp})s"
 _PHP_CONTROL_TIMEOUT="${_ANSWER:-$anstmp}" && _confset _PHP_CONTROL_TIMEOUT "${_PHP_CONTROL_TIMEOUT}"
 
-_echoT "------------------  data pool www"
+_echot "------------------  data pool www"
 
 anstmp='20' && _askno "Give value for 'pm.max_children' (${anstmp})"
 _PHP_W_MAX_CHILDREN="${_ANSWER:-$anstmp}" && _confset _PHP_W_MAX_CHILDREN "${_PHP_W_MAX_CHILDREN}"
@@ -139,7 +139,7 @@ _CT_NAME=${ct_base}-1
 ########################  PROFILE
 
 if ! lxc profile list -f csv|grep -q "^${profile},"; then
-	_echoT "------------------  profile create ${profile}"
+	_echot "------------------  profile create ${profile}"
 	_eval lxc profile create ${profile}
 
 	path=${S_HOST_PATH_SHARE}/php/${_DOMAIN_FQDN}
@@ -147,38 +147,38 @@ if ! lxc profile list -f csv|grep -q "^${profile},"; then
 	[ -d ${path} ] || _evalr mkdir -p ${path}
 	_eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
 else
-	_echoT "------------------  existing profile ${profile}"
+	_echot "------------------  existing profile ${profile}"
 fi
 
 ########################  INIT
 
-_echoT "------------------  init"
+_echot "------------------  init"
 if lxc list -f csv -c n | grep -q ^${_CT_NAME}$; then
 	lxc list -f csv -c n status=Running| grep -q ^${_CT_NAME}$ && _eval lxc stop ${_CT_NAME}
-	_echoT "------------------ rename ${_CT_NAME} -> ${_CT_NAME}-${_SDATE}"
+	_echot "------------------ rename ${_CT_NAME} -> ${_CT_NAME}-${_SDATE}"
 	_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
 fi
 _eval lxc init ${ct_www} ${_CT_NAME} -p default -p global -p ${profile_www} -p ${profile}
 
-#_echoT "------------------  network fixed ip"
+#_echot "------------------  network fixed ip"
 #
 #if ! lxc list -f json | jq -r '.[] | select(.name == "'${_CT_NAME}'").devices[].name' | grep -q eth0; then
 #	_eval lxc network attach ${s_inet} ${_CT_NAME} eth0 eth0
 #fi
 #_eval lxc config device set ${_CT_NAME} eth0 ipv4.address ${_CT_IP}
 
-_echoT "------------------  ${_CT_NAME} start"
+_echot "------------------  ${_CT_NAME} start"
 _eval lxc start ${_CT_NAME}
 
 ########################  METADATA
 
-_echoT "------------------  metadata"
+_echot "------------------  metadata"
 _lxc_meta_set ${_CT_NAME} profiles default global ${profile_www} ${profile}
 _lxc_meta_add ${_CT_NAME} apps php7
 
 ########################  PATHS
 
-_echoT "------------------  paths ${_PHP_SERVICE}"
+_echot "------------------  paths ${_PHP_SERVICE}"
 
 paths="${path_php_share}/tmp ${path_php_share}/sessions ${path_php_share}/soap ${path_xdebug_profile} ${path_xdebug_trace} ${path_fpm_pool}/www ${path_fpm_pool}/www-admin"
 cmd="for path in ${paths}; do [ -d \${path} ] || mkdir -p \${path}; done"
@@ -186,16 +186,16 @@ _lxc_exec ${_CT_NAME} "${cmd}"
 
 ########################  INSTALL
 
-_echoT "------------------  update"
+_echot "------------------  update"
 _lxc_exec ${_CT_NAME} "apk update"
 
-_echoT "------------------  install php7-fpm"
+_echot "------------------  install php7-fpm"
 _lxc_exec ${_CT_NAME} "apk add php7-fpm"
 
-_echoT "------------------  install php7 modules"
+_echot "------------------  install php7 modules"
 _lxc_exec ${_CT_NAME} "apk add ${php_modules}"
 
-_echoT "------------------  service set & start"
+_echot "------------------  service set & start"
 service=${_PHP_SERVICE}
 _lxc_exec ${_CT_NAME} "rc-update add ${service}"
 _lxc_exec ${_CT_NAME} "rc-service ${service} start"
@@ -203,7 +203,7 @@ _lxc_exec ${_CT_NAME} "rc-service ${service} start"
 
 ########################  CONF PHP.INI
 
-_echoT "------------------  conf php.ini global"
+_echot "------------------  conf php.ini global"
 
 file=${file_php_conf}
 _lxc_exec ${_CT_NAME} "[ -f ${file} ] && cp -a ${file} ${file}.${_SDATE}"
@@ -228,7 +228,7 @@ mail.log  syslog"
 #syslog.facility  user
 _lxc_exec ${_CT_NAME} "${cmds}"
 
-_echoT "------------------  conf php.ini opcache"
+_echot "------------------  conf php.ini opcache"
 
 cmds=; while read str val; do
 	cmds+="sed -i 's|^;\?\(${str}\s*=\).*|\1 ${val}|' ${file}
@@ -242,7 +242,7 @@ opcache.revalidate_freq  4
 opcache.save_comments  1"
 _lxc_exec ${_CT_NAME} "${cmds}"
 
-_echoT "------------------  conf php.ini paths"
+_echot "------------------  conf php.ini paths"
 
 cmds=; while read str val; do
 	cmds+="sed -i 's|^;\?\(${str}\s*=\).*|\1 ${val}|' ${file}
@@ -257,7 +257,7 @@ _lxc_exec ${_CT_NAME} "${cmds}"
 file=${file_fpm_conf}
 _lxc_exec ${_CT_NAME} "[ -f ${file} ] && cp -a ${file} ${file}.${_SDATE}"
 
-_echoT "------------------  conf php.fpm global"
+_echot "------------------  conf php.fpm global"
 
 cmds=; while read str val; do
 	cmds+="sed -i 's|^;\?\(${str}\s*=\).*|\1 ${val}|' ${file}
@@ -276,13 +276,13 @@ _lxc_exec ${_CT_NAME} "${cmds}"
 
 pool=www
 
-_echoT "------------------  file pool ${pool}"
+_echot "------------------  file pool ${pool}"
 
 file=${path_fpm_conf}/${pool}.conf
 
 _lxc_exec ${_CT_NAME} "[ -f ${file} ] && cp -a ${file} ${file}.${_SDATE}"
 
-_echoT "------------------  conf pool ${pool}"
+_echot "------------------  conf pool ${pool}"
 
 cmds=; while read str val; do
 	cmds+="sed -i 's|^;\?\(${str}\s*=\).*|\1 ${val}|' ${file}
@@ -318,7 +318,7 @@ _lxc_exec ${_CT_NAME} "sed -i 's|^;\?\(access.format\s*=\).*|\1  \"%R - %u %t \\
 
 pool=www-admin
 
-_echoT "------------------  file pool ${pool}"
+_echot "------------------  file pool ${pool}"
 
 file=${path_fpm_conf}/${pool}.conf
 
@@ -326,7 +326,7 @@ _lxc_exec ${_CT_NAME} "[ -f ${file} ] && cp -a ${file} ${file}.${_SDATE}"
 _lxc_exec ${_CT_NAME} "cp -a ${path_fpm_conf}/www.conf.${_SDATE} ${file}"
 
 
-_echoT "------------------  conf pool ${pool}"
+_echot "------------------  conf pool ${pool}"
 
 _lxc_exec ${_CT_NAME} "sed -i 's|^\[.*\]$|[${pool}]|' ${file}"
 
@@ -353,14 +353,14 @@ _lxc_exec ${_CT_NAME} "${cmds}"
 
 ########################  APACHE
 
-_echoT "------------------  apache php-fpm"
+_echot "------------------  apache php-fpm"
 
 file=${path_apache_conf}/${file_phpfpm##*/}
 _eval lxc file push -q ${file_phpfpm} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} php apache
 
 
-_echoT "------------------  localhost files"
+_echot "------------------  localhost files"
 
 _lxc_exec ${_CT_NAME} "echo '<?php phpinfo() ?>' > ${_APA_PATH_WWW}/phpinf.php"
 
@@ -371,7 +371,7 @@ file=${_APA_PATH_WWW}/index.html
 _lxc_exec ${_CT_NAME} "[ -f ${file} ] && mv ${file} ${file}.keep"
 
 
-_echoT "------------------  ${_DOMAIN_FQDN} files"
+_echot "------------------  ${_DOMAIN_FQDN} files"
 
 _lxc_exec ${_CT_NAME} "echo '<?php phpinfo() ?>' > ${_PATH_DOMAIN}/html/phpinf.php"
 
@@ -384,10 +384,10 @@ _lxc_exec ${_CT_NAME} "[ -f ${file} ] && mv ${file} ${file}.keep"
 
 ########################  PING-MONITOR
 
-_echoT "------------------  ping-monitor file"
+_echot "------------------  ping-monitor file"
 _lxc_exec ${_CT_NAME} "echo '<?php echo \"pong\"; ?>' > ${_APA_PATH_WWW}/ping-monitor.php"
 
-_echoT "------------------  ping-monitor conf"
+_echot "------------------  ping-monitor conf"
 file=${path_apache_conf}/${file_monitor##*/}
 _keepcpts ${file}
 _eval lxc file push -q ${file_monitor} ${_CT_NAME}${file}
@@ -396,12 +396,12 @@ _lxc_var_replace ${_CT_NAME} ${file} apache php
 
 ########################  OPCACHE
 
-_echoT "------------------  opcache file"
+_echot "------------------  opcache file"
 url=https://raw.githubusercontent.com/rlerdorf/opcache-status/master/opcache.php
 file=${_APA_PATH_WWW}/opcache.php
 _lxc_exec ${_CT_NAME} "wget -q ${url} -O ${file}"
 
-_echoT "------------------  opcache conf"
+_echot "------------------  opcache conf"
 file=${path_apache_conf}/${file_opcache##*/}
 _keepcpts ${file}
 _eval lxc file push -q ${file_opcache} ${_CT_NAME}${file}
@@ -410,7 +410,7 @@ _lxc_var_replace ${_CT_NAME} ${file} apache php
 
 ########################  RIGHTS
 
-_echoT "------------------  rights"
+_echot "------------------  rights"
 _lxc_exec ${_CT_NAME} "chown apache:apache -R ${path_php_share}/*"
 _lxc_exec ${_CT_NAME} "chown apache:apache -R ${_APA_PATH_WWW}"
 _lxc_exec ${_CT_NAME} "chown apache:apache -R ${_PATH_DOMAIN}/*"
@@ -418,64 +418,64 @@ _lxc_exec ${_CT_NAME} "chown apache:apache -R ${_PATH_DOMAIN}/*"
 
 ########################  RESTART
 
-_echoT "------------------  ${_PHP_SERVICE} restart"
+_echot "------------------  ${_PHP_SERVICE} restart"
 _lxc_exec ${_CT_NAME} "rc-service ${_PHP_SERVICE} restart"
 
-_echoT "------------------  apache2 restart"
+_echot "------------------  apache2 restart"
 _lxc_exec ${_CT_NAME} "rc-service apache2 restart"
 
 
 ########################  RSYSLOG
 
-_echoT "------------------  ${S_SERVICE[log]} host path"
+_echot "------------------  ${S_SERVICE[log]} host path"
 path=${S_VM_PATH_LOG}/php7
 _lxc_exec ${S_SERVICE[log]} "[ -d ${path} ] || mkdir -p ${path}"
 
-_echoT "------------------  ${S_SERVICE[log]} host"
+_echot "------------------  ${S_SERVICE[log]} host"
 file=/etc/rsyslog.d/${file_rsyslog_host##*/}
 _eval lxc file push -q ${file_rsyslog_host} ${S_SERVICE[log]}${file}
 _lxc_var_replace ${S_SERVICE[log]} ${file} rsyslog php
 
-_echoT "------------------  rsyslog restart ${S_SERVICE[log]}"
+_echot "------------------  rsyslog restart ${S_SERVICE[log]}"
 _lxc_exec ${S_SERVICE[log]} "rc-service rsyslog restart"
 
 
-_echoT "------------------  ${_CT_NAME} client path"
+_echot "------------------  ${_CT_NAME} client path"
 path=${S_PATH_LOG}/php7
 _lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
 
-_echoT "------------------  ${_CT_NAME} client"
+_echot "------------------  ${_CT_NAME} client"
 file=/etc/rsyslog.d/${file_rsyslog_client##*/}
 _eval lxc file push -q ${file_rsyslog_client} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} rsyslog php
 
-_echoT "------------------  rsyslog restart ${_CT_NAME}"
+_echot "------------------  rsyslog restart ${_CT_NAME}"
 _lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
 
 
 ########################  LOGROTATE
 
-_echoT "------------------  ${S_SERVICE[log]} logrotate"
+_echot "------------------  ${S_SERVICE[log]} logrotate"
 file=/etc/logrotate.d/${file_logrotate_host##*/}
 _eval lxc file push -q ${file_logrotate_host} ${S_SERVICE[log]}${file}
 _lxc_var_replace ${S_SERVICE[log]} ${file} logrotate
 
-_echoT "------------------  ${S_SERVICE[log]} crond restart"
+_echot "------------------  ${S_SERVICE[log]} crond restart"
 _lxc_exec ${S_SERVICE[log]} "rc-service crond restart"
 
 
-_echoT "------------------  ${_CT_NAME} logrotate"
+_echot "------------------  ${_CT_NAME} logrotate"
 file=/etc/logrotate.d/${file_logrotate_client##*/}
 _eval lxc file push -q ${file_logrotate_client} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} logrotate
 
-_echoT "------------------  ${_CT_NAME} crond restart"
+_echot "------------------  ${_CT_NAME} crond restart"
 _lxc_exec ${_CT_NAME} "rc-service crond restart"
 
 
 ########################  CLEAN LOG
 
-_echoT "------------------  ${_CT_NAME} log clean"
+_echot "------------------  ${_CT_NAME} log clean"
 _lxc_exec ${_CT_NAME} "find ${S_PATH_LOG}/php7 -name *.log -exec rm {} \;"
 
 
@@ -483,7 +483,7 @@ _lxc_exec ${_CT_NAME} "find ${S_PATH_LOG}/php7 -name *.log -exec rm {} \;"
 
 for i in `seq 2 ${ct_num}`; do
 	ct_name=${ct_base}-${i}
-	_echoT "---------- build ${ct_name}"
+	_echot "---------- build ${ct_name}"
 
 	if lxc list -f csv -c n | grep -q ^${ct_name}$; then
 		lxc list -f csv -c n status=Running| grep -q ^${ct_name}$ && _eval lxc stop ${ct_name}
@@ -496,7 +496,7 @@ done
 
 ########################  TEST
 
-_echoT "------------------  php test"
+_echot "------------------  php test"
 
 _echoW "To verify php configuration, type:"
 _echo "curl ${_IPTHIS}/phpinf.php"
@@ -529,7 +529,7 @@ _echo $(for i in `seq 1 ${ct_num}`; do echo ${ct_base}-${i};done)
 for i in `seq 1 ${ct_num}`; do
  	ct_name=${ct_base}-${i}
 
-	_echoT "------------------  publish ${ct_name}"
+	_echot "------------------  publish ${ct_name}"
 	lxc image list -f csv -c l | grep -q ^${ct_name}$ && _eval lxc image alias rename ${ct_name} ${ct_name}-${_SDATE}
 	_eval lxc publish --force ${ct_name} --alias ${ct_name}
 done

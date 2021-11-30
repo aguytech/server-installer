@@ -8,10 +8,10 @@ grep -q "^# ${_PART#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART}" >> ${S_FI
 
 ########################  REQUIRED
 
-_echoT "------------------ required vm image"
+_echot "------------------ required vm image"
 lxc image list -f csv -c l | grep -q ^${_CT_NAME_COM}$ || _exite "Unable to find image container: '${_CT_NAME_COM}'"
 
-_echoT "------------------ required vm"
+_echot "------------------ required vm"
 lxc list -f csv -c n | grep -q ^${S_SERVICE[log]}$ || _exite "Unable to find container: '${S_SERVICE[log]}'"
 
 file_vim=${S_PATH_SCRIPT_CONF}/.vimrc
@@ -25,22 +25,22 @@ file_logrotate_client=${S_PATH_INSTALL_CONF}/logrotate/client-haproxy
 
 path_haproxy=${S_PATH_INSTALL_CONF}/haproxy
 
-_echoT "------------------ required files"
+_echot "------------------ required files"
 _require ${file_haproxy_initd} ${file_vim}  ${file_cron_letsencrypt} ${file_rsyslog_host} ${file_rsyslog_client} ${file_logrotate_host} ${file_logrotate_client}
 
-_echoT "------------------ required paths"
+_echot "------------------ required paths"
 _requirep ${path_haproxy}
 
 ########################  DATA
 
-_echoT "------------------  data domain"
+_echot "------------------  data domain"
 
 cts_www=`lxc list -f json | jq -r '.[] | select(.profiles | any(contains("www-"))).name'`
 [ "${cts_www}" ] || _exite "Unable to find a container with a www* profile"
 _menu "Select one available container for www default server" ${cts_www}
 _SERVER_DEFAULT=${_ANSWER}
 
-_echoT "------------------  data"
+_echot "------------------  data"
 
 anstmp=${S_DOMAIN_FQDN} && _askno "A first domain name: (${anstmp})" && _HPX_DOMAIN_FQDN="${_ANSWER:-${anstmp}}" && _confset _HPX_DOMAIN_FQDN "${_HPX_DOMAIN_FQDN}"
 anstmp=otokoz.ovh && _askno "A second fqdn second domain name: (${anstmp})" && _HPX_DOMAIN_2_FQDN="${_ANSWER:-${anstmp}}" && _confset _HPX_DOMAIN_2_FQDN "${_HPX_DOMAIN_2_FQDN}"
@@ -48,7 +48,7 @@ anstmp=admin && _askno "Name for stats access (${anstmp})" && _HPX_ACCESS_USER="
 anstmp=`_pwd` && _askno "Password to stats access (${anstmp})" && _HPX_ACCESS_PWD="${_ANSWER:-${anstmp}}" && _confset _HPX_ACCESS_PWD "${_HPX_ACCESS_PWD}"
 anstmp=/haproxy-stats && _askno "URI to access to admin site (${anstmp})" && _HPX_ACCESS_URI="${_ANSWER:-${anstmp}}" && _confset _HPX_ACCESS_URI "${_HPX_ACCESS_URI}"
 
-_echoT "------------------  data letsencrypt"
+_echot "------------------  data letsencrypt"
 
 _askyn "Use letsencrypt" && _HPX_LCRYPT_ENABLE="${_ANSWER/n/}"
 
@@ -74,7 +74,7 @@ _HPX_STATS_2_PORT=${S_HAPROXY_STATS_PORTS#* } && _HPX_STATS_2_PORT=${_HPX_STATS_
 ########################  PROFILE
 
 profile=ssl-${_HPX_DOMAIN_FQDN}
-_echoT "------------------  profile ${profile}"
+_echot "------------------  profile ${profile}"
 
 lxc profile list -f csv|grep -q "^${profile}," && _eval lxc profile rename ${profile} ${profile}.${_SDATE}
 _eval lxc profile create ${profile}
@@ -86,7 +86,7 @@ _eval lxc profile device add ${profile} ${profile} disk source=${path} path=${pa
 
 
 profile=ssl-${_HPX_DOMAIN_2_FQDN}
-_echoT "------------------  profile ${profile}"
+_echot "------------------  profile ${profile}"
 
 lxc profile list -f csv|grep -q "^${profile}," && _eval lxc profile rename ${profile} ${profile}.${_SDATE}
 _eval lxc profile create ${profile}
@@ -98,38 +98,38 @@ _eval lxc profile device add ${profile} ${profile} disk source=${path} path=${pa
 
 ########################  INIT
 
-_echoT "------------------  init"
+_echot "------------------  init"
 if lxc list -f csv -c n | grep -q ^${_CT_NAME}$; then
 	lxc list -f csv -c n status=Running| grep -q ^${_CT_NAME}$ && _eval lxc stop ${_CT_NAME}
-	_echoT "------------------ rename ${_CT_NAME} -> ${_CT_NAME}-${_SDATE}"
+	_echot "------------------ rename ${_CT_NAME} -> ${_CT_NAME}-${_SDATE}"
 	_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
 fi
 _eval lxc init ${_CT_NAME_COM} ${_CT_NAME} -p default -p global -p ssl-${_HPX_DOMAIN_FQDN} -p ssl-${_HPX_DOMAIN_2_FQDN}
 
-_echoT "------------------  network fixed ip"
+_echot "------------------  network fixed ip"
 if ! lxc list -f json | jq -r '.[] | select(.name == "'${_CT_NAME}'").devices[].name' | grep -q eth0; then
 	#_eval lxc network attach ${s_inet} ${_CT_NAME} eth0 eth0
 	_eval lxc config device override ${_CT_NAME} eth0 ipv4.address=${_CT_IP}
 fi
 
-_echoT "------------------  ${_CT_NAME} start"
+_echot "------------------  ${_CT_NAME} start"
 _eval lxc start ${_CT_NAME}
 
 ########################  METADATA
 
-_echoT "------------------  metadata"
+_echot "------------------  metadata"
 _lxc_meta_set ${_CT_NAME} profiles default global ssl-${_HPX_DOMAIN_FQDN} ssl-${_HPX_DOMAIN_2_FQDN}
 _lxc_meta_add ${_CT_NAME} apps haproxy
 
 ########################  IPTABLES
 
-_echoT "------------------  iptables"
+_echot "------------------  iptables"
 sed -i '/^_NAT_HAPROXY=/ s|=.*$|=true|' ${_IPT_FILE_CONF}
 _service restart ${_IPT_SERVICE}
 
 ########################  SYSCTL
 
-_echoT "------------------  conf sysctl.conf"
+_echot "------------------  conf sysctl.conf"
 
 file=/etc/sysctl.d/20-lxd.conf
 
@@ -145,29 +145,29 @@ _lxc_exec ${_CT_NAME} "echo '${txt}' > ${file}"
 
 ########################  PROXY
 
-#_echoT "------------------  proxy httpx"
+#_echot "------------------  proxy httpx"
 #for port in 80 443; do
 #	_eval lxc config device add ${_CT_NAME} http-${port} proxy listen=tcp:0.0.0.0:${port} connect=tcp:127.0.0.1:${port}
 #done
 
-_echoT "------------------  proxy stats"
+_echot "------------------  proxy stats"
 for port in ${S_HAPROXY_STATS_PORTS}; do
 	_eval lxc config device add ${_CT_NAME} stats-${port} proxy listen=tcp:0.0.0.0:${port} connect=tcp:127.0.0.1:${port}
 done
 
 ########################  INSTALL
 
-_echoT "------------------  install"
+_echot "------------------  install"
 _lxc_exec ${_CT_NAME} "apk update"
 _lxc_exec ${_CT_NAME} "apk add haproxy bash bash-completion vim curl" # lnav
 
-_echoT "------------------  service set"
+_echot "------------------  service set"
 service=haproxy
 _lxc_exec ${_CT_NAME} "rc-update add ${service}"
 
 ########################  CONF
 
-_echoT "------------------  conf bash"
+_echot "------------------  conf bash"
 _lxc_exec ${_CT_NAME} "sed -i 's|^\(root.*\):[^:]*$|\1:/bin/bash|' /etc/passwd"
 _eval lxc file push -q ${S_PATH_INSTALL_CONF}/bash-completion/haconf ${_CT_NAME}/usr/share/bash-completion/completions/
 
@@ -177,7 +177,7 @@ _eval "lxc file push -q ${S_PATH_INSTALL_CONF}/vim/* ${_CT_NAME}${path}/"
 file=/root/.vimrc
 _lxc_exec ${_CT_NAME} "[ -e ${file} ] || ln -s ${file_vim} ${file}"
 
-_echoT "------------------  conf haproxy"
+_echot "------------------  conf haproxy"
 path=/etc/haproxy
 _lxc_exec ${_CT_NAME} "[ -d ${path} ] && mv ${path} ${path}.${_SDATE}"
 _eval lxc file push -rq ${path_haproxy} ${_CT_NAME}/etc
@@ -185,11 +185,11 @@ _eval lxc file push -rq ${path_haproxy} ${_CT_NAME}/etc
 # select alpine configuration
 _lxc_exec ${_CT_NAME} "sed -i 's|^\(\s*\)#\(.*\) # alpine$|\1\2|' ${path}/haproxy.cfg"
 
-_echoT "------------------  conf variables"
+_echot "------------------  conf variables"
 # replace variables
 _lxc_var_replace ${_CT_NAME} ${path} haproxy rspamd
 
-_echoT "------------------  conf enable"
+_echot "------------------  conf enable"
 _lxc_exec ${_CT_NAME} "[ -d ${path}/conf-enabled ] || mkdir -p ${path}/conf-enabled"
 files="00-defaults 02-resolvers-lxd 20-listen-stats 40-frontends-80 70-frontends-mail 80-backends"
 [ ${_HPX_DOMAIN_FQDN##*.} != lxd ] && files+=" 60-frontends-443"
@@ -197,7 +197,7 @@ for str in ${files}; do
 	_lxc_exec ${_CT_NAME} "[ -e ${path}/conf-enabled/${str} ] || ln -s ${path}/conf-available/${str}  ${path}/conf-enabled/${str}"
 done
 
-_echoT "------------------  conf init.d"
+_echot "------------------  conf init.d"
 file=/etc/init.d/${file_haproxy_initd##*/}
 _lxc_exec ${_CT_NAME} "[ -f ${file} ] && mv ${file} ${file}.${_SDATE} && chmod -x ${file}.${_SDATE}"
 _eval lxc file push -q ${file_haproxy_initd} ${_CT_NAME}/etc/init.d/haproxy
@@ -210,20 +210,20 @@ if [ "${_HPX_LCRYPT_ENABLE}" ]; then
 	# privkey.pem: Your certificate’s private key
 	# fullchain.pem: cert.pem and chain.pem combined
 
-	_echoT "------------------  haproxy stop"
+	_echot "------------------  haproxy stop"
 	_lxc_exec ${_CT_NAME} "rc-service -s haproxy stop"
 
-	_echoT "------------------  letsencrypt install"
+	_echot "------------------  letsencrypt install"
 	_lxc_exec ${_CT_NAME} "apk add certbot openssl"
 
-	_echoT "------------------  copy letsencrypt"
+	_echot "------------------  copy letsencrypt"
 	_echoI "Copy backup of letsencrypt certs and valid" && read str
 
 	for domain in ${_HPX_DOMAIN_FQDN} ${_HPX_DOMAIN_2_FQDN}; do
 
 		if ! _lxc_exec ${_CT_NAME} "[ -d /etc/letsencrypt/live/${domain} ]"; then
 
-			_echoT "------------------  letsencrypt cert ${domain}"
+			_echot "------------------  letsencrypt cert ${domain}"
 			str="-d ${domain}"
 			for sub in ${_HPX_LCRYPT_SUBS}; do
 				str+=" -d ${sub}.${domain}"
@@ -232,24 +232,24 @@ if [ "${_HPX_LCRYPT_ENABLE}" ]; then
 			#cmd="certbot certonly --standalone --preferred-challenges http --http-01-port 80 -d example.com -d www.example.com"
 			_lxc_exec ${_CT_NAME} "${cmd}"
 		else
-			_echoT "------------------  letsencrypt skip ${domain}"
+			_echot "------------------  letsencrypt skip ${domain}"
 		fi
 
 	done
 
-	_echoT "------------------  letsencrypt unify"
+	_echot "------------------  letsencrypt unify"
 	_lxc_exec ${_CT_NAME} "${S_PATH_SCRIPT}/scripts/letsencrypt-unify.sh"
 
-	_echoT "------------------  letsencrypt unified"
+	_echot "------------------  letsencrypt unified"
 	_lxc_exec ${_CT_NAME} "cat ${S_PATH_CONF_SSL}/private/letsencrypt.pem.lst"
 
-	_echoT "------------------  letsencrypt cron"
+	_echot "------------------  letsencrypt cron"
 	file=/etc/periodic/weekly/${file_cron_letsencrypt##*/}
 	_eval lxc file push -q ${file_cron_letsencrypt} ${_CT_NAME}${file}
 	_lxc_var_replace ${_CT_NAME} ${file} haproxy script
 	_lxc_exec ${_CT_NAME} "chmod +x ${file}"
 
-	_echoT "------------------  haproxy start"
+	_echot "------------------  haproxy start"
 	_lxc_exec ${_CT_NAME} "rc-service haproxy start"
 
 	# https://www.digitalocean.com/community/tutorials/how-to-secure-haproxy-with-let-s-encrypt-on-centos-7
@@ -260,7 +260,7 @@ fi
 file=/etc/ssl/openssl.cnf
 _lxc_exec ${_CT_NAME} cp -a ${file} ${file}.${_SDATE}
 
-_echoT "------------------  openssl conf multi-domains"
+_echot "------------------  openssl conf multi-domains"
 cmds=; while read str val; do
 	cmds+="sed -i 's|^#\?\(${str}\s*=\).*$|\1 ${val}|' ${file}
 ";done <<< "countryName_default  FR
@@ -279,75 +279,75 @@ _lxc_exec ${_CT_NAME} "${cmds}"
 ########################  RSYSLOG
 
 if [ "${S_RSYSLOG_PTC}" = udp ]; then
-	_echoT "------------------  conf udp"
+	_echot "------------------  conf udp"
 
 	file=/etc/rsyslog.conf
 	_lxc_exec ${_CT_NAME} "sed -i '/#module(load=.imudp/,/#)/ s|^#||' ${file}"
 	_lxc_exec ${_CT_NAME} "sed -i '/^\s*port=/ s|=.*|=\"${S_RSYSLOG_PORT}\"|' ${file}"
 
-	_echoT "------------------  ${_CT_NAME} restart rsyslog"
+	_echot "------------------  ${_CT_NAME} restart rsyslog"
 	_lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
 fi
 
 
-_echoT "------------------  ${S_SERVICE[log]} host path"
+_echot "------------------  ${S_SERVICE[log]} host path"
 path=${S_VM_PATH_LOG}/haproxy
 _lxc_exec ${S_SERVICE[log]} "[ -d ${path} ] || mkdir -p ${path}"
 
 
-_echoT "------------------  ${S_SERVICE[log]} host-haproxy"
+_echot "------------------  ${S_SERVICE[log]} host-haproxy"
 file=/etc/rsyslog.d/${file_rsyslog_host##*/}
 _eval lxc file push -q ${file_rsyslog_host} ${S_SERVICE[log]}${file}
 _lxc_var_replace ${S_SERVICE[log]} ${file} rsyslog
 
-_echoT "------------------  ${S_SERVICE[log]} restart rsyslog"
+_echot "------------------  ${S_SERVICE[log]} restart rsyslog"
 _lxc_exec ${S_SERVICE[log]} "rc-service rsyslog restart"
 
 
-_echoT "------------------  ${_CT_NAME} client path"
+_echot "------------------  ${_CT_NAME} client path"
 path=${S_PATH_LOG}/haproxy
 _lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
 
 
-_echoT "------------------  ${_CT_NAME} client-haproxy"
+_echot "------------------  ${_CT_NAME} client-haproxy"
 file=/etc/rsyslog.d/${file_rsyslog_client##*/}
 _eval lxc file push -q ${file_rsyslog_client} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} rsyslog
 
-_echoT "------------------  ${_CT_NAME} rsyslog restart"
+_echot "------------------  ${_CT_NAME} rsyslog restart"
 _lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
 
 
 ########################  LOGROTATE
 
-_echoT "------------------  ${S_SERVICE[log]} logrotate"
+_echot "------------------  ${S_SERVICE[log]} logrotate"
 
 file=/etc/logrotate.d/${file_logrotate_host##*/}
 _eval lxc file push -q ${file_logrotate_host} ${S_SERVICE[log]}${file}
 _lxc_var_replace ${S_SERVICE[log]} ${file} logrotate
 
-_echoT "------------------  ${S_SERVICE[log]} crond restart"
+_echot "------------------  ${S_SERVICE[log]} crond restart"
 _lxc_exec ${S_SERVICE[log]} "rc-service crond restart"
 
 
-_echoT "------------------  client logrotate"
+_echot "------------------  client logrotate"
 file=/etc/logrotate.d/${file_logrotate_client##*/}
 _eval lxc file push -q ${file_logrotate_client} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} logrotate
 
-_echoT "------------------  ${_CT_NAME} crond restart"
+_echot "------------------  ${_CT_NAME} crond restart"
 _lxc_exec ${_CT_NAME} "rc-service crond restart"
 
 
 ########################  CLEAN LOG
 
-_echoT "------------------  ${_CT_NAME} log clean"
+_echot "------------------  ${_CT_NAME} log clean"
 _lxc_exec ${_CT_NAME} "find ${S_PATH_LOG}/haproxy -name *.log -exec rm {} \;"
 
 
 ########################  PUBLISH
 
-_echoT "------------------  publish ${_CT_NAME}"
+_echot "------------------  publish ${_CT_NAME}"
 
 lxc image list -f csv -c l | grep -q ^${_CT_NAME}$ && _eval lxc image alias rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
 _eval lxc publish --force ${_CT_NAME} --alias ${_CT_NAME}
@@ -355,12 +355,12 @@ _eval lxc publish --force ${_CT_NAME} --alias ${_CT_NAME}
 
 ########################  TEST
 
-_echoT "------------------  test haproxy"
+_echot "------------------  test haproxy"
 
 _echoI "password to access to  haproxy: ${_HPX_ACCESS_PWD}"
 _echoW "${_IPTHIS}:${_HPX_STATS_PORT}${_HPX_ACCESS_URI}"
 
-_echoT "------------------  test ${_CT_NAME}"
+_echot "------------------  test ${_CT_NAME}"
 
 _echoI "To test connection type:"
 _echo "curl ${_IPTHIS}:80"

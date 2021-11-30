@@ -8,7 +8,7 @@ grep -q "^# ${_PART#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART}" >> ${S_FI
 
 ########################  REQUIRED
 
-_echoT "------------------ required vm"
+_echot "------------------ required vm"
 img_all_www=`lxc image list -f csv -c l| grep '^wap-'`
 [ "${img_all_www}" ] || _exite "Unable to find a 'www' image container"
 
@@ -22,12 +22,12 @@ cts_all_maria=`lxc list -f json | jq -r '.[] | select(.profiles | any(contains("
 file_conf=${S_PATH_INSTALL_CONF}/php/nextcloud-config.php
 file_site=${S_PATH_INSTALL_CONF}/apache2/sub-admin.conf
 
-_echoT "------------------ required files"
+_echot "------------------ required files"
 _require ${file_conf} ${file_site}
 
 ########################  DATA
 
-_echoT "------------------  data domain"
+_echot "------------------  data domain"
 
 anstmp=${S_DOMAIN_FQDN} && _askno "Domain name to use (${anstmp})"
 _DOMAIN_FQDN="${_ANSWER:-${anstmp}}"
@@ -46,7 +46,7 @@ profiles=`lxc profile list -f csv|grep "^cloud.*,"|cut -d, -f1`
 profile_cloud="${_ANSWER/none/}" && profile_cloud_exist=${profile_cloud}
 [ -z "${profile_cloud_exist}" ] && anstmp=cloud.${_DOMAIN_FQDN} && _askno "Name of the new  cloud profile (${anstmp})" && profile_cloud="${_ANSWER:-${anstmp}}"
 
-_echoT "------------------  data www"
+_echot "------------------  data www"
 
 _menu "Select one available image container for www service" ${img_all_www}
 ct_www=${_ANSWER}
@@ -56,12 +56,12 @@ profiles=`lxc profile list -f csv|grep "^www.*,"|cut -d, -f1`
 profile_www="${_ANSWER/none/}" && profile_www_exist=${profile_www}
 [ -z "${profile_www_exist}" ] && anstmp=www-${_SUBDOMAIN}.${_DOMAIN_FQDN} && _askno "Name of the new  www profile (${anstmp})" && profile_www="${_ANSWER:-${anstmp}}"
 
-_echoT "------------------  data php"
+_echot "------------------  data php"
 
 _menu "Select an available PHP profile to apply or none" ${profiles_all_php} || _ANSWER=
 profile_php="${_ANSWER/none/}"
 
-_echoT "------------------  data mariadb"
+_echot "------------------  data mariadb"
 
 _menu "Select mariadb container to use" ${cts_all_maria}
 ct_maria=${_ANSWER}
@@ -80,7 +80,7 @@ ok=false; while ! ${ok}; do
 	file_app_tmp=/tmp/${file_app}
 	uri=https://download.nextcloud.com/server/releases/${file_app}
 	if ! [ -f ${file_app_tmp} ] || [ `ls -s ${file_app_tmp}|cut -d' ' -f1` = 0 ]; then
-		_echoT "------------------  wget ${file_app}"
+		_echot "------------------  wget ${file_app}"
 		wget -q ${uri} -O ${file_app_tmp} && ok=true || _echoe "Unable to get version: ${uri}"
 	else
 		ok=true
@@ -112,38 +112,38 @@ if [ -z "${profile_cloud_exist}" ]; then
 	if [ "${S_STORAGE_DRIVER}" = zfs ]; then
 
 		name=cloud
-		_echoT "------------------  zfs ${name}"
+		_echot "------------------  zfs ${name}"
 		path=${S_HOST_PATH}/${name}
 		path_zfs=${_ZFS_ROOT}${path}
 		opts="-o mountpoint=${path} -o compression=lz4 -o  acltype=posixacl"
 		_evalr zfs list ${path_zfs} >/dev/null 2>&1 || _evalr zfs create ${opts} ${path_zfs}
 
 		name=${_DOMAIN_FQDN}
-		_echoT "------------------  zfs ${name}"
+		_echot "------------------  zfs ${name}"
 		path=${S_HOST_PATH}/cloud/${name}
 		path_zfs=${_ZFS_ROOT}${path}
 
 		# rename
 		if zfs list ${path_zfs} >/dev/null 2>&1; then
-		 	_echoT "------------------  unmount  ${path_zfs}"
+		 	_echot "------------------  unmount  ${path_zfs}"
 		 	_evalr zfs unmount ${path_zfs} || _exite "Unable to unmount ${path_zfs}\nUnbind container using it"
 			_echoI "------------------  zfs backup ${path_zfs} to ${path_zfs}.${_SDATE}"
 		 	_evalr zfs rename ${path_zfs} ${path_zfs}.${_SDATE}
 		 fi
 
-		_echoT "------------------  zfs create ${path_zfs}"
+		_echot "------------------  zfs create ${path_zfs}"
 		_evalr zfs create -o mountpoint=${path} ${path_zfs}
 
 
 	elif [ "${S_STORAGE_DRIVER}" = btrfs ]; then
 
 		name=cloud
-		_echoT "------------------  btrfs ${name}"
+		_echot "------------------  btrfs ${name}"
 		path=${S_HOST_PATH}/${name}
 		_evalr ls -1 ${path} >/dev/null 2>&1 || _evalr btrfs subvolume create ${path}
 
 		name=${_DOMAIN_FQDN}
-		_echoT "------------------  btrfs ${name}"
+		_echot "------------------  btrfs ${name}"
 		# rename
 		path=${S_HOST_PATH}/cloud/${name}
 		if _evalr ls -1 ${path} >/dev/null 2>&1; then
@@ -151,14 +151,14 @@ if [ -z "${profile_cloud_exist}" ]; then
 		 	_evalr mv ${path} ${path}.${_SDATE}
 		 fi
 
-		_echoT "------------------  btrfs create ${path}"
+		_echot "------------------  btrfs create ${path}"
 		_evalr btrfs subvolume create ${path}
 
 	else
 		_exite "This part have to be implemented"
 	fi
 
-	_echoT "------------------  rights ${name}"
+	_echot "------------------  rights ${name}"
 	_evalr chown ${_LXD_UID}:${_LXD_UID} ${S_HOST_PATH}/cloud/${_DOMAIN_FQDN}
 	_evalr setfacl -Rm u:${_LXD_UID}:rwx ${S_HOST_PATH}/cloud/${_DOMAIN_FQDN}
 	_evalr setfacl -Rm d:u:${_LXD_UID}:rwx ${S_HOST_PATH}/cloud/${_DOMAIN_FQDN}
@@ -170,7 +170,7 @@ fi
 if [ -z "${profile_www_exist}" ]; then
 
 	profile=${profile_www}
-	_echoT "------------------  profile ${profile}"
+	_echot "------------------  profile ${profile}"
 
 	lxc profile list -f csv|grep -q "^${profile}," && _eval lxc profile rename ${profile} ${profile}.${_SDATE}
 	_eval lxc profile create ${profile}
@@ -184,7 +184,7 @@ fi
 if [ -z "${profile_cloud_exist}" ]; then
 
 	profile=${profile_cloud}
-	_echoT "------------------  profile ${profile}"
+	_echot "------------------  profile ${profile}"
 
 	lxc profile list -f csv|grep -q "^${profile}," && _eval lxc profile rename ${profile} ${profile}.${_SDATE}
 	_eval lxc profile create ${profile}
@@ -197,18 +197,18 @@ fi
 
 ########################  INIT
 
-_echoT "------------------  init"
+_echot "------------------  init"
 
 if lxc list -f csv -c n | grep -q ^${_CT_NAME}$; then
 	lxc list -f csv -c n status=Running| grep -q ^${_CT_NAME}$ && _eval lxc stop ${_CT_NAME}
-	_echoT "------------------ rename ${_CT_NAME} -> ${_CT_NAME}-${_SDATE}"
+	_echot "------------------ rename ${_CT_NAME} -> ${_CT_NAME}-${_SDATE}"
 	_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
 fi
 _eval lxc init ${ct_www} ${_CT_NAME} -p default -p global -p ${profile_www}  -p ${profile_php} -p ${profile_cloud}
 
 #############  START
 
-_echoT "------------------  ${_CT_NAME} start"
+_echot "------------------  ${_CT_NAME} start"
 lxc list -f csv -c n status=Stopped | grep -q ^${_CT_NAME}$ && _eval lxc start ${_CT_NAME}
 
 #############  WWW
@@ -224,14 +224,14 @@ done
 _echoT "\n==========  php ${_CT_NAME}"
 
 domain=${_SUBDOMAIN}.${_DOMAIN_FQDN}
-_echoT "------------------  ${domain} path"
+_echot "------------------  ${domain} path"
 
 file=${path_sites}/${_SUBDOMAIN}.conf
 _eval lxc file push -q ${file_site} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} apache
 _lxc_exec ${_CT_NAME} "sed -i 's|^\(\s*\)#\?\(SetEnv PHP_ADMIN_VALUE .session.gc_maxlifetime =\).*$|\1\2 3600\"|' ${file}"
 
-_echoT "------------------  ${domain} file"
+_echot "------------------  ${domain} file"
 path=${_PATH_DOMAIN}/${file_app%.tar.bz2}
 _lxc_exec ${_CT_NAME} "[ -d ${path} ] && mv ${path} ${path}.${_SDATE}"
 
@@ -248,17 +248,17 @@ _lxc_exec ${_CT_NAME} "cd ${path} && ln -sv ${file_app%.tar.bz2} nextcloud"
 
 ########################  RIGHTS
 
-_echoT "------------------  rights"
+_echot "------------------  rights"
 _lxc_exec ${_CT_NAME} "chown apache:apache -R ${_APA_PATH_WWW}"
 _lxc_exec ${_CT_NAME} "chown apache:apache -R ${_PATH_DOMAIN}/*"
 
 
 #############  RESTART
 
-_echoT "------------------  ${_PHP_SERVICE} restart"
+_echot "------------------  ${_PHP_SERVICE} restart"
 _lxc_exec ${_CT_NAME} "rc-service ${_PHP_SERVICE} restart"
 
-_echoT "------------------  apache2 restart"
+_echot "------------------  apache2 restart"
 _lxc_exec ${_CT_NAME} "rc-service apache2 restart"
 
 
@@ -266,11 +266,11 @@ _lxc_exec ${_CT_NAME} "rc-service apache2 restart"
 
 _echoT "\n==========  mariadb ${ct_maria}"
 
-_echoT "------------------  ${ct_maria} db create"
+_echot "------------------  ${ct_maria} db create"
 cmd="CREATE DATABASE IF NOT EXISTS ${_APP_DB_NAME};"
 _eval "mysql -h${ct_maria} -uroothost -p${pwd_maria} -e \"${cmd}\""
 
-_echoT "------------------  ${ct_maria} ${_APP_DB_USER} strpass"
+_echot "------------------  ${ct_maria} ${_APP_DB_USER} strpass"
 file=${S_PATH_CONF}/mariadb
 str="${_APP_DB_USER} @ ${_CT_NAME}.lxd - ${_APP_DB_PWD}"
 strpass+="${str}\n"
@@ -279,13 +279,13 @@ _lxc_exec ${ct_maria} "${cmd}"
 
 for ct_php in ${cts_php}; do
 
-	_echoT "------------------  ${ct_maria} ${_APP_DB_USER} grant"
+	_echot "------------------  ${ct_maria} ${_APP_DB_USER} grant"
 	cmd="GRANT USAGE ON *.* TO '${_APP_DB_USER}'@'${ct_php}.lxd' IDENTIFIED BY '${_APP_DB_PWD}';"
 	_eval "mysql -h${ct_maria} -uroothost -p${pwd_maria} -e \"${cmd}\""
 	cmd="GRANT ALL PRIVILEGES ON ${_APP_DB_NAME}.* TO '${_APP_DB_USER}'@'${ct_php}.lxd';"
 	_eval "mysql -h${ct_maria} -uroothost -p${pwd_maria} -e \"${cmd}\""
 
-	_echoT "------------------  ${ct_maria} ${_APP_DB_USER} strpass"
+	_echot "------------------  ${ct_maria} ${_APP_DB_USER} strpass"
 	file=${S_PATH_CONF}/mariadb
 	str="${_APP_DB_USER} @ ${ct_php}.lxd - ${_APP_DB_PWD}"
 	strpass+="${str}\n"
@@ -302,7 +302,7 @@ done
 
 for i in `seq 2 ${ct_num}`; do
 	ct_name=${ct_base}-${i}
-	_echoT "---------- build ${ct_name}"
+	_echot "---------- build ${ct_name}"
 
 	if lxc list -f csv -c n | grep -q ^${ct_name}$; then
 		lxc list -f csv -c n status=Running| grep -q ^${ct_name}$ && _eval lxc stop ${ct_name}
@@ -316,10 +316,10 @@ done
 
 ########################  SHOW
 
-_echoT "------------------  show privileges ${ct_maria}"
+_echot "------------------  show privileges ${ct_maria}"
 _eval "mysql -h${ct_maria} -uroothost -p${pwd_maria} -e \"SELECT user,host FROM mysql.user WHERE user like '${_APP_DB_USER}';\""
 
-_echoT "------------------  show passwords"
+_echot "------------------  show passwords"
 _echoI "Keep this passwords:"
 _echoW "${strpass%\\n}"
 
@@ -333,7 +333,7 @@ _echo "${cts_php}"
 ########################  PUBLISH
 
 for ct_name in ${ct_php} ${ct_maria}; do
-	_echoT "------------------  publish ${ct_name}"
+	_echot "------------------  publish ${ct_name}"
 
 	lxc image list -f csv -c l | grep -q ^${ct_name}$ && _eval lxc image alias rename ${ct_name} ${ct_name}-${_SDATE}
 	_eval lxc publish --force ${ct_name} --alias ${ct_name}

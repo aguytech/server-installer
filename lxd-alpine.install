@@ -14,7 +14,7 @@ S_GLOBAL_FUNCTIONS=${S_GLOBAL_FUNCTIONS:-/usr/local/bs/inc-functions.sh}
 
 ########################  CONF
 
-_echoT "------------------ conf && data"
+_echot "------------------ conf && data"
 
 # for install from desktop
 S_PATH_INSTALL="${S_PATH_INSTALL/-desktop/}" && _confset S_PATH_INSTALL "${S_PATH_INSTALL}"

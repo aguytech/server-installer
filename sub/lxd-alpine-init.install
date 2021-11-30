@@ -8,7 +8,7 @@ grep -q "^# ${_PART#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART}" >> ${S_FI
 
 ########################  DATA
 
-_echoT "------------------  data"
+_echot "------------------  data"
 [ -z ${_RELEASE_NAME+x} ] && anstmp="3.15" && _askno "Give a version image container for LXC ${_RELEASE_ID} (${anstmp})" && _RELEASE_NAME="${_ANSWER:-$anstmp}" && _confset _RELEASE_NAME "${_RELEASE_NAME}"
 
 [ -z ${_RELEASE+x} ] && _RELEASE=${_RELEASE_ID}${_RELEASE_NAME} && _confset _RELEASE "${_RELEASE}"
@@ -17,7 +17,7 @@ _CT_NAME_COM="${_CT_NAME}-com" && _confset _CT_NAME_COM "${_CT_NAME_COM}"
 
 ########################  COPY
 
-_echoT "------------------  image copy ${_CT_NAME}"
+_echot "------------------  image copy ${_CT_NAME}"
 if ! lxc image list -f csv -c L|grep -q ^${_CT_NAME}$; then
 	_echo "copy images ${_CT_NAME}"
 	_eval lxc image copy images:${_RELEASE_ID}/${_RELEASE_NAME} local: --alias ${_CT_NAME} --auto-update
@@ -26,7 +26,7 @@ fi
 ########################  PROFILE
 
 profile=global
-_echoT "------------------  profiles ${profile}"
+_echot "------------------  profiles ${profile}"
 
 lxc profile list -f csv|grep -q "^${profile}," && _eval lxc profile rename ${profile} ${profile}.${_SDATE}
 _eval lxc profile create ${profile}
@@ -38,43 +38,43 @@ _eval lxc profile device add ${profile} global disk source=${path} path=${path_c
 
 ########################  INIT
 
-_echoT "------------------  init"
+_echot "------------------  init"
 
 if lxc list -f csv -c n | grep -q ^${_CT_NAME_COM}$; then
 	lxc list -f csv -c n status=Running | grep -q ^${_CT_NAME_COM}$ && lxc stop ${_CT_NAME_COM}
-	_echoT "------------------ rename ${_CT_NAME_COM} -> ${_CT_NAME_COM}-${_SDATE}"
+	_echot "------------------ rename ${_CT_NAME_COM} -> ${_CT_NAME_COM}-${_SDATE}"
 	_eval lxc rename ${_CT_NAME_COM} ${_CT_NAME_COM}-${_SDATE}
 fi
 _eval lxc init ${_CT_NAME} ${_CT_NAME_COM} -p stock -p global
 
 if lxc list -f csv -c n status=Stopped | grep -q ^${_CT_NAME_COM}$; then
-	_echoT "------------------  start ${_CT_NAME_COM}"
+	_echot "------------------  start ${_CT_NAME_COM}"
 	_eval lxc start ${_CT_NAME_COM}
 fi
 
 ########################  METADATA
 
-_echoT "------------------  metadata"
+_echot "------------------  metadata"
 _lxc_meta_set ${_CT_NAME_COM} profiles stock global
 
 ########################  CONF
 
-_echoT "------------------  apk update"
+_echot "------------------  apk update"
 _lxc_exec ${_CT_NAME_COM} "apk update && apk upgrade"
 
-_echoT "------------------  timezone Paris"
+_echot "------------------  timezone Paris"
 _lxc_exec ${_CT_NAME_COM} "apk add tzdata"
 _lxc_exec ${_CT_NAME_COM} "cp /usr/share/zoneinfo/Europe/Paris /etc/localtime && echo 'Europe/Paris' > /etc/timezone && date"
 _lxc_exec ${_CT_NAME_COM} "apk del tzdata"
 
 ########################  PATHS
 
-_echoT "------------------  path bs"
+_echot "------------------  path bs"
 path=/usr/local/bs
 _lxc_exec ${_CT_NAME_COM} "[ -d ${path} ] && mv ${path} ${path}.${_SDATE}"
 _eval lxc file push -rq ${path} ${_CT_NAME_COM}/usr/local/
 
-_echoT "------------------  path server"
+_echot "------------------  path server"
 paths="${S_PATH_CONF} ${S_PATH_CONF_SSL}/private ${S_PATH_CONF_SSL}/certs"
 for path in ${paths}; do
 	_lxc_exec ${_CT_NAME_COM} "[ -d ${path} ] || mkdir -p ${path}"
@@ -87,7 +87,7 @@ _lxc_exec ${_CT_NAME_COM} "[ -h /server ] || ln -s /etc/server /server"
 
 ########################  HOSTS
 
-#_echoT "------------------  hosts"
+#_echot "------------------  hosts"
 
 #file=" /etc/hosts"
 #if ! [ "$(_lxc_exec ${_CT_NAME} "grep '\ssrv-' ${file}")" ]; then

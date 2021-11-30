@@ -8,7 +8,7 @@ _echoT "\n======================  ${_INSTALL}-${_PARTMAIL}"
 
 eval ${S_HOST_VM_ETH[default]} # get s_inet s_cidr s_base
 
-_echoT "------------------ data container"
+_echot "------------------ data container"
 
 anstmp=${S_SERVICE[mail]} && _askno "Base name of containers to build (${anstmp})"
 _CT_NAME="${_ANSWER:-${anstmp}}" && _confset _CT_NAME "${_CT_NAME}" ${_FILE_INSTALL_CONF}
@@ -19,7 +19,7 @@ _CT_NUM="${_ANSWER:-${anstmp}}" && _confset _CT_NUM "${_CT_NUM}" ${_FILE_INSTALL
 _CT_ALL_NAME="${_CT_NAME} $(for i in `seq 2 ${_CT_NUM}`; do echo ${_CT_NAME}-${i}; done)"
 _confset _CT_ALL_NAME "${_CT_ALL_NAME}" ${_FILE_INSTALL_CONF}
 
-_echoT "------------------ data domain"
+_echot "------------------ data domain"
 
 [ "${_DOMAIN_FQDN%.lxd}" = "${_DOMAIN_FQDN}" ] && anstmp="17112018.fr 17112018.ovh ambau.ovh ggj.fr ggj.ovh han-sci.fr otokoz.ovh" || anstmp="17112018.fr.lxd ggj.fr.lxd otokoz.ovh.lxd"
 _askno "Others fqdn domain (${anstmp})"
@@ -35,7 +35,7 @@ _EMAIL_ADMIN=${_ANSWER:-${anstmp}} && _confset _EMAIL_ADMIN "${_EMAIL_ADMIN}" ${
 anstmp=${S_DOMAIN_EMAIL_TECH} && _askno "Technical email adress (${anstmp})"
 _EMAIL_TECH=${_ANSWER:-${anstmp}} && _confset _EMAIL_TECH "${_EMAIL_TECH}" ${_FILE_INSTALL_CONF}
 
-_echoT "------------------ data"
+_echot "------------------ data"
 
 anstmp=${S_VM_PATH_SHARE}/mail && _askno "shared path for mail (${anstmp})"
 _PATH_MAIL=${_ANSWER:-${anstmp}} && _confset _PATH_MAIL "${_PATH_MAIL}" ${_FILE_INSTALL_CONF}

@@ -16,7 +16,7 @@ file_conf_headin=${S_PATH_INSTALL_CONF}/mail/postfix/header_checks_in.pcre
 file_conf_client=${S_PATH_INSTALL_CONF}/mail/postfix/client_access.cidr
 path_sql=${S_PATH_INSTALL_CONF}/mail/${_VMAIL_APP}
 
-_echoT "------------------ required files"
+_echot "------------------ required files"
 _require `set|grep ^file_conf_|cut -d= -f2`
 _requirep ${path_sql}
 
@@ -27,67 +27,67 @@ _PFA_PATH_SQL=/etc/postfix/sql && _confset _PFA_PATH_SQL "${_PFA_PATH_SQL}" ${_F
 
 ########################  METADATA
 
-_echoT "------------------ metadata"
+_echot "------------------ metadata"
 _lxc_meta_add ${_CT_NAME} apps postfix
 
 ########################  MAIN
 
-_echoT "------------------  install postfix"
+_echot "------------------  install postfix"
 _lxc_exec ${_CT_NAME} apk add postfix postfix-mysql postfix-pcre # mailx
 
-_echoT "------------------  postfix start"
+_echot "------------------  postfix start"
 _lxc_exec ${_CT_NAME} rc-update add postfix
 _lxc_exec_e ${_CT_NAME} rc-service -S postfix start
 
 ########################  CONF
 
-_echoT "------------------  conf keep"
+_echot "------------------  conf keep"
 path=/etc/postfix
 _lxc_exec ${_CT_NAME} cp -a ${path} ${path}.${_SDATE}
 
-_echoT "------------------  conf main.cf"
+_echot "------------------  conf main.cf"
 file=/etc/postfix/${file_conf_main##*/}
 _eval lxc file push -q ${file_conf_main} ${_CT_NAME}${file}
 
-_echoT "------------------  conf alias"
+_echot "------------------  conf alias"
 _lxc_exec ${_CT_NAME} "sed -i '/^#\?root:.*/ croot: ${_EMAIL_TECH}' /etc/postfix/aliases"
 _lxc_exec ${_CT_NAME} newaliases
 _echoI "test postmap -q root lmdb:/etc/postfix/aliases"
 _lxc_exec ${_CT_NAME} postmap -q root lmdb:/etc/postfix/aliases
 
-_echoT "------------------  conf var replace"
+_echot "------------------  conf var replace"
 _lxc_var_replace ${_CT_NAME} /etc/postfix mail
 
-_echoT "------------------  postfix restart"
+_echot "------------------  postfix restart"
 _lxc_exec_e ${_CT_NAME} chown -R 0.0 /etc/postfix
 _lxc_exec_e ${_CT_NAME} rc-service postfix restart
 
-_echoT "------------------  postconf mynetworks"
+_echot "------------------  postconf mynetworks"
 _lxc_exec_e ${_CT_NAME} postconf mynetworks
 
 ########################  CONF ADD
 
-_echoT "------------------  conf master.cf"
+_echot "------------------  conf master.cf"
 file=/etc/postfix/${file_conf_master##*/}
 _eval lxc file push -q ${file_conf_master} ${_CT_NAME}${file}
 
-_echoT "------------------  conf main_add.cf"
+_echot "------------------  conf main_add.cf"
 file=/etc/postfix/${file_conf_main_add##*/}
 _eval lxc file push -q ${file_conf_main_add} ${_CT_NAME}${file}
 _lxc_exec ${_CT_NAME} "cat ${file} >> /etc/postfix/main.cf"
 _lxc_exec ${_CT_NAME} "rm ${file}"
 
-_echoT "------------------  conf cleanup"
+_echot "------------------  conf cleanup"
 file=/etc/postfix/${file_conf_headout##*/}
 _eval lxc file push -q ${file_conf_headout} ${_CT_NAME}${file}
 file=/etc/postfix/${file_conf_headin##*/}
 _eval lxc file push -q ${file_conf_headin} ${_CT_NAME}${file}
 
-_echoT "------------------  conf client access"
+_echot "------------------  conf client access"
 file=/etc/postfix/${file_conf_client##*/}
 _eval lxc file push -q ${file_conf_client} ${_CT_NAME}${file}
 
-_echoT "------------------  sql files"
+_echot "------------------  sql files"
 _lxc_exec_e ${_CT_NAME} "[ -d '${_PFA_PATH_SQL}' ] || mkdir -p ${_PFA_PATH_SQL}"
 _lxc_exec_e ${_CT_NAME} chmod 755 ${_PFA_PATH_SQL}
 for file in `ls ${path_sql}/mysql_*.cf`; do
@@ -95,19 +95,19 @@ for file in `ls ${path_sql}/mysql_*.cf`; do
 	_eval lxc file push -q ${file} ${_CT_NAME}/${_PFA_PATH_SQL}/ || _exite "unable to push file"
 done
 
-_echoT "------------------  conf var replace"
+_echot "------------------  conf var replace"
 _lxc_var_replace ${_CT_NAME} /etc/postfix mail
 
-_echoT "------------------  postfix restart"
+_echot "------------------  postfix restart"
 _lxc_exec_e ${_CT_NAME} chown -R 0:0 /etc/postfix/*
 _lxc_exec_e ${_CT_NAME} rc-service postfix restart
 
-_echoT "------------------  postconf mynetworks"
+_echot "------------------  postconf mynetworks"
 _lxc_exec_e ${_CT_NAME} postconf mynetworks
 
 ########################  TEST 
 
-_echoT "------------------  services enabled"
+_echot "------------------  services enabled"
 _echoI "Verify enabled smtp services"
 _lxc_exec ${_CT_NAME} grep "submission\|smtp" /etc/services
 _askno "valid to continue"
@@ -128,7 +128,7 @@ for query in ${queries}; do
 done
 _askno "valid to continue"
 
-_echoT "------------------  test send mail - root"
+_echot "------------------  test send mail - root"
 _lxc_exec ${_CT_NAME} "echo first message | mail -s test root"
 str=2
 _echoI "Verify the following content of the email received (in ${str}s)"
@@ -136,16 +136,16 @@ sleep ${str}
 _lxc_exec ${_CT_NAME} cat ${_PATH_LMAIL}/root
 _askno "valid to continue"
 
-_echoT "------------------  test telnet 25"
+_echot "------------------  test telnet 25"
 _echoI "Enter 'quit' to quit"
 telnet mx.${_DOMAIN_FQDN} 25
 
-_echoT "------------------  test starttls 465"
+_echot "------------------  test starttls 465"
 _echoI "Enter 'quit' to quit after connection"
 _askno "valid to continue"
 openssl s_client -connect mx.${_DOMAIN_FQDN}:465
 
-_echoT "------------------  test openssl 587"
+_echot "------------------  test openssl 587"
 _echoI "Enter 'quit' to quit after connection"
 _askno "valid to continue"
 openssl s_client -starttls smtp -connect mx.${_DOMAIN_FQDN}:587

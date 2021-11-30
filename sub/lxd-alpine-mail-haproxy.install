@@ -8,12 +8,12 @@ grep -q "^# ${_PARTMAIL#++}$" ${_FILE_INSTALL_CONF} || echo  "# ${_PARTMAIL}" >>
 
 ########################  MAIN
 
-_echoT "------------------  proxy enable ${_CT_NAME}"
+_echot "------------------  proxy enable ${_CT_NAME}"
 file=/etc/haproxy/conf-available/80-backends
 _lxc_exec ${S_SERVICE[proxy]} "ls ${file}>/dev/null" || _exite "Unable to find file: ${file}"
 _lxc_exec ${S_SERVICE[proxy]} "sed-i '/^\s*#server ${S_SERVICE[mail]}/ s|#server|server|' ${file}"
 
-_echoT "------------------  proxy reload"
+_echot "------------------  proxy reload"
 _lxc_exec ${S_SERVICE[proxy]} "rc-service -s haproxy reload"
 
 ########################  END

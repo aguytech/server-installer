@@ -8,12 +8,12 @@ _echoT "\n==========================================  ${S_RELEASE}-${_PART}"
 
 ########################  MAIN
 
-_echoT "------------------  timezone"
+_echot "------------------  timezone"
 [ -e /etc/localtime ] && rm /etc/localtime
 ln -s /usr/share/zoneinfo/posix/Europe/Paris /etc/localtime
 
 
-_echoT "------------------  grub"
+_echot "------------------  grub"
 file=/etc/default/grub
 # grub timeout
 sed -i "/^GRUB_TIMEOUT=/ s|=.*|=0|" "${file}"
@@ -23,7 +23,7 @@ update-grub
 
 ###################  CLUSTER
 
-_echoT "------------------  hosts S_CLUSTER"
+_echot "------------------  hosts S_CLUSTER"
 
 file=/etc/hosts
 _keepcpts "${file}"
@@ -41,7 +41,7 @@ done
 _eval "sed -i 's|^\(${_IPTHIS}.*\)$|#\1|' ${file}"
 
 if ! grep -q '^# services' ${file}; then
-	_echoT "------------------  hosts S_SERVICE_BITS"
+	_echot "------------------  hosts S_SERVICE_BITS"
 	_keepcpts $file
 	echo -e "\n# services" >> ${file}
 	for str in ${!S_SERVICE_BITS[*]}; do
