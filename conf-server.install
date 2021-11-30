@@ -211,7 +211,7 @@ fi
 
 _echoT "------------------  S_DOMAIN_FQDN"
 if [ -z "${S_DOMAIN_FQDN}" ]; then
-	anstmp="ambau.ovh"
+	anstmp="ambau.fr"
 	_askno "FQDN of principal domain (${anstmp})"
 	S_DOMAIN_FQDN=${_ANSWER:-${anstmp}} && _confset S_DOMAIN_FQDN "${S_DOMAIN_FQDN}" "${S_GLOBAL_CONF}"
 fi
@@ -295,21 +295,21 @@ fi
 _echoT "------------------  S_RSPAMD_PORT[proxy]"
 if [ -z "${S_RSPAMD_PORT[proxy]}" ]; then
 	anstmp="11332"
-	_askno "Port number' for RSPAMD proxy, normal and controller (${anstmp})"
+	_askno "Port number' for rspamd 'proxy' (${anstmp})"
 	S_RSPAMD_PORT[proxy]=${_ANSWER:-${anstmp}} && _confset_array "S_RSPAMD_PORT" "proxy" "${S_RSPAMD_PORT[proxy]}" "${S_GLOBAL_CONF}"
 fi
 
 _echoT "------------------  S_RSPAMD_PORT[normal]"
 if [ -z "${S_RSPAMD_PORT[normal]}" ]; then
 	anstmp="11333"
-	_askno "Port number' for RSPAMD normal (${anstmp})"
+	_askno "Port number' for rspamd 'normal' (${anstmp})"
 	S_RSPAMD_PORT[normal]=${_ANSWER:-${anstmp}} && _confset_array "S_RSPAMD_PORT" "normal" "${S_RSPAMD_PORT[normal]}" "${S_GLOBAL_CONF}"
 fi
 
 _echoT "------------------  S_RSPAMD_PORT[controller]"
 if [ -z "${S_RSPAMD_PORT[controller]}" ]; then
 	anstmp="11334"
-	_askno "Port number' for RSPAMD controller (${anstmp})"
+	_askno "Port number' for rspamd 'controller' (${anstmp})"
 	S_RSPAMD_PORT[controller]=${_ANSWER:-${anstmp}} && _confset_array "S_RSPAMD_PORT" "controller" "${S_RSPAMD_PORT[controller]}" "${S_GLOBAL_CONF}"
 fi
 

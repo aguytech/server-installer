@@ -143,13 +143,16 @@ while read str val; do
 	_lxc_exec ${_CT_NAME} "postconf '${str}=${val}'"
 done <<< "mydomain lxd
 mynetworks 127.0.0.1/32
+mynetworks_style host
 relayhost ${S_SERVICE[mail]}:25
 smtpd_relay_restrictions permit_mynetworks"
+
+_echoT "------------------  postfix aliases"
+_lxc_exec ${_CT_NAME} newaliases
 
 _echoT "------------------  postfix start"
 _lxc_exec ${_CT_NAME} rc-update add postfix
 _lxc_exec_e ${_CT_NAME} rc-service -S postfix start
-
 
 ########################  PUBLISH
 
@@ -161,27 +164,3 @@ _eval lxc publish --force ${_CT_NAME} --alias ${_CT_NAME_COM}
 
 _echoT "===================== ${_PART} end"
 _partadd ${_PART} ${S_FILE_INSTALL_DONE}
-
-<<KEEP
-_echoT "------------------  exim install"
-_eval "apk add exim"
-
-_echoT "------------------  exim conf"
-FILE=/etc/exim4/update-exim4.conf.conf
-[ -f "$FILE" ] && [ ! -f "$FILE.$DDATE" ] && _evalq cp -a "$FILE" "$FILE.$DDATE"
-SCH='dc_eximconfig_configtype'; STR="'satellite'"; sed -i "s|^\($SCH=\).*$|\1$STR|" "$FILE"
-SCH='dc_other_hostnames';       STR="''"; sed -i "s|^\($SCH=\).*$|\1$STR|" "$FILE"
-SCH='dc_local_interfaces';      STR="'127.0.0.1 ; ::1'"; sed -i "s|^\($SCH=\).*$|\1$STR|" "$FILE"
-SCH='dc_readhost';              STR="'$HOSTNAME'"; sed -i "s|^\($SCH=\).*$|\1$STR|" "$FILE"
-SCH='dc_relay_domains';         STR="''"; sed -i "s|^\($SCH=\).*$|\1$STR|" "$FILE"
-SCH='dc_minimaldns';            STR="'false'"; sed -i "s|^\($SCH=\).*$|\1$STR|" "$FILE"
-SCH='dc_relay_nets';            STR="''"; sed -i "s|^\($SCH=\).*$|\1$STR|" "$FILE"
-SCH='dc_smarthost';             STR="'${S_SERVICE_IPS['mail']%% *}::25'"; sed -i "s|^\($SCH=\).*$|\1$STR|" "$FILE"
-SCH='CFILEMODE';                STR="'644'"; sed -i "s|^\($SCH=\).*$|\1$STR|" "$FILE"
-SCH='dc_use_split_config';      STR="'false'"; sed -i "s|^\($SCH=\).*$|\1$STR|" "$FILE"
-SCH='dc_hide_mailname';         STR="'false'"; sed -i "s|^\($SCH=\).*$|\1$STR|" "$FILE"
-SCH='dc_mailname_in_oh';        STR="'true'"; sed -i "s|^\($SCH=\).*$|\1$STR|" "$FILE"
-SCH='dc_localdelivery';         STR="'mail_spool'"; sed -i "s|^\($SCH=\).*$|\1$STR|" "$FILE"
-
-_service restart exim4
-KEEP

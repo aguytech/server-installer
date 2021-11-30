@@ -21,12 +21,12 @@ _confset _CT_ALL_NAME "${_CT_ALL_NAME}" ${_FILE_INSTALL_CONF}
 
 _echoT "------------------ data domain"
 
-[ "${_DOMAIN_FQDN%.lxd}" = "${_DOMAIN_FQDN}" ] && anstmp="17112018.fr 17112018.ovh ggj.fr ggj.ovh otokoz.ovh han-sci.fr" || anstmp="17112018.fr.lxd ggj.fr.lxd otokoz.ovh.lxd"
+[ "${_DOMAIN_FQDN%.lxd}" = "${_DOMAIN_FQDN}" ] && anstmp="17112018.fr 17112018.ovh ambau.ovh ggj.fr ggj.ovh han-sci.fr otokoz.ovh" || anstmp="17112018.fr.lxd ggj.fr.lxd otokoz.ovh.lxd"
 _askno "Others fqdn domain (${anstmp})"
 _DOMAIN_OTHERS="${_ANSWER:-${anstmp}}" && _confset _DOMAIN_OTHERS "${_DOMAIN_OTHERS}" ${_FILE_INSTALL_CONF}
 _DOMAIN_ALL_FQDN="${_DOMAIN_FQDN} ${_DOMAIN_OTHERS}" && _confset _DOMAIN_ALL_FQDN "${_DOMAIN_ALL_FQDN}" ${_FILE_INSTALL_CONF}
 
-_menu "A second fqdn domain (otokoz.ovh)" ${_DOMAIN_OTHERS}
+_menu "A second fqdn domain (ggl.fr)" ${_DOMAIN_OTHERS}
 _DOMAIN_2_FQDN="${_ANSWER:-${anstmp}}" && _confset _DOMAIN_2_FQDN "${_DOMAIN_2_FQDN}" ${_FILE_INSTALL_CONF}
 
 anstmp=${S_DOMAIN_EMAIL_ADMIN} && _askno "Administration email adress (${anstmp})"

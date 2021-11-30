@@ -96,13 +96,13 @@ S_SERVICE[mail]="srv-mail"
 
 ########################  DOMAIN
 # FQDN of principal domain
-S_DOMAIN_FQDN="ambau.ovh"
+S_DOMAIN_FQDN="ambau.fr"
 # Name of principal domain
 S_DOMAIN_NAME="ambau"
 # Administration email of principal domain
-S_DOMAIN_EMAIL_ADMIN="admin@ambau.ovh"
+S_DOMAIN_EMAIL_ADMIN="admin@ambau.fr"
 # Technical email of principal domain
-S_DOMAIN_EMAIL_TECH="tech@ambau.ovh"
+S_DOMAIN_EMAIL_TECH="tech@ambau.fr"
 
 ########################  USERS
 # IPs of remote administrators

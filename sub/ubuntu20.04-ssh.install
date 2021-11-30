@@ -12,19 +12,16 @@ grep -q "^# ${_PART#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART}" >> ${S_FI
 eval ${S_CLUSTER[$HOSTNAME]}
 
 if ! [ -f ${HOME}/.ssh/id_rsa ]; then
-
 	_echoT "------------------  ssh-keygen"
-
-	_askyn "Generate new keys for ssh"
 	[ "$_ANSWER" = y ] && _eval "ssh-keygen -t rsa"
 fi
 
-# client
+_echoT "------------------  conf client"
 file='/etc/ssh/ssh_config'
 _keepcpts "${file}"
 _eval "sed -i 's/^\( *GSSAPIAuthentication\).*/\1 no/' ${file}"
 
-# server
+_echoT "------------------  conf server"
 file='/etc/ssh/sshd_config'
 _keepcpts "${file}"
 

@@ -8,7 +8,7 @@ grep -q "^# ${_PART#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART}" >> ${S_FI
 
 ########################  DATA
 
-_echoT "------------------  ${_RELEASE_ID} data"
+_echoT "------------------  data"
 [ -z ${_RELEASE_NAME+x} ] && anstmp="3.15" && _askno "Give a version image container for LXC ${_RELEASE_ID} (${anstmp})" && _RELEASE_NAME="${_ANSWER:-$anstmp}" && _confset _RELEASE_NAME "${_RELEASE_NAME}"
 
 [ -z ${_RELEASE+x} ] && _RELEASE=${_RELEASE_ID}${_RELEASE_NAME} && _confset _RELEASE "${_RELEASE}"
@@ -17,7 +17,7 @@ _CT_NAME_COM="${_CT_NAME}-com" && _confset _CT_NAME_COM "${_CT_NAME_COM}"
 
 ########################  COPY
 
-_echoT "------------------  ${_RELEASE} copy"
+_echoT "------------------  image copy ${_CT_NAME}"
 if ! lxc image list -f csv -c L|grep -q ^${_CT_NAME}$; then
 	_echo "copy images ${_CT_NAME}"
 	_eval lxc image copy images:${_RELEASE_ID}/${_RELEASE_NAME} local: --alias ${_CT_NAME} --auto-update
@@ -38,7 +38,7 @@ _eval lxc profile device add ${profile} global disk source=${path} path=${path_c
 
 ########################  INIT
 
-_echoT "------------------  ${_CT_NAME_COM} init"
+_echoT "------------------  init"
 
 if lxc list -f csv -c n | grep -q ^${_CT_NAME_COM}$; then
 	lxc list -f csv -c n status=Running | grep -q ^${_CT_NAME_COM}$ && lxc stop ${_CT_NAME_COM}
@@ -55,7 +55,7 @@ fi
 ########################  METADATA
 
 _echoT "------------------  metadata"
-_lxc_meta_set ${_CT_NAME} profiles stock global
+_lxc_meta_set ${_CT_NAME_COM} profiles stock global
 
 ########################  CONF
 
