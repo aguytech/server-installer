@@ -12,5 +12,5 @@
 #
 # See: http://www.postfix.org/access.5.html
 #
-_CIDR OK
-# 1.2.3.4 REJECT
+_CIDR			OK
+# 1.2.3.4				REJECT

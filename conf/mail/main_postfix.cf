@@ -283,8 +283,8 @@ unknown_local_recipient_reject_code = 550
 #mynetworks = $config_directory/mynetworks
 #mynetworks = hash:/etc/postfix/network_table
 #
-#mynetworks = 127.0.0.0/8 _CIDR _IPS_IN
-mynetworks = 127.0.0.0/8 _CIDR _IPS_IN
+#mynetworks = 127.0.0.0/8 _CIDR _IPS_CLUSTER
+mynetworks = 127.0.0.0/8 _CIDR _IPS_CLUSTER
 
 # The relay_domains parameter restricts what destinations this system will
 # relay mail to.  See the smtpd_recipient_restrictions description in
@@ -602,7 +602,7 @@ mail_spool_directory = _PATH_LMAIL
 # logging level when an SMTP client or server host name or address
 # matches a pattern in the debug_peer_list parameter.
 #
-debug_peer_level = 2
+debug_peer_level = 1
 
 # The debug_peer_list parameter specifies an optional list of domain
 # or network patterns, /file/name patterns or type:name tables. When
@@ -611,7 +611,7 @@ debug_peer_level = 2
 # debug_peer_level parameter.
 #
 #debug_peer_list = 127.0.0.1
-#debug_peer_list = some.domain
+#debug_peer_list = 127.0.0.0/8 _CIDR
 
 # The debugger_command specifies the external command that is executed
 # when a Postfix daemon program is run with the -D option.

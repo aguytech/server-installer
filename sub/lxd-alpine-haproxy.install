@@ -187,7 +187,7 @@ _lxc_exec ${_CT_NAME} "sed -i 's|^\(\s*\)#\(.*\) # alpine$|\1\2|' ${path}/haprox
 
 _echoT "------------------  conf variables"
 # replace variables
-_lxc_var_replace ${_CT_NAME} ${path} haproxy
+_lxc_var_replace ${_CT_NAME} ${path} haproxy rspamd
 
 _echoT "------------------  conf enable"
 _lxc_exec ${_CT_NAME} "[ -d ${path}/conf-enabled ] || mkdir -p ${path}/conf-enabled"

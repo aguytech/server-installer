@@ -14,14 +14,14 @@ anstmp=${S_SERVICE[mail]} && _askno "Base name of containers to build (${anstmp}
 _CT_NAME="${_ANSWER:-${anstmp}}" && _confset _CT_NAME "${_CT_NAME}" ${_FILE_INSTALL_CONF}
 _CT_IP=${s_base}.${S_SERVICE_BITS[mail]} && _confset _CT_IP "${_CT_IP}" ${_FILE_INSTALL_CONF}
 
-anstmp=2 && _askno "Number of containers to build (${anstmp})"
+anstmp=1 && _askno "Number of containers to build (${anstmp})"
 _CT_NUM="${_ANSWER:-${anstmp}}" && _confset _CT_NUM "${_CT_NUM}" ${_FILE_INSTALL_CONF}
 _CT_ALL_NAME="${_CT_NAME} $(for i in `seq 2 ${_CT_NUM}`; do echo ${_CT_NAME}-${i}; done)"
 _confset _CT_ALL_NAME "${_CT_ALL_NAME}" ${_FILE_INSTALL_CONF}
 
 _echoT "------------------ data domain"
 
-[ "${_DOMAIN_FQDN%.lxd}" = "${_DOMAIN_FQDN}" ] && anstmp="17112018.fr ggj.fr otokoz.ovh" || anstmp="17112018.fr.lxd ggj.fr.lxd otokoz.ovh.lxd"
+[ "${_DOMAIN_FQDN%.lxd}" = "${_DOMAIN_FQDN}" ] && anstmp="17112018.fr 17112018.ovh ggj.fr ggj.ovh otokoz.ovh han-sci.fr" || anstmp="17112018.fr.lxd ggj.fr.lxd otokoz.ovh.lxd"
 _askno "Others fqdn domain (${anstmp})"
 _DOMAIN_OTHERS="${_ANSWER:-${anstmp}}" && _confset _DOMAIN_OTHERS "${_DOMAIN_OTHERS}" ${_FILE_INSTALL_CONF}
 _DOMAIN_ALL_FQDN="${_DOMAIN_FQDN} ${_DOMAIN_OTHERS}" && _confset _DOMAIN_ALL_FQDN "${_DOMAIN_ALL_FQDN}" ${_FILE_INSTALL_CONF}
@@ -62,9 +62,6 @@ _SSL_SCHEME=SHA512 && _confset _SSL_SCHEME "${_SSL_SCHEME}" ${_FILE_INSTALL_CONF
 _PATH_SSL=${S_VM_PATH_SHARE}/ssl/mail && _confset _PATH_SSL "${_PATH_SSL}" ${_FILE_INSTALL_CONF}
 _PATH_DKIM="${_PATH_RSPAMD}/dkim" && _confset _PATH_DKIM "${_PATH_DKIM}" ${_FILE_INSTALL_CONF}
 _CIDR=`echo ${S_HOST_VM_ETH[default]}|sed -n 's|.*s_cidr=\([^ ]\+\).*|\1|p'` && _CIDR=${_CIDR/1\//0\/} && _confset _CIDR "${_CIDR}" ${_FILE_INSTALL_CONF}
-#_IPS_IN=`echo "${S_CLUSTER[*]}"|tr ' ' '\n'|sed -n 's|s_ip=\([^ ]\+\)$|\1|p'|grep -v ${_IPTHIS}|xargs`
-_IPS_IN=`echo "${S_CLUSTER[*]}"|tr ' ' '\n'|sed -n 's|s_ip=\([^ ]\+\)$|\1|p'|xargs` && _confset _IPS_IN "${_IPS_IN}" ${_FILE_INSTALL_CONF}
-_IP6S_IN=`echo "${S_CLUSTER[*]}"|tr ' ' '\n'|sed -n 's|s_ip6=\([^ ]\+\)$|\1|p'|xargs` && _confset _IP6S_IN "${_IP6S_IN}" ${_FILE_INSTALL_CONF}
 _SSL_PROFILE_MAIL=ssl-mail
 
 ########################  END

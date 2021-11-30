@@ -35,12 +35,15 @@ _DB_PFA_PWD=${_ANSWER:-${anstmp}} && _confset _DB_PFA_PWD "${_DB_PFA_PWD}" ${_FI
 
 _echoT "------------------  data"
 pfa_tmp=
-while ! [ -f "${pfa_file}" ]; do
+while ! [ -f "${pfa_tmp}" ]; do
 	anstmp=3.3.8 && _askno "Version to install? (${anstmp})"
 	pfa_ver=${_ANSWER:-${anstmp}} 
 	pfa_file=postfixadmin-${pfa_ver}.tar.gz
 	pfa_tmp=/tmp/${pfa_file}
-	! [ -f "${pfa_tmp}" ] && wget -qO ${pfa_tmp} https://github.com/postfixadmin/postfixadmin/archive/refs/tags/${pfa_file}
+	if ! [ -f "${pfa_tmp}" ]; then
+		url=https://github.com/postfixadmin/postfixadmin/archive/refs/tags/${pfa_file}
+		wget -qO ${pfa_tmp} ${url} || echo "[error] Unable to get ${url}"
+	fi
 done
 
 _echoI "Default policy to use for postfix"
@@ -59,12 +62,13 @@ _echo "none: Don’t use encryption
 - secure: Encrypted connections only. Certificate must be issued by an accepted CA.
    Hostname in certificate must by domain or subdomain of e-mail domain. No DNS used.
 " && sleep 0.4
-_menu "Select a global default policy of security (none)" none may encrypt dane dane-only verify secure
+_menu "Select a global default policy of security (may)" none may encrypt dane dane-only verify secure
 _PFA_POLICY="${_ANSWER}" && _confset _PFA_POLICY "${_PFA_POLICY}"
 
 pfa_path=${pfa_file%.tar.gz}
 path_admin=${S_VM_PATH_SHARE}/www/admin.${_DOMAIN_FQDN}
 _SUBDOMAIN=pfa
+_APA_ADMIN=admin
 
 ########################  MARIADB
 
@@ -95,7 +99,7 @@ tar -xzf ${pfa_file}
 [ -e postfixadmin-${pfa_path} ] && mv postfixadmin-${pfa_path} ${pfa_path}
 [ -e '${_SUBDOMAIN}' ] && rm ${_SUBDOMAIN}
 ln -s ${pfa_path} ${_SUBDOMAIN}
-chown -R apache.apache ../"
+chown -R apache.apache *"
 _lxc_exec ${ct_name} "${cmds}"
 
 <<KEEP
@@ -140,7 +144,7 @@ _lxc_exec ${ct_name} "rc-service apache2 restart"
 
 _echoT "------------------  manually app password"
 _echoI "Go to address: ${_SUBDOMAIN}.${_DOMAIN_FQDN}/setup.php"
-_echo "Use this password to configrure postfixadmin: ${_DB_PFA_PWD}"
+_echo "Use this password to configure postfixadmin: ${_DB_PFA_PWD}"
 _echo "after this, paste to this terminal the text given by postfixadmin to configure it:"
 str=
 while [ -z "${str}" ]; do read -r str; done

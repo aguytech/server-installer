@@ -10,11 +10,10 @@ grep -q "^# ${_PART#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART}" >> ${S_FI
 
 _echoT "------------------ required vm"
 cts_all_www=`lxc image list -f csv -c l| grep -e '^\(wa-\|wn-\)'`
-[ "${cts_all_www}" ] || _exite "unable to find image container start with apa|ngx"
+[ "${cts_all_www}" ] || _exite "Unable to find image container start with wa-|wn-"
 
 imgs_all_rds=`lxc list -f csv -c n| grep '^rds-'`
-[ "${imgs_all_rds}" ] || _exite "unable to find www container"
-
+[ "${imgs_all_rds}" ] || _exite "Unable to find redis container (name starts with rds-)"
 
 file_phpfpm="${S_PATH_INSTALL_CONF}/apache2/php7-fpm.conf"
 file_monitor="${S_PATH_INSTALL_CONF}/apache2/monitor.conf"

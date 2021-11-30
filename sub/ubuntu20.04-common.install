@@ -41,6 +41,8 @@ fi
 
 _echoT "------------------  data sysctl.conf"
 
+_SYS_FILE=/etc/sysctl.d/20-server.conf && _confset _SYS_FILE "${_SYS_FILE}"
+
 # host
 [ -z ${_SOMAXCONN+x} ] && anstmp="4096" && _askno "Set $(sysctl net.core.somaxconn) - (${anstmp})" && _SOMAXCONN="${_ANSWER:-$anstmp}" && _confset _SOMAXCONN "${_SOMAXCONN}"
 [ -z ${_MAX_BACKLOG+x} ] && anstmp="1000" && _askno "Set $(sysctl net.core.netdev_max_backlog) - (${anstmp})" && _MAX_BACKLOG="${_ANSWER:-$anstmp}" && _confset _MAX_BACKLOG "${_MAX_BACKLOG}"
@@ -60,8 +62,7 @@ _echoT "------------------  data sysctl.conf"
 ########################  MAIN
 
 _echoT "------------------  sysctl conf"
-file=/etc/sysctl.d/20-server.conf
-_keepcpts ${file}
+_keepcpts ${_SYS_FILE}
 echo "# server configuration
 net.ipv4.ip_forward = 1
 net.core.somaxconn = ${_SOMAXCONN}
@@ -71,7 +72,7 @@ net.ipv4.tcp_max_tw_buckets = ${_MAX_TW_BUCKETS}
 net.ipv4.tcp_fin_timeout = ${_FIN_TIMEOUT}
 net.ipv4.tcp_keepalive_time = ${_KEEPALIVE_TIME}
 net.ipv4.tcp_keepalive_intvl = ${_KEEPALIVE_INTVL}
-net.ipv4.tcp_keepalive_probes = ${_KEEPALIVE_PROBES}" > ${file}
+net.ipv4.tcp_keepalive_probes = ${_KEEPALIVE_PROBES}" > ${_SYS_FILE}
 
 _echoT "------------------  sysctl restart"
 _service restart systemd-sysctl

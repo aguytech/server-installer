@@ -86,10 +86,6 @@ else
 	_echoW "performed *** ${_PARTMAIL}"
 fi
 
-
-exit
-
-
 ####################  DOVECOT
 
 _PARTMAIL=mail-dovecot
@@ -99,6 +95,10 @@ if ! _parthave ${_PARTMAIL} ${S_FILE_INSTALL_DONE}; then
 else
 	_echoW "performed *** ${_PARTMAIL}"
 fi
+
+
+
+exit
 
 ####################  RSPAMD
 
@@ -120,30 +120,6 @@ else
 	_echoW "performed *** ${_PARTMAIL}"
 fi
 
-####################################  START
-
-_echoT "------------------ postfix start"
-_evalq "systemctl start postfix"
-
-_echoT "------------------ dovecot start"
-_evalq "systemctl start dovecot.service"
-
-#################################### test mail sending
-
-_echoT "------------------ test mail sending : root -> postmaster@$_DOMAIN_FQDN"
-
-# sendmail -v postmaster@$_DOMAIN_FQDN
-_mail "root <root@$_DOMAIN_FQDN>" postmaster@$_DOMAIN_FQDN test "Here is the first email of Postfix from $HOSTNAME / $_IPTHIS\nYes ;o)"
-sleep 1
-_askno "${bblue}Please verify you have received the email test to postmaster@$_DOMAIN_FQDN\n& valid${cclear}"
-
-####################################  CONNECT
-
-_echoi "To use your mail manager, follow this informations:"
-_echoi "${yellowb}IMAP-Server${cclear} mail.$_DOMAIN_FQDN | Port: 143 | STARTTLS"
-_echoi "${yellowb}SMTP-Server${cclear} mail.$_DOMAIN_FQDN | Port: 587 | STARTTLS"
-_echoi "${yellowb}Managesieve${cclear} mail.$_DOMAIN_FQDN | Port: 4190 | STARTTLS"
-_echoi "${yellowb}Username${cclear} Complete e-mail address"
 
 ########################  COPY
 

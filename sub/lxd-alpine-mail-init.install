@@ -78,28 +78,23 @@ _lxc_meta_set ${_CT_NAME} profiles default global ssl-mail ${profile}
 
 _lxc_exec ${_CT_NAME} apk update
 
-########################  INSTALL
-
-_echoT "------------------  install postfix"
-_lxc_exec ${_CT_NAME} apk add postfix postfix-mysql mailx
-
-_echoT "------------------  install dovecot"
-_lxc_exec ${_CT_NAME} apk add dovecot dovecot-mysql dovecot-lmtpd dovecot-pigeonhole-plugin
-
-_echoT "------------------  install rspamd"
-_lxc_exec ${_CT_NAME} apk add rspamd rspamd-proxy
-
 ########################  PATH
 
-_echoT "------------------ c reate paths"
-paths="${_PATH_MAIL} ${_PATH_LMAIL} ${_PATH_VMAIL} ${_PATH_SIEVE} ${_PATH_RSPAMD} ${_PATH_DKIM} ${_PATH_SSL}"
-cmd="for path in ${paths}; do [ -d \${path} ] || mkdir -p \${path}; done"
-_lxc_exec ${_CT_NAME} "${cmd}"
+_echoT "------------------ create paths"
+for path in ${_PATH_MAIL} ${_PATH_LMAIL}${_PATH_SSL}; do
+	_lxc_exec ${_CT_NAME} "[ -d '${path}' ] || mkdir -p ${path}; chown ${_VMAIL_USER}:${_VMAIL_USER} -R ${path}"
+done
 
-cmds="chmod 640 ${_PATHSSL}"
-_lxc_exec ${_CT_NAME} "${cmd}"
+_echoT "------------------  rights path ${_PATH_SSL} ${S_PATH_CONF_SSL}"
+_lxc_exec ${_CT_NAME} chown -R ${_VMAIL_USER}:${_VMAIL_USER} ${_PATH_SSL} ${S_PATH_CONF_SSL}
+_lxc_exec ${_CT_NAME} chmod 640 -R ${_PATH_SSL} ${S_PATH_CONF_SSL}
 
-########################  DATA
+_echoT "------------------  rights path ${_PATH_MAIL}"
+_lxc_exec_e ${_CT_NAME} chown ${_VMAIL_USER}:postdrop -R ${_PATH_LMAIL}
+_lxc_exec_e ${_CT_NAME} "find ${_PATH_LMAIL} -type d -exec chmod g+rwx -R {} \;"
+_lxc_exec_e ${_CT_NAME} "find ${_PATH_LMAIL} -type f -exec chmod g+rw -R {} \;"
+
+########################  _VMAIL_USER
 
 # group
 file=/etc/group
@@ -122,9 +117,6 @@ _lxc_exec_e ${_CT_NAME} "sed -i '/^${_VMAIL_USER}/ s|^\(.*:.*:.*:\).*$|\1${_VMAI
 
 _confset _VMAIL_UID "${_VMAIL_UID}" ${_FILE_INSTALL_CONF}
 _confset _VMAIL_GID "${_VMAIL_GID}" ${_FILE_INSTALL_CONF}
-
-_echoT "------------------  rights path ${_VMAIL_USER}"
-_lxc_exec_e ${_CT_NAME} "chown ${_VMAIL_USER}:${_VMAIL_USER} -R ${_PATH_VMAIL}"
 
 ########################  IPTABLES
 

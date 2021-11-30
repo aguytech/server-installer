@@ -6,33 +6,37 @@ _echoT "\n======================  ${_INSTALL}-${_PARTMAIL}"
 
 grep -q "^# ${_PARTMAIL#++}$" ${_FILE_INSTALL_CONF} || echo  "# ${_PARTMAIL}" >> ${_FILE_INSTALL_CONF}
 
-file_conf_dovecot_main=${S_PATH_INSTALL_CONF}/mail/main_dovecot.cf
+########################  REQUIRED
+
+file_conf_dovecot_main=${S_PATH_INSTALL_CONF}/mail/postfix/main_dovecot.cf
 file_conf_dovecot=${S_PATH_INSTALL_CONF}/mail/dovecot/dovecot.conf
 file_conf_dovecot_sql=${S_PATH_INSTALL_CONF}/mail/dovecot/dovecot-sql.conf.ext
 
-file_conf_dovecot_auth=${S_PATH_INSTALL_CONF}/mail/dovecot/10-auth.conf
-file_conf_dovecot_auth_sql=${S_PATH_INSTALL_CONF}/mail/dovecot/auth-sql.conf.ext
-file_conf_dovecot_log=${S_PATH_INSTALL_CONF}/mail/dovecot/10-logging.conf
-file_conf_dovecot_mail=${S_PATH_INSTALL_CONF}/mail/dovecot/10-mail.conf
-file_conf_dovecot_master=${S_PATH_INSTALL_CONF}/mail/dovecot/10-master.conf
-file_conf_dovecot_ssl=${S_PATH_INSTALL_CONF}/mail/dovecot/10-ssl.conf
-file_conf_dovecot_lda=${S_PATH_INSTALL_CONF}/mail/dovecot/15-lda.conf
-file_conf_dovecot_mail=${S_PATH_INSTALL_CONF}/mail/dovecot/15-mailboxes.conf
-file_conf_dovecot_imap=${S_PATH_INSTALL_CONF}/mail/dovecot/20-imap.conf
-file_conf_dovecot_lmtp=${S_PATH_INSTALL_CONF}/mail/dovecot/20-lmtp.conf
-file_conf_dovecot_sieve_man=${S_PATH_INSTALL_CONF}/mail/dovecot/20-managesieve.conf
-file_conf_dovecot_quota=${S_PATH_INSTALL_CONF}/mail/dovecot/90-quota.conf
-file_conf_dovecot_plugin=${S_PATH_INSTALL_CONF}/mail/dovecot/90-plugin.conf
-file_conf_dovecot_sieve=${S_PATH_INSTALL_CONF}/mail/dovecot/90-sieve.conf
-file_conf_dovecot_sieve_ext=${S_PATH_INSTALL_CONF}/mail/dovecot/90-sieve-extprograms.conf
+file_conf_dovecot_confd_auth=${S_PATH_INSTALL_CONF}/mail/dovecot/10-auth.conf
+file_conf_dovecot_confd_auth_sql=${S_PATH_INSTALL_CONF}/mail/dovecot/auth-sql.conf.ext
+file_conf_dovecot_confd_log=${S_PATH_INSTALL_CONF}/mail/dovecot/10-logging.conf
+file_conf_dovecot_confd_mail=${S_PATH_INSTALL_CONF}/mail/dovecot/10-mail.conf
+file_conf_dovecot_confd_master=${S_PATH_INSTALL_CONF}/mail/dovecot/10-master.conf
+file_conf_dovecot_confd_ssl=${S_PATH_INSTALL_CONF}/mail/dovecot/10-ssl.conf
+file_conf_dovecot_confd_lda=${S_PATH_INSTALL_CONF}/mail/dovecot/15-lda.conf
+file_conf_dovecot_confd_mailbox=${S_PATH_INSTALL_CONF}/mail/dovecot/15-mailboxes.conf
+file_conf_dovecot_confd_imap=${S_PATH_INSTALL_CONF}/mail/dovecot/20-imap.conf
+file_conf_dovecot_confd_lmtp=${S_PATH_INSTALL_CONF}/mail/dovecot/20-lmtp.conf
+file_conf_dovecot_confd_sieve_man=${S_PATH_INSTALL_CONF}/mail/dovecot/20-managesieve.conf
+file_conf_dovecot_confd_quota=${S_PATH_INSTALL_CONF}/mail/dovecot/90-quota.conf
+file_conf_dovecot_confd_plugin=${S_PATH_INSTALL_CONF}/mail/dovecot/90-plugin.conf
+file_conf_dovecot_confd_sieve=${S_PATH_INSTALL_CONF}/mail/dovecot/90-sieve.conf
+file_conf_dovecot_confd_sieve_ext=${S_PATH_INSTALL_CONF}/mail/dovecot/90-sieve-extprograms.conf
+
+file_conf_dovecot_bin_quota=${S_PATH_INSTALL_CONF}/mail/dovecot/quota-warning.sh
 
 file_conf_sieve_global=${S_PATH_INSTALL_CONF}/mail/sieve/spam-global.sieve
 file_conf_sieve_spam=${S_PATH_INSTALL_CONF}/mail/sieve/learn-spam.sieve
 file_conf_sieve_ham=${S_PATH_INSTALL_CONF}/mail/sieve/learn-ham.sieve
 
 _echoT "------------------ required files"
-_require `( set -o posix; set )|grep ^file_conf_dovecot_|cut -d= -f1`
-_require `( set -o posix; set )|grep ^file_conf_sieve_|cut -d= -f1`
+_require `set|grep ^file_conf_dovecot_|cut -d= -f2`
+_require `set|grep ^file_conf_sieve_|cut -d= -f2`
 
 ########################  DATA
 
@@ -43,40 +47,31 @@ _lxc_meta_add ${_CT_NAME} apps dovecot
 
 ########################  MAIN
 
+_echoT "------------------  install dovecot"
+_lxc_exec ${_CT_NAME} apk add dovecot dovecot-mysql dovecot-lmtpd dovecot-pigeonhole-plugin
+
+_echoT "------------------  service start"
+_lxc_exec ${_CT_NAME} rc-update add dovecot
+_lxc_exec ${_CT_NAME} rc-service -s dovecot start
+
 _echoT "------------------  path create"
-for path in ${_PATH_VMAIL}/mailboxes ${_PATH_SIEVE}/global; do
-	_lxc_exec ${_CT_NAME} "[ -d '${path}' ] || mkdir -p ${path}"
+for path in ${_PATH_VMAIL} ${_PATH_VMAIL}/mailboxes ${_PATH_SIEVE} ${_PATH_SIEVE}/global ${_PATH_RSPAMD} ${_PATH_DKIM}; do
+	_lxc_exec ${_CT_NAME} "[ -d '${path}' ] || mkdir -p ${path}; chown ${_VMAIL_USER}:${_VMAIL_USER} -R ${path}"
+	_lxc_exec_e ${_CT_NAME} "find ${path} -type d -exec chmod o-rwx -R {} \;"
 done
 
-#_echoT "------------------  ${_PARTMAIL} install"
-#_lxc_exec ${_CT_NAME} apk add dovecot dovecot-mysql dovecot-lmtpd dovecot-pigeonhole-plugin
-
-_echoT "------------------  services stop"
-_lxc_exec ${_CT_NAME} rc-update add dovecot
-_lxc_exec ${_CT_NAME} rc-service -s dovecot stop
-
 ######################## POSTFIX
-
-_echoT "------------------  postfix conf alias"
-#_lxc_exec ${_CT_NAME} "sed -i '/^#\?root:.*/ croot: ${_EMAIL_TECH}' /etc/postfix/aliases"
-_lxc_exec ${_CT_NAME} newaliases
-_echoI "test postmap -q root lmdb:/etc/postfix/aliases"
-_lxc_exec ${_CT_NAME} postmap -q root lmdb:/etc/postfix/aliases
-
-_echoT "------------------  postfix conf dovecot"
-_lxc_exec ${_CT_NAME} "sed -i '/#*-o smtpd_sasl_type=dovecot/ s|#||' /etc/postfix/master.cf"
 
 _echoT "------------------  postfix conf main_dovecot.cf"
 if ! _lxc_exec ${_CT_NAME} "grep -q '#* *ADD DOVECOT$' /etc/postfix/main.cf"; then
 	file=/etc/postfix/${file_conf_dovecot_main##*/}
 	_eval lxc file push -q ${file_conf_dovecot_main} ${_CT_NAME}${file}
-	_lxc_var_replace ${_CT_NAME} ${file} mail
 	_lxc_exec ${_CT_NAME} "cat ${file} >> /etc/postfix/main.cf"
-	_lxc_exec ${_CT_NAME} "rm ${file}"
+	_lxc_exec ${_CT_NAME} rm ${file}
 fi
 
-_echoT "------------------  postfix rights"
-_lxc_exec_e ${_CT_NAME} chown -R 0.0 /etc/postfix
+_echoT "------------------  conf var replace"
+_lxc_var_replace ${_CT_NAME} /etc/postfix mail
 
 ######################## DOVECOT
 
@@ -87,98 +82,94 @@ _lxc_exec ${_CT_NAME} "[ -d '${path}' ] && cp -a ${path} ${path}.${_SDATE}"
 _echoT "------------------  conf dovecot"
 file=/etc/dovecot/${file_conf_dovecot##*/}
 _eval lxc file push -q ${file_conf_dovecot} ${_CT_NAME}${file}
-_lxc_var_replace ${_CT_NAME} ${file} mail
-_lxc_exec_e ${_CT_NAME} chown -R 0.0 ${file}
 
 _echoT "------------------  conf sql"
 file=/etc/dovecot/${file_conf_dovecot_sql##*/}
 _eval lxc file push -q ${file_conf_dovecot_sql} ${_CT_NAME}${file}
-_lxc_var_replace ${_CT_NAME} ${file} mail
-_lxc_exec_e ${_CT_NAME} chown -R 0.0 ${file}
 
 _echoT "------------------  conf conf.d"
-for file_from in ${file_conf_dovecot_auth} ${file_conf_dovecot_auth_sql} ${file_conf_dovecot_log} \
-${file_conf_dovecot_master} ${file_conf_dovecot_lda} ${file_conf_dovecot_mail} ${file_conf_dovecot_imap} \
-${file_conf_dovecot_sieve_man} ${file_conf_dovecot_quota} ${file_conf_dovecot_plugin} ${file_conf_dovecot_sieve_ext}; do
+for file_from in _require `set|grep ^file_conf_dovecot_confd_|cut -d= -f2`; do
 	file=/etc/dovecot/conf.d/${file_from##*/}
 	_echo ${file_from##*/}
 	_eval lxc file push -q ${file_from} ${_CT_NAME}${file}
 done
-_lxc_exec_e ${_CT_NAME} chown -R 0.0 /etc/dovecot/conf.d
 
-for file_from in ${file_conf_dovecot_mail} ${file_conf_dovecot_ssl} ${file_conf_dovecot_lmtp} ${file_conf_dovecot_sieve}; do
-	file=/etc/dovecot/conf.d/${file_from##*/}
-	_echo ${file_from##*/}
-	_eval lxc file push -q ${file_from} ${_CT_NAME}${file}
-	_lxc_var_replace ${_CT_NAME} ${file} mail
-done
+_echoT "------------------  conf var replace"
+_lxc_var_replace ${_CT_NAME} /etc/dovecot mail
+
+######################## QUOTA
+
+_echoT "------------------  conf quota"
+file=${_PATH_VMAIL}/${file_conf_dovecot_bin_quota##*/}
+_eval lxc file push -q ${file_conf_dovecot_bin_quota} ${_CT_NAME}${file}
+_lxc_exec ${_CT_NAME}  chmod +x ${file}
 
 ######################## SIEVE
+
+_echoT "------------------  dovecot reload"
+# load first_valid_uid  for sievec
+_lxc_exec_e ${_CT_NAME} chown -R 0.0 /etc/dovecot
+_lxc_exec_e ${_CT_NAME} rc-service dovecot reload
+
+_echoT "------------------  path sieve"
+path=/usr/lib/dovecot/sieve-pipe
+_lxc_exec ${_CT_NAME} "[ -d '${path}' ] || mkdir ${path}"
+_lxc_exec ${_CT_NAME} chown ${path}
 
 _echoT "------------------  conf sieve"
 for file_from in ${file_conf_sieve_global} ${file_conf_sieve_spam} ${file_conf_sieve_ham}; do
 	file=${_PATH_SIEVE}/global/${file_from##*/}
-	_echo ${file_from##*/}
+	_echo ${file_from}
 	_eval lxc file push -q ${file_from} ${_CT_NAME}${file}
+	_lxc_exec ${_CT_NAME}  chown ${_VMAIL_USER}:${_VMAIL_USER} ${file}
 	_lxc_exec ${_CT_NAME} sievec ${file}
 done
 
-_echoT "------------------  right on vmail"
-
+_echoT "------------------  rights user vmail"
 _lxc_exec ${_CT_NAME}  chown ${_VMAIL_USER}:${_VMAIL_USER} -R ${_PATH_VMAIL} ${_PATH_SIEVE}
 _lxc_exec ${_CT_NAME}  chmod o-rwx -R ${_PATH_VMAIL} ${_PATH_SIEVE}
 
-_lxc_exec ${_CT_NAME}  chown ${_VMAIL_USER}:postfix ${S_PATH_CONF_SSL}
+_echoT "------------------  rights ${S_PATH_CONF_SSL}"
+_lxc_exec ${_CT_NAME}  chown -R ${_VMAIL_USER}:postfix ${S_PATH_CONF_SSL}
 _lxc_exec ${_CT_NAME}  "find ${S_PATH_CONF_SSL} -type f -exec chmod 550 {} \;"
 _lxc_exec ${_CT_NAME}  "find ${S_PATH_CONF_SSL} -type f -exec chmod 440 {} \;"
 
-########################  TEST
-
-_echoT "------------------  postmap test mysql"
-queries=`_lxc_exec ${_CT_NAME} "sed -n 's|^[^#].*\(mysql:.*\)$|\1|p' /etc/postfix/main.cf"`
-queries+=`_lxc_exec ${_CT_NAME} "sed -n 's|^[^#].*\(mysql:.*\)$|\n\1|p' /etc/postfix/master.cf"`
-for query in ${queries}; do
-	_echo "- ${query}"
-	_lxc_exec ${_CT_NAME} postmap -q ${_PFA_EMAIL_TEST} ${query}
-done
-
-_echoT "------------------  postmap test cidr"
-queries=`_lxc_exec ${_CT_NAME} "sed -n 's|^[^#].*\(cidr:.*\)$|\1|p' /etc/postfix/main.cf"`
-queries+=`_lxc_exec ${_CT_NAME} "sed -n 's|^[^#].*\(cidr:.*\)$|\n\1|p' /etc/postfix/master.cf"`
-for query in ${queries}; do
-	_echo "- ${query}"
-	_lxc_exec ${_CT_NAME} postmap -q ${_CIDR%.*}.1 ${query%,}
-done
-_askno "valid to continue"
-
-_echoT "------------------  services start"
-_lxc_exec ${_CT_NAME} rc-service -S dovecot start
-_lxc_exec ${_CT_NAME} rc-service postfix restart
-
-
-
-
-
+_echoT "------------------  conf var replace"
+_lxc_var_replace ${_CT_NAME} /etc/dovecot mail
 
 ########################  TEST
 
-_echoT "------------------  mail root test"
-_lxc_exec_e ${_CT_NAME} "echo test | mail -s test root"
-_echoI "Verify the following content of the email received (in 4s)"
-sleep 4
+_echoT "------------------  postfix restart"
+_lxc_exec_e ${_CT_NAME} chown -R 0.0 /etc/postfix
+_lxc_exec_e ${_CT_NAME} rc-service postfix restart
+
+_echoT "------------------  dovecot restart"
+_lxc_exec_e ${_CT_NAME} chown -R 0.0 /etc/dovecot
+_lxc_exec_e ${_CT_NAME} rc-service dovecot restart
+
+_echoT "------------------  test mail send to ${_EMAIL_TEST}"
+_lxc_exec ${_CT_NAME} "echo first message | mail -s test ${_EMAIL_TEST}"
+str=2
+_echoI "Verify the following content of the email received (in ${str}s)"
+sleep ${str}
 _lxc_exec ${_CT_NAME} cat ${_PATH_LMAIL}/root
 _askno "valid to continue"
 
-########################  END
+_echoT "------------------  test telnet 143"
+_echoI "Enter 'z logout' to quit after connection"
+_echo "type:\na login $username $password"
+_askno "valid to continue"
+telnet mx.${_DOMAIN_FQDN} 143
 
+_echoT "------------------  test ssl 993"
+_echoI "Enter 'z logout' to quit after connection"
+_askno "valid to continue"
+openssl s_client -connect mx.${_DOMAIN_FQDN}:993
 
-
-exit
-
-
-
-
-
+_echoT "------------------  test starttls 143"
+_echoI "Enter 'z logout' to quit after connection"
+_askno "valid to continue"
+openssl s_client -connect mx.${_DOMAIN_FQDN}:143 -starttls imap
 
 ########################  END
 

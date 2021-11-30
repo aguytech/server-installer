@@ -14,11 +14,16 @@ _require ${file_cron_certificate}
 
 ########################  DATA
 
-_echoT "------------------  data"
+_echoT "------------------ data ssl"
 
-anstmp="mail mx imap smtp"
-_askno "Subdomains to register to ssl: (${anstmp})"
-subs_ssl="${_ANSWER:-${anstmp}}" && _confset subs_ssl "${subs_ssl}" ${_FILE_INSTALL_CONF}
+_menu "generate new ssl certificates for mail server" none letsencrypt openssl
+ssl_api=${_ANSWER/none/} && _confset ssl_api "${ssl_api}" ${_FILE_INSTALL_CONF}
+
+if [ "${ssl_api}" ]; then
+	anstmp="mail mx imap smtp"
+	_askno "Subdomains to register to ssl: (${anstmp})"
+	subs_ssl="${_ANSWER:-${anstmp}}" && _confset subs_ssl "${subs_ssl}" ${_FILE_INSTALL_CONF}
+fi
 
 _FILE_SSL_FULL="${_PATH_SSL}/mail.${_DOMAIN_FQDN}-fullchain.pem"
 _confset _FILE_SSL_FULL "${_FILE_SSL_FULL}" ${_FILE_INSTALL_CONF} ${_FILE_INSTALL_CONF}
@@ -30,9 +35,7 @@ ct_proxy=${S_SERVICE[proxy]}
 
 _echoT "------------------  data letsencrypt"
 
-_askyn "Use letsencrypt" && lcrypt_enabled="${_ANSWER/n/}"
-
-if [ "${lcrypt_enabled}" ]; then
+if [ "${ssl_api}" =  letsencrypt ]; then
 	########################  LETSENCRYPT
 
 	anstmp=${S_DOMAIN_EMAIL_TECH} && _askno "Technical email for letsencrypt (${anstmp})"
@@ -63,9 +66,9 @@ if [ "${lcrypt_enabled}" ]; then
 	_echoT "------------------  letsencrypt unify"
 	_lxc_exec ${ct_proxy} "${S_PATH_SCRIPT}/scripts/letsencrypt-unify.sh"
 
-elif [ -z "${lcrypt_enabled}" ] && [ "${_DOMAIN_FQDN%.lxd}" != "${_DOMAIN_FQDN}" ]; then
+elif [ "${ssl_api}" =  openssl ]; then
 
-	########################  LOCAL
+	########################  OPENSSL
 
 	_echoT "------------------  openssl conf root"
 	file_ca_key=${S_PATH_CONF_SSL}/private/${_DOMAIN_FQDN}.key.ca

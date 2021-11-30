@@ -1,0 +1,7 @@
+### Removes headers of MUAs for privacy reasons
+#/^Received:/					IGNORE
+/^\s*Received: from \S+ \(\S+ \[\S+\]\)(.*)/ REPLACE Received: from [127.0.0.1] (localhost [127.0.0.1])$1
+/^X-Originating-IP:/		IGNORE
+/^X-Mailer:/						IGNORE
+/^Mime-Version:/			IGNORE
+/^User-Agent:/					IGNORE

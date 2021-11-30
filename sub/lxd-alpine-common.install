@@ -131,6 +131,26 @@ _echoT "------------------  logrotate start"
 _lxc_exec ${_CT_NAME} rc-service -s rsyslog restart
 _lxc_exec ${_CT_NAME} rc-service -S rsyslog start
 
+########################  MAIL
+
+_echoT "------------------  postfix install"
+_lxc_exec ${_CT_NAME} apk add postfix
+
+_echoT "------------------  postfix conf"
+file=/etc/postfix/main.cf
+_lxc_exec ${_CT_NAME} "[ -f ${file} ] && cp -a ${file} ${file}.init"
+while read str val; do
+	_lxc_exec ${_CT_NAME} "postconf '${str}=${val}'"
+done <<< "mydomain lxd
+mynetworks 127.0.0.1/32
+relayhost ${S_SERVICE[mail]}:25
+smtpd_relay_restrictions permit_mynetworks"
+
+_echoT "------------------  postfix start"
+_lxc_exec ${_CT_NAME} rc-update add postfix
+_lxc_exec_e ${_CT_NAME} rc-service -S postfix start
+
+
 ########################  PUBLISH
 
 _echoT "------------------  publish ${_CT_NAME}"

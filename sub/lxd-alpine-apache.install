@@ -85,6 +85,7 @@ _eval lxc profile create ${profile}
 path=${S_HOST_PATH_SHARE}/www/${_DOMAIN_FQDN}
 path_ct=${_PATH_DOMAIN}
 [ -d ${path} ] || _evalr mkdir -p ${path}
+_evalr chown ${_LXD_UID}:${_LXD_UID} ${path}
 _eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
 
 
