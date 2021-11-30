@@ -24,7 +24,7 @@ parted /dev/sda print free
 fdisk /dev/sda # m p F n w | extend with lxd:+50G / save:available
 
 #apt update && apt -y dist-upgrade
-/usr/local/install/ubuntu.install # sed -i 's|ambau|ggj|g' /etc/server/server.conf && grep ggj /etc/server/server.conf
+/usr/local/install/ubuntu.install # sed -i 's|ambau\.fr|ambau.ovh|g' /etc/server/server.conf && grep ambau /etc/server/server.conf
 MANUALLY
 
 ######################## CONF
@@ -71,6 +71,9 @@ while [ "${_PART}" != "quit" ]; do
 				break
 				;;
 			iptables) # ovh
+				_source "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
+				;;
+			mail) # ovh
 				_source "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
 				;;
 			fail2ban) # ovh home
