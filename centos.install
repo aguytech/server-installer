@@ -146,7 +146,7 @@ sudo bs=512 count=1 if=/dev/sda of="$HOST-${RELEASE}-${DATE}-mbrpt.iso"
 
 for VOL in $VOLS
 do
-	echo -e "${cyan}************************  $VOL${cclear}"
+	echo -e "${cyanb}************************  $VOL${cclear}"
 	VOLNAME=${VOL#/dev/}; VOLNAME=${VOLNAME//\//_}
 	e2fsck -f $VOL
 	SIZE=$(fdisk -l /dev/sda1 |grep "^Disk.*" |sed "s/^Disk .*, \([0-9]*\) bytes, .*$/\1/")

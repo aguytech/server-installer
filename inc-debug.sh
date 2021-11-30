@@ -10,7 +10,7 @@ _echoE() { echo -e "${redb}$*${cclear}"; }
 _echoi() { echo -e "$*"; }
 _echoI() { echo -e "${yellowb}$*${cclear}"; }
 _echot() { echo -e "${blue}$*${cclear}"; }
-_echoT() { echo -e "${cyan}$*${cclear}"; }
+_echoT() { echo -e "${cyanb}$*${cclear}"; }
 _ask() { _ANSWER=; while [ -z "$_ANSWER" ]; do _echo_ -n "$*: "; read _ANSWER; _echod; done; }
 _askno() { _ANSWER=; _echo_ -n "$*: "; read _ANSWER; _echod; }
 _askyn() { local options; _ANSWER=; options=" y n "; while [ "${options/ $_ANSWER }" = "$options" ]; do _echo_ -n "$* (y/n): "; read _ANSWER;     _echod; done; }

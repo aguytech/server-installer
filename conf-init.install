@@ -3,7 +3,7 @@
 # write by Aguy
 
 _PART=conf-init
-echo -e "${cyan}==========================================  ${_PART}${cclear}"
+echo -e "${cyanb}==========================================  ${_PART}${cclear}"
 
 
 ########################  DATA
