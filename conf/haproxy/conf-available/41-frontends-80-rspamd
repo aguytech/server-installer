@@ -1,0 +1,7 @@
+# included file for haproxy configuration
+
+frontend rspamd
+	bind :S_RSPAMD_PORT[controller]
+	mode http
+	option			httplog
+	default_backend	rspamd

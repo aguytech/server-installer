@@ -10,6 +10,10 @@ backend letsencrypt
 	mode			http
 	server			letsencrypt 127.0.0.1:_HPX_LCRYPT_PORT
 
+backend rspamd
+	mode			http
+	#server			S_SERVICE[mail]	S_SERVICE[mail] check port S_RSPAMD_PORT[controller]
+
 backend S_SERVICE[mail]
 	mode			tcp
 	timeout server	60s
@@ -17,8 +21,7 @@ backend S_SERVICE[mail]
 
 	option smtpchk
 	default-server	check port 80  inter 4s  fall 2  rise 1  resolvers lxd  resolve-prefer ipv4 # resolve-net 10.0.0.1/24
-	#server S_SERVICE[mail]-1	S_SERVICE[mail]-1 check port 25
-	#server S_SERVICE[mail]-2	S_SERVICE[mail]-2 check port 25 backup
+	#server S_SERVICE[mail]	S_SERVICE[mail] check port 25
 
 backend _HPX_DOMAIN_FQDN
 	mode			http
