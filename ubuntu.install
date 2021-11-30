@@ -63,7 +63,7 @@ while [ "${_PART}" != "quit" ]; do
 	_echod "partsmade='$partsmade'"
 	_echod "parts2do='$parts2do'"
 
-	_echo "Part already made: ${blueb}$partsmade${cclear}"
+	_echo "Part already made: ${cyan}$partsmade${cclear}"
 	PS3="Give your choice: "
 	select _PART in quit $parts2do; do
 		case "${_PART}" in
