@@ -67,8 +67,8 @@ _RDS_DATABASES="${_ANSWER:-$anstmp}" && _confset _RDS_DATABASES "${_RDS_DATABASE
 anstmp=512mb && _askno "Memory usage limit (${anstmp})"
 _RDS_MEM_MAX="${_ANSWER:-$anstmp}" && _confset _RDS_MEM_MAX "${_RDS_MEM_MAX}"
 
-_echoI "MAXMEMORY POLICY"
--echo "# allkeys-lru -> Evict any key using approximated LRU
+_echoa "MAXMEMORY POLICY"
+_echo "# allkeys-lru -> Evict any key using approximated LRU
 # volatile-lfu -> Evict using approximated LFU, only keys with an expire set
 # allkeys-lfu -> Evict any key using approximated LFU
 # volatile-random -> Remove a random key having an expire set
@@ -86,13 +86,11 @@ _CT_NAME=${ct_base}-1
 ########################  INIT
 
 _echot "------------------  init"
-
 if lxc list -f csv -c n | grep -q ^${_CT_NAME}$; then
 	lxc list -f csv -c n status=Running| grep -q ^${_CT_NAME}$ && _eval lxc stop ${_CT_NAME}
 	_echot "------------------ rename ${_CT_NAME} -> ${_CT_NAME}-${_SDATE}"
 	_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
 fi
-
 _eval lxc init ${_CT_NAME_COM} ${_CT_NAME} -p default -p global
 
 _echot "------------------  ${_CT_NAME} start"
@@ -220,14 +218,14 @@ _lxc_exec ${_CT_NAME} "find ${S_PATH_LOG}/redis -name *.log -exec rm {} \;"
 ########################  TEST
 
 _echot "------------------  redis test access"
-_echo "timeout 3 redis-cli -h ${_CT_NAME} ping"
+_echoa "timeout 3 redis-cli -h ${_CT_NAME} ping"
 _eval "timeout 3 redis-cli -h ${_CT_NAME} ping 2>/dev/null"
 
-_echoI "\nTo do a benchmark, just type:" && sleep 0.1
-_echo "redis-benchmark -h ${_CT_NAME} -p ${S_CACHE_PORT} -n 1000 -c 10 -k 1 -q"
-_echo "redis-benchmark -h ${_CT_NAME} -p ${S_CACHE_PORT} -n 10000 -c 10 -k 1"
-_echoI "\nTo see latency, just type:" && sleep 0.1
-_echo "redis-cli -h ${_CT_NAME} -p ${S_CACHE_PORT} --latency-dist"
+_echoA "To do a benchmark, just type:" && sleep 0.1
+_echoa "redis-benchmark -h ${_CT_NAME} -p ${S_CACHE_PORT} -n 1000 -c 10 -k 1 -q"
+_echoa "redis-benchmark -h ${_CT_NAME} -p ${S_CACHE_PORT} -n 10000 -c 10 -k 1"
+_echoA "To see latency, just type:" && sleep 0.1
+_echoa "redis-cli -h ${_CT_NAME} -p ${S_CACHE_PORT} --latency-dist"
 
 ########################  PUBLISH
 

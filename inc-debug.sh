@@ -1,16 +1,28 @@
 #!/bin/bash
 
-white='\e[0;0m'; red='\e[0;31m'; green='\e[0;32m'; blue='\e[0;34m'; magenta='\e[0;35m'; yellow='\e[0;33m'
-whiteb='\e[1;1m'; redb='\e[1;31m'; greenb='\e[1;32m'; blueb='\e[1;34m'; magentab='\e[1;35m'; yellowb='\e[1;33m'; cclear='\e[0;0m'
+white='\e[0;0m'; red='\e[0;31m'; green='\e[0;32m'; blue='\e[0;34m'; magenta='\e[0;95m'; yellow='\e[0;93m'; cyan='\e[0;96m';
+whiteb='\e[1;1m'; redb='\e[1;31m'; greenb='\e[1;32m'; blueb='\e[1;34m'; magentab='\e[1;95m'; yellowb='\e[1;93m'; cyanb='\e[1;96m'; cclear='\e[0;0m';
 _echo() { echo -e "$*"; }
+_echO() { echo -e "${whiteb}$*${cclear}"; }
 _echo_() { echo -e $*; }
-_echod() { echo -e "${yellow}$*${cclear}"; }
-_echoe() { echo -e "${red}$*${cclear}"; }
-_echoE() { echo -e "${redb}$*${cclear}"; }
-_echoi() { echo -e "$*"; }
-_echoI() { echo -e "${yellowb}$*${cclear}"; }
-_echot() { echo -e "${blue}$*${cclear}"; }
-_echoT() { echo -e "${cyanb}$*${cclear}"; }
+_echO_() { echo -e ${whiteb}$*${cclear}; }
+# debug
+_echod() { echo "$(date +"%Y%m%d %T") $*" >&6; }
+# alert
+_echoa() { echo -e "${yellow}$*${cclear}"; }
+_echoA() { echo -e "[alert] ${yellowb}$*${cclear}"; }
+# warnning
+_echow() { echo -e "${magenta}$*${cclear}"; }
+_echoW() { echo -e "${magentab}$*${cclear}"; }
+# error
+_echoe() { echo -e "${red}$*${cclear}" >&2; }
+_echoE() { echo -e "${redb}$*${cclear}" >&2; }
+# information
+_echoi() { echo -e "$*" >&4; }
+_echoI() { echo -e "${yellowb}$*${cclear}" >&4; }
+# title
+_echot() { echo -e "${cyan}$*${cclear}" >&4; }
+_echoT() { echo -e "${cyanb}$*${cclear}" >&4; }
 _ask() { _ANSWER=; while [ -z "$_ANSWER" ]; do _echo_ -n "$*: "; read _ANSWER; _echod; done; }
 _askno() { _ANSWER=; _echo_ -n "$*: "; read _ANSWER; _echod; }
 _askyn() { local options; _ANSWER=; options=" y n "; while [ "${options/ $_ANSWER }" = "$options" ]; do _echo_ -n "$* (y/n): "; read _ANSWER;     _echod; done; }
@@ -26,7 +38,7 @@ _var_replace_vars() {
         fail2ban)
             vars="S_DOMAIN_FQDN S_DOMAIN_EMAIL_TECH S_HOST_PATH_LOG _IPS_IGNORED _SSH_PORT" ;;
         haproxy)
-            vars="S_RSYSLOG_PORT S_PATH_CONF_SSL _HPX_LCRYPT_PORT _HPX_STATS_PORT _HPX_STATS_2_PORT _SOMAXCONN _DOMAIN_FQDN _DOMAIN_2_FQDN _HPX_CT_NAME _HPX_CT_2_NAME _HPX_ACCESS_USER _HPX_ACCESS_PWD _HPX_ACCESS_URI _HPX_DNS_DEFAULT _SERVER_DEFAULT" ;;
+            vars="S_RSYSLOG_PORT S_PATH_CONF_SSL _HPX_LCRYPT_PORT _HPX_STATS_PORT _HPX_STATS_2_PORT _SOMAXCONN _DOMAIN_FQDN _HPX_CT_NAME _HPX_ACCESS_USER _HPX_ACCESS_PWD _HPX_ACCESS_URI _HPX_DNS_DEFAULT _SERVER_DEFAULT" ;;
         logrotate)
             vars="S_PATH_LOG S_HOST_PATH_LOG S_VM_PATH_LOG S_PATH_LOG_INSTALL S_PATH_LOG_SERVER" ;;
         mail)

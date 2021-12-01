@@ -20,7 +20,6 @@ sed -i "/^GRUB_TIMEOUT=/ s|=.*|=0|" "${file}"
 
 update-grub
 
-
 ###################  CLUSTER
 
 _echot "------------------  hosts S_CLUSTER"
@@ -28,8 +27,9 @@ _echot "------------------  hosts S_CLUSTER"
 file=/etc/hosts
 _keepcpts "${file}"
 
-_echo "Here is the servers list actually declared :\n${!S_CLUSTER[*]}"
-_askyn "y to continue or modify file:${S_GLOBAL_CONF}"
+_echoA "Here is the servers list actually declared :\n${!S_CLUSTER[*]}"
+_echoa "You can modify file:${S_GLOBAL_CONF}"
+_askno "Valid to continue"
 _source ${S_GLOBAL_CONF}
 
 ! sudo grep -q "# ${S_DOMAIN_NAME} cluster" ${file} && sudo sh -c "echo '\n# ${S_DOMAIN_NAME} cluster' >> ${file}"

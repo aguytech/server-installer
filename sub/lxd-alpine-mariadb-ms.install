@@ -185,8 +185,8 @@ _echot "------------------  status slave"
 _eval "mysql -h${ct_slave} -uroothost -p${pwd_slave} -e \"SHOW SLAVE STATUS \G;\" | head -n19"
 
 _echot "------------------  show passwords"
-_echoI "Keep this passwords:"
-_echoW "${strpass%\\n}"
+_echoA "Keep this passwords:"
+_echoa "${strpass%\\n}"
 
 
 ########################  PUBLISH

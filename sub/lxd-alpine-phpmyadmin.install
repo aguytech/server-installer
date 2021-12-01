@@ -299,14 +299,14 @@ for ct_maria in ${cts_maria}; do
 done
 
 _echot "------------------  show passwords"
-_echoI "Keep this passwords:"
-_echoW "${strpass%\\n}"
+_echoA "Keep this passwords:"
+_echoa "${strpass%\\n}"
 
 
 ########################  HAPROXY
 
-_echoI "\nAdjust backend for domain: ${_APA_ADMIN}.${_DOMAIN_FQDN} with:"
-_echo "${cts_php}"
+_echoA "Adjust backend for domain: ${_APA_ADMIN}.${_DOMAIN_FQDN} with:"
+_echoa "${cts_php}"
 
 
 ########################  PUBLISH

@@ -150,24 +150,24 @@ _lxc_exec_e ${_CT_NAME} rc-service dovecot restart
 _echot "------------------  test mail send to ${_EMAIL_TEST}"
 _lxc_exec ${_CT_NAME} "echo first message | mail -s test ${_EMAIL_TEST}"
 str=2
-_echoI "Verify the following content of the email received (in ${str}s)"
+_echoA "Verify the following content of the email received (in ${str}s)"
 sleep ${str}
 _lxc_exec ${_CT_NAME} cat ${_PATH_LMAIL}/root
 _askno "valid to continue"
 
 _echot "------------------  test telnet 143"
-_echoI "Enter 'z logout' to quit after connection"
-_echo "type:\na login $username $password"
+_echoA "Enter 'z logout' to quit after connection"
+_echoa "type:\na login $username $password"
 _askno "valid to continue"
 telnet mx.${_DOMAIN_FQDN} 143
 
 _echot "------------------  test ssl 993"
-_echoI "Enter 'z logout' to quit after connection"
+_echoA "Enter 'z logout' to quit after connection"
 _askno "valid to continue"
 openssl s_client -connect mx.${_DOMAIN_FQDN}:993
 
 _echot "------------------  test starttls 143"
-_echoI "Enter 'z logout' to quit after connection"
+_echoA "Enter 'z logout' to quit after connection"
 _askno "valid to continue"
 openssl s_client -connect mx.${_DOMAIN_FQDN}:143 -starttls imap
 

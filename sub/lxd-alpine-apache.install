@@ -341,11 +341,11 @@ _lxc_exec ${_CT_NAME} "find ${S_PATH_LOG}/apache2 -name *.log -exec rm {} \;"
 
 ########################  TEST
 
-_echot "------------------  publish ${_CT_NAME}"
+_echot "------------------  test ${_CT_NAME}"
 
-_echoI "To test connection type:"
-_echo "curl ${_CT_NAME}:80"
-_echo "curl ${_CT_NAME}/ping-monitor"
+_echoA "To test connection type from host:"
+_echoa "curl ${_CT_NAME}:80"
+_echoa "curl ${_CT_NAME}/ping-monitor"
 
 ########################  PUBLISH
 

@@ -498,30 +498,30 @@ done
 
 _echot "------------------  php test"
 
-_echoW "To verify php configuration, type:"
-_echo "curl ${_IPTHIS}/phpinf.php"
-_echo "curl ${_CT_NAME}/phpinf.php"
-_echo "curl ${_DOMAIN_FQDN}:80"
+_echoA "To verify php configuration, type:"
+_echoa "curl ${_IPTHIS}/phpinf.php"
+_echoa "curl ${_CT_NAME}/phpinf.php"
+_echoa "curl ${_DOMAIN_FQDN}:80"
 
-_echoW "To verify ping response, type:"
-_echo "curl ${_CT_NAME}/ping-monitor"
+_echoA "To verify ping response, type:"
+_echoa "curl ${_CT_NAME}/ping-monitor"
 
-_echoW "To verify opcache response, type:"
-_echoW "curl ${_CT_NAME}/opcache"
+_echoA "To verify opcache response, type:"
+_echoa "curl ${_CT_NAME}/opcache"
 
-_echoW "To verify 'www' pool informations, type:"
-_echo "curl ${_CT_NAME}/status-www"
-_echo "curl ${_CT_NAME}/status-www?full"
+_echoA "To verify 'www' pool informations, type:"
+_echoa "curl ${_CT_NAME}/status-www"
+_echoa "curl ${_CT_NAME}/status-www?full"
 
-_echoW "To verify 'www-admin' pool informations, type:"
-_echo "curl ${_CT_NAME}/status-www-admin"
-_echo "curl ${_CT_NAME}/status-www-admin?full"
+_echoA "To verify 'www-admin' pool informations, type:"
+_echoa "curl ${_CT_NAME}/status-www-admin"
+_echoa "curl ${_CT_NAME}/status-www-admin?full"
 
 
 ########################  HAPROXY
 
-_echoI "\nAdjust backend in proxy for domain: ${_DOMAIN_FQDN} with:"
-_echo $(for i in `seq 1 ${ct_num}`; do echo ${ct_base}-${i};done)
+_echoA "\nAdjust backend in proxy for domain: ${_DOMAIN_FQDN} with:"
+_echoa $(for i in `seq 1 ${ct_num}`; do echo ${ct_base}-${i};done)
 
 
 ########################  PUBLISH

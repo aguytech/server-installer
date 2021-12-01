@@ -46,7 +46,7 @@ while ! [ -f "${pfa_tmp}" ]; do
 	fi
 done
 
-_echoI "Default policy to use for postfix"
+_echoA "Default policy to use for postfix"
 _echo "none: Don’t use encryption
 - may: Encrypt, if supported by other server. Self-signed certificates
    are accepted, because there is no certificate verification.
@@ -143,18 +143,18 @@ _lxc_exec ${ct_name} "rc-service apache2 restart"
 ########################  MANUAL
 
 _echot "------------------  manually app password"
-_echoI "Go to address: ${_SUBDOMAIN}.${_DOMAIN_FQDN}/setup.php"
-_echo "Use this password to configure postfixadmin: ${_DB_PFA_PWD}"
-_echo "after this, paste to this terminal the text given by postfixadmin to configure it:"
+_echoA "Go to address: ${_SUBDOMAIN}.${_DOMAIN_FQDN}/setup.php"
+_echoa "Use this password to configure postfixadmin: ${_DB_PFA_PWD}"
+_echoa "after this, paste to this terminal the text given by postfixadmin to configure it:"
 str=
 while [ -z "${str}" ]; do read -r str; done
 file=${path_admin}/${_SUBDOMAIN}/config.local.php
 lxc exec ${ct_name} -- sed -i "/^.CONF..setup_password/ c${str}" ${file}
 
 _echot "------------------  manually admin password"
-_echoI "Refresh page: ${_SUBDOMAIN}.${_DOMAIN_FQDN}/setup.php"
-_echo "and enter setup password: ${_DB_PFA_PWD} to continue"
-_echo "After creation of tables succeed you have to setup an account for administration"
+_echoA "Refresh page: ${_SUBDOMAIN}.${_DOMAIN_FQDN}/setup.php"
+_echoa "and enter setup password: ${_DB_PFA_PWD} to continue"
+_echoa "After creation of tables succeed you have to setup an account for administration"
 _askno "and valid after this"
 
 ########################  DB ADD
@@ -167,14 +167,14 @@ ALTER TABLE domain ADD COLUMN IF NOT EXISTS params varchar(255) DEFAULT NULL AFT
 ########################  SHOW
 
 _echot "------------------  show passwords"
-_echoI "Keep this passwords:"
-_echoW "${strpass}"
+_echoA "Keep this passwords:"
+_echoa "${strpass}"
 
 ########################  COUNTS
 
 _echot "------------------  domain & email account"
-_echoI "Now use this address: ${_SUBDOMAIN}.${_DOMAIN_FQDN}/"
-_echo "Logging you and create at least one domain & an email with the domain: ${_DOMAIN_FQDN}"
+_echoA "Now use this address: ${_SUBDOMAIN}.${_DOMAIN_FQDN}/"
+_echoa "Logging you and create at least one domain & an email with the domain: ${_DOMAIN_FQDN}"
 _askno "and valid after this"
 
 ########################  END

@@ -228,8 +228,8 @@ if [[ " ${str} " = *" ${S_SERVER_TYPE} "* ]]; then
 
 		_echot "------------------  btrfs storage"
 		path=${S_HOST_PATH}
-		_echoI "Create a btrfs subvolume: /lxd-${S_RELEASE_NAME} and mount it in ${path}"
-		_echo "Continue after that: " && read str
+		_echoA "Create a btrfs subvolume: /lxd-${S_RELEASE_NAME} and mount it in ${path}"
+		_echoa "Continue after that: " && read str
 		[ -d ${path} ] || _exite "Unable to find path: ${path}"
 
 		btrfs subvolume list .
@@ -261,7 +261,7 @@ fi
 ########################  MAIL
 
 _echot "------------------  mail"
-_echoI "MAIL part have to be implemented"
+_echow "MAIL part have to be implemented"
 
 ########################  CONF
 

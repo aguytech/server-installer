@@ -127,7 +127,7 @@ if [ -z "${profile_cloud_exist}" ]; then
 		if zfs list ${path_zfs} >/dev/null 2>&1; then
 		 	_echot "------------------  unmount  ${path_zfs}"
 		 	_evalr zfs unmount ${path_zfs} || _exite "Unable to unmount ${path_zfs}\nUnbind container using it"
-			_echoI "------------------  zfs backup ${path_zfs} to ${path_zfs}.${_SDATE}"
+			_echot "------------------  zfs backup ${path_zfs} to ${path_zfs}.${_SDATE}"
 		 	_evalr zfs rename ${path_zfs} ${path_zfs}.${_SDATE}
 		 fi
 
@@ -147,7 +147,7 @@ if [ -z "${profile_cloud_exist}" ]; then
 		# rename
 		path=${S_HOST_PATH}/cloud/${name}
 		if _evalr ls -1 ${path} >/dev/null 2>&1; then
-			_echoI "------------------  mv ${path} to ${path}.${_SDATE}"
+			_echot "------------------  mv ${path} to ${path}.${_SDATE}"
 		 	_evalr mv ${path} ${path}.${_SDATE}
 		 fi
 
@@ -313,22 +313,19 @@ for i in `seq 2 ${ct_num}`; do
 	_eval lxc start ${ct_name}
 done
 
-
 ########################  SHOW
 
 _echot "------------------  show privileges ${ct_maria}"
 _eval "mysql -h${ct_maria} -uroothost -p${pwd_maria} -e \"SELECT user,host FROM mysql.user WHERE user like '${_APP_DB_USER}';\""
 
 _echot "------------------  show passwords"
-_echoI "Keep this passwords:"
-_echoW "${strpass%\\n}"
-
+_echoA "Keep this passwords:"
+_echoa "${strpass%\\n}"
 
 ########################  HAPROXY
 
-_echoI "\nAdjust backend for domain: ${_SUBDOMAIN}.${_DOMAIN_FQDN} with:"
-_echo "${cts_php}"
-
+_echoA "Adjust backend for domain: ${_SUBDOMAIN}.${_DOMAIN_FQDN} with:"
+_echoa "${cts_php}"
 
 ########################  PUBLISH
 
@@ -338,7 +335,6 @@ for ct_name in ${ct_php} ${ct_maria}; do
 	lxc image list -f csv -c l | grep -q ^${ct_name}$ && _eval lxc image alias rename ${ct_name} ${ct_name}-${_SDATE}
 	_eval lxc publish --force ${ct_name} --alias ${ct_name}
 done
-
 
 ########################  END
 

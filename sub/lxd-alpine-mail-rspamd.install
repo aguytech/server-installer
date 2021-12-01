@@ -100,7 +100,7 @@ for domain in ${domains}; do
 done
 
 _echot "------------------  DNS dkim"
-_echoI "Use the content of ${file_pubkeys} to fill DNS domains"
+_echoA "Use the content of ${file_pubkeys} to fill DNS domains"
 _askno "Valid to continue"
 
 ########################  TEST
@@ -137,14 +137,14 @@ _askno "Verify the postfix starting and valid to continue"
 ########################  SHOW
 
 _echot "------------------  passwords"
-_echoI "Keep this passwords:"
-_echoW "${_RSP_PWD}"
+_echoA "Keep this passwords:"
+_echoa "${_RSP_PWD}"
 
 _echot "------------------  rspamd controller"
-_echoI "To verify rspamd controller acces, goto:"
+_echoA "To verify rspamd controller acces, goto:"
 _echo "http://${_IPTHIS}:${S_RSPAMD_PORT[controller]}/"
 _echo "http://${_DOMAIN_FQDN}:${S_RSPAMD_PORT[controller]}/"
-_echo "Access with password: ${_RSP_PWD}"
+_echoa "Access with password: ${_RSP_PWD}"
 
 ########################  END
 

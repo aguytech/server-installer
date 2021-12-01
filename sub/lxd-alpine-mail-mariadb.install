@@ -62,8 +62,8 @@ _eval "mysql -h${_DB_HOST} -uroothost -p${_DB_HOST_PWD} -e \"FLUSH PRIVILEGES;\"
 ########################  SHOW
 
 _echot "------------------  show passwords"
-_echoI "Keep this passwords:"
-_echoW "${strpass}"
+_echoA "Keep this passwords:"
+_echoa "${strpass}"
 
 ########################  END
 

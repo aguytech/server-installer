@@ -13,7 +13,6 @@ file_logrotate_host=${S_PATH_INSTALL_CONF}/logrotate/host-mail
 _echot "------------------ required files"
 _require ${file_rsyslog_client} ${file_rsyslog_host} ${file_logrotate_client} ${file_logrotate_host}
 
-
 ########################  PROFILE
 
 profile=${_SSL_PROFILE_MAIL}
@@ -229,32 +228,33 @@ _lxc_exec ${_CT_NAME} "rc-service crond restart"
 ########################  MANUAL CONF
 
 _echot "------------------  DNS conf"
-_echoI "IN MX 1   ${_DOMAIN_FQDN}.
+_echo "IN MX 1   ${_DOMAIN_FQDN}.
 IN TXT 'v=spf1 a mx ~all'
 imap				IN CNAME  ${_DOMAIN_FQDN}.
 mail				IN CNAME  ${_DOMAIN_FQDN}.
 smtp				IN CNAME  ${_DOMAIN_FQDN}.
 
-${_DOMAIN_FQDN}  3600 IN TXT v=spf1 a:mx.${_DOMAIN_FQDN} ?all
-# for each domain in: ${_DOMAIN_2_FQDN}
-${_DOMAIN_2_FQDN%% *}. 3600 IN TXT v=spf1 include:${_DOMAIN_FQDN} ?all
+${_DOMAIN_FQDN}  3600 IN TXT v=spf1 a:mx.${_DOMAIN_FQDN} ?all"
+_echoA "For each domain in: ${_DOMAIN_ALL_FQDN}"
+_echoa "${_DOMAIN_ALL_FQDN%% *}. 3600 IN TXT v=spf1 include:${_DOMAIN_FQDN} ?all"
 
-# for each domain in: ${_DOMAIN_FQDN} ${_DOMAIN_2_FQDN}
-_dmarc.${_DOMAIN_2_FQDN}. 'v=DMARC1; p=none; sp=none; aspf=r;''
-"
-_askno "Verify the configuration of your DNS server about MAIL\nand confirm"
+_echoA "For each domain in: ${_DOMAIN_ALL_FQDN}"
+_echoa "_dmarc.${_DOMAIN_ALL_FQDN}. 'v=DMARC1; p=none; sp=none; aspf=r;'"
+_echoA "Verify the configuration of your DNS server about MAIL"
 
 _echot "------------------  reverse DNS conf"
-_askno "Verify that the reverse DNS of your machine: ${_IPTHIS} is set to:\n
-mail.${_DOMAIN_FQDN}\n
-and confirm"
+_echoA"Verify that the reverse DNS of your machine: ${_IPTHIS} is set to:"
+_echoa "mail.${_DOMAIN_FQDN}"
+_askno "Valid to continue"
 
 
 _echot "------------------  firewall conf"
 file=${S_PATH_CONF}/iptables-firewall.conf
 if [ -f "${file}" ]; then
-	_echo "Verify that the following ports are corrects for mails: $(sed -n 's|^_PORTS_MAIL="\(.*\)"$|\1|p' ${file})"
-	_askno "If not, open the file: '${file}' and adjust settings\nand confirm"
+	_echoA "Verify that the following ports are corrects for mails:"
+	_echo "$(sed -n 's|^_PORTS_MAIL="\(.*\)"$|\1|p' ${file})"
+	_echoa "If not, open the file: '${file}' and adjust settings"
+	_askno "Valid to continue"
 else
 	_echoe "Unable to find file: ${file}\nPlease configure input mail ports in your firewall"
 fi

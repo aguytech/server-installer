@@ -17,11 +17,18 @@ lxc list -f csv -c n | grep -q ^${S_SERVICE[log]}$ || _exite "Unable to find con
 
 _echot "------------------ select"
 
-anstmp=${S_DOMAIN_FQDN} && _askno "Domain name to use (${anstmp})"
-_DOMAIN_FQDN="${_ANSWER:-${anstmp}}"
+anstmp="17112018.fr.lxd 17112018.ovh.lxd ambau.fr.lxd ambau.ovh.lxd ggj.fr.lxd ggj.ovh.lxd han-sci.fr.lxd otokoz.ovh.lxd"
+[ "${_DOMAIN_FQDN%.lxd}" = "${_DOMAIN_FQDN}" ] && anstmp=${anstmp//.lxd/}
+_askno "All FQDN domains (${anstmp})"
+_DOMAIN_ALL_FQDN="${_ANSWER:-${anstmp}}"
+
+_menu "A principal fqdn domain (ambau.fr)" ${_DOMAIN_ALL_FQDN}
+_DOMAIN_FQDN="${_ANSWER}"
+
 _DOMAIN_NAME=${_DOMAIN_FQDN%.lxd} && _DOMAIN_NAME=${_DOMAIN_NAME%.*}
 _FILE_INSTALL_CONF=${S_PATH_CONF}/${_PART}-${_DOMAIN_FQDN}.conf
 _confset _FILE_INSTALL_CONF "${_FILE_INSTALL_CONF}" ${_FILE_INSTALL_CONF}
+_confset _DOMAIN_ALL_FQDN "${_DOMAIN_ALL_FQDN}" ${_FILE_INSTALL_CONF}
 _confset _DOMAIN_FQDN "${_DOMAIN_FQDN}" ${_FILE_INSTALL_CONF}
 _confset _DOMAIN_NAME "${_DOMAIN_NAME}" ${_FILE_INSTALL_CONF}
 
@@ -33,7 +40,7 @@ if ! _parthave ${_PARTMAIL} ${S_FILE_INSTALL_DONE}; then
 	[ "$_STEP" ] && _askno "Valid to continue" 
 else
 	. ${_FILE_INSTALL_CONF}
-	_echoW "performed *** ${_PARTMAIL}"
+	_echO "performed *** ${_PARTMAIL}"
 fi
 
 ####################  INIT
@@ -43,7 +50,7 @@ if ! _parthave ${_PARTMAIL} ${S_FILE_INSTALL_DONE}; then
 	. "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PARTMAIL}.install" || _exite "Wrong part: ${_PARTMAIL}"
 	[ "$_STEP" ] && _askno "Valid to continue" 
 else
-	_echoW "performed *** ${_PARTMAIL}"
+	_echO "performed *** ${_PARTMAIL}"
 fi
 
 ####################  SSL
@@ -53,7 +60,7 @@ if ! _parthave ${_PARTMAIL} ${S_FILE_INSTALL_DONE}; then
 	. "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PARTMAIL}.install" || _exite "Wrong part: ${_PARTMAIL}"
 	[ "$_STEP" ] && _askno "Valid to continue" 
 else
-	_echoW "performed *** ${_PARTMAIL}"
+	_echO "performed *** ${_PARTMAIL}"
 fi
 
 ####################  MARIADB
@@ -63,7 +70,7 @@ if ! _parthave ${_PARTMAIL} ${S_FILE_INSTALL_DONE}; then
 	. "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PARTMAIL}.install" || _exite "Wrong part: ${_PARTMAIL}"
 	[ "$_STEP" ] && _askno "Valid to continue" 
 else
-	_echoW "performed *** ${_PARTMAIL}"
+	_echO "performed *** ${_PARTMAIL}"
 fi
 
 ####################  _VMAIL_APP
@@ -73,7 +80,7 @@ if ! _parthave ${_PARTMAIL} ${S_FILE_INSTALL_DONE}; then
 	. "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PARTMAIL}.install" || _exite "Wrong part: ${_PARTMAIL}"
 	[ "$_STEP" ] && _askno "Valid to continue" 
 else
-	_echoW "performed *** ${_PARTMAIL}"
+	_echO "performed *** ${_PARTMAIL}"
 fi
 
 ####################  POSTFIX
@@ -83,7 +90,7 @@ if ! _parthave ${_PARTMAIL} ${S_FILE_INSTALL_DONE}; then
 	. "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PARTMAIL}.install" || _exite "Wrong part: ${_PARTMAIL}"
 	[ "$_STEP" ] && _askno "Valid to continue" 
 else
-	_echoW "performed *** ${_PARTMAIL}"
+	_echO "performed *** ${_PARTMAIL}"
 fi
 
 ####################  DOVECOT
@@ -93,12 +100,8 @@ if ! _parthave ${_PARTMAIL} ${S_FILE_INSTALL_DONE}; then
 	. "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PARTMAIL}.install" || _exite "Wrong part: ${_PARTMAIL}"
 	[ "$_STEP" ] && _askno "Valid to continue" 
 else
-	_echoW "performed *** ${_PARTMAIL}"
+	_echO "performed *** ${_PARTMAIL}"
 fi
-
-
-
-exit
 
 ####################  RSPAMD
 
@@ -107,19 +110,18 @@ if ! _parthave ${_PARTMAIL} ${S_FILE_INSTALL_DONE}; then
 	. "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PARTMAIL}.install" || _exite "Wrong part: ${_PARTMAIL}"
 	[ "$_STEP" ] && _askno "Valid to continue" 
 else
-	_echoW "performed *** ${_PARTMAIL}"
+	_echO "performed *** ${_PARTMAIL}"
 fi
 
 ####################  FAIL2BAN
 
-_PARTMAIL=mail-fail2ban
-if ! _parthave ${_PARTMAIL} ${S_FILE_INSTALL_DONE}; then
-	. "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PARTMAIL}.install" || _exite "Wrong part: ${_PARTMAIL}"
-	[ "$_STEP" ] && _askno "Valid to continue" 
-else
-	_echoW "performed *** ${_PARTMAIL}"
-fi
-
+#_PARTMAIL=mail-fail2ban
+#if ! _parthave ${_PARTMAIL} ${S_FILE_INSTALL_DONE}; then
+#	. "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PARTMAIL}.install" || _exite "Wrong part: ${_PARTMAIL}"
+#	[ "$_STEP" ] && _askno "Valid to continue" 
+#else
+#	_echO "performed *** ${_PARTMAIL}"
+#fi
 
 ########################  COPY
 
@@ -142,18 +144,10 @@ if ! lxc list -f json | jq -r '.[] | select(.name == "'${_CT_NAME}'").devices[].
 	_eval lxc config device override ${_CT_NAME} eth0 ipv4.address=${_CT_IP}
 fi
 
-
-########################  TEST
-
-_echot "------------------  mail test"
-
-
-
-
 ########################  HAPROXY
 
-_echoI "\nAdjust backend in proxy for backend: ${S_SERVICE[mail]} with:"
-_echo $(for i in `seq 1 ${_CT_NUM}`; do echo ${_CT_NAME}-${i};done)
+_echoA "Adjust backend in proxy for backend: ${S_SERVICE[mail]} with:"
+_echoa $(for i in `seq 1 ${_CT_NUM}`; do echo ${_CT_NAME}-${i};done)
 
 ########################  PUBLISH
 

@@ -48,7 +48,8 @@ if [ "${ssl_api}" =  letsencrypt ]; then
 	# privkey.pem: Your certificate’s private key / Private key for mailserver certificate
 
 	_echot "------------------  copy letsencrypt"
-	_echoI "Copy backup of letsencrypt certs and valid" && read str
+	_echoA "Copy backup of letsencrypt certs"
+	_askno "Valid to continue"
 
 	if ! _lxc_exec ${ct_proxy} "[ -d /etc/letsencrypt/live/mail.${_DOMAIN_FQDN} ]"; then
 

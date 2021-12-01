@@ -5,47 +5,34 @@
 _PART=conf-init
 echo -e "${cyanb}==========================================  ${_PART}${cclear}"
 
-
-########################  DATA
-
-echo -e "${cyan}----------  data${cclear}"
+########################  REQUIRED
 
 S_PATH_INSTALL=`dirname "$(readlink -e "${BASH_SOURCE[0]}")"`
 S_PATH_INSTALL_CONF=${S_PATH_INSTALL}/conf
 
 file_conf_server=${S_PATH_INSTALL}/conf-server.install
 file_install_server=${S_PATH_INSTALL_CONF}/server.conf
+file_install_server_ovh=${S_PATH_INSTALL_CONF}/server-ovh.conf
 
-[ ${USER} != root ] && _SUDO=sudo
-
-
-########################  PRE
+for file in ${file_conf_server} ${file_install_server} ${file_install_server_ovh}; do
+	! ${_SUDO} [ -f "${file}" ] && echo -e "${redb}[error] Unable to find file: ${file}${cclear}" && exit 1
+done
 
 ! [ -d ${S_PATH_SCRIPT} ] && echo -e "${redb}[error] Unable to find path script: '${S_PATH_SCRIPT}'${cclear}" && exit 1
 
-echo -e "${cyan}----------  initialisation${cclear}"
+########################  DATA
 
-echo -n "unable to find initial configuration, Do you want to do it? (y)/n: "
-read answer && [ "${answer}" = n ] && exit
+[ ${USER} != root ] && _SUDO=sudo
 
+echo -e "${cyan}----------  data${cclear}"
 
-echo -e "${cyan}----------  required files${cclear}"
-
-for file in "${file_conf_server}" "${file_install_server}"; do
-	! ${_SUDO} [ -f ${file} ] && echo -e "${redb}[error] unable to find file: '${file}'${cclear}" && exit 1
-done
-
+echo "Unable to find initial configuration"
+echo -n "Do you want to copy ovh configuration? (Y/n): "
+read answer && copy_file_install=${answer:-y} && copy_file_install=${copy_file_install/n/}
 
 ########################  MAIN
 
-echo -e "${cyan}----------  log path${cclear}"
-
-[ -d "${_PATH_LOG}" ] || ${_SUDO} mkdir -p "${_PATH_LOG}"
-[ ${USER} != root ] && sudo chown :1000 "${_PATH_LOG}" && sudo chmod g+rw "${_PATH_LOG}"
-
-
 echo -e "${cyan}----------  paths rights${cclear}"
-
 # install path
 path=${_PATH_BASE}
 ${_SUDO} chown root:root -R ${path}
@@ -56,9 +43,7 @@ path=${S_PATH_SCRIPT}
 ${_SUDO} chown root:root -R ${path}
 ${_SUDO} chmod g+rw,o-rwx -R ${path}
 
-
 echo -e "${cyan}----------  conf rights${cclear}"
-
 for path in "${S_PATH_CONF}/ssl/private" "${S_PATH_CONF}/ssl/certs"; do
 	! ${_SUDO} [ -d "$path" ] && ${_SUDO} mkdir -p "$path"
 done
@@ -76,34 +61,18 @@ if [ ${USER} != root ]; then
 	sudo find "${S_PATH_CONF}" -maxdepth 1 -type f -exec chown 0:1000 "{}" \;
 fi
 
-echo -e "${cyan}----------  server.conf${cclear}"
-
-[ -f "${S_GLOBAL_CONF}" ] || ${_SUDO} cp -a "${file_install_server}" "${S_GLOBAL_CONF}"
-
-echo "If you want to use a specific 'server.conf' , put this file to '${S_GLOBAL_CONF}'"
-echo "cp /usr/local/install/conf/server.conf-ovh /etc/server/server.conf"
-echo -n "and valid to continue : " && read _ANSWER
+if ! [ -f "${S_GLOBAL_CONF}" ]; then
+	echo -e "${cyan}----------  server.conf${cclear}"
+	${_SUDO} cp -a "${file_install_server}" "${S_GLOBAL_CONF}"
+	[ "${copy_file_install}" ] && ${_SUDO} cp -a ${file_install_server_ovh} ${S_GLOBAL_CONF}
+fi
 . ${S_GLOBAL_CONF}
 
-echo -e "${cyan}----------  install files${cclear}"
-
-files="${S_FILE_INSTALL_CONF} ${S_FILE_INSTALL_DONE}"
-for file in ${files}; do
-	! [ -f "${file}" ] && _touchr "${file}"
-done
-
-. ${S_FILE_INSTALL_CONF}
-
-
 echo -e "${cyan}----------  fd open${cclear}"
-
 _redirect
 
-
 _echot "------------------  server settings"
-
 . "${file_conf_server}"
-
 
 ########################  END
 

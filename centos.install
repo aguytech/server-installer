@@ -21,9 +21,9 @@ S_FILE_INSTALL_DONE="$S_PATH_LOG_INSTALL/${S_RELEASE}.done"
 # openvz
 PARTSUB=ct-openvz
 if [ "$S_SERVER_TYPE" == vz ] && ! _parthave "$PARTSUB" "${S_FILE_INSTALL_DONE}"; then
-	_echoI "To mount device(s) in this container execute from hosting server :"
-	_echoI "${whiteb}Exit from this container ${_CTIDTHIS} and from host in a terminal launch :"
-	_echoI "'${_PATH_BASE_SUB}/${S_HOST_RELEASE}-${PARTSUB}.install ${_CTIDTHIS}'${cclear}"
+	_echoA "To mount device(s) in this container execute from hosting server :"
+	_echoa "${whiteb}Exit from this container ${_CTIDTHIS} and from host in a terminal launch :"
+	_echoa "'${_PATH_BASE_SUB}/${S_HOST_RELEASE}-${PARTSUB}.install ${_CTIDTHIS}'${cclear}"
 	_exit
 fi
 
