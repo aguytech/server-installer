@@ -17,15 +17,10 @@ frontend http
 	acl _HPX_DOMAIN_FQDN-admin		hdr(host) admin._HPX_DOMAIN_FQDN matomo._HPX_DOMAIN_FQDN monitor._HPX_DOMAIN_FQDN pfa._HPX_DOMAIN_FQDN pma._HPX_DOMAIN_FQDN
 	#acl _HPX_DOMAIN_FQDN-cloud		hdr(host) cloud._HPX_DOMAIN_FQDN nextcloud._HPX_DOMAIN_FQDN
 
-	# _HPX_DOMAIN_2_FQDN
-	#acl _HPX_DOMAIN_2_FQDN			hdr_end(host) -i _HPX_DOMAIN_2_FQDN
-
 	#redirect		scheme https code 301 if _HPX_DOMAIN_FQDN !_HPX_DOMAIN_FQDN-check !letsencrypt !{ ssl_fc }
 	#redirect		scheme https code 301 if !_HPX_DOMAIN_FQDN-check !letsencrypt !{ ssl_fc }
 
 	use_backend		letsencrypt if letsencrypt
 	use_backend		_HPX_DOMAIN_FQDN-admin if _HPX_DOMAIN_FQDN-admin
 	#use_backend		_HPX_DOMAIN_FQDN-cloud if _HPX_DOMAIN_FQDN-cloud
-	#use_backend		_HPX_DOMAIN_FQDN-admin if _HPX_DOMAIN_FQDN-admin or _HPX_DOMAIN_2_FQDN-admin
 	use_backend		_HPX_DOMAIN_FQDN if _HPX_DOMAIN_FQDN || _HPX_DOMAIN_FQDN-check
-	#use_backend		_HPX_DOMAIN_2_FQDN if _HPX_DOMAIN_2_FQDN

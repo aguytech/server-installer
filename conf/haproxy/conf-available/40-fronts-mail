@@ -14,3 +14,9 @@ frontend mail
 	option				tcplog
 	timeout client		60s
 	default_backend		S_SERVICE[mail]
+
+frontend rspamd
+	bind :S_RSPAMD_PORT[controller]
+	mode http
+	option			httplog
+	default_backend	rspamd

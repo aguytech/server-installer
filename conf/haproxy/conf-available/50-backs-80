@@ -10,19 +10,6 @@ backend letsencrypt
 	mode			http
 	server			letsencrypt 127.0.0.1:_HPX_LCRYPT_PORT
 
-backend rspamd
-	mode			http
-	#server			S_SERVICE[mail]	S_SERVICE[mail] check port S_RSPAMD_PORT[controller]
-
-backend S_SERVICE[mail]
-	mode			tcp
-	timeout server	60s
-	timeout connect	7s
-
-	option smtpchk
-	default-server	check port 80  inter 4s  fall 2  rise 1  resolvers lxd  resolve-prefer ipv4 # resolve-net 10.0.0.1/24
-	#server S_SERVICE[mail]	S_SERVICE[mail] check port 25
-
 backend _HPX_DOMAIN_FQDN
 	mode			http
 	#option			httpchk GET /ping-monitor "HTTP/1.1\r\nHost: _HPX_DOMAIN_FQDN"
@@ -57,16 +44,6 @@ backend _HPX_DOMAIN_FQDN-cloud
 	## backup
 	#server	wap-cloud-_HPX_CT_NAME-1	wap-cloud-_HPX_CT_NAME-1:80
 	#server	wap-cloud-_HPX_CT_NAME-2	wap-cloud-_HPX_CT_NAME-2:80  backup
-
-backend _HPX_DOMAIN_2_FQDN
-	mode			http
-	#option			httpchk GET /ping-monitor "HTTP/1.1\r\nHost: _HPX_DOMAIN_2_FQDN"
-	option			httpchk GET /ping-monitor
-	http-check		expect string pong
-	default-server	weight 20  maxconn 30  check  inter 4s  fall 2  rise 1  resolvers lxd  resolve-prefer ipv4 # resolve-net 10.0.0.1/24
-
-	#server	wap-_HPX_CT_2_NAME1	wap-_HPX_CT_2_NAME-1:80 weight 10 maxconn 30 check inter 4s
-	#server	wap-_HPX_CT_2_NAME2	wap-_HPX_CT_2_NAME-2:80 weight 10 maxconn 30 check inter 4s backup
 
 backend	_HPX_DOMAIN_FQDN-admin
 	mode			http

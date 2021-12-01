@@ -42,11 +42,22 @@ _SERVER_DEFAULT=${_ANSWER}
 
 _echot "------------------  data"
 
-anstmp=${S_DOMAIN_FQDN} && _askno "A first domain name: (${anstmp})" && _HPX_DOMAIN_FQDN="${_ANSWER:-${anstmp}}" && _confset _HPX_DOMAIN_FQDN "${_HPX_DOMAIN_FQDN}"
-anstmp=otokoz.ovh && _askno "A second fqdn second domain name: (${anstmp})" && _HPX_DOMAIN_2_FQDN="${_ANSWER:-${anstmp}}" && _confset _HPX_DOMAIN_2_FQDN "${_HPX_DOMAIN_2_FQDN}"
-anstmp=admin && _askno "Name for stats access (${anstmp})" && _HPX_ACCESS_USER="${_ANSWER:-${anstmp}}" && _confset _HPX_ACCESS_USER "${_HPX_ACCESS_USER}"
-anstmp=`_pwd` && _askno "Password to stats access (${anstmp})" && _HPX_ACCESS_PWD="${_ANSWER:-${anstmp}}" && _confset _HPX_ACCESS_PWD "${_HPX_ACCESS_PWD}"
-anstmp=/haproxy-stats && _askno "URI to access to admin site (${anstmp})" && _HPX_ACCESS_URI="${_ANSWER:-${anstmp}}" && _confset _HPX_ACCESS_URI "${_HPX_ACCESS_URI}"
+anstmp="17112018.fr.lxd 17112018.ovh.lxd ambau.fr.lxd ambau.ovh.lxd ggj.fr.lxd ggj.ovh.lxd han-sci.fr.lxd otokoz.ovh.lxd"
+[ "${_DOMAIN_FQDN%.lxd}" = "${_DOMAIN_FQDN}" ] && anstmp=${anstmp//.lxd/}
+_askno "All FQDN domains (${anstmp})"
+_HPX_DOMAIN_ALL_FQDN="${_ANSWER:-${anstmp}}" && _confset _HPX_DOMAIN_ALL_FQDN "${_HPX_DOMAIN_ALL_FQDN}" ${_FILE_INSTALL_CONF}
+
+_menu "A principal fqdn domain (ambau.fr)" ${_HPX_DOMAIN_ALL_FQDN}
+_HPX_DOMAIN_FQDN="${_ANSWER}" && _confset _HPX_DOMAIN_FQDN "${_HPX_DOMAIN_FQDN}" ${_FILE_INSTALL_CONF}
+
+anstmp=admin && _askno "Name for stats access (${anstmp})"
+_HPX_ACCESS_USER="${_ANSWER:-${anstmp}}" && _confset _HPX_ACCESS_USER "${_HPX_ACCESS_USER}"
+
+anstmp=`_pwd` && _askno "Password to stats access (${anstmp})"
+_HPX_ACCESS_PWD="${_ANSWER:-${anstmp}}" && _confset _HPX_ACCESS_PWD "${_HPX_ACCESS_PWD}"
+
+anstmp=/haproxy-stats && _askno "URI to access to admin site (${anstmp})"
+_HPX_ACCESS_URI="${_ANSWER:-${anstmp}}" && _confset _HPX_ACCESS_URI "${_HPX_ACCESS_URI}"
 
 _echot "------------------  data letsencrypt"
 
@@ -65,7 +76,6 @@ _CT_IP=${s_base}.${S_SERVICE_BITS[proxy]}
 
 _HPX_DOMAIN_NAME="${_HPX_DOMAIN_FQDN%.lxd}" && _HPX_DOMAIN_NAME="${_HPX_DOMAIN_NAME%.*}" && _confset _HPX_DOMAIN_NAME "${_HPX_DOMAIN_NAME}"
 _HPX_CT_NAME="${_HPX_DOMAIN_FQDN//./-}" && _confset _HPX_CT_NAME "${_HPX_CT_NAME}"
-_HPX_CT_2_NAME="${_HPX_DOMAIN_2_FQDN//./-}" && _confset _HPX_CT_2_NAME "${_HPX_CT_2_NAME}"
 _HPX_DNS_DEFAULT="${s_base}.1:53" && _confset _HPX_DNS_DEFAULT "${_HPX_DNS_DEFAULT}"
 
 _HPX_STATS_PORT=${S_HAPROXY_STATS_PORTS%% *} && _confset _HPX_STATS_PORT "${_HPX_STATS_PORT}"
@@ -84,18 +94,6 @@ path_ct=${S_VM_PATH_SHARE}/ssl/${_HPX_DOMAIN_FQDN}
 [ -d ${path} ] || _evalr mkdir -p ${path}
 _eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
 
-
-profile=ssl-${_HPX_DOMAIN_2_FQDN}
-_echot "------------------  profile ${profile}"
-
-lxc profile list -f csv|grep -q "^${profile}," && _eval lxc profile rename ${profile} ${profile}.${_SDATE}
-_eval lxc profile create ${profile}
-
-path=${S_HOST_PATH_SHARE}/ssl/${_HPX_DOMAIN_2_FQDN}
-path_ct=${S_VM_PATH_SHARE}/ssl/${_HPX_DOMAIN_2_FQDN}
-[ -d ${path} ] || _evalr mkdir -p ${path}
-_eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
-
 ########################  INIT
 
 _echot "------------------  init"
@@ -104,7 +102,7 @@ if lxc list -f csv -c n | grep -q ^${_CT_NAME}$; then
 	_echot "------------------ rename ${_CT_NAME} -> ${_CT_NAME}-${_SDATE}"
 	_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
 fi
-_eval lxc init ${_CT_NAME_COM} ${_CT_NAME} -p default -p global -p ssl-${_HPX_DOMAIN_FQDN} -p ssl-${_HPX_DOMAIN_2_FQDN}
+_eval lxc init ${_CT_NAME_COM} ${_CT_NAME} -p default -p global -p ssl-${_HPX_DOMAIN_FQDN}
 
 _echot "------------------  network fixed ip"
 if ! lxc list -f json | jq -r '.[] | select(.name == "'${_CT_NAME}'").devices[].name' | grep -q eth0; then
@@ -118,7 +116,7 @@ _eval lxc start ${_CT_NAME}
 ########################  METADATA
 
 _echot "------------------  metadata"
-_lxc_meta_set ${_CT_NAME} profiles default global ssl-${_HPX_DOMAIN_FQDN} ssl-${_HPX_DOMAIN_2_FQDN}
+_lxc_meta_set ${_CT_NAME} profiles default global ssl-${_HPX_DOMAIN_FQDN}
 _lxc_meta_add ${_CT_NAME} apps haproxy
 
 ########################  IPTABLES
@@ -180,7 +178,30 @@ _lxc_exec ${_CT_NAME} "[ -e ${file} ] || ln -s ${file_vim} ${file}"
 _echot "------------------  conf haproxy"
 path=/etc/haproxy
 _lxc_exec ${_CT_NAME} "[ -d ${path} ] && mv ${path} ${path}.${_SDATE}"
-_eval lxc file push -rq ${path_haproxy} ${_CT_NAME}/etc
+_eval lxc file push -rq ${path_haproxy} ${_CT_NAME}/backend _HPX_DOMAIN_FQDN
+	mode			http
+	#option			httpchk GET /ping-monitor "HTTP/1.1\r\nHost: _HPX_DOMAIN_FQDN"
+	option			httpchk GET /ping-monitor
+	http-check		expect string pong
+	default-server	weight 20  maxconn 30  check  inter 4s  fall 2  rise 1  resolvers lxd  resolve-prefer ipv4 # resolve-net 10.0.0.1/24
+	http-response		set-header  Strict-Transport-Security "max-age=16000000; includeSubDomains; preload;" # 16000000 seconds ~ 6 months
+
+	## balance
+	#balance		roundrobin
+	#cookie			PROXYBAL insert
+	#retries		3  # retries x times before to redispatch to other server
+	#option			redispatch
+	#server	wap-_HPX_CT_NAME-1	wap-_HPX_CT_NAME-1:80  cookie _HPX_CT_NAME-1
+	#server	wap-_HPX_CT_NAME-2	wap-_HPX_CT_NAME-2:80  cookie _HPX_CT_NAME-2
+	#server	wap-_HPX_CT_NAME-3	wap-_HPX_CT_NAME-3:80  cookie _HPX_CT_NAME-3
+	#server	wap-_HPX_CT_NAME-4	wap-_HPX_CT_NAME-4:80  cookie _HPX_CT_NAME-4
+
+	## backup
+	server	_SERVER_DEFAULT		_SERVER_DEFAULT:80
+	#server	wap-_HPX_CT_NAME-1	wap-_HPX_CT_NAME-1:80
+	#server	wap-_HPX_CT_NAME-2	wap-_HPX_CT_NAME-2:80  backup
+
+etc
 
 # select alpine configuration
 _lxc_exec ${_CT_NAME} "sed -i 's|^\(\s*\)#\(.*\) # alpine$|\1\2|' ${path}/haproxy.cfg"
@@ -191,8 +212,31 @@ _lxc_var_replace ${_CT_NAME} ${path} haproxy rspamd
 
 _echot "------------------  conf enable"
 _lxc_exec ${_CT_NAME} "[ -d ${path}/conf-enabled ] || mkdir -p ${path}/conf-enabled"
-files="00-defaults 02-resolvers-lxd 20-listen-stats 40-frontends-80 70-frontends-mail 80-backends"
-[ ${_HPX_DOMAIN_FQDN##*.} != lxd ] && files+=" 60-frontends-443"
+files="10-defaults 12-listen-stats 14-resolvers-lxd 20-fronts-80 40-fronts-mail 50-backs-80 60-backs-mail"
+[ ${_HPX_DOMAIN_FQDN##*.} != lxd ] && files+=" 30-fronts-443"backend _HPX_DOMAIN_FQDN
+	mode			http
+	#option			httpchk GET /ping-monitor "HTTP/1.1\r\nHost: _HPX_DOMAIN_FQDN"
+	option			httpchk GET /ping-monitor
+	http-check		expect string pong
+	default-server	weight 20  maxconn 30  check  inter 4s  fall 2  rise 1  resolvers lxd  resolve-prefer ipv4 # resolve-net 10.0.0.1/24
+	http-response		set-header  Strict-Transport-Security "max-age=16000000; includeSubDomains; preload;" # 16000000 seconds ~ 6 months
+
+	## balance
+	#balance		roundrobin
+	#cookie			PROXYBAL insert
+	#retries		3  # retries x times before to redispatch to other server
+	#option			redispatch
+	#server	wap-_HPX_CT_NAME-1	wap-_HPX_CT_NAME-1:80  cookie _HPX_CT_NAME-1
+	#server	wap-_HPX_CT_NAME-2	wap-_HPX_CT_NAME-2:80  cookie _HPX_CT_NAME-2
+	#server	wap-_HPX_CT_NAME-3	wap-_HPX_CT_NAME-3:80  cookie _HPX_CT_NAME-3
+	#server	wap-_HPX_CT_NAME-4	wap-_HPX_CT_NAME-4:80  cookie _HPX_CT_NAME-4
+
+	## backup
+	server	_SERVER_DEFAULT		_SERVER_DEFAULT:80
+	#server	wap-_HPX_CT_NAME-1	wap-_HPX_CT_NAME-1:80
+	#server	wap-_HPX_CT_NAME-2	wap-_HPX_CT_NAME-2:80  backup
+
+
 for str in ${files}; do
 	_lxc_exec ${_CT_NAME} "[ -e ${path}/conf-enabled/${str} ] || ln -s ${path}/conf-available/${str}  ${path}/conf-enabled/${str}"
 done
@@ -217,9 +261,10 @@ if [ "${_HPX_LCRYPT_ENABLE}" ]; then
 	_lxc_exec ${_CT_NAME} "apk add certbot openssl"
 
 	_echot "------------------  copy letsencrypt"
-	_echoI "Copy backup of letsencrypt certs and valid" && read str
+	_echoA "Copy backup of letsencrypt certs" && read str
+	_askno "Valid to continue"
 
-	for domain in ${_HPX_DOMAIN_FQDN} ${_HPX_DOMAIN_2_FQDN}; do
+	for domain in ${_HPX_DOMAIN_ALL_FQDN}; do
 
 		if ! _lxc_exec ${_CT_NAME} "[ -d /etc/letsencrypt/live/${domain} ]"; then
 
@@ -357,14 +402,14 @@ _eval lxc publish --force ${_CT_NAME} --alias ${_CT_NAME}
 
 _echot "------------------  test haproxy"
 
-_echoI "password to access to  haproxy: ${_HPX_ACCESS_PWD}"
-_echoW "${_IPTHIS}:${_HPX_STATS_PORT}${_HPX_ACCESS_URI}"
+_echoA "password to access to  haproxy: ${_HPX_ACCESS_PWD}"
+_echoa "${_IPTHIS}:${_HPX_STATS_PORT}${_HPX_ACCESS_URI}"
 
 _echot "------------------  test ${_CT_NAME}"
 
-_echoI "To test connection type:"
-_echo "curl ${_IPTHIS}:80"
-_echo "curl ${_HPX_DOMAIN_FQDN}:80"
+_echoA "To test connection type:"
+_echoa "curl ${_IPTHIS}:80"
+_echoa "curl ${_HPX_DOMAIN_FQDN}:80"
 
 
 ########################  END
