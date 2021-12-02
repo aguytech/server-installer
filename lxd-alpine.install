@@ -33,14 +33,6 @@ S_FILE_INSTALL_DONE="${S_PATH_CONF}/lxd.done" && _confset S_PATH_INSTALL "${S_FI
 [ -z ${_RELEASE_PART+x} ] && _RELEASE_PART=lxd-${_RELEASE_ID} && _confset _RELEASE_PART "${_RELEASE_PART}"
 _IP_HOST_VM=${_CIDR_VM%/*} && _confset _IP_HOST_VM "${_IP_HOST_VM}"
 
-########################  MANDATORY
-
-# init common
- parts="init common"
-for _PART in ${parts}; do
-	! _parthave "${_PART}" "$S_FILE_INSTALL_DONE" && _source "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PART}.install"
-done
-
 ########################  MENU
 
 while [ "${_PART}" != "quit" ]; do
@@ -68,6 +60,9 @@ while [ "${_PART}" != "quit" ]; do
 		case "$_PART" in
 			quit)
 				break
+				;;
+			init) # ovh home
+				_source "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PART#++}.install"
 				;;
 			rsyslog) # ovh home
 				_source "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PART#++}.install"
@@ -97,6 +92,9 @@ while [ "${_PART}" != "quit" ]; do
 				_source "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PART#++}.install"
 				;;
 			nextcloud) # ovh home
+				_source "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PART#++}.install"
+				;;
+			++init) # ovh home
 				_source "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PART#++}.install"
 				;;
 			++apache) # ovh home

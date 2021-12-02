@@ -6,21 +6,33 @@ _echoT "\n==========================================  ${_RELEASE_ID} ${_PART}"
 
 grep -q "^# ${_PART#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART}" >> ${S_FILE_INSTALL_CONF}
 
+########################  REQUIRED
+
+file_rsyslog_cron=${S_PATH_INSTALL_CONF}/rsyslog/cron.conf
+file_rsyslog_client_auth=${S_PATH_INSTALL_CONF}/rsyslog/client-auth.conf
+file_rsyslog_client_mail=${S_PATH_INSTALL_CONF}/rsyslog/client-mail.conf
+file_logrotate_server=${S_PATH_INSTALL_CONF}/logrotate/server
+
+_echot "------------------  required files"
+_require ${file_rsyslog_cron} ${file_rsyslog_client_auth} ${file_rsyslog_client_mail} ${file_logrotate_server}
+
 ########################  DATA
 
 _echot "------------------  data"
-[ -z ${_RELEASE_NAME+x} ] && anstmp="3.15" && _askno "Give a version image container for LXC ${_RELEASE_ID} (${anstmp})" && _RELEASE_NAME="${_ANSWER:-$anstmp}" && _confset _RELEASE_NAME "${_RELEASE_NAME}"
+anstmp=3.15 && _askno "Give a version image container for LXC ${_RELEASE_ID} (${anstmp})"
+_RELEASE_NAME="${_ANSWER:-$anstmp}" && _confset _RELEASE_NAME "${_RELEASE_NAME}"
 
-[ -z ${_RELEASE+x} ] && _RELEASE=${_RELEASE_ID}${_RELEASE_NAME} && _confset _RELEASE "${_RELEASE}"
-_CT_NAME="${_RELEASE/./}"
-_CT_NAME_COM="${_CT_NAME}-com" && _confset _CT_NAME_COM "${_CT_NAME_COM}"
+_RELEASE=${_RELEASE_ID}${_RELEASE_NAME} && _confset _RELEASE "${_RELEASE}"
+_IMG_NAME="${_RELEASE/./}"
+_CT_INIT_NAME=${_IMG_NAME}-init && _confset _CT_INIT_NAME "${_CT_INIT_NAME}"
+_CT_NAME=${_CT_INIT_NAME}
 
 ########################  COPY
 
-_echot "------------------  image copy ${_CT_NAME}"
-if ! lxc image list -f csv -c L|grep -q ^${_CT_NAME}$; then
-	_echo "copy images ${_CT_NAME}"
-	_eval lxc image copy images:${_RELEASE_ID}/${_RELEASE_NAME} local: --alias ${_CT_NAME} --auto-update
+_echot "------------------  image copy ${_IMG_NAME}"
+if ! lxc image list -f csv -c L|grep -q ^${_IMG_NAME}$; then
+	_echo "copy images ${_IMG_NAME}"
+	_eval lxc image copy images:${_RELEASE_ID}/${_RELEASE_NAME} local: --alias ${_IMG_NAME} --auto-update
 fi
 
 ########################  PROFILE
@@ -40,65 +52,198 @@ _eval lxc profile device add ${profile} global disk source=${path} path=${path_c
 
 _echot "------------------  init"
 
-if lxc list -f csv -c n | grep -q ^${_CT_NAME_COM}$; then
-	lxc list -f csv -c n status=Running | grep -q ^${_CT_NAME_COM}$ && lxc stop ${_CT_NAME_COM}
-	_echot "------------------ rename ${_CT_NAME_COM} -> ${_CT_NAME_COM}-${_SDATE}"
-	_eval lxc rename ${_CT_NAME_COM} ${_CT_NAME_COM}-${_SDATE}
+if lxc list -f csv -c n | grep -q ^${_CT_NAME}$; then
+	lxc list -f csv -c n status=Running | grep -q ^${_CT_NAME}$ && lxc stop ${_CT_NAME}
+	_echot "------------------ rename ${_CT_NAME} -> ${_CT_NAME}-${_SDATE}"
+	_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
 fi
-_eval lxc init ${_CT_NAME} ${_CT_NAME_COM} -p stock -p global
+_eval lxc init ${_IMG_NAME} ${_CT_NAME} -p stock -p global
 
-if lxc list -f csv -c n status=Stopped | grep -q ^${_CT_NAME_COM}$; then
-	_echot "------------------  start ${_CT_NAME_COM}"
-	_eval lxc start ${_CT_NAME_COM}
+if lxc list -f csv -c n status=Stopped | grep -q ^${_CT_NAME}$; then
+	_echot "------------------  start ${_CT_NAME}"
+	_eval lxc start ${_CT_NAME}
 fi
 
 ########################  METADATA
 
 _echot "------------------  metadata"
-_lxc_meta_set ${_CT_NAME_COM} profiles stock global
-
-########################  CONF
-
-_echot "------------------  apk update"
-_lxc_exec ${_CT_NAME_COM} "apk update && apk upgrade"
-
-_echot "------------------  timezone Paris"
-_lxc_exec ${_CT_NAME_COM} "apk add tzdata"
-_lxc_exec ${_CT_NAME_COM} "cp /usr/share/zoneinfo/Europe/Paris /etc/localtime && echo 'Europe/Paris' > /etc/timezone && date"
-_lxc_exec ${_CT_NAME_COM} "apk del tzdata"
+_lxc_meta_set ${_CT_NAME} profiles stock global
 
 ########################  PATHS
 
 _echot "------------------  path bs"
 path=/usr/local/bs
-_lxc_exec ${_CT_NAME_COM} "[ -d ${path} ] && mv ${path} ${path}.${_SDATE}"
-_eval lxc file push -rq ${path} ${_CT_NAME_COM}/usr/local/
+_lxc_exec ${_CT_NAME} "[ -d ${path} ] && mv ${path} ${path}.${_SDATE}"
+_eval lxc file push -rq ${path} ${_CT_NAME}/usr/local/
 
 _echot "------------------  path server"
 paths="${S_PATH_CONF} ${S_PATH_CONF_SSL}/private ${S_PATH_CONF_SSL}/certs"
 for path in ${paths}; do
-	_lxc_exec ${_CT_NAME_COM} "[ -d ${path} ] || mkdir -p ${path}"
-	_lxc_exec ${_CT_NAME_COM} "chown 0:0 -R ${path}"
+	_lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
+	_lxc_exec ${_CT_NAME} "chown 0:0 -R ${path}"
 done
-_lxc_exec ${_CT_NAME_COM} "chown -R 0:0 ${S_PATH_CONF_SSL} && chmod -R 750 ${S_PATH_CONF_SSL}"
-_lxc_exec ${_CT_NAME_COM} "chmod 700 -R ${S_PATH_CONF_SSL}/private"
+_lxc_exec ${_CT_NAME} "chown -R 0:0 ${S_PATH_CONF_SSL} && chmod -R 750 ${S_PATH_CONF_SSL}"
+_lxc_exec ${_CT_NAME} "chmod 700 -R ${S_PATH_CONF_SSL}/private"
 
-_lxc_exec ${_CT_NAME_COM} "[ -h /server ] || ln -s /etc/server /server"
+_lxc_exec ${_CT_NAME} "[ -h /server ] || ln -s /etc/server /server"
+
+########################  CONF
+
+_echot "------------------  apk update"
+_lxc_exec ${_CT_NAME} "apk update && apk upgrade"
+
+_echot "------------------  timezone Paris"
+_lxc_exec ${_CT_NAME} "apk add tzdata"
+_lxc_exec ${_CT_NAME} "cp /usr/share/zoneinfo/Europe/Paris /etc/localtime && echo 'Europe/Paris' > /etc/timezone && date"
+_lxc_exec ${_CT_NAME} "apk del tzdata"
+
+_echot "------------------  conf profile.d"
+_lxc_exec ${_CT_NAME} "[ -e /etc/profile.d/bash-lxc-aliases.sh ] || ln -s ${S_PATH_SCRIPT_CONF}/bash-lxc-aliases.sh /etc/profile.d/bash-lxc-aliases.sh"
+_lxc_exec ${_CT_NAME} "[ -e /etc/profile.d/bash-lxc-alpine.sh ] || ln -s ${S_PATH_SCRIPT_CONF}/bash-lxc-alpine.sh /etc/profile.d/bash-lxc-alpine.sh"
+_lxc_exec ${_CT_NAME} "[ -e /etc/profile.d/bash_functions.sh ] || ln -s ${S_PATH_SCRIPT_CONF}/.bash_functions /etc/profile.d/bash_functions.sh"
+_lxc_exec ${_CT_NAME} "[ -e /etc/profile.d/env.sh ] || ln -s ${S_PATH_SCRIPT_CONF}/env /etc/profile.d/env.sh"
+
+# not for busybox
+#_lxc_exec ${_CT_NAME} "echo -e 'set showmatch\nset tabstop=4\nset shiftwidth=4' | tee -a /etc/vimrc /etc/exrc"
+
+file="/tmp/server.conf"
+_evalr cp ${S_GLOBAL_CONF} ${file}
+_evalr "sed -i 's|^\(S_RELEASE\)=.*$|\1=\"${_RELEASE}\"|' ${file}"
+_evalr "sed -i 's|^\(S_RELEASE_ID\)=.*$|\1=\"${_RELEASE_ID}\"|' ${file}"
+_evalr "sed -i 's|^\(S_RELEASE_NAME\)=.*$|\1=\"${_RELEASE_NAME}\"|' ${file}"
+_evalr "sed -i 's|^\(S_ETH\)=.*$|\1=\"eth0\"|' ${file}"
+_evalr "sed -i 's|^\(S_SERVER_TYPE\)=.*$|\1=\"lxd\"|' ${file}"
+_evalr "sed -i 's|^\(S_PATH_INSTALL\)=.*$|\1=\"/usr/local/install\"|' ${file}"
+
+_eval lxc file push -q ${file} ${_CT_NAME}${S_PATH_CONF}/server.conf
+_lxc_exec ${_CT_NAME} "chmod 700 -R ${S_PATH_CONF}"
 
 ########################  HOSTS
 
 #_echot "------------------  hosts"
 
 #file=" /etc/hosts"
-#if ! [ "$(_lxc_exec ${_CT_NAME} "grep '\ssrv-' ${file}")" ]; then
-#	_lxc_exec ${_CT_NAME} "echo >> ${file}"
-#	_lxc_exec ${_CT_NAME} "echo \"# DNS for services\" >> ${file}"
+#if ! [ "$(_lxc_exec ${_IMG_NAME} "grep '\ssrv-' ${file}")" ]; then
+#	_lxc_exec ${_IMG_NAME} "echo >> ${file}"
+#	_lxc_exec ${_IMG_NAME} "echo \"# DNS for services\" >> ${file}"
 #	for str in ${!S_SERVICE[*]}; do
-#		echo _lxc_exec ${_CT_NAME} "echo \"${S_SERVICE[$str]}	${str}\" >> ${file}"
+#		echo _lxc_exec ${_IMG_NAME} "echo \"${S_SERVICE[$str]}	${str}\" >> ${file}"
 #	done
 #fi
+
+########################  CRON
+
+_echot "------------------  cron"
+file="/etc/crontabs/root"
+_lxc_exec ${_CT_NAME} "sed -i '/^\*\/15/ s|^|#|' ${file}"
+_lxc_exec ${_CT_NAME} rc-service -S crond start
+
+file=/etc/crontabs/mail
+_lxc_exec ${_CT_NAME} "echo 'MAILTO=${S_DOMAIN_EMAIL_TECH}' > ${file}"
+
+_echot "------------------  cron restart"
+_lxc_exec ${_CT_NAME} "rc-service crond restart"
+
+########################  SYSLOG
+
+_echot "------------------  syslog remove"
+_lxc_exec ${_CT_NAME} "rc-service syslog stop"
+_lxc_exec ${_CT_NAME} "rc-status boot|grep -q '^\s*syslog\s' && rc-update del syslog boot"
+
+########################  RSYSLOG
+
+_echot "------------------  rsyslog install"
+_lxc_exec ${_CT_NAME} "apk list -I|grep -q ^rsyslog || apk add rsyslog"
+path="/etc/rsyslog.d"
+_lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir ${path}"
+
+_echot "------------------  rsyslog vm enable"
+service="rsyslog"
+_lxc_exec ${_CT_NAME} "rc-update add ${service}"
+
+_echot "------------------  rsyslog conf"
+
+file="/etc/rsyslog.conf"
+_lxc_exec ${_CT_NAME} "[ -f ${file} ] && cp -a ${file} ${file}.${_SDATE}"
+
+_lxc_exec ${_CT_NAME} "sed -i '/#module(load=.immark/ s|^#||' ${file}"
+_lxc_exec ${_CT_NAME} "sed -i '/^module(load=.imklog/ s|^|#|' ${file}"
+_lxc_exec ${_CT_NAME} "sed -i '/#module(load=.imuxsock/ s|^#||' ${file}"
+_lxc_exec ${_CT_NAME} "sed -i '/module(load=.imuxsock/ s|=.*|=\"imuxsock\" SysSock.RateLimit.Interval=\"5\" SysSock.RateLimit.Burst=\"200\")|' ${file}"
+
+_echot "------------------  rsyslog cron & mail"
+
+file=/etc/rsyslog.conf
+_lxc_exec ${_CT_NAME} "sed -i '/^cron/ s|^|#|' ${file}"
+file=/etc/rsyslog.conf
+_lxc_exec ${_CT_NAME} "sed -i '/^mail/ s|^|#|' ${file}"
+
+file=/etc/rsyslog.d/${file_rsyslog_cron##*/}
+_eval lxc file push -q ${file_rsyslog_cron} ${_CT_NAME}${file}
+_lxc_var_replace ${_CT_NAME} ${file} rsyslog
+
+_echot "------------------  rsyslog client-auth"
+file=/etc/rsyslog.d/${file_rsyslog_client_auth##*/}
+_eval lxc file push -q ${file_rsyslog_client_auth} ${_CT_NAME}${file}
+_lxc_var_replace ${_CT_NAME} ${file} rsyslog
+
+_echot "------------------  rsyslog client-mail"
+file=/etc/rsyslog.d/${file_rsyslog_client_mail##*/}
+_eval lxc file push -q ${file_rsyslog_client_mail} ${_CT_NAME}${file}
+_lxc_var_replace ${_CT_NAME} ${file} rsyslog
+
+_echot "------------------  rsyslog vm start"
+_lxc_exec ${_CT_NAME} "rc-update add rsyslog"
+_lxc_exec ${_CT_NAME} "rc-service -S rsyslog start"
+
+########################  LOGROTATE
+
+_echot "------------------  logrotate install"
+_lxc_exec ${_CT_NAME} "apk list -I | grep -q ^logrotate || apk add logrotate"
+
+_echot "------------------  logrotate global"
+file=/etc/logrotate.conf
+_lxc_exec ${_CT_NAME} "sed -i '/^#dateext/ s|^#||' ${file}"
+
+_echot "------------------  logrotate conf server"
+file=/etc/logrotate.d/${file_logrotate_server##*/}
+_eval lxc file push -q ${file_logrotate_server} ${_CT_NAME}${file}
+_lxc_var_replace ${_CT_NAME} ${file} logrotate
+
+_echot "------------------  logrotate start"
+_lxc_exec ${_CT_NAME} rc-service -s rsyslog restart
+_lxc_exec ${_CT_NAME} rc-service -S rsyslog start
+
+########################  MAIL
+
+_echot "------------------  postfix install"
+_lxc_exec ${_CT_NAME} apk add postfix
+
+_echot "------------------  postfix conf"
+file=/etc/postfix/main.cf
+_lxc_exec ${_CT_NAME} "[ -f ${file} ] && cp -a ${file} ${file}.init"
+while read str val; do
+	_lxc_exec ${_CT_NAME} "postconf '${str}=${val}'"
+done <<< "mydomain lxd
+mynetworks 127.0.0.1/32
+mynetworks_style host
+relayhost ${S_SERVICE[mail]}:25
+smtpd_relay_restrictions permit_mynetworks"
+
+_echot "------------------  postfix aliases"
+_lxc_exec ${_CT_NAME} newaliases
+
+_echot "------------------  postfix start"
+_lxc_exec ${_CT_NAME} rc-update add postfix
+_lxc_exec_e ${_CT_NAME} rc-service -S postfix start
+
+########################  PUBLISH
+
+_echot "------------------  publish ${_CT_NAME}"
+lxc image list -f csv -c l | grep -q ^${_CT_NAME}$ && _eval lxc image alias rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
+_eval lxc publish --force ${_CT_NAME} --alias ${_CT_NAME}
 
 ########################  END
 
 _echoT "===================== ${_PART} end"
-_partadd ${_PART} ${S_FILE_INSTALL_DONE}
+_partadd ${_PART#++} ${S_FILE_INSTALL_DONE}
