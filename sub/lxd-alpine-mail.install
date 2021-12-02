@@ -7,7 +7,7 @@ _echoT "\n==========================================  ${_INSTALL}-${_PART}"
 ########################  REQUIRED
 
 _echot "------------------ required vm image"
-lxc image list -f csv -c l | grep -q ^${_CT_NAME_COM}$ || _exite "Unable to find image container: '${_CT_NAME_COM}'"
+lxc image list -f csv -c l | grep -q ^${_CT_INIT_NAME}$ || _exite "Unable to find image container: '${_CT_INIT_NAME}'"
 
 _echot "------------------ required vm"
 lxc list -f csv -c n | grep -q ^${S_SERVICE[proxy]}$ || _exite "Unable to find container: '${S_SERVICE[proxy]}'"

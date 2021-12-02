@@ -9,7 +9,7 @@ grep -q "^# ${_PART#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART}" >> ${S_FI
 ########################  REQUIRED
 
 _echot "------------------ required vm image"
-lxc image list -f csv -c l | grep -q ^${_CT_NAME_COM}$ || _exite "Unable to find image container: '${_CT_NAME_COM}'"
+lxc image list -f csv -c l | grep -q ^${_CT_INIT_NAME}$ || _exite "Unable to find image container: '${_CT_INIT_NAME}'"
 
 _echot "------------------ required vm"
 lxc list -f csv -c n | grep -q ^${S_SERVICE[log]}$ || _exite "Unable to find container: '${S_SERVICE[log]}'"
@@ -91,7 +91,7 @@ if lxc list -f csv -c n | grep -q ^${_CT_NAME}$; then
 	_echot "------------------ rename ${_CT_NAME} -> ${_CT_NAME}-${_SDATE}"
 	_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
 fi
-_eval lxc init ${_CT_NAME_COM} ${_CT_NAME} -p default -p global
+_eval lxc init ${_CT_INIT_NAME} ${_CT_NAME} -p default -p global
 
 _echot "------------------  ${_CT_NAME} start"
 _eval lxc start ${_CT_NAME}
@@ -236,4 +236,4 @@ _eval lxc publish --force ${_CT_NAME} --alias ${_CT_NAME}
 ########################  END
 
 _echoT "===================== ${_PART} end"
-_partadd ${_PART} ${S_FILE_INSTALL_DONE}
+_partadd ${_PART#++} ${S_FILE_INSTALL_DONE}

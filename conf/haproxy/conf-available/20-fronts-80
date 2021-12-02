@@ -9,6 +9,7 @@ frontend http
 	default_backend	default
 
 	acl letsencrypt			path_beg /.well-known/acme-challenge/
+	
 	acl _HPX_DOMAIN_FQDN		hdr_end(host) -i _HPX_DOMAIN_FQDN
 	#acl _HPX_DOMAIN_FQDN			hdr_sub(host) -i _HPX_DOMAIN_FQDN
 	acl _HPX_DOMAIN_FQDN-check		path_dir /ping-monitor /server-status /server-info /status-www /status-www-admin /ping-www

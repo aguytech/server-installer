@@ -56,7 +56,7 @@ if lxc list -f csv -c n | grep -q ^${_CT_NAME}$; then
 	_echot "------------------ rename ${_CT_NAME} -> ${_CT_NAME}-${_SDATE}"
 	_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
 fi
-_eval lxc init ${_CT_NAME_COM} ${_CT_NAME} -p default -p global -p ssl-mail -p ${profile}
+_eval lxc init ${_CT_INIT_NAME} ${_CT_NAME} -p default -p global -p ssl-mail -p ${profile}
 
 _echot "------------------  network fixed ip"
 if ! lxc list -f json | jq -r '.[] | select(.name == "'${_CT_NAME}'").devices[].name' | grep -q eth0; then

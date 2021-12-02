@@ -9,7 +9,7 @@ grep -q "^# ${_PART#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART}" >> ${S_FI
 ########################  REQUIRED
 
 _echot "------------------ required vm image"
-lxc image list -f csv -c l | grep -q ^${_CT_NAME_COM}$ || _exite "Unable to find image container: '${_CT_NAME_COM}'"
+lxc image list -f csv -c l | grep -q ^${_CT_INIT_NAME}$ || _exite "Unable to find image container: '${_CT_INIT_NAME}'"
 
 file_rsyslog_host_auth=${S_PATH_INSTALL_CONF}/rsyslog/host-auth.conf
 file_logrotate_host_rsyslog=${S_PATH_INSTALL_CONF}/logrotate/host-rsyslog
@@ -57,7 +57,7 @@ if lxc list -f csv -c n | grep -q ^${_CT_NAME}$; then
 	_echot "------------------ rename ${_CT_NAME} -> ${_CT_NAME}-${_SDATE}"
 	_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
 fi
-_eval lxc init ${_CT_NAME_COM} ${_CT_NAME} -p default -p global -p ${profile}
+_eval lxc init ${_CT_INIT_NAME} ${_CT_NAME} -p default -p global -p ${profile}
 
 _echot "------------------  network fixed ip"
 if ! lxc list -f json | jq -r '.[] | select(.name == "'${_CT_NAME}'").devices[].name' | grep -q eth0; then
@@ -183,4 +183,4 @@ _eval lxc publish --force ${_CT_NAME} --alias ${_CT_NAME}
 ########################  END
 
 _echoT "===================== ${_PART} end"
-_partadd ${_PART} ${S_FILE_INSTALL_DONE}
+_partadd ${_PART#++} ${S_FILE_INSTALL_DONE}
