@@ -10,7 +10,7 @@ grep -q "^# ${_PART#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART}" >> ${S_FI
 
 path_install_conf=${S_PATH_INSTALL_CONF/-desktop/}
 file_rsyslog_client_lxd=${path_install_conf}/rsyslog/client-lxd.conf
-file_logrotate_client_lxd=${path_install_conf}/rsyslog/client-lxd.conf
+file_logrotate_client_lxd=${path_install_conf}/logrotate/client-lxd
 
 _echot "------------------ required files"
 _require ${file_rsyslog_client_lxd} ${file_logrotate_client_lxd}

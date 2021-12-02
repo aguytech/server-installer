@@ -14,7 +14,7 @@ file_conf_iptables=${path_install_conf}/iptables/iptables-firewall.conf
 file_service_iptables=${path_install_conf}/iptables/iptables-firewall.service
 file_service_test_iptables=${path_install_conf}/iptables/iptables-firewall-test.service
 file_rsyslog_client_iptables=${path_install_conf}/rsyslog/client-iptables.conf
-file_logrotate_client_iptables=${path_install_conf}/logrotate/client-iptables.conf
+file_logrotate_client_iptables=${path_install_conf}/logrotate/client-iptables
 
 _echot "------------------ required files"
 _require ${file_service_iptables} ${file_service_test_iptables} ${file_script_iptables} ${file_conf_iptables} 

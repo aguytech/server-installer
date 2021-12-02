@@ -12,7 +12,7 @@ file_conf_global=${S_PATH_INSTALL_CONF}/fail2ban/global.conf
 file_conf_jail_local=${S_PATH_INSTALL_CONF}/fail2ban/jail.local
 file_conf_jail_ssh=${S_PATH_INSTALL_CONF}/fail2ban/jail-ssh.conf
 file_rsyslog_client_fail2ban=${S_PATH_INSTALL_CONF}/rsyslog/client-fail2ban.conf
-file_logrotate_client_fail2ban=${S_PATH_INSTALL_CONF}/logrotate/client-fail2ban.conf
+file_logrotate_client_fail2ban=${S_PATH_INSTALL_CONF}/logrotate/client-fail2ban
 
 _echot "------------------ required files"
 _require ${file_conf_global} ${file_conf_jail_local} ${file_conf_jail_ssh} ${file_rsyslog_client_fail2ban} ${file_logrotate_client_fail2ban}

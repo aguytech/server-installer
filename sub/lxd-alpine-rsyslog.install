@@ -12,15 +12,13 @@ _echot "------------------ required vm image"
 lxc image list -f csv -c l | grep -q ^${_CT_INIT_NAME}$ || _exite "Unable to find image container: '${_CT_INIT_NAME}'"
 
 file_rsyslog_host_auth=${S_PATH_INSTALL_CONF}/rsyslog/host-auth.conf
-file_logrotate_host_rsyslog=${S_PATH_INSTALL_CONF}/logrotate/host-rsyslog
-
 file_rsyslog_host_iptables=${S_PATH_INSTALL_CONF}/rsyslog/host-iptables.conf
-file_logrotate_host_iptables=${S_PATH_INSTALL_CONF}/logrotate/host-iptables
-
 file_rsyslog_host_fail2ban=${S_PATH_INSTALL_CONF}/rsyslog/host-fail2ban.conf
-file_logrotate_host_fail2ban=${S_PATH_INSTALL_CONF}/logrotate/host-fail2ban
-
 file_rsyslog_host_lxd=${S_PATH_INSTALL_CONF}/rsyslog/host-lxd.conf
+
+file_logrotate_host_rsyslog=${S_PATH_INSTALL_CONF}/logrotate/host-rsyslog
+file_logrotate_host_iptables=${S_PATH_INSTALL_CONF}/logrotate/host-iptables
+file_logrotate_host_fail2ban=${S_PATH_INSTALL_CONF}/logrotate/host-fail2ban
 file_logrotate_host_lxd=${S_PATH_INSTALL_CONF}/logrotate/host-lxd
 
 _echot "------------------ required files"
