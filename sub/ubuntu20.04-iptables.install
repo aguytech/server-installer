@@ -79,13 +79,16 @@ _echot "------------------  systemd reload daemon"
 _evalr systemctl daemon-reload
 
 _echot "------------------  ${_IPT_SERVICE}-test"
-_echoA "To launch iptables rules for TEST, run: systemctl start ${_IPT_SERVICE}-test"
+_echoA "To launch iptables rules for TEST, run:"
+_echo "systemctl start ${_IPT_SERVICE}-test"
 _echoa "You have 2 minutes after to verify iptables rules"
 
 _echot "------------------  systemd ${_IPT_SERVICE}"
-_askno "To START the service: ${_IPT_SERVICE}, valid"
+_echoa  "START the service: ${_IPT_SERVICE}"
+_askno "Valid to process"
 _service start ${_IPT_SERVICE}
-_askno "To ENABLE the service: ${_IPT_SERVICE}, valid"
+_echoa  "ENABLE the service: ${_IPT_SERVICE}"
+_askno "Valid to process"
 _service enable ${_IPT_SERVICE}
 
 ########################  RSYSLOG

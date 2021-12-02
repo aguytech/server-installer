@@ -16,7 +16,7 @@ _require ${file_conf_aliases}
 ########################  MAIN
 
 _echot "------------------  postfix install"
-_echo "Choose 'Internet Site' and just valid for all default values"
+_echoA "Choose 'Internet Site' and just valid for all default values"
 _askno "valid to continue"
 _eval apt install -y postfix
 

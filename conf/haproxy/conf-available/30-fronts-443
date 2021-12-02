@@ -1,6 +1,7 @@
 # included file for haproxy configuration
 
 frontend https
+	bind :443			ssl crt-list ${S_VM_PATH_SHARE}/ssl/root/letsencrypt.pem.lst
 	bind :443			ssl crt-list S_PATH_CONF_SSL/private/letsencrypt.pem.lst
 	#bind :443			ssl crt ambau.ovh.pem
 	mode http

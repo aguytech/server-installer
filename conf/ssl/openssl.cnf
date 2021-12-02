@@ -1,0 +1,27 @@
+[ req ]
+default_bits		= 4096
+default_md		= sha512
+#default_keyfile	= privkey.pem
+prompt			= no
+encrypt_key		= no
+distinguished_name	= req_distinguished_name
+x509_extensions		= v3_ca
+#req_extensions		= v3_req
+
+[ req_distinguished_name ]
+countryName		= FR
+localityName		= Nantes
+organizationName	= Ambau
+organizationalUnitName	= Research and development
+commonName		= *._HPX_DOMAIN_FQDN
+emailAddress		= _HPX_LCRYPT_EMAIL
+
+[ v3_req ]
+#basicConstraints	= CA:FALSE
+#keyUsage		= nonRepudiation, digitalSignature, keyEncipherment
+#subjectAltName	=DNS:smtp.${domain},DNS:mail.${domain},DNS:imap.${domain}
+
+[ v3_ca ]
+#subjectKeyIdentifier	= hash
+#authorityKeyIdentifier	= keyid:always,issuer
+#basicConstraints	= critical,CA:true

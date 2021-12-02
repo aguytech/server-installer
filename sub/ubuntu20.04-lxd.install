@@ -243,7 +243,7 @@ _service restart logrotate
 
 _echot "------------------ lxd containers"
 _echoA "You need to launch following command to build containers:"
-_echoa ls ${_PATH_BASE}/lxd-*
+_echoa `ls ${_PATH_BASE}/lxd-*`
 
 ########################  REBOOT
 

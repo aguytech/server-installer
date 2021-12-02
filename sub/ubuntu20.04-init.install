@@ -27,8 +27,9 @@ _echot "------------------  hosts S_CLUSTER"
 file=/etc/hosts
 _keepcpts "${file}"
 
-_echoA "Here is the servers list actually declared :\n${!S_CLUSTER[*]}"
-_echoa "You can modify file:${S_GLOBAL_CONF}"
+_echoA "Here is the servers list actually declared:"
+_echo "${!S_CLUSTER[*]}"
+_echoa "You can modify file: ${S_GLOBAL_CONF}"
 _askno "Valid to continue"
 _source ${S_GLOBAL_CONF}
 
