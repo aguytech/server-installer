@@ -92,7 +92,7 @@ path=${S_HOST_PATH_SHARE}
 _echot "------------------  rights ${path}"
 _evalr setfacl -Rm u:${_LXD_UID}:rwx "${path}"
 _evalr setfacl -Rm d:u:${_LXD_UID}:rwx "${path}"
-_evalr chown ${_LXD_UID}:${_LXD_UID} -R "${path}"
+_evalr chown -R ${_LXD_UID}:${_LXD_UID} "${path}"
 
 ########################  CLEAN STORAGE
 

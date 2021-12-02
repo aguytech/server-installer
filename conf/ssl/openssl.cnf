@@ -14,12 +14,12 @@ localityName		= Nantes
 organizationName	= Ambau
 organizationalUnitName	= Research and development
 commonName		= *._HPX_DOMAIN_FQDN
-emailAddress		= _HPX_LCRYPT_EMAIL
+emailAddress		= _HPX_EMAIL
 
 [ v3_req ]
 #basicConstraints	= CA:FALSE
 #keyUsage		= nonRepudiation, digitalSignature, keyEncipherment
-#subjectAltName	=DNS:smtp.${domain},DNS:mail.${domain},DNS:imap.${domain}
+#subjectAltName		= DNS:smtp.${domain},DNS:mail.${domain},DNS:imap.${domain}
 
 [ v3_ca ]
 #subjectKeyIdentifier	= hash

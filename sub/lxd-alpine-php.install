@@ -145,6 +145,7 @@ if ! lxc profile list -f csv|grep -q "^${profile},"; then
 	path=${S_HOST_PATH_SHARE}/php/${_DOMAIN_FQDN}
 	path_ct=${path_php_share}
 	[ -d ${path} ] || _evalr mkdir -p ${path}
+	_evalr chown -R ${_LXD_UID}:${_LXD_UID} ${S_HOST_PATH_SHARE}/php
 	_eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
 else
 	_echot "------------------  existing profile ${profile}"

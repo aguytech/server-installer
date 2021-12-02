@@ -61,14 +61,14 @@ _HPX_ACCESS_PWD="${_ANSWER:-${anstmp}}" && _confset _HPX_ACCESS_PWD "${_HPX_ACCE
 anstmp=/haproxy-stats && _askno "URI to access to admin site (${anstmp})"
 _HPX_ACCESS_URI="${_ANSWER:-${anstmp}}" && _confset _HPX_ACCESS_URI "${_HPX_ACCESS_URI}"
 
+anstmp=${S_DOMAIN_EMAIL_ADMIN} && _askno "Technical email for certificates (${anstmp})"
+_HPX_EMAIL="${_ANSWER:-${anstmp}}" && _confset _HPX_EMAIL "${_HPX_EMAIL}"
+
 _echot "------------------  data letsencrypt"
 
 _askyn "Use letsencrypt" && _HPX_LCRYPT_ENABLE="${_ANSWER/n/}"
 
 if [ "${_HPX_LCRYPT_ENABLE}" ]; then
-	anstmp=${S_DOMAIN_EMAIL_ADMIN} && _askno "Technical email for letsencrypt (${anstmp})"
-	_HPX_LCRYPT_EMAIL="${_ANSWER:-${anstmp}}" && _confset _HPX_LCRYPT_EMAIL "${_HPX_LCRYPT_EMAIL}"
-
 	anstmp="ada admin blog carte chat chiffres cloud cms code compta dev diaspora discord discourse down elastik files forum gestion git gitea gitlab graylog info kibana links log manage matomo metrics monitor nextcloud pfa pma roundcube shaarli snippet social st stats test tuleap vma vmail webmail wiki www zabbix" # imap mail mail10 mx mx10 smtp
 	_askno "Subdomains to register to letsencrypt: (${anstmp})"
 	_HPX_LCRYPT_SUBS="${_ANSWER:-${anstmp}}" && _confset _HPX_LCRYPT_SUBS "${_HPX_LCRYPT_SUBS}"
@@ -106,6 +106,7 @@ _eval lxc profile create ${profile}
 path=${S_HOST_PATH_SHARE}/ssl/haproxy
 path_ct=${_HPX_PATH_SSL}
 [ -d ${path} ] || _evalr mkdir -p ${path}
+_evalr chown -R ${_LXD_UID}:${_LXD_UID} ${S_HOST_PATH_SHARE}/ssl
 _eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
 
 ########################  INIT
@@ -262,7 +263,7 @@ if [ "${_HPX_LCRYPT_ENABLE}" ]; then
 			for sub in ${_HPX_LCRYPT_SUBS}; do
 				str+=" -d ${sub}.${domain}"
 			done
-			cmd="certbot certonly --standalone --preferred-challenges http --http-01-port 80 --non-interactive --agree-tos --email ${_HPX_LCRYPT_EMAIL} ${str}"
+			cmd="certbot certonly --standalone --preferred-challenges http --http-01-port 80 --non-interactive --agree-tos --email ${_HPX_EMAIL} ${str}"
 			#cmd="certbot certonly --standalone --preferred-challenges http --http-01-port 80 -d example.com -d www.example.com"
 			_lxc_exec ${_CT_NAME} "${cmd}"
 		else

@@ -117,6 +117,7 @@ if [ -z "${profile_www_exist}" ]; then
 	path=${S_HOST_PATH_SHARE}/www/${_APA_ADMIN}.${_DOMAIN_FQDN}
 	path_ct=${_PATH_DOMAIN}
 	[ -d ${path} ] || _evalr mkdir -p ${path}
+	_evalr chown -R ${_LXD_UID}:${_LXD_UID} ${S_HOST_PATH_SHARE}/www
 	_eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
 fi
 

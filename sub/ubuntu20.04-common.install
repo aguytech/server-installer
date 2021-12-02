@@ -235,7 +235,7 @@ if [[ " ${str} " = *" ${S_SERVER_TYPE} "* ]]; then
 		btrfs subvolume list .
 
 		_echot "------------------  btrfs paths"
-		paths="${S_HOST_PATH_SP} ${S_HOST_PATH_SHARE} ${S_HOST_PATH_SAVE} ${S_HOST_PATH_LOG} "
+		paths="${S_HOST_PATH} ${S_HOST_PATH_SP} ${S_HOST_PATH_SHARE} ${S_HOST_PATH_SAVE} ${S_HOST_PATH_LOG} "
 		for path in ${paths}; do
 			[ -d ${path} ] || _eval mkdir /vm/${path}
 		done
@@ -244,18 +244,6 @@ if [[ " ${str} " = *" ${S_SERVER_TYPE} "* ]]; then
 		_exite "This part have to be implemented"
 	fi
 
-fi
-
-########################  PATHS
-
-str=" ovh home "
-if [ "${str/ ${S_SERVER_TYPE} /}" != "${str}" ]; then
-
-	paths="${S_HOST_PATH} ${S_HOST_PATH_SP} ${S_HOST_PATH_SHARE} ${S_HOST_PATH_LOG} ${S_HOST_PATH_SAVE}"
-	_echot "------------------  create ${paths}"
-	for path in ${paths}; do
-		[ -d "${path}" ] || _evalq mkdir -p "${path}"
-	done
 fi
 
 ########################  MAIL
