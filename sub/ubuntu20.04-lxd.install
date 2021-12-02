@@ -235,6 +235,8 @@ _echot "------------------  logrotate client-lxd"
 file=/etc/logrotate.d/${file_logrotate_client_lxd##*/}
 _evalr cp -a ${file_logrotate_client_lxd} ${file}
 _var_replace ${file} logrotate
+_evalr chmod g-w /etc/logrotate.d/*
+_service restart logrotate
 
 _echot "------------------  logrotate restart"
 _service restart logrotate

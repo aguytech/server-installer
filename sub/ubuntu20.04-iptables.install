@@ -14,7 +14,7 @@ file_conf_iptables=${path_install_conf}/iptables/iptables-firewall.conf
 file_service_iptables=${path_install_conf}/iptables/iptables-firewall.service
 file_service_test_iptables=${path_install_conf}/iptables/iptables-firewall-test.service
 file_rsyslog_client_iptables=${path_install_conf}/rsyslog/client-iptables.conf
-file_logrotate_client_iptables=${path_install_conf}/rsyslog/client-iptables.conf
+file_logrotate_client_iptables=${path_install_conf}/logrotate/client-iptables.conf
 
 _echot "------------------ required files"
 _require ${file_service_iptables} ${file_service_test_iptables} ${file_script_iptables} ${file_conf_iptables} 
@@ -109,6 +109,8 @@ _echot "------------------  logrotate client-iptables"
 file=/etc/logrotate.d/${file_logrotate_client_iptables##*/}
 _evalr cp -a ${file_logrotate_client_iptables} ${file}
 _var_replace ${file} logrotate
+_evalr chmod g-w /etc/logrotate.d/*
+_service restart logrotate
 
 _echot "------------------  logrotate restart"
 _service restart logrotate

@@ -20,6 +20,10 @@ _echoA "Choose 'Internet Site' and just valid for all default values"
 _askno "valid to continue"
 _eval apt install -y postfix
 
+_echot "------------------  postfix trick"
+link=/etc/postfix/makedefs.out
+[ -h ${link} ] && rm ${link} && ln /usr/share/postfix/makedefs.out ${link}
+
 _echot "------------------  postfix conf"
 file=/etc/postfix/main.cf
 _keepcpts ${file}
@@ -33,14 +37,16 @@ while read str val; do
 done <<< "mydomain  ovh
 mynetworks  127.0.0.1/32
 mynetworks_style host
+inet_interfaces  127.0.0.1
 relayhost  ${S_SERVICE[mail]}:25
-smtpd_relay_restrictions  permit_mynetworks
 alias_database  hash:${file_aliases}
 alias_maps  hash:${file_aliases}"
+#smtpd_relay_restrictions  permit_mynetworks,check_relay_domains
 
 _echot "------------------  postfix aliases"
-_eval cp -a ${file_conf_aliases} ${file_aliases}
-_eval "sed -i '/_EMAIL_TECH/ {s|_EMAIL_TECH|${S_DOMAIN_EMAIL_TECH}|;s|^#||}' ${file_aliases}"
+_evalrcp -a ${file_conf_aliases} ${file_aliases}
+_evalr "sed -i '/_EMAIL_TECH/ {s|_EMAIL_TECH|${S_DOMAIN_EMAIL_TECH}|;s|^#||}' ${file_aliases}"
+_evalr chmod g-w,o= ${file_aliases}
 newaliases
 
 _echot "------------------  postfix enable"

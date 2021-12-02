@@ -273,7 +273,6 @@ for ct_maria in ${cts_maria}; do
 
 done
 
-
 ########################  COPY
 
 for i in `seq 2 ${ct_num}`; do
@@ -289,7 +288,6 @@ for i in `seq 2 ${ct_num}`; do
 	_eval lxc start ${ct_name}
 done
 
-
 ########################  SHOW
 
 _echot "------------------  show privileges"
@@ -302,12 +300,10 @@ _echot "------------------  show passwords"
 _echoA "Keep this passwords:"
 _echoa "${strpass%\\n}"
 
-
 ########################  HAPROXY
 
 _echoA "Adjust backend for domain: ${_APA_ADMIN}.${_DOMAIN_FQDN} with:"
 _echoa "${cts_php}"
-
 
 ########################  PUBLISH
 
@@ -317,7 +313,6 @@ for ct_name in ${cts_php} ${cts_maria}; do
 	lxc image list -f csv -c l | grep -q ^${ct_name}$ && _eval lxc image alias rename ${ct_name} ${ct_name}-${_SDATE}
 	_eval lxc publish --force ${ct_name} --alias ${ct_name}
 done
-
 
 ########################  END
 

@@ -200,11 +200,9 @@ service=${_PHP_SERVICE}
 _lxc_exec ${_CT_NAME} "rc-update add ${service}"
 _lxc_exec ${_CT_NAME} "rc-service ${service} start"
 
-
 ########################  CONF PHP.INI
 
 _echot "------------------  conf php.ini global"
-
 file=${file_php_conf}
 _lxc_exec ${_CT_NAME} "[ -f ${file} ] && cp -a ${file} ${file}.${_SDATE}"
 
@@ -229,7 +227,6 @@ mail.log  syslog"
 _lxc_exec ${_CT_NAME} "${cmds}"
 
 _echot "------------------  conf php.ini opcache"
-
 cmds=; while read str val; do
 	cmds+="sed -i 's|^;\?\(${str}\s*=\).*|\1 ${val}|' ${file}
 "; done <<< "opcache.enable 1
@@ -250,7 +247,6 @@ cmds=; while read str val; do
 sys_temp_dir  ${path_php_share}/tmp
 soap.wsdl_cache_dir  ${path_php_share}/soap"
 _lxc_exec ${_CT_NAME} "${cmds}"
-
 
 ########################  CONF PHP-FPM
 
@@ -275,15 +271,11 @@ _lxc_exec ${_CT_NAME} "${cmds}"
 ########################  POOL - WWW
 
 pool=www
-
 _echot "------------------  file pool ${pool}"
-
 file=${path_fpm_conf}/${pool}.conf
 
 _lxc_exec ${_CT_NAME} "[ -f ${file} ] && cp -a ${file} ${file}.${_SDATE}"
-
 _echot "------------------  conf pool ${pool}"
-
 cmds=; while read str val; do
 	cmds+="sed -i 's|^;\?\(${str}\s*=\).*|\1 ${val}|' ${file}
 "; done <<< "prefix  ${path_fpm_pool}/www
@@ -313,21 +305,16 @@ _lxc_exec ${_CT_NAME} "${cmds}"
 
 _lxc_exec ${_CT_NAME} "sed -i 's|^;\?\(access.format\s*=\).*|\1  \"%R - %u %t \\\\\"%m %r%Q%q\\\\\" %s %f %{mili}d %{kilo}M %C%%\"|' ${file}"
 
-
 ########################  POOL - WWW-ADMIN
 
 pool=www-admin
 
 _echot "------------------  file pool ${pool}"
-
 file=${path_fpm_conf}/${pool}.conf
-
 _lxc_exec ${_CT_NAME} "[ -f ${file} ] && cp -a ${file} ${file}.${_SDATE}"
 _lxc_exec ${_CT_NAME} "cp -a ${path_fpm_conf}/www.conf.${_SDATE} ${file}"
 
-
 _echot "------------------  conf pool ${pool}"
-
 _lxc_exec ${_CT_NAME} "sed -i 's|^\[.*\]$|[${pool}]|' ${file}"
 
 cmds=; while read str val; do
@@ -350,7 +337,6 @@ ping.path  /ping-www-admin
 ping.response  pong"
 _lxc_exec ${_CT_NAME} "${cmds}"
 
-
 ########################  APACHE
 
 _echot "------------------  apache php-fpm"
@@ -359,28 +345,19 @@ file=${path_apache_conf}/${file_phpfpm##*/}
 _eval lxc file push -q ${file_phpfpm} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} php apache
 
-
 _echot "------------------  localhost files"
-
 _lxc_exec ${_CT_NAME} "echo '<?php phpinfo() ?>' > ${_APA_PATH_WWW}/phpinf.php"
-
 file=${_APA_PATH_WWW}/index.php
 _lxc_exec ${_CT_NAME} "echo '<html><body><h1><?php echo \"php works!\" ?></h1></body></html>' > ${file}"
-
 file=${_APA_PATH_WWW}/index.html
 _lxc_exec ${_CT_NAME} "[ -f ${file} ] && mv ${file} ${file}.keep"
 
-
 _echot "------------------  ${_DOMAIN_FQDN} files"
-
 _lxc_exec ${_CT_NAME} "echo '<?php phpinfo() ?>' > ${_PATH_DOMAIN}/html/phpinf.php"
-
 file=${_PATH_DOMAIN}/html/index.php
 _lxc_exec ${_CT_NAME} "echo '<html><body><h1>${_DOMAIN_FQDN} php works!</h1></body></html>' > ${file}"
-
 file=${_PATH_DOMAIN}/index.html
 _lxc_exec ${_CT_NAME} "[ -f ${file} ] && mv ${file} ${file}.keep"
-
 
 ########################  PING-MONITOR
 
@@ -392,7 +369,6 @@ file=${path_apache_conf}/${file_monitor##*/}
 _keepcpts ${file}
 _eval lxc file push -q ${file_monitor} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} apache php
-
 
 ########################  OPCACHE
 
@@ -407,14 +383,12 @@ _keepcpts ${file}
 _eval lxc file push -q ${file_opcache} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} apache php
 
-
 ########################  RIGHTS
 
 _echot "------------------  rights"
 _lxc_exec ${_CT_NAME} "chown apache:apache -R ${path_php_share}/*"
 _lxc_exec ${_CT_NAME} "chown apache:apache -R ${_APA_PATH_WWW}"
 _lxc_exec ${_CT_NAME} "chown apache:apache -R ${_PATH_DOMAIN}/*"
-
 
 ########################  RESTART
 
@@ -423,7 +397,6 @@ _lxc_exec ${_CT_NAME} "rc-service ${_PHP_SERVICE} restart"
 
 _echot "------------------  apache2 restart"
 _lxc_exec ${_CT_NAME} "rc-service apache2 restart"
-
 
 ########################  RSYSLOG
 
@@ -439,7 +412,6 @@ _lxc_var_replace ${S_SERVICE[log]} ${file} rsyslog php
 _echot "------------------  rsyslog restart ${S_SERVICE[log]}"
 _lxc_exec ${S_SERVICE[log]} "rc-service rsyslog restart"
 
-
 _echot "------------------  ${_CT_NAME} client path"
 path=${S_PATH_LOG}/php7
 _lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
@@ -452,26 +424,25 @@ _lxc_var_replace ${_CT_NAME} ${file} rsyslog php
 _echot "------------------  rsyslog restart ${_CT_NAME}"
 _lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
 
-
 ########################  LOGROTATE
 
 _echot "------------------  ${S_SERVICE[log]} logrotate"
 file=/etc/logrotate.d/${file_logrotate_host##*/}
 _eval lxc file push -q ${file_logrotate_host} ${S_SERVICE[log]}${file}
 _lxc_var_replace ${S_SERVICE[log]} ${file} logrotate
+_lxc_exec ${S_SERVICE[log]} "chmod g-w,o= /etc/logrotate.d/*"
 
 _echot "------------------  ${S_SERVICE[log]} crond restart"
 _lxc_exec ${S_SERVICE[log]} "rc-service crond restart"
-
 
 _echot "------------------  ${_CT_NAME} logrotate"
 file=/etc/logrotate.d/${file_logrotate_client##*/}
 _eval lxc file push -q ${file_logrotate_client} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} logrotate
+_lxc_exec ${_CT_NAME} "chmod g-w,o= /etc/logrotate.d/*"
 
 _echot "------------------  ${_CT_NAME} crond restart"
 _lxc_exec ${_CT_NAME} "rc-service crond restart"
-
 
 ########################  CLEAN LOG
 

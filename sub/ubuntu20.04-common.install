@@ -386,8 +386,10 @@ _eval  "sed -i '/^#dateext/ s|^#||' ${file}"
 
 _echot "------------------  logrotate server"
 file=/etc/logrotate.d/${file_logrotate_server##*/}
-_eval cp -a ${file_logrotate_server} ${file}
+_evalr cp -a ${file_logrotate_server} ${file}
 _var_replace ${file} logrotate
+_evalr chmod g-w /etc/logrotate.d/*
+_service restart logrotate
 
 ########################  CLEAN
 

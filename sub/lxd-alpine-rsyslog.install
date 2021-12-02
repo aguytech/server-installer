@@ -158,17 +158,17 @@ _service restart rsyslog
 _echot "------------------  logrotate rsyslog host"
 file=/etc/logrotate.d/${file_logrotate_host_rsyslog##*/}
 _eval lxc file push -q ${file_logrotate_host_rsyslog} ${_CT_NAME}${file}
-_lxc_var_replace ${_CT_NAME} ${file} logrotate
 
 _echot "------------------  logrotate iptables host"
 file=/etc/logrotate.d/${file_logrotate_host_iptables##*/}
 _eval lxc file push -q ${file_logrotate_host_iptables} ${_CT_NAME}${file}
-_lxc_var_replace ${_CT_NAME} ${file} logrotate
 
 _echot "------------------  logrotate lxd host"
 file=/etc/logrotate.d/${file_logrotate_host_lxd##*/}
 _eval lxc file push -q ${file_logrotate_host_lxd} ${_CT_NAME}${file}
-_lxc_var_replace ${_CT_NAME} ${file} logrotate
+
+_lxc_var_replace ${_CT_NAME} /etc/logrotate.d logrotate
+_lxc_exec ${_CT_NAME} "chmod g-w,o= /etc/logrotate.d/*"
 
 _echot "------------------  ${_CT_NAME} crond restart"
 _lxc_exec ${_CT_NAME} "rc-service crond restart"
