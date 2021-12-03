@@ -109,7 +109,7 @@ path_sites=/etc/apache2/sites
 
 if [ -z "${profile_cloud_exist}" ]; then
 
-	if [ "${S_STORAGE_DRIVER}" = zfs ]; then
+	if [ "${_DEV_DRIVER}" = zfs ]; then
 
 		name=cloud
 		_echot "------------------  zfs ${name}"
@@ -135,7 +135,7 @@ if [ -z "${profile_cloud_exist}" ]; then
 		_evalr zfs create -o mountpoint=${path} ${path_zfs}
 
 
-	elif [ "${S_STORAGE_DRIVER}" = btrfs ]; then
+	elif [ "${_DEV_DRIVER}" = btrfs ]; then
 
 		name=cloud
 		_echot "------------------  btrfs ${name}"

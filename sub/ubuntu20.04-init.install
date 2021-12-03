@@ -4,7 +4,7 @@
 
 _echoT "\n==========================================  ${S_RELEASE}-${_PART}"
 
-! [ -f "${S_FILE_INSTALL_CONF}" ] || ! grep -q "^# ${_PART#++}$" ${S_FILE_INSTALL_CONF} && echo  "# ${_PART}" >> ${S_FILE_INSTALL_CONF}
+grep -q "^# ${_PART#++}$" ${S_FILE_INSTALL_CONF} || echo "# ${_PART}" >> ${S_FILE_INSTALL_CONF}
 
 ########################  REQUIRED
 
@@ -31,22 +31,49 @@ _requirep ${path_install_bash_completion}
 _echot "-------------------  conf server"
 _echoA "Here is the servers list actually declared:"
 for i in `echo ${!S_CLUSTER[*]}|tr ' ' '\n'|sort`; do
-	_echo "${whiteb}${i}${cclear}  ${S_CLUSTER[${i}]}"
+	_echo "${whiteb}${i}${cclear} ${S_CLUSTER[${i}]}"
 done
 _echoa "You can modify file: ${S_GLOBAL_CONF}"
 _askno "Valid to continue"
 _source ${S_GLOBAL_CONF}
 
 _echot "-------------------  data"
+
 anstmp= && _askno "Give a passwd for root or leave blank to let unset - (${anstmp})"
 root_pwd="${_ANSWER:-$anstmp}"
 
-if [ "${S_STORAGE_DRIVER}" = zfs ]; then
+_echot "------------------  data storage"
+
+anstmp=zfs
+_menu "Select a driver for storage (${anstmp})" zfs btrfs
+_DEV_DRIVER=${_ANSWER} && _confset _DEV_DRIVER "${_DEV_DRIVER}" "${S_GLOBAL_CONF}"
+
+_echoa "State of available disk devices:"
+#lsblk -ro NAME|grep -v [0-9]$|grep -v NAME # shortly list of devices
+lsblk -o NAME,PATH,FSTYPE,FSUSED,SIZE,STATE,TYPE,MOUNTPOINT|grep -v ^loop
+
+if [ "${_DEV_DRIVER}" = zfs ]; then
 	_echot "------------------  data zfs"
-	anstmp=root && 	_askno "Give the name of zfs root for device ${S_STORAGE_DEVICE} (${anstmp})"
-	_ZFS_ROOT=${_ANSWER:-$anstmp} && _confset _ZFS_ROOT "${_ZFS_ROOT}"
+
+	anstmp="/dev/sdb /dev/sdc" && 	_askno "Give devices for pool 'root' (${anstmp})"
+	_DEV_ROOT=${_ANSWER:-${anstmp}} && _confset _DEV_ROOT "${_DEV_ROOT}"
+
+	anstmp=root && 	_askno "Give the name for pool 'root' using ${_DEV_ROOT} (${anstmp})"
+	_ZFS_ROOT=${_ANSWER:-${anstmp}} && _confset _ZFS_ROOT "${_ZFS_ROOT}"
+
+	anstmp= && _askno "Give the type of vdevs: mirror/raidz/... for ${_ZFS_ROOT} (${anstmp})"
+	_ZFS_ROOT_TYPE=${_ANSWER:-${anstmp}} && _confset _ZFS_ROOT_TYPE "${_ZFS_ROOT_TYPE}"
 fi
 
+anstmp= && _askno "Give devices for pool 'ext' (${anstmp})"
+_DEV_EXT=${_ANSWER:-${anstmp}} && _confset _DEV_EXT "${_DEV_EXT}"
+
+if [ "${_DEV_EXT}" ] && [ "${_DEV_DRIVER}" = zfs ]; then
+	anstmp=ext && _askno "Give the name for pool 'save' using ${_DEV_EXT} (${anstmp})"
+	_ZFS_EXT=${_ANSWER:-${anstmp}} && _confset _ZFS_EXT "${_ZFS_EXT}"
+fi
+
+_echot "------------------  data sysctl"
 # host
 [ -z ${_SOMAXCONN+x} ] && anstmp="4096" && _askno "Set $(sysctl net.core.somaxconn) - (${anstmp})" && _SOMAXCONN="${_ANSWER:-$anstmp}" && _confset _SOMAXCONN "${_SOMAXCONN}"
 [ -z ${_MAX_BACKLOG+x} ] && anstmp="1000" && _askno "Set $(sysctl net.core.netdev_max_backlog) - (${anstmp})" && _MAX_BACKLOG="${_ANSWER:-$anstmp}" && _confset _MAX_BACKLOG "${_MAX_BACKLOG}"
@@ -222,20 +249,28 @@ fi
 str="ovh home"
 if [[ " ${str} " = *" ${S_SERVER_TYPE} "* ]]; then
 
-	if [ "${S_STORAGE_DRIVER}" = zfs ]; then
+	if [ "${_DEV_DRIVER}" = zfs ]; then
 
 		_echot "------------------  zfs install"
 		_eval apt install -y zfsutils-linux
 
-		path=/zroot
+		path=/zfs/root
 		_echot "------------------  zfs zpool ${path}"
 		[ -d ${path} ] && rm -fR ${path}
-		_evalq zpool create root ${S_STORAGE_DEVICE} -m ${path}
+		_evalq zpool create ${_ZFS_ROOT} ${_DEV_ROOT} -m ${path}
+
+		if [ "${_DEV_EXT}" ];then
+			path=/zfs/ext
+			_echot "------------------  zfs zpool ${path}"
+			[ -d ${path} ] && rm -fR ${path}
+			_evalq zpool create ${_ZFS_EXT} ${_DEV_EXT} -m ${path}
+		fi
 
 		path=${S_PATH_SAVE}
 		_echot "------------------  zfs ${path}"
 		[ -d ${path} ] && rm -fR ${path}
-		_eval zfs create -o mountpoint=${path} -o compression=lz4 ${_ZFS_ROOT}${S_PATH_SAVE}
+		[ "${_DEV_EXT}" ] && zpath=${_ZFS_EXT}${S_PATH_SAVE}|| zpath=${_ZFS_ROOT}${S_PATH_SAVE}
+		_eval zfs create -o mountpoint=${path} -o compression=lz4 ${zpath}
 
 		path=${S_HOST_PATH}
 		_echot "------------------  zfs ${path}"
@@ -263,12 +298,12 @@ if [[ " ${str} " = *" ${S_SERVER_TYPE} "* ]]; then
 		_echot "------------------  zfs list"
 		zfs list
 
-	elif [ "${S_STORAGE_DRIVER}" = btrfs ]; then
+	elif [ "${_DEV_DRIVER}" = btrfs ]; then
 
 		_echot "------------------  btrfs storage"
 		path=${S_HOST_PATH}
 		_echoA "Create a btrfs subvolume: /lxd-${S_RELEASE_NAME} and mount it in ${path}"
-		_echoa "Continue after that: " && read str
+		_askno "Continue after that:"
 		[ -d ${path} ] || _exite "Unable to find path: ${path}"
 
 		btrfs subvolume list .
@@ -284,11 +319,6 @@ if [[ " ${str} " = *" ${S_SERVER_TYPE} "* ]]; then
 	fi
 
 fi
-
-########################  MAIL
-
-_echot "------------------  mail"
-_echow "MAIL part have to be implemented"
 
 ########################  CONF
 
@@ -342,11 +372,9 @@ str=" ovh "
 if [ "${str/ "${S_SERVER_TYPE}" /}" != "${str}" ]; then
 
 	_echot "------------------  install ntp"
-
 	_eval "apt-get install -y ntp"
 
 	_echot "------------------  conf ntp"
-
 	file=/etc/ntp.conf
 	_keepcpts "${file}"
 
@@ -396,14 +424,6 @@ _echot "------------------  rsyslog client-auth"
 file=/etc/rsyslog.d/72-${file_rsyslog_client_auth##*/}
 _evalq cp -a ${file_rsyslog_client_auth} ${file}
 _var_replace ${file} rsyslog
-
-#TODO add rsyslog mail
-<<KEEP
-_echot "------------------  rsyslog client-mail conf"
-file="/etc/rsyslog.d/70-default.conf"
-# stop mail logs for syslog
-! grep -q "mail\.\*\s*stop" "${file}" && sed -i '/^mail\.err/ amail.*              stop' "${file}"
-KEEP
 
 ########################  LOGROTATE
 

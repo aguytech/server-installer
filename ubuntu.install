@@ -4,7 +4,9 @@
 
 <<MANUALLY
 # HOME
-server=node1; host=ns388803; ssh_port=2002 # server=node2; host=ns364584; ssh_port=2002
+server=node1; host=ns313372; ssh_port=2002
+# server=node2; host=ns364584; ssh_port=2002
+#server=node3; host=ns388803; ssh_port=2002
 for i in  ${server} ${host}; do sed -i "/${i}/d" ~/.ssh/known_hosts; done
 
 cmds="sudo apt install rsync
@@ -19,7 +21,8 @@ rsync -e "ssh -p${ssh_port}" /home/shared/dev/bs/ root@${server}:/usr/local/bs/ 
 ssh root@${server} -p${ssh_port}
 # HOST
 
-lshw -class disk -short
+#lshw -class disk -short
+lsblk -o NAME,PATH,FSTYPE,FSUSED,SIZE,TYPE,MOUNTPOINT|grep -v ^loop
 parted /dev/sda print free
 fdisk /dev/sda # m p F n w | extend with lxd:+50G / save:available
 
@@ -94,7 +97,16 @@ done
 _exit
 
 <<KEEP
-# rescue LVM
+########################  ZFS
+# rescue
+
+zpool import # list pool
+zpool import -R /mnt rpool # mount pool
+KEEP
+
+<<KEEP
+########################  LVM
+# rescue
 
 path_save_vm=/dev/mapper/vg-save
 path_save="/mnt/save"

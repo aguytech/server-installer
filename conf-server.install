@@ -46,27 +46,6 @@ if [ -z "${S_SERVER_TYPE}" ]; then
 	S_SERVER_TYPE=${_ANSWER} && _confset S_SERVER_TYPE "${S_SERVER_TYPE}" "${S_GLOBAL_CONF}"
 fi
 
-########################  STORAGE
-
-str="ovh home"
-if [[ " ${str} " = *" ${S_SERVER_TYPE} "* ]]; then
-
-	if [ -z "${S_STORAGE_DRIVER}" ]; then
-		_echot "------------------  S_STORAGE_DRIVER"
-
-		anstmp=zfs
-		_menu "Select a driver for storage (${anstmp})" zfs btrfs
-		S_STORAGE_DRIVER=${_ANSWER} && _confset S_STORAGE_DRIVER "${S_STORAGE_DRIVER}" "${S_GLOBAL_CONF}"
-	fi
-	if [ "${S_STORAGE_DRIVER}" = zfs ] && [ -z "${S_STORAGE_DEVICE}" ]; then
-		_echot "------------------  S_STORAGE_DEVICE"
-		sudo lsblk -o NAME,PATH,FSTYPE,FSUSED,SIZE,TYPE,MOUNTPOINT|grep -v ^loop
-		anstmp=
-		_askno "Give the PATH name of selected device for server ROOT storage (${anstmp})"
-		S_STORAGE_DEVICE=${_ANSWER:-${anstmp}} && _confset S_STORAGE_DEVICE "${S_STORAGE_DEVICE}" "${S_GLOBAL_CONF}"
-	fi
-fi
-
 ###################  PATH
 
 _echot "------------------  S_PATH_INSTALL"
