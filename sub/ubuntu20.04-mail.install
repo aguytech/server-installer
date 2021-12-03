@@ -44,14 +44,14 @@ alias_maps  hash:${file_aliases}"
 #smtpd_relay_restrictions  permit_mynetworks,check_relay_domains
 
 _echot "------------------  postfix aliases"
-_evalrcp -a ${file_conf_aliases} ${file_aliases}
+_evalr cp -a ${file_conf_aliases} ${file_aliases}
 _evalr "sed -i '/_EMAIL_TECH/ {s|_EMAIL_TECH|${S_DOMAIN_EMAIL_TECH}|;s|^#||}' ${file_aliases}"
 _evalr chmod g-w,o= ${file_aliases}
 newaliases
 
 _echot "------------------  postfix enable"
 systemctl is-enabled postfix || _eval systemctl enable postfix
-_eval systemctl restart postfix
+_service restart postfix
 
 _echoT "===================== ${_PART} end"
 _partadd ${_PART#++} ${S_FILE_INSTALL_DONE}
