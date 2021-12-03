@@ -27,7 +27,7 @@ echo -e "${cyan}----------  data${cclear}"
 
 echo "Unable to find initial configuration"
 _menu "Do you want to copy an pre configuration file or none" none `ls ${S_PATH_INSTALL_CONF}/server-*.conf 2>/dev/null`
-copy_file_install=${answer/none/}
+file_conf_pre_server=${_ANSWER/none/}
 
 ########################  MAIN
 
@@ -62,8 +62,11 @@ fi
 
 if ! [ -f "${S_GLOBAL_CONF}" ]; then
 	echo -e "${cyan}----------  server.conf${cclear}"
-	${_SUDO} cp -a "${file_install_server}" "${S_GLOBAL_CONF}"
-	[ "${copy_file_install}" ] && ${_SUDO} cp -a ${copy_file_install} ${S_GLOBAL_CONF}
+	if [ "${file_conf_pre_server}" ]; then
+		${_SUDO} cp -a ${file_conf_pre_server} ${S_GLOBAL_CONF}
+	else
+		${_SUDO} cp -a "${file_install_server}" "${S_GLOBAL_CONF}"
+	fi
 fi
 . ${S_GLOBAL_CONF}
 

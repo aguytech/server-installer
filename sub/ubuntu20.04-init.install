@@ -28,6 +28,15 @@ _requirep ${path_install_bash_completion}
 
 ########################  DATA
 
+_echot "-------------------  conf server"
+_echoA "Here is the servers list actually declared:"
+for i in `echo ${!S_CLUSTER[*]}|tr ' ' '\n'|sort`; do
+	_echo "${whiteb}${i}${cclear}  ${S_CLUSTER[${i}]}"
+done
+_echoa "You can modify file: ${S_GLOBAL_CONF}"
+_askno "Valid to continue"
+_source ${S_GLOBAL_CONF}
+
 _echot "-------------------  data"
 anstmp= && _askno "Give a passwd for root or leave blank to let unset - (${anstmp})"
 root_pwd="${_ANSWER:-$anstmp}"
@@ -52,36 +61,6 @@ fi
 # sysctl net.ipv4.tcp_max_syn_backlog net.ipv4.tcp_max_tw_buckets
 # sysctl net.ipv4.tcp_fin_timeout net.ipv4.tcp_keepalive_time net.ipv4.tcp_keepalive_intvl net.ipv4.tcp_keepalive_probes
 _SYS_FILE=/etc/sysctl.d/20-server.conf && _confset _SYS_FILE "${_SYS_FILE}"
-
-########################  CLUSTER
-
-_echot "------------------  hosts S_CLUSTER"
-
-file=/etc/hosts
-_keepcpts "${file}"
-
-_echoA "Here is the servers list actually declared:"
-_echo "${!S_CLUSTER[*]}"
-_echoa "You can modify file: ${S_GLOBAL_CONF}"
-_askno "Valid to continue"
-_source ${S_GLOBAL_CONF}
-
-! sudo grep -q "# ${S_DOMAIN_NAME} cluster" ${file} && sudo sh -c "echo '\n# ${S_DOMAIN_NAME} cluster' >> ${file}"
-for host in ${servers_list}; do
-	eval ${S_CLUSTER[${host}]}
-	[ "${s_ip}" ] && sudo sed -i "/${s_ip}/d" ${file}
-	! grep -q "${host}" ${file} && [ "${s_ip}" ] && sudo sh -c "echo '${s_ip}\t${host}\t${s_name}' >> ${file}"
-done
-_eval "sed -i 's|^\(${_IPTHIS}.*\)$|#\1|' ${file}"
-
-if ! grep -q '^# services' ${file}; then
-	_echot "------------------  hosts S_SERVICE_BITS"
-	_keepcpts $file
-	echo -e "\n# services" >> ${file}
-	for str in ${!S_SERVICE_BITS[*]}; do
-		echo -e "#${_CIDR_VM%.*}.${S_SERVICE_BITS[$str]}\t${S_SERVICE[$str]}" >> ${file}
-	done
-fi
 
 ########################  MAIN
 
@@ -171,6 +150,30 @@ grep -q '. ~/.bash_aliases' ${file} || echo "[ -f ~/.bash_aliases ] && . ~/.bash
 "  >> ${file}
 
 _source ${file}
+
+########################  CLUSTER
+
+_echot "------------------  hosts S_CLUSTER"
+
+file=/etc/hosts
+_keepcpts "${file}"
+
+! sudo grep -q "# ${S_DOMAIN_NAME} cluster" ${file} && sudo sh -c "echo '\n# ${S_DOMAIN_NAME} cluster' >> ${file}"
+for host in ${servers_list}; do
+	eval ${S_CLUSTER[${host}]}
+	[ "${s_ip}" ] && sudo sed -i "/${s_ip}/d" ${file}
+	! grep -q "${host}" ${file} && [ "${s_ip}" ] && sudo sh -c "echo '${s_ip}\t${host}\t${s_name}' >> ${file}"
+done
+_eval "sed -i 's|^\(${_IPTHIS}.*\)$|#\1|' ${file}"
+
+if ! grep -q '^# services' ${file}; then
+	_echot "------------------  hosts S_SERVICE_BITS"
+	_keepcpts $file
+	echo -e "\n# services" >> ${file}
+	for str in ${!S_SERVICE_BITS[*]}; do
+		echo -e "#${_CIDR_VM%.*}.${S_SERVICE_BITS[$str]}\t${S_SERVICE[$str]}" >> ${file}
+	done
+fi
 
 ########################  COMMON
 
