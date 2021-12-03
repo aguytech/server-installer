@@ -12,9 +12,8 @@ S_PATH_INSTALL_CONF=${S_PATH_INSTALL}/conf
 
 file_conf_server=${S_PATH_INSTALL}/conf-server.install
 file_install_server=${S_PATH_INSTALL_CONF}/server.conf
-file_install_server_ovh=${S_PATH_INSTALL_CONF}/server-ovh.conf
 
-for file in ${file_conf_server} ${file_install_server} ${file_install_server_ovh}; do
+for file in ${file_conf_server} ${file_install_server}; do
 	! ${_SUDO} [ -f "${file}" ] && echo -e "${redb}[error] Unable to find file: ${file}${cclear}" && exit 1
 done
 
@@ -27,8 +26,8 @@ done
 echo -e "${cyan}----------  data${cclear}"
 
 echo "Unable to find initial configuration"
-echo -n "Do you want to copy ovh configuration? (Y/n): "
-read answer && copy_file_install=${answer:-y} && copy_file_install=${copy_file_install/n/}
+_menu "Do you want to copy an pre configuration file or none" none `ls ${S_PATH_INSTALL_CONF}/server-*.conf 2>/dev/null`
+copy_file_install=${answer/none/}
 
 ########################  MAIN
 
@@ -64,7 +63,7 @@ fi
 if ! [ -f "${S_GLOBAL_CONF}" ]; then
 	echo -e "${cyan}----------  server.conf${cclear}"
 	${_SUDO} cp -a "${file_install_server}" "${S_GLOBAL_CONF}"
-	[ "${copy_file_install}" ] && ${_SUDO} cp -a ${file_install_server_ovh} ${S_GLOBAL_CONF}
+	[ "${copy_file_install}" ] && ${_SUDO} cp -a ${copy_file_install} ${S_GLOBAL_CONF}
 fi
 . ${S_GLOBAL_CONF}
 
