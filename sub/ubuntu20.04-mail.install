@@ -54,4 +54,4 @@ systemctl is-enabled postfix || _eval systemctl enable postfix
 _eval systemctl restart postfix
 
 _echoT "===================== ${_PART} end"
-_partadd ${_PART} ${S_FILE_INSTALL_DONE}
+_partadd ${_PART#++} ${S_FILE_INSTALL_DONE}

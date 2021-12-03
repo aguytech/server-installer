@@ -199,7 +199,7 @@ _lxc_var_replace ${_CT_NAME} ${file} mariadb
 ########################  PASSWORD
 
 _echot "------------------  variables set"
-strpass="root @ localhost - $_MDB_PWD_LOCAL\n"
+strpass="root @ localhost - ${_MDB_PWD_LOCAL}\n"
 
 _echot "------------------  right roothost"
 for ip in ${_IPS_CLUSTER} ${_IP_HOST_VM}; do

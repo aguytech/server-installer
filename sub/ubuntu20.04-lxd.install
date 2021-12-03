@@ -255,4 +255,4 @@ _echoW "You have to reboot before continuing"
 ########################  END
 
 _echoT "===================== ${_PART} end"
-_partadd ${_PART} ${S_FILE_INSTALL_DONE}
+_partadd ${_PART#++} ${S_FILE_INSTALL_DONE}

@@ -38,7 +38,7 @@ _echot "------------------  ssh restart"
 _service restart sshd
 
 _echoT "===================== ${_PART} end"
-_partadd ${_PART} ${S_FILE_INSTALL_DONE}
+_partadd ${_PART#++} ${S_FILE_INSTALL_DONE}
 
 <<KEEP
 # /etc/ssh/sshd_config

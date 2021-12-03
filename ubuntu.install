@@ -42,7 +42,7 @@ S_GLOBAL_FUNCTIONS=${S_GLOBAL_FUNCTIONS:-/usr/local/bs/inc-functions.sh}
 ########################  MANDATORY
 
 # common + ssh
-parts="init common ssh"
+parts="init ssh"
 for _PART in $parts; do
 	! _parthave "${_PART}" "${S_FILE_INSTALL_DONE}" && _source "${_PATH_BASE_SUB}/${S_RELEASE}-${_PART}.install"
 done
