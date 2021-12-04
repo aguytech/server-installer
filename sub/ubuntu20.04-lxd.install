@@ -164,7 +164,7 @@ WantedBy=sys-subsystem-net-devices-${s_inet}.device
 ' > ${file}"
 
 	_evalr systemctl daemon-reload
-	_evalr systemctl enable --now ${service}
+	_evalr systemctl -q enable --now ${service}
 	_evalr resolvectl status ${s_inet}
 
 fi

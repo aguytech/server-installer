@@ -50,7 +50,7 @@ _evalr chmod g-w,o= ${file_aliases}
 newaliases
 
 _echot "------------------  postfix enable"
-systemctl is-enabled postfix || _eval systemctl enable postfix
+systemctl is-enabled postfix || _service enable postfix
 _service restart postfix
 
 _echoT "===================== ${_PART} end"
