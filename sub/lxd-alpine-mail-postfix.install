@@ -4,7 +4,7 @@
 
 _echoT "\n======================  ${_INSTALL}-${_PARTMAIL}"
 
-grep -q "^# ${_PARTMAIL#++}$" ${_FILE_INSTALL_CONF} || echo  "# ${_PARTMAIL}" >> ${_FILE_INSTALL_CONF}
+grep -q "^# ${_PARTMAIL#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PARTMAIL}" >> ${S_FILE_INSTALL_CONF}
 
 ####################  REQUIRED
 
@@ -14,16 +14,15 @@ file_conf_main_add=${S_PATH_INSTALL_CONF}/mail/postfix/main_add.cf
 file_conf_headout=${S_PATH_INSTALL_CONF}/mail/postfix/header_checks_out.pcre
 file_conf_headin=${S_PATH_INSTALL_CONF}/mail/postfix/header_checks_in.pcre
 file_conf_client=${S_PATH_INSTALL_CONF}/mail/postfix/client_access.cidr
-path_sql=${S_PATH_INSTALL_CONF}/mail/${_VMAIL_APP}
+path_sql=${S_PATH_INSTALL_CONF}/mail/${_MEL_VMAIL_APP}
 
 _echot "------------------ required files"
 _require `set|grep ^file_conf_|cut -d= -f2`
 _requirep ${path_sql}
 
-anstmp=tech@${_DOMAIN_FQDN} && _askno "Created email in domain ${_DOMAIN_FQDN} to test mysql settings (${anstmp})"
-_EMAIL_TEST=${_ANSWER:-${anstmp}} && _confset _EMAIL_TEST "${_EMAIL_TEST}" ${_FILE_INSTALL_CONF}
+########################  DATA
 
-_PFA_PATH_SQL=/etc/postfix/sql && _confset _PFA_PATH_SQL "${_PFA_PATH_SQL}" ${_FILE_INSTALL_CONF}
+_MEL_PATH_SQL=/etc/postfix/sql && _confset _MEL_PATH_SQL "${_MEL_PATH_SQL}"
 
 ########################  METADATA
 
@@ -88,11 +87,11 @@ file=/etc/postfix/${file_conf_client##*/}
 _eval lxc file push -q ${file_conf_client} ${_CT_NAME}${file}
 
 _echot "------------------  sql files"
-_lxc_exec_e ${_CT_NAME} "[ -d '${_PFA_PATH_SQL}' ] || mkdir -p ${_PFA_PATH_SQL}"
-_lxc_exec_e ${_CT_NAME} chmod 755 ${_PFA_PATH_SQL}
+_lxc_exec_e ${_CT_NAME} "[ -d '${_MEL_PATH_SQL}' ] || mkdir -p ${_MEL_PATH_SQL}"
+_lxc_exec_e ${_CT_NAME} chmod 755 ${_MEL_PATH_SQL}
 for file in `ls ${path_sql}/mysql_*.cf`; do
 	_echo ${file##*/}
-	_eval lxc file push -q ${file} ${_CT_NAME}/${_PFA_PATH_SQL}/ || _exite "unable to push file"
+	_eval lxc file push -q ${file} ${_CT_NAME}/${_MEL_PATH_SQL}/ || _exite "unable to push file"
 done
 
 _echot "------------------  conf var replace"
@@ -116,16 +115,16 @@ queries=`_lxc_exec ${_CT_NAME} "sed -n 's|^[^#].*\( mysql:.*\)$|\1|p' /etc/postf
 queries+=" $(_lxc_exec ${_CT_NAME} "sed -n 's|^[^#].*\(proxy:mysql:.*\)$|\1|p' /etc/postfix/main.cf")"
 queries+=" $(_lxc_exec ${_CT_NAME} "sed -n 's|^[^#].*\( mysql:.*\)$|\n\1|p' /etc/postfix/master.cf")"
 queries+=" $(_lxc_exec ${_CT_NAME} "sed -n 's|^[^#].*\(proxy:mysql:.*\)$|\n\1|p' /etc/postfix/master.cf")"
-_echot "------------------  test postmap ${_DOMAIN_FQDN}"
+_echot "------------------  test postmap ${S_DOM_FQDN}"
 _echoA "Verify results of postamp commands:"
 for query in ${queries}; do
 	_echo "- ${query}"
-	_lxc_exec ${_CT_NAME} postmap -q ${_DOMAIN_FQDN} ${query}
+	_lxc_exec ${_CT_NAME} postmap -q ${S_DOM_FQDN} ${query}
 done
-_echot "------------------  test postmap ${_EMAIL_TEST}"
+_echot "------------------  test postmap ${S_EMAIL_TECH}"
 for query in ${queries}; do
 	_echo "- ${query}"
-	_lxc_exec ${_CT_NAME} postmap -q ${_EMAIL_TEST} ${query}
+	_lxc_exec ${_CT_NAME} postmap -q ${S_EMAIL_TECH} ${query}
 done
 _askno "valid to continue"
 
@@ -135,22 +134,22 @@ str=2
 _echoA "Verify the following content of the email received"
 _echoa "(in ${str}s)"
 sleep ${str}
-_lxc_exec ${_CT_NAME} cat ${_PATH_LMAIL}/root
+_lxc_exec ${_CT_NAME} cat ${_MEL_PATH_LOCAL}/root
 _askno "valid to continue"
 
 _echot "------------------  test telnet 25"
 _echoa "Enter 'quit' to quit"
-telnet mx.${_DOMAIN_FQDN} 25
+telnet mx.${S_DOM_FQDN} 25
 
 _echot "------------------  test starttls 465"
 _echoa "Enter 'quit' to quit after connection"
 _askno "valid to continue"
-openssl s_client -connect mx.${_DOMAIN_FQDN}:465
+openssl s_client -connect mx.${S_DOM_FQDN}:465
 
 _echot "------------------  test openssl 587"
 _echoa "Enter 'quit' to quit after connection"
 _askno "valid to continue"
-openssl s_client -starttls smtp -connect mx.${_DOMAIN_FQDN}:587
+openssl s_client -starttls smtp -connect mx.${S_DOM_FQDN}:587
 
 ########################  END
 

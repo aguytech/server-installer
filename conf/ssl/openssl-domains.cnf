@@ -13,15 +13,15 @@ countryName		= FR
 localityName		= Nantes
 organizationName	= Ambau
 organizationalUnitName	= Research and development
-commonName		= _HPX_DOMAIN_FQDN
-emailAddress		= _HPX_EMAIL
+commonName		= S_DOM_FQDN
+emailAddress		= S_EMAIL_ADMIN
 
 [ v3_req ]
-#basicConstraints	= CA:FALSE
-#keyUsage		= nonRepudiation, digitalSignature, keyEncipherment
-subjectAltName		= DNS:smtp._HPX_DOMAIN_FQDN,DNS:mail._HPX_DOMAIN_FQDN,DNS:imap._HPX_DOMAIN_FQDN
+basicConstraints	= CA:FALSE
+keyUsage		= nonRepudiation, digitalSignature, keyEncipherment
+subjectAltName		= DNS:smtp.S_DOM_FQDN,DNS:imap.S_DOM_FQDN
 
 [ v3_ca ]
-#subjectKeyIdentifier	= hash
-#authorityKeyIdentifier	= keyid:always,issuer
-#basicConstraints	= critical,CA:true
+subjectKeyIdentifier	= hash
+authorityKeyIdentifier	= keyid:always,issuer
+basicConstraints	= critical,CA:true

@@ -4,111 +4,109 @@
 
 _echoT "\n======================  ${_INSTALL}-${_PARTMAIL}"
 
-grep -q "^# ${_PARTMAIL#++}$" ${_FILE_INSTALL_CONF} || echo  "# ${_PARTMAIL}" >> ${_FILE_INSTALL_CONF}
+grep -q "^# ${_PARTMAIL#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PARTMAIL}" >> ${S_FILE_INSTALL_CONF}
 
 ########################  REQUIRED
 
 file_cron_certificate=${S_PATH_INSTALL_CONF}/cron/certificate-copy
+file_conf_ssl_dom=${S_PATH_INSTALL_CONF}/ssl/openssl-domains.cnf
+
 _echot "------------------ required files"
-_require ${file_cron_certificate}
+_require ${file_cron_certificate}  ${file_conf_ssl_dom}
 
 ########################  DATA
 
 _echot "------------------ data ssl"
 
-_menu "generate new ssl certificates for mail server" none letsencrypt openssl
-ssl_api=${_ANSWER/none/} && _confset ssl_api "${ssl_api}" ${_FILE_INSTALL_CONF}
+_menu "generate new ssl certificates for mail server" none certbot openssl
+ssl_api=${_ANSWER/none/} && _confset ssl_api "${ssl_api}"
 
 if [ "${ssl_api}" ]; then
 	anstmp="mail mx imap smtp"
 	_askno "Subdomains to register to ssl: (${anstmp})"
-	subs_ssl="${_ANSWER:-${anstmp}}" && _confset subs_ssl "${subs_ssl}" ${_FILE_INSTALL_CONF}
+	subs_ssl="${_ANSWER:-${anstmp}}" && _confset subs_ssl "${subs_ssl}"
 fi
 
-_FILE_SSL_FULL="${_PATH_SSL}/mail.${_DOMAIN_FQDN}-fullchain.pem"
-_confset _FILE_SSL_FULL "${_FILE_SSL_FULL}" ${_FILE_INSTALL_CONF} ${_FILE_INSTALL_CONF}
-
-_FILE_SSL_KEY="${_PATH_SSL}/mail.${_DOMAIN_FQDN}-privkey.pem"
-_confset _FILE_SSL_KEY "${_FILE_SSL_KEY}" ${_FILE_INSTALL_CONF} ${_FILE_INSTALL_CONF}
-
 ct_proxy=${S_SERVICE[proxy]}
+path_ssl_conf=${_MEL_PATH_SSL}/conf
+path_ssl_private=${_MEL_PATH_SSL}/private
+path_ssl_certs=${_MEL_PATH_SSL}/certs
+path_ssl_haproxy=${_HPX_PATH_SSL}/haproxy
 
-_echot "------------------  data letsencrypt"
+if [ "${ssl_api}" =  certbot ]; then
 
-if [ "${ssl_api}" =  letsencrypt ]; then
 	########################  LETSENCRYPT
 
-	anstmp=${S_EMAIL_TECH} && _askno "Technical email for letsencrypt (${anstmp})"
-	lcrypt_email="${_ANSWER:-${anstmp}}" && _confset lcrypt_email "${lcrypt_email}" ${_FILE_INSTALL_CONF}
-
-	#### letsencrypt
+	#### certbot
      # cert.pem: Your domain’s certificate / mailserver
 	# chain.pem: The CA certificate
 	# fullchain.pem: cert.pem and chain.pem combined / mailserver certificate + CA certificate
 	# privkey.pem: Your certificate’s private key / Private key for mailserver certificate
 
-	_echot "------------------  copy letsencrypt"
-	_echoA "Copy backup of letsencrypt certs"
+	_echot "------------------  copy certbot"
+	_echoA "Copy backup of certbot certs"
 	_askno "Valid to continue"
 
-	if ! _lxc_exec ${ct_proxy} "[ -d /etc/letsencrypt/live/mail.${_DOMAIN_FQDN} ]"; then
+	if ! _lxc_exec ${ct_proxy} "[ -d /etc/letsencrypt/live/mail.${S_DOM_FQDN} ]"; then
 
-		_echot "------------------  letsencrypt cert mail.${_DOMAIN_FQDN}"
+		_echot "------------------  certbot cert mail.${S_DOM_FQDN}"
 		subs=
-		for domain in ${_DOMAIN_FQDN} ${_DOMAIN_OTHERS}; do
+		for domain in ${S_DOM_FQDN} ${S_DOM_ALL_FQDN/${S_DOM_FQDN}/}; do
 			for sub in ${subs_ssl}; do subs+=" -d ${sub}.${domain}"; done
 		done
-		cmd="certbot certonly --standalone --preferred-challenges http --http-01-port ${_HPX_LCRYPT_PORT} --non-interactive --agree-tos --email ${lcrypt_email} ${subs}"
+		cmd="certbot certonly --standalone --preferred-challenges http --http-01-port ${_HPX_CERTBOT_PORT} --non-interactive --agree-tos --email ${S_EMAIL_ADMIN} ${subs}"
 		_lxc_exec ${ct_proxy} "${cmd}"
 	else
-		_echot "------------------  letsencrypt skip mail.${_DOMAIN_FQDN}"
+		_echot "------------------  certbot skip mail.${S_DOM_FQDN}"
 	fi
 
-	_echot "------------------  letsencrypt unify"
-	_lxc_exec ${ct_proxy} "${S_PATH_SCRIPT}/scripts/letsencrypt-unify.sh"
+	_echot "------------------  certbot unify"
+	_lxc_exec ${ct_proxy} "${S_PATH_SCRIPT}/scripts/certbot-unify.sh"
 
 elif [ "${ssl_api}" =  openssl ]; then
 
 	########################  OPENSSL
 
-	_echot "------------------  openssl conf root"
-	file_ca_key=${S_PATH_CONF_SSL}/private/${_DOMAIN_FQDN}.key.ca
-	file_ca_pem=${S_PATH_CONF_SSL}/certs/${_DOMAIN_FQDN}.pem.ca
-
-	_lxc_exec ${ct_proxy} openssl genrsa -out ${file_ca_key} 4096
-	_lxc_exec ${ct_proxy} openssl req -x509 -new -nodes -key ${file_ca_key} -sha256 -days 3650 -out ${file_ca_pem}
+	_echot "------------------  openssl paths"
+	for path in ${path_ssl_conf} ${path_ssl_private} ${path_ssl_certs}; do
+		_lxc_exec ${ct_proxy} "[ -d '${path}' ] || mkdir -p ${path}"
+	done
 
 	_echot "------------------  openssl conf multi-domains"
-	file_ssl_conf=${S_PATH_CONF_SSL}/openssl-${_DOMAIN_FQDN}-mail.cnf
-	file_ssl_csr=${S_PATH_CONF_SSL}/private/mail.${_DOMAIN_FQDN}.csr
-	file_ssl_crt=${S_PATH_CONF_SSL}/certs/mail.${_DOMAIN_FQDN}.crt
+	file_ssl_csr=${path_ssl_certs}/mail.${S_DOM_FQDN}.csr
+	file_ssl_key="${path_ssl_private}/mail.${S_DOM_FQDN}-privkey.pem"
+	file_ssl_full="${path_ssl_certs}/mail.${S_DOM_FQDN}-fullchain.pem"
+
+	file_ssl_conf=${path_ssl_conf}/openssl-mail.${S_DOM_FQDN}.cnf
+	_eval lxc file push -q ${file_conf_ssl_dom} ${ct_proxy}${file_ssl_conf}
+	_lxc_var_replace ${ct_proxy} ${file_ssl_conf} haproxy
 
 	dns=
-	for domain in ${_DOMAIN_FQDN} ${_DOMAIN_OTHERS}; do
+	for domain in ${S_DOM_FQDN} ${S_DOM_ALL_FQDN/${S_DOM_FQDN}/}; do
 		for sub in ${subs_ssl}; do dns+="DNS:${sub}.${domain},"; done
 	done
 	dns=${dns%,}
-
-	_lxc_exec ${ct_proxy} cp -a /etc/ssl/openssl.cnf ${file_ssl_conf}
-	_lxc_exec ${ct_proxy} "sed -i 's|^.*\(req_extensions = v3_req.*\)$|\1|' ${file_ssl_conf}"
-	_lxc_exec ${ct_proxy} "sed -i 's|^\(\[ v3_ca \].*\)$|subjectAltName = ${dns}\n\n\1|' ${file_ssl_conf}"
+	_lxc_exec ${ct_proxy} "sed -i '/subjectAltName/ s|=.*|= ${dns}|' ${file_ssl_conf}"
 
 	# Create the key
-	_lxc_exec ${ct_proxy} openssl genrsa -out ${_FILE_SSL_KEY} 2048
+	_lxc_exec ${ct_proxy} openssl genrsa -out ${file_ssl_key} 4096
 	# Create the Certificate Signing Request CSR - for CN use the correct FQDN !! ex: mail.ambau.ovh
-	_lxc_exec ${ct_proxy} openssl req -new  -key ${_FILE_SSL_KEY} -out ${file_ssl_csr} -config ${file_ssl_conf}
+	_lxc_exec ${ct_proxy} openssl req -new  -key ${file_ssl_key} -out ${file_ssl_csr} -config ${file_ssl_conf}
 
 	_echot "------------------  conf verify"
 	# verify configuration of CSR
 	_lxc_exec ${ct_proxy} openssl req -text -noout -in ${file_ssl_csr}|grep -e '\(Subject:\|DNS:\)'
 	# Self-sign the certificate CSR to a CRT
-	_lxc_exec ${ct_proxy} openssl x509 -req -days 3650 -sha256 -in ${file_ssl_csr} -CA ${file_ca_pem} -CAkey ${file_ca_key} -CAcreateserial -out ${file_ssl_crt} -extensions v3_req -extfile ${file_ssl_conf}
-	# Create pem file
-	_lxc_exec ${ct_proxy} "cat ${file_ssl_crt} ${_FILE_SSL_KEY} > ${_FILE_SSL_FULL}"
+	_lxc_exec ${ct_proxy} openssl x509 -req -days 3650 -sha512 -in ${file_ssl_csr} -CA ${_HPX_SSL_CA_PEM} -CAkey ${_HPX_SSL_CA_KEY} -CAcreateserial -out ${file_ssl_full} -extensions v3_req -extfile ${file_ssl_conf}
+	# Compose
+	_lxc_exec ${ct_proxy} "cat ${file_ssl_crt} ${file_ssl_key} > ${file_ssl_full}"
+
+	# create haproxy pem list
+	_lxc_exec ${ct_proxy} "ls -1 ${path_ssl_haproxy}/*.pem > ${_HPX_PATH_SSL}/certbot.pem.lst"
 
 fi
 
-_echot "------------------  certificate copy"
+_echot "------------------  certificate cron"
 file=/etc/periodic/weekly/${file_cron_certificate##*/}
 _eval lxc file push -q ${file_cron_certificate} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} mail
@@ -116,9 +114,9 @@ _lxc_exec ${_CT_NAME} "chmod +x ${file}" # shift the haproxy cron by one hour
 _lxc_exec ${_CT_NAME} "sed -i '/run-parts.*weekly/ s|3|4|' /etc/crontabs/root" # shift the haproxy cron by one hour
 _lxc_exec ${_CT_NAME} "sh ${file}"
 
-_echot "------------------  copy certificate"
-cmds="cp -a ${_FILE_SSL_KEY} ${S_PATH_CONF_SSL}/private/
-cp -a ${_FILE_SSL_FULL} ${S_PATH_CONF_SSL}/private/"
+_echot "------------------  certificate copy"
+cmds="cp -a ${file_ssl_key} ${S_PATH_CONF_SSL}/private/
+cp -a ${file_ssl_full} ${S_PATH_CONF_SSL}/private/"
 _lxc_exec ${ct_proxy} "${cmds}"
 
 ########################  END

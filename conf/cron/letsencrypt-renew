@@ -1,4 +1,0 @@
-#!/bin/sh
-#
-# renew certificate with letsencrypt
-certbot renew --quiet --standalone --preferred-challenges http --http-01-port _HPX_LCRYPT_PORT --post-hook "S_PATH_SCRIPT/scripts/letsencrypt-unify.sh && rc-service haproxy reload"

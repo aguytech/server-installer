@@ -4,7 +4,7 @@
 
 _echoT "\n======================  ${_INSTALL}-${_PARTMAIL}"
 
-grep -q "^# ${_PARTMAIL#++}$" ${_FILE_INSTALL_CONF} || echo  "# ${_PARTMAIL}" >> ${_FILE_INSTALL_CONF}
+grep -q "^# ${_PARTMAIL#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PARTMAIL}" >> ${S_FILE_INSTALL_CONF}
 
 ########################  REQUIRED
 
@@ -32,13 +32,13 @@ _require `set|grep ^file_conf_|cut -d= -f2`
 ########################  DATA
 
 _menua "Select one available container for cache" ${imgs_all_rds}
-_CTS_RDS=${_ANSWER} && _confset _CTS_RDS "${_CTS_RDS}" ${_CTS_RDS}
+_MEL_CTS_RDS=${_ANSWER} && _confset _MEL_CTS_RDS "${_MEL_CTS_RDS}" ${_MEL_CTS_RDS}
 
 anstmp="$(_pwd)" && _askno "User password for webUI, controller (${anstmp})"
-_RSP_PWD=${_ANSWER:-${anstmp}} && _confset _RSP_PWD "${_RSP_PWD}" ${_FILE_INSTALL_CONF}
+ui_pwd=${_ANSWER:-${anstmp}} 
 
 anstmp=dkim && _askno "Default selector for DKIM (${anstmp})"
-_RSP_DKIM_SEL=${_ANSWER:-${anstmp}} && _confset _RSP_DKIM_SEL "${_RSP_DKIM_SEL}" ${_FILE_INSTALL_CONF}
+dkim_sel=${_ANSWER:-${anstmp}} && _confset dkim_sel "${dkim_sel}"
 
 ########################  METADATA
 
@@ -70,31 +70,31 @@ _lxc_var_replace ${_CT_NAME} /etc/rspamd rspamd
 
 _echot "------------------  conf password"
 file=/etc/rspamd/local.d/worker-controller.inc
-str=`_lxc_exec ${_CT_NAME} "rspamadm pw -p ${_RSP_PWD}"`
+str=`_lxc_exec ${_CT_NAME} "rspamadm pw -p ${ui_pwd}"`
 _lxc_exec ${_CT_NAME} "sed -i '/^#\?password =/ c password = "${str}";' ${file}"
 
 ########################  DKIM
 
 _echot "------------------  dkim keys"
-file=${_PATH_RSPAMD}/dkim_selectors.map
-for domain in `echo ${_DOMAIN_ALL_FQDN}|tr ' ' '\n'|sort`; do
-	file_key=${_PATH_DKIM}/${domain}.${_RSP_DKIM_SEL}.key
-	file_pub=${_PATH_DKIM}/${domain}.${_RSP_DKIM_SEL}.pub
+file=${_MEL_PATH_SPAM}/dkim_selectors.map
+for domain in `echo ${S_DOM_ALL_FQDN}|tr ' ' '\n'|sort`; do
+	file_key=${_MEL_PATH_DKIM}/${domain}.${dkim_sel}.key
+	file_pub=${_MEL_PATH_DKIM}/${domain}.${dkim_sel}.pub
 	if ! _lxc_exec ${_CT_NAME} "test -f '${file_key}'"; then
 		_echo ${domain}
-		_lxc_exec ${_CT_NAME} "echo -e '${domain}\t\t${_RSP_DKIM_SEL}' >> ${file}"
-		_lxc_exec ${_CT_NAME} "rspamadm dkim_keygen -b 2048 -s ${_RSP_DKIM_SEL} -d ${domain} -k ${file_key} > ${file_pub}"
+		_lxc_exec ${_CT_NAME} "echo -e '${domain}\t\t${dkim_sel}' >> ${file}"
+		_lxc_exec ${_CT_NAME} "rspamadm dkim_keygen -b 2048 -s ${dkim_sel} -d ${domain} -k ${file_key} > ${file_pub}"
 	fi
 done
-_lxc_exec ${_CT_NAME} chown -R rspamd:rspamd ${_PATH_RSPAMD}
-_lxc_exec ${_CT_NAME} chmod -R u=rw,g-w,o= ${_PATH_RSPAMD}
+_lxc_exec ${_CT_NAME} chown -R rspamd:rspamd ${_MEL_PATH_SPAM}
+_lxc_exec ${_CT_NAME} chmod -R u=rw,g-w,o= ${_MEL_PATH_SPAM}
 
 _echot "------------------  dkim all_keys"
-file_pubkeys=${_PATH_RSPAMD}/dkim_all_keys.pub
+file_pubkeys=${_MEL_PATH_SPAM}/dkim_all_keys.pub
 _lxc_exec ${_CT_NAME} "[ -f '${file_pubkeys}' ] && rm ${file_pubkeys}"
-domains=`_lxc_exec ${_CT_NAME} "ls ${_PATH_DKIM}/*.pub|sed -n 's|.*/\([^/]\+\).${_RSP_DKIM_SEL}.pub|\1|p'"`
+domains=`_lxc_exec ${_CT_NAME} "ls ${_MEL_PATH_DKIM}/*.pub|sed -n 's|.*/\([^/]\+\).${dkim_sel}.pub|\1|p'"`
 for domain in ${domains}; do
-	file_pub=${_PATH_DKIM}/${domain}.${_RSP_DKIM_SEL}.pub
+	file_pub=${_MEL_PATH_DKIM}/${domain}.${dkim_sel}.pub
 	_lxc_exec ${_CT_NAME} "echo ${domain} >> ${file_pubkeys}"
 	_lxc_exec ${_CT_NAME} "sed -n '2,3 s|.*\"p\?=\?\(.\+\)\".*|\1|gp' ${file_pub} >> ${file_pubkeys}"
 done
@@ -138,13 +138,13 @@ _askno "Verify the postfix starting and valid to continue"
 
 _echot "------------------  passwords"
 _echoA "Keep this passwords:"
-_echoa "${_RSP_PWD}"
+_echoa "${ui_pwd}"
 
 _echot "------------------  rspamd controller"
 _echoA "To verify rspamd controller acces, goto:"
 _echo "http://${_IPTHIS}:${S_RSPAMD_PORT[controller]}/"
-_echo "http://${_DOMAIN_FQDN}:${S_RSPAMD_PORT[controller]}/"
-_echoa "Access with password: ${_RSP_PWD}"
+_echo "http://${S_DOM_FQDN}:${S_RSPAMD_PORT[controller]}/"
+_echoa "Access with password: ${ui_pwd}"
 
 ########################  END
 

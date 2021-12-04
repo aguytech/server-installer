@@ -4,6 +4,8 @@
 
 _echoT "\n==========================================  ${_INSTALL}-${_PART}"
 
+grep -q "^# ${_PART#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART}" >> ${S_FILE_INSTALL_CONF}
+
 ########################  REQUIRED
 
 _echot "------------------ required vm image"
@@ -13,25 +15,6 @@ _echot "------------------ required vm"
 lxc list -f csv -c n | grep -q ^${S_SERVICE[proxy]}$ || _exite "Unable to find container: '${S_SERVICE[proxy]}'"
 lxc list -f csv -c n | grep -q ^${S_SERVICE[log]}$ || _exite "Unable to find container: '${S_SERVICE[log]}'"
 
-####################  SELECT
-
-_echot "------------------ select"
-
-anstmp="17112018.fr.lxd 17112018.ovh.lxd ambau.fr.lxd ambau.ovh.lxd ggj.fr.lxd ggj.ovh.lxd han-sci.fr.lxd otokoz.ovh.lxd"
-[ "${_DOMAIN_FQDN%.lxd}" = "${_DOMAIN_FQDN}" ] && anstmp=${anstmp//.lxd/}
-_askno "All FQDN domains (${anstmp})"
-_DOMAIN_ALL_FQDN="${_ANSWER:-${anstmp}}"
-
-_menu "A principal fqdn domain (ambau.fr)" ${_DOMAIN_ALL_FQDN}
-_DOMAIN_FQDN="${_ANSWER}"
-
-_DOMAIN_NAME=${_DOMAIN_FQDN%.lxd} && _DOMAIN_NAME=${_DOMAIN_NAME%.*}
-_FILE_INSTALL_CONF=${S_PATH_CONF}/${_PART}-${_DOMAIN_FQDN}.conf
-_confset _FILE_INSTALL_CONF "${_FILE_INSTALL_CONF}" ${_FILE_INSTALL_CONF}
-_confset _DOMAIN_ALL_FQDN "${_DOMAIN_ALL_FQDN}" ${_FILE_INSTALL_CONF}
-_confset _DOMAIN_FQDN "${_DOMAIN_FQDN}" ${_FILE_INSTALL_CONF}
-_confset _DOMAIN_NAME "${_DOMAIN_NAME}" ${_FILE_INSTALL_CONF}
-
 ####################  DATA
 
 _PARTMAIL=mail-data
@@ -39,7 +22,6 @@ if ! _parthave ${_PARTMAIL} ${S_FILE_INSTALL_DONE}; then
 	. "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PARTMAIL}.install" || _exite "Wrong part: ${_PARTMAIL}"
 	[ "$_STEP" ] && _askno "Valid to continue" 
 else
-	. ${_FILE_INSTALL_CONF}
 	_echO "performed *** ${_PARTMAIL}"
 fi
 
@@ -73,9 +55,9 @@ else
 	_echO "performed *** ${_PARTMAIL}"
 fi
 
-####################  _VMAIL_APP
+####################  _MEL_VMAIL_APP
 
-_PARTMAIL=mail-${_VMAIL_APP}
+_PARTMAIL=mail-${_MEL_VMAIL_APP}
 if ! _parthave ${_PARTMAIL} ${S_FILE_INSTALL_DONE}; then
 	. "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PARTMAIL}.install" || _exite "Wrong part: ${_PARTMAIL}"
 	[ "$_STEP" ] && _askno "Valid to continue" 

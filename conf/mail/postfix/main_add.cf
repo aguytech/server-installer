@@ -14,10 +14,10 @@ mailbox_size_limit = 51200000
 
 ###### VIRTUAL
 
-virtual_mailbox_domains = proxy:mysql:/etc/postfix/sql/mysql_virtual_mailbox_domains.cf
-virtual_alias_maps = proxy:mysql:/etc/postfix/sql/mysql_virtual_alias_maps.cf
-virtual_mailbox_maps = proxy:mysql:/etc/postfix/sql/mysql_virtual_mailbox_maps.cf
-virtual_mailbox_base = _PATH_LMAIL
+virtual_mailbox_domains = proxy:mysql:_MEL_PATH_SQL/mysql_virtual_mailbox_domains.cf
+virtual_alias_maps = proxy:mysql:_MEL_PATH_SQL/mysql_virtual_alias_maps.cf
+virtual_mailbox_maps = proxy:mysql:_MEL_PATH_SQL/mysql_virtual_mailbox_maps.cf
+virtual_mailbox_base = _MEL_PATH_LOCAL
 virtual_mailbox_limit = $mailbox_size_limit
 virtual_uid_maps = static:101
 virtual_gid_maps = static:102
@@ -98,7 +98,7 @@ smtp_tls_protocols = !SSLv2, !SSLv3
 smtp_tls_ciphers = high
 smtp_tls_CAfile = /etc/ssl/certs/ca-certificates.crt
 smtp_tls_session_cache_database = lmdb:${data_directory}/smtp_scache
-smtp_tls_policy_maps = proxy:mysql:/etc/postfix/sql/mysql_tls_policy.cf
+smtp_tls_policy_maps = proxy:mysql:_MEL_PATH_SQL/mysql_tls_policy.cf
 smtp_tls_loglevel = 1
 
 ## TLS SMTPD
@@ -108,8 +108,8 @@ smtpd_tls_security_level = may
 smtpd_tls_protocols = !SSLv2, !SSLv3
 smtpd_tls_ciphers = high
 smtpd_tls_session_cache_database = lmdb:${data_directory}/smtpd_scache
-smtpd_tls_cert_file = S_PATH_CONF_SSL/private/mail._DOMAIN_FQDN-fullchain.pem
-smtpd_tls_key_file = S_PATH_CONF_SSL/private/mail._DOMAIN_FQDN-privkey.pem
+smtpd_tls_cert_file = S_PATH_CONF_SSL/private/mail.S_DOM_FQDN-fullchain.pem
+smtpd_tls_key_file = S_PATH_CONF_SSL/private/mail.S_DOM_FQDN-privkey.pem
 smtpd_tls_auth_only = yes
 smtpd_tls_loglevel = 1
 

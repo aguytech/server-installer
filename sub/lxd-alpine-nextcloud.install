@@ -29,13 +29,13 @@ _require ${file_conf} ${file_site}
 
 _echot "------------------  data domain"
 
-anstmp=${S_DOMAIN_FQDN} && _askno "Domain name to use (${anstmp})"
-_DOMAIN_FQDN="${_ANSWER:-${anstmp}}"
+anstmp=${S_DOM_FQDN} && _askno "Domain name to use (${anstmp})"
+_DOM_FQDN="${_ANSWER:-${anstmp}}"
 
 anstmp=cloud && _askno "Give the new subdomain for admin (${anstmp})"
-_SUBDOMAIN="${_ANSWER:-${anstmp}}"
+_APA_SUB="${_ANSWER:-${anstmp}}"
 
-anstmp=wap-${_SUBDOMAIN}-${S_DOMAIN_NAME//./-} && _askno "Base name of containers to build (${anstmp})"
+anstmp=wap-${_APA_SUB}-${S_DOM_NAME//./-} && _askno "Base name of containers to build (${anstmp})"
 ct_base="${_ANSWER:-${anstmp}}"
 
 anstmp=1 && _askno "Number of containers to build (${anstmp})"
@@ -44,7 +44,7 @@ ct_num="${_ANSWER:-${anstmp}}"
 profiles=`lxc profile list -f csv|grep "^cloud.*,"|cut -d, -f1`
 [ "${profiles}" ] && _menu "Select an available cloud profile to apply or none" none ${profiles} || _ANSWER=
 profile_cloud="${_ANSWER/none/}" && profile_cloud_exist=${profile_cloud}
-[ -z "${profile_cloud_exist}" ] && anstmp=cloud.${_DOMAIN_FQDN} && _askno "Name of the new  cloud profile (${anstmp})" && profile_cloud="${_ANSWER:-${anstmp}}"
+[ -z "${profile_cloud_exist}" ] && anstmp=cloud.${_DOM_FQDN} && _askno "Name of the new  cloud profile (${anstmp})" && profile_cloud="${_ANSWER:-${anstmp}}"
 
 _echot "------------------  data www"
 
@@ -54,7 +54,7 @@ ct_www=${_ANSWER}
 profiles=`lxc profile list -f csv|grep "^www.*,"|cut -d, -f1`
 [ "${profiles}" ] && _menu "Select an available www profile to apply or none" none ${profiles} || _ANSWER=
 profile_www="${_ANSWER/none/}" && profile_www_exist=${profile_www}
-[ -z "${profile_www_exist}" ] && anstmp=www-${_SUBDOMAIN}.${_DOMAIN_FQDN} && _askno "Name of the new  www profile (${anstmp})" && profile_www="${_ANSWER:-${anstmp}}"
+[ -z "${profile_www_exist}" ] && anstmp=www-${_APA_SUB}.${_DOM_FQDN} && _askno "Name of the new  www profile (${anstmp})" && profile_www="${_ANSWER:-${anstmp}}"
 
 _echot "------------------  data php"
 
@@ -89,8 +89,7 @@ done
 
 _CT_NAME=${ct_base}-1
 
-_PATH_DOMAIN=${S_VM_PATH_SHARE}/www/${_SUBDOMAIN}.${_DOMAIN_FQDN}
-_APP_URI=https://${_SUBDOMAIN}.${_DOMAIN_FQDN}
+_APP_URI=https://${_APA_SUB}.${_DOM_FQDN}
 _APP_DB_PORT=${S_DB_MARIA_PORT}
 _APP_DB_NAME=nextcloud
 _APP_DB_USER=nextcloud
@@ -103,6 +102,7 @@ _APP_DATA_DIR=${S_VM_PATH_SHARE}/cloud
 
 cts_php=`for i in $(seq 1 ${ct_num}); do echo ${ct_base}-${i}; done`
 path_sites=/etc/apache2/sites
+path_dom=${S_VM_PATH_SHARE}/www/${_APA_SUB}.${_DOM_FQDN}
 
 
 ########################  STORAGE
@@ -118,7 +118,7 @@ if [ -z "${profile_cloud_exist}" ]; then
 		opts="-o mountpoint=${path} -o compression=lz4 -o  acltype=posixacl"
 		_evalr zfs list ${path_zfs} >/dev/null 2>&1 || _evalr zfs create ${opts} ${path_zfs}
 
-		name=${_DOMAIN_FQDN}
+		name=${_DOM_FQDN}
 		_echot "------------------  zfs ${name}"
 		path=${S_HOST_PATH}/cloud/${name}
 		path_zfs=${_ZFS_ROOT}${path}
@@ -142,7 +142,7 @@ if [ -z "${profile_cloud_exist}" ]; then
 		path=${S_HOST_PATH}/${name}
 		_evalr ls -1 ${path} >/dev/null 2>&1 || _evalr btrfs subvolume create ${path}
 
-		name=${_DOMAIN_FQDN}
+		name=${_DOM_FQDN}
 		_echot "------------------  btrfs ${name}"
 		# rename
 		path=${S_HOST_PATH}/cloud/${name}
@@ -159,9 +159,9 @@ if [ -z "${profile_cloud_exist}" ]; then
 	fi
 
 	_echot "------------------  rights ${name}"
-	_evalr chown ${_LXD_UID}:${_LXD_UID} ${S_HOST_PATH}/cloud/${_DOMAIN_FQDN}
-	_evalr setfacl -Rm u:${_LXD_UID}:rwx ${S_HOST_PATH}/cloud/${_DOMAIN_FQDN}
-	_evalr setfacl -Rm d:u:${_LXD_UID}:rwx ${S_HOST_PATH}/cloud/${_DOMAIN_FQDN}
+	_evalr chown ${_LXD_UID}:${_LXD_UID} ${S_HOST_PATH}/cloud/${_DOM_FQDN}
+	_evalr setfacl -Rm u:${_LXD_UID}:rwx ${S_HOST_PATH}/cloud/${_DOM_FQDN}
+	_evalr setfacl -Rm d:u:${_LXD_UID}:rwx ${S_HOST_PATH}/cloud/${_DOM_FQDN}
 fi
 
 ########################  PROFILE
@@ -175,8 +175,8 @@ if [ -z "${profile_www_exist}" ]; then
 	lxc profile list -f csv|grep -q "^${profile}," && _eval lxc profile rename ${profile} ${profile}.${_SDATE}
 	_eval lxc profile create ${profile}
 
-	path=${S_HOST_PATH_SHARE}/www/${_SUBDOMAIN}.${_DOMAIN_FQDN}
-	path_ct=${_PATH_DOMAIN}
+	path=${S_HOST_PATH_SHARE}/www/${_APA_SUB}.${_DOM_FQDN}
+	path_ct=${path_dom}
 	[ -d ${path} ] || _evalr mkdir -p ${path}
 	_eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
 fi
@@ -189,7 +189,7 @@ if [ -z "${profile_cloud_exist}" ]; then
 	lxc profile list -f csv|grep -q "^${profile}," && _eval lxc profile rename ${profile} ${profile}.${_SDATE}
 	_eval lxc profile create ${profile}
 
-	path=${S_HOST_PATH}/cloud/${_DOMAIN_FQDN}
+	path=${S_HOST_PATH}/cloud/${_DOM_FQDN}
 	path_ct=${_APP_DATA_DIR}
 	[ -d ${path} ] || _evalr mkdir -p ${path}
 	_eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
@@ -223,25 +223,25 @@ done
 
 _echoT "\n==========  php ${_CT_NAME}"
 
-domain=${_SUBDOMAIN}.${_DOMAIN_FQDN}
+domain=${_APA_SUB}.${_DOM_FQDN}
 _echot "------------------  ${domain} path"
 
-file=${path_sites}/${_SUBDOMAIN}.conf
+file=${path_sites}/${_APA_SUB}.conf
 _eval lxc file push -q ${file_site} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} apache
 _lxc_exec ${_CT_NAME} "sed -i 's|^\(\s*\)#\?\(SetEnv PHP_ADMIN_VALUE .session.gc_maxlifetime =\).*$|\1\2 3600\"|' ${file}"
 
 _echot "------------------  ${domain} file"
-path=${_PATH_DOMAIN}/${file_app%.tar.bz2}
+path=${path_dom}/${file_app%.tar.bz2}
 _lxc_exec ${_CT_NAME} "[ -d ${path} ] && mv ${path} ${path}.${_SDATE}"
 
-path=${_PATH_DOMAIN}
+path=${path_dom}
 _eval lxc file push -q ${file_app_tmp} ${_CT_NAME}/${path}/
 _lxc_exec ${_CT_NAME} "tar xjf ${path}/${file_app} -C ${path}" || _exite "Unable to decompress file: ${file}"
 _lxc_exec ${_CT_NAME} "[ -d ${path}/nextcloud ] && mv ${path}/nextcloud ${path}/${file_app%.tar.bz2}"
 
-_lxc_exec ${_CT_NAME} "[ -h ${path}/${_SUBDOMAIN} ] && rm ${path}/${_SUBDOMAIN}"
-_lxc_exec ${_CT_NAME} "cd ${path} && ln -sv ${file_app%.tar.bz2} ${_SUBDOMAIN}"
+_lxc_exec ${_CT_NAME} "[ -h ${path}/${_APA_SUB} ] && rm ${path}/${_APA_SUB}"
+_lxc_exec ${_CT_NAME} "cd ${path} && ln -sv ${file_app%.tar.bz2} ${_APA_SUB}"
 _lxc_exec ${_CT_NAME} "[ -h ${path}/nextcloud ] && rm ${path}/nextcloud"
 _lxc_exec ${_CT_NAME} "cd ${path} && ln -sv ${file_app%.tar.bz2} nextcloud"
 
@@ -250,7 +250,7 @@ _lxc_exec ${_CT_NAME} "cd ${path} && ln -sv ${file_app%.tar.bz2} nextcloud"
 
 _echot "------------------  rights"
 _lxc_exec ${_CT_NAME} "chown apache:apache -R ${_APA_PATH_WWW}"
-_lxc_exec ${_CT_NAME} "chown apache:apache -R ${_PATH_DOMAIN}/*"
+_lxc_exec ${_CT_NAME} "chown apache:apache -R ${path_dom}/*"
 
 
 #############  RESTART
@@ -324,7 +324,7 @@ _echoa "${strpass%\\n}"
 
 ########################  HAPROXY
 
-_echoA "Adjust backend for domain: ${_SUBDOMAIN}.${_DOMAIN_FQDN} with:"
+_echoA "Adjust backend for domain: ${_APA_SUB}.${_DOM_FQDN} with:"
 _echoa "${cts_php}"
 
 ########################  PUBLISH

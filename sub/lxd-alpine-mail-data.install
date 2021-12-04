@@ -11,42 +11,40 @@ eval ${S_HOST_VM_ETH[default]} # get s_inet s_cidr s_base
 _echot "------------------ data container"
 
 anstmp=${S_SERVICE[mail]} && _askno "Base name of containers to build (${anstmp})"
-_CT_NAME="${_ANSWER:-${anstmp}}" && _confset _CT_NAME "${_CT_NAME}" ${_FILE_INSTALL_CONF}
-_CT_IP=${s_base}.${S_SERVICE_BITS[mail]} && _confset _CT_IP "${_CT_IP}" ${_FILE_INSTALL_CONF}
+_CT_NAME="${_ANSWER:-${anstmp}}"
+_CT_IP=${s_base}.${S_SERVICE_BITS[mail]}
 
 anstmp=1 && _askno "Number of containers to build (${anstmp})"
-_CT_NUM="${_ANSWER:-${anstmp}}" && _confset _CT_NUM "${_CT_NUM}" ${_FILE_INSTALL_CONF}
+_CT_NUM="${_ANSWER:-${anstmp}}"
 _CT_ALL_NAME="${_CT_NAME} $(for i in `seq 2 ${_CT_NUM}`; do echo ${_CT_NAME}-${i}; done)"
-_confset _CT_ALL_NAME "${_CT_ALL_NAME}" ${_FILE_INSTALL_CONF}
 
 _echot "------------------ data"
 
 anstmp=${S_VM_PATH_SHARE}/mail && _askno "shared path for mail (${anstmp})"
-_PATH_MAIL=${_ANSWER:-${anstmp}} && _confset _PATH_MAIL "${_PATH_MAIL}" ${_FILE_INSTALL_CONF}
+_MEL_PATH=${_ANSWER:-${anstmp}} && _confset _MEL_PATH "${_MEL_PATH}"
 
-anstmp=${_PATH_MAIL}/local && _askno "path for shared local mail (${anstmp})"
-_PATH_LMAIL=${_ANSWER:-${anstmp}} && _confset _PATH_LMAIL "${_PATH_LMAIL}" ${_FILE_INSTALL_CONF}
+anstmp=${_MEL_PATH}/local && _askno "path for shared local mail (${anstmp})"
+_MEL_PATH_LOCAL=${_ANSWER:-${anstmp}} && _confset _MEL_PATH_LOCAL "${_MEL_PATH_LOCAL}"
 
-anstmp=${_PATH_MAIL}/vmail && _askno "path for shared virtual mail (${anstmp})" && _PATH_VMAIL=${_ANSWER:-${anstmp}}
-_PATH_VMAIL=${_ANSWER:-${anstmp}} && _confset _PATH_VMAIL "${_PATH_VMAIL}" ${_FILE_INSTALL_CONF}
+anstmp=${_MEL_PATH}/vmail && _askno "path for shared virtual mail (${anstmp})"
+_MEL_PATH_VMAIL=${_ANSWER:-${anstmp}} && _confset _MEL_PATH_VMAIL "${_MEL_PATH_VMAIL}"
 
-anstmp=${_PATH_VMAIL}/sieve && _askno "path for sieve (${anstmp})"
-_PATH_SIEVE=${_ANSWER:-${anstmp}} && _confset _PATH_SIEVE "${_PATH_SIEVE}" ${_FILE_INSTALL_CONF}
+anstmp=${_MEL_PATH_VMAIL}/sieve && _askno "path for sieve (${anstmp})"
+_MEL_PATH_SIEVE=${_ANSWER:-${anstmp}} && _confset _MEL_PATH_SIEVE "${_MEL_PATH_SIEVE}"
 
-anstmp=${_PATH_MAIL}/rspamd && _askno "path for RSPAMD (${anstmp})"
-_PATH_RSPAMD=${_ANSWER:-${anstmp}} && _confset _PATH_RSPAMD "${_PATH_RSPAMD}" ${_FILE_INSTALL_CONF}
+anstmp=${_MEL_PATH}/rspamd && _askno "path for RSPAMD (${anstmp})"
+_MEL_PATH_SPAM=${_ANSWER:-${anstmp}} && _confset _MEL_PATH_SPAM "${_MEL_PATH_SPAM}"
 
 anstmp=y && _askno "Do you want an installation with halts for each parts (${anstmp})"
-_STEP=${_ANSWER:-${anstmp}} && _confset _STEP "${_STEP}" ${_FILE_INSTALL_CONF}
+_STEP=${_ANSWER:-${anstmp}} && _confset _STEP "${_STEP}"
 
-_VMAIL_USER=vmail && _confset _VMAIL_USER "${_VMAIL_USER}" ${_FILE_INSTALL_CONF}
-_VMAIL_APP=postfixadmin && _confset _VMAIL_APP "${_VMAIL_APP}" ${_FILE_INSTALL_CONF}
-_SSL_SCHEME=SHA512 && _confset _SSL_SCHEME "${_SSL_SCHEME}" ${_FILE_INSTALL_CONF}
+_MEL_VMAIL_USER=vmail && _confset _MEL_VMAIL_USER "${_MEL_VMAIL_USER}"
+_MEL_VMAIL_APP=postfixadmin && _confset _MEL_VMAIL_APP "${_MEL_VMAIL_APP}"
+_MEL_SSL_SCHEME=SHA512 && _confset _MEL_SSL_SCHEME "${_MEL_SSL_SCHEME}"
 
-_PATH_SSL=${S_VM_PATH_SHARE}/ssl/mail && _confset _PATH_SSL "${_PATH_SSL}" ${_FILE_INSTALL_CONF}
-_PATH_DKIM="${_PATH_RSPAMD}/dkim" && _confset _PATH_DKIM "${_PATH_DKIM}" ${_FILE_INSTALL_CONF}
-_CIDR=`echo ${S_HOST_VM_ETH[default]}|sed -n 's|.*s_cidr=\([^ ]\+\).*|\1|p'` && _CIDR=${_CIDR/1\//0\/} && _confset _CIDR "${_CIDR}" ${_FILE_INSTALL_CONF}
-_SSL_PROFILE_MAIL=ssl-mail
+_MEL_PATH_SSL=${S_VM_PATH_SHARE}/ssl/mail && _confset _MEL_PATH_SSL "${_MEL_PATH_SSL}"
+_MEL_PATH_DKIM="${_MEL_PATH_SPAM}/dkim" && _confset _MEL_PATH_DKIM "${_MEL_PATH_DKIM}"
+_MEL_CIDR=`echo ${S_HOST_VM_ETH[default]}|sed -n 's|.*s_cidr=\([^ ]\+\).*|\1|p'` && _MEL_CIDR=${_MEL_CIDR/1\//0\/} && _confset _MEL_CIDR "${_MEL_CIDR}"
 
 ########################  END
 

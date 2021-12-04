@@ -33,10 +33,10 @@ _require ${file_conf} ${file_conf_part} ${file_site}
 
 _echot "------------------  data domain"
 
-anstmp=${S_DOMAIN_FQDN} && _askno "Domain name to use (${anstmp})"
-_DOMAIN_FQDN="${_ANSWER:-${anstmp}}"
+anstmp=${S_DOM_FQDN} && _askno "Domain name to use (${anstmp})"
+_DOM_FQDN="${_ANSWER:-${anstmp}}"
 
-anstmp=wap-${_APA_ADMIN}-${S_DOMAIN_NAME//./-} && _askno "Base name of containers to build (${anstmp})"
+anstmp=wap-${_APA_ADMIN}-${S_DOM_NAME//./-} && _askno "Base name of containers to build (${anstmp})"
 ct_base="${_ANSWER:-${anstmp}}"
 
 anstmp=2 && _askno "Number of containers to build (${anstmp})"
@@ -53,7 +53,7 @@ ct_www=${_ANSWER}
 profiles=`lxc profile list -f csv|grep "^www.*,"|cut -d, -f1`
 [ "${profiles}" ] && _menu "Select an available www profile to apply or none" none ${profiles} || _ANSWER=
 profile_www="${_ANSWER/none/}" && profile_www_exist=${profile_www}
-[ -z "${profile_www_exist}" ] && anstmp=www-${_APA_ADMIN}.${_DOMAIN_FQDN} && _askno "Name of the new  www profile (${anstmp})" && profile_www="${_ANSWER:-${anstmp}}"
+[ -z "${profile_www_exist}" ] && anstmp=www-${_APA_ADMIN}.${_DOM_FQDN} && _askno "Name of the new  www profile (${anstmp})" && profile_www="${_ANSWER:-${anstmp}}"
 
 _echot "------------------  data php"
 
@@ -89,8 +89,7 @@ done
 
 _CT_NAME=${ct_base}-1
 
-_PATH_DOMAIN=${S_VM_PATH_SHARE}/www/${_APA_ADMIN}.${_DOMAIN_FQDN}
-_APP_URI=https://${sub_pma}.${_DOMAIN_FQDN}
+_APP_URI=https://${sub_pma}.${_DOM_FQDN}
 _APP_DB_PORT=${S_DB_MARIA_PORT}
 _APP_DB_NAME=phpmyadmin
 _APP_DB_USER=pma
@@ -101,6 +100,7 @@ _APP_PATH_DW=${S_VM_PATH_SHARE}/php/down
 
 cts_php=`for i in $(seq 1 ${ct_num}); do echo ${ct_base}-${i}; done`
 path_sites=/etc/apache2/sites
+path_dom=${S_VM_PATH_SHARE}/www/${_APA_ADMIN}.${_DOM_FQDN}
 strpass=
 
 ########################  PROFILE
@@ -114,8 +114,8 @@ if [ -z "${profile_www_exist}" ]; then
 	lxc profile list -f csv|grep -q "^${profile}," && _eval lxc profile rename ${profile} ${profile}.${_SDATE}
 	_eval lxc profile create ${profile}
 
-	path=${S_HOST_PATH_SHARE}/www/${_APA_ADMIN}.${_DOMAIN_FQDN}
-	path_ct=${_PATH_DOMAIN}
+	path=${S_HOST_PATH_SHARE}/www/${_APA_ADMIN}.${_DOM_FQDN}
+	path_ct=${path_dom}
 	[ -d ${path} ] || _evalr mkdir -p ${path}
 	_evalr chown -R ${_LXD_UID}:${_LXD_UID} ${S_HOST_PATH_SHARE}/www
 	_eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
@@ -157,15 +157,15 @@ _lxc_exec ${_CT_NAME} "echo '<?php echo \"admin\"; ?>' > ${_APA_PATH_WWW}/ping-m
 
 #############  SITE ADMIN
 
-_SUBDOMAIN=${_APA_ADMIN}
-domain=${_SUBDOMAIN}.${_DOMAIN_FQDN}
+_APA_SUB=${_APA_ADMIN}
+domain=${_APA_SUB}.${_DOM_FQDN}
 
 _echot "------------------  ${domain} path"
-path=${_PATH_DOMAIN}/${_APA_ADMIN}
+path=${path_dom}/${_APA_ADMIN}
 _lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
 
 _echot "------------------  ${domain} index.php"
-file=${_PATH_DOMAIN}/${_APA_ADMIN}/index.php
+file=${path_dom}/${_APA_ADMIN}/index.php
 _lxc_exec ${_CT_NAME} "echo '<html><body><h1><?php echo \"php ${_APA_ADMIN} works! \" ?></h1></body></html>' > ${file}"
 
 
@@ -176,8 +176,8 @@ _lxc_var_replace ${_CT_NAME} ${file} apache
 
 #############  SITE APP
 
-_SUBDOMAIN=${sub_pma}
-domain=${_SUBDOMAIN}.${S_DOMAIN_FQDN}
+_APA_SUB=${sub_pma}
+domain=${_APA_SUB}.${S_DOM_FQDN}
 
 _echot "------------------  ${domain} conf apache"
 file=${path_sites}/${sub_pma}.conf
@@ -186,26 +186,26 @@ _lxc_var_replace ${_CT_NAME} ${file} apache
 _lxc_exec ${_CT_NAME} "sed -i 's|^\(\s*\)#\?\(SetEnv PHP_ADMIN_VALUE .session.gc_maxlifetime =\).*$|\1\2 14400\"|' ${file}"
 
 _echot "------------------  ${domain} file"
-path=${_PATH_DOMAIN}/${file_app%.tar.gz}
+path=${path_dom}/${file_app%.tar.gz}
 _lxc_exec ${_CT_NAME} "[ -d ${path} ] && mv ${path} ${path}.${_SDATE}"
 
-path=${_PATH_DOMAIN}
+path=${path_dom}
 _eval lxc file push -q ${file_app_tmp} ${_CT_NAME}/${path}/
 _lxc_exec ${_CT_NAME} "tar xzf ${path}/${file_app} -C ${path}" || _exite "Unable to decompress file: ${file}"
 _lxc_exec ${_CT_NAME} "[ -h ${path}/${sub_pma} ] && rm ${path}/${sub_pma}"
 _lxc_exec ${_CT_NAME} "cd ${path} && ln -sv ${file_app%.tar.gz} ${sub_pma}"
 
 _echot "------------------  ${domain} path tmp"
-path=${_PATH_DOMAIN}/${sub_pma}/tmp
+path=${path_dom}/${sub_pma}/tmp
 _lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
 
 _echot "------------------  ${domain} ${sub_pma} conf"
-file=${_PATH_DOMAIN}/${sub_pma}/config.inc.php
+file=${path_dom}/${sub_pma}/config.inc.php
 _eval lxc file push -q ${file_conf} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} pma
-[ "${S_DOMAIN_FQDN##*.}" = lxd ] && _lxc_exec ${_CT_NAME} "sed -i '/.cfg..PmaAbsoluteUri/ s|https|http|' ${file}"
+[ "${S_DOM_FQDN##*.}" = lxd ] && _lxc_exec ${_CT_NAME} "sed -i '/.cfg..PmaAbsoluteUri/ s|https|http|' ${file}"
 
-file_part=${_PATH_DOMAIN}/${sub_pma}/config-part.inc.php
+file_part=${path_dom}/${sub_pma}/config-part.inc.php
 for ct_maria in ${cts_maria}; do
 	_echot "------------------  ${domain} conf ${cts_maria}"
 	_eval lxc file push -q ${file_conf_part} ${_CT_NAME}${file_part}
@@ -216,13 +216,13 @@ done
 
 _echot "------------------  ${_CT_NAME} pull sql file"
 file_tables=/tmp/create_tables.sql
-_evalr lxc file pull ${_CT_NAME}/${_PATH_DOMAIN}/${sub_pma}/sql/create_tables.sql ${file_tables}
+_evalr lxc file pull ${_CT_NAME}/${path_dom}/${sub_pma}/sql/create_tables.sql ${file_tables}
 
 ########################  RIGHTS
 
 _echot "------------------  rights"
 _lxc_exec ${_CT_NAME} "chown apache:apache -R ${_APA_PATH_WWW}"
-_lxc_exec ${_CT_NAME} "chown apache:apache -R ${_PATH_DOMAIN}/*"
+_lxc_exec ${_CT_NAME} "chown apache:apache -R ${path_dom}/*"
 
 #############  RESTART
 
@@ -303,7 +303,7 @@ _echoa "${strpass%\\n}"
 
 ########################  HAPROXY
 
-_echoA "Adjust backend for domain: ${_APA_ADMIN}.${_DOMAIN_FQDN} with:"
+_echoA "Adjust backend for domain: ${_APA_ADMIN}.${_DOM_FQDN} with:"
 _echoa "${cts_php}"
 
 ########################  PUBLISH

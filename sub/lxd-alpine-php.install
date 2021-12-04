@@ -34,10 +34,10 @@ php_modules="php7-bcmath php7-bz2 php7-ctype php7-curl php7-exif php7-fileinfo p
 
 _echot "------------------  data domain"
 
-anstmp=${S_DOMAIN_FQDN} && _askno "Domain name to use (${anstmp})"
-_DOMAIN_FQDN="${_ANSWER:-$anstmp}"
+anstmp=${S_DOM_FQDN} && _askno "Domain name to use (${anstmp})"
+_DOM_FQDN="${_ANSWER:-$anstmp}"
 
-anstmp=wap-${_DOMAIN_FQDN//./-} && _askno "Base name of containers to build (${anstmp})"
+anstmp=wap-${_DOM_FQDN//./-} && _askno "Base name of containers to build (${anstmp})"
 ct_base="${_ANSWER:-$anstmp}"
 
 anstmp=2 && _askno "Number of containers to build (${anstmp})"
@@ -60,7 +60,7 @@ _echot "------------------  data php"
 profiles=`lxc profile list -f csv|grep "^php.*,"|cut -d, -f1`
 [ "${profiles}" ] && _menu "Select an available PHP profile to apply or none" none ${profiles} || _ANSWER=
 profile="${_ANSWER/none/}"
-[ -z "${profile}" ] && anstmp=php7-${_DOMAIN_FQDN} && _askno "Name of the new  PHP profile (${anstmp})" && profile="${_ANSWER:-$anstmp}"
+[ -z "${profile}" ] && anstmp=php7-${_DOM_FQDN} && _askno "Name of the new  PHP profile (${anstmp})" && profile="${_ANSWER:-$anstmp}"
 
 
 anstmp="20" && _askno "max_execution_time (${anstmp})s"
@@ -128,8 +128,8 @@ path_fpm_conf=/etc/php7/php-fpm.d
 path_apache_conf=/etc/apache2/conf.d
 
 # shared
-_PATH_DOMAIN=${S_VM_PATH_SHARE}/www/${_DOMAIN_FQDN}
-path_php_share=${S_VM_PATH_SHARE}/php/${_DOMAIN_FQDN}
+path_dom=${S_VM_PATH_SHARE}/www/${_DOM_FQDN}
+path_php_share=${S_VM_PATH_SHARE}/php/${_DOM_FQDN}
 path_fpm_pool=${path_php_share}/pools
 path_xdebug_profile=${path_php_share}/xdebug/profile
 path_xdebug_trace=${path_php_share}/xdebug/trace
@@ -142,7 +142,7 @@ if ! lxc profile list -f csv|grep -q "^${profile},"; then
 	_echot "------------------  profile create ${profile}"
 	_eval lxc profile create ${profile}
 
-	path=${S_HOST_PATH_SHARE}/php/${_DOMAIN_FQDN}
+	path=${S_HOST_PATH_SHARE}/php/${_DOM_FQDN}
 	path_ct=${path_php_share}
 	[ -d ${path} ] || _evalr mkdir -p ${path}
 	_evalr chown -R ${_LXD_UID}:${_LXD_UID} ${S_HOST_PATH_SHARE}/php
@@ -353,11 +353,11 @@ _lxc_exec ${_CT_NAME} "echo '<html><body><h1><?php echo \"php works!\" ?></h1></
 file=${_APA_PATH_WWW}/index.html
 _lxc_exec ${_CT_NAME} "[ -f ${file} ] && mv ${file} ${file}.keep"
 
-_echot "------------------  ${_DOMAIN_FQDN} files"
-_lxc_exec ${_CT_NAME} "echo '<?php phpinfo() ?>' > ${_PATH_DOMAIN}/html/phpinf.php"
-file=${_PATH_DOMAIN}/html/index.php
-_lxc_exec ${_CT_NAME} "echo '<html><body><h1>${_DOMAIN_FQDN} php works!</h1></body></html>' > ${file}"
-file=${_PATH_DOMAIN}/index.html
+_echot "------------------  ${_DOM_FQDN} files"
+_lxc_exec ${_CT_NAME} "echo '<?php phpinfo() ?>' > ${path_dom}/html/phpinf.php"
+file=${path_dom}/html/index.php
+_lxc_exec ${_CT_NAME} "echo '<html><body><h1>${_DOM_FQDN} php works!</h1></body></html>' > ${file}"
+file=${path_dom}/index.html
 _lxc_exec ${_CT_NAME} "[ -f ${file} ] && mv ${file} ${file}.keep"
 
 ########################  PING-MONITOR
@@ -389,7 +389,7 @@ _lxc_var_replace ${_CT_NAME} ${file} apache php
 _echot "------------------  rights"
 _lxc_exec ${_CT_NAME} "chown apache:apache -R ${path_php_share}/*"
 _lxc_exec ${_CT_NAME} "chown apache:apache -R ${_APA_PATH_WWW}"
-_lxc_exec ${_CT_NAME} "chown apache:apache -R ${_PATH_DOMAIN}/*"
+_lxc_exec ${_CT_NAME} "chown apache:apache -R ${path_dom}/*"
 
 ########################  RESTART
 
@@ -473,7 +473,7 @@ _echot "------------------  php test"
 _echoA "To verify php configuration, type:"
 _echoa "curl ${_IPTHIS}/phpinf.php"
 _echoa "curl ${_CT_NAME}/phpinf.php"
-_echoa "curl ${_DOMAIN_FQDN}:80"
+_echoa "curl ${_DOM_FQDN}:80"
 
 _echoA "To verify ping response, type:"
 _echoa "curl ${_CT_NAME}/ping-monitor"
@@ -492,7 +492,7 @@ _echoa "curl ${_CT_NAME}/status-www-admin?full"
 
 ########################  HAPROXY
 
-_echoA "\nAdjust backend in proxy for domain: ${_DOMAIN_FQDN} with:"
+_echoA "\nAdjust backend in proxy for domain: ${_DOM_FQDN} with:"
 _echoa $(for i in `seq 1 ${ct_num}`; do echo ${ct_base}-${i};done)
 
 

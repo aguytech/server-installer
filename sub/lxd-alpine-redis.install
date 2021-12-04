@@ -26,7 +26,7 @@ _require ${file_rsyslog_host} ${file_rsyslog_client} ${file_logrotate_host} ${fi
 
 _echot "------------------  data domain"
 
-anstmp=rds-${S_DOMAIN_NAME//./-} && _askno "Base name of containers to build (${anstmp})"
+anstmp=rds-${S_DOM_NAME//./-} && _askno "Base name of containers to build (${anstmp})"
 ct_base="${_ANSWER:-$anstmp}"
 
 anstmp=1 && _askno "Number of containers to build (${anstmp})"

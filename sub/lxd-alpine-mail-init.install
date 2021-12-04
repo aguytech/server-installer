@@ -4,7 +4,7 @@
 
 _echoT "\n======================  ${_INSTALL}-${_PARTMAIL}"
 
-grep -q "^# ${_PARTMAIL#++}$" ${_FILE_INSTALL_CONF} || echo  "# ${_PARTMAIL}" >> ${_FILE_INSTALL_CONF}
+grep -q "^# ${_PARTMAIL#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PARTMAIL}" >> ${S_FILE_INSTALL_CONF}
 
 file_rsyslog_client=${S_PATH_INSTALL_CONF}/rsyslog/client-mail.conf
 file_rsyslog_host=${S_PATH_INSTALL_CONF}/rsyslog/host-mail.conf
@@ -13,15 +13,19 @@ file_logrotate_host=${S_PATH_INSTALL_CONF}/logrotate/host-mail
 _echot "------------------ required files"
 _require ${file_rsyslog_client} ${file_rsyslog_host} ${file_logrotate_client} ${file_logrotate_host}
 
+########################  DATA
+
+profile_ssl_mail=ssl-mail
+
 ########################  PROFILE
 
-profile=${_SSL_PROFILE_MAIL}
+profile=${profile_ssl_mail}
 if ! lxc profile list -f csv|grep -q "^${profile},"; then
 	_echot "------------------ profile create ${profile}"
 	_eval lxc profile create ${profile}
 
 	path=${S_HOST_PATH_SHARE}/ssl/mail
-	path_ct=${_PATH_SSL}
+	path_ct=${_MEL_PATH_SSL}
 	[ -d ${path} ] || _evalr mkdir -p ${path}
 	_evalr chown ${_LXD_UID}:${_LXD_UID} -R ${S_HOST_PATH_SHARE}/ssl
 	_eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
@@ -35,7 +39,7 @@ if ! lxc profile list -f csv|grep -q "^${profile},"; then
 	_eval lxc profile create ${profile}
 
 	path=${S_HOST_PATH_SHARE}/mail
-	path_ct=${_PATH_MAIL}
+	path_ct=${_MEL_PATH}
 	[ -d ${path} ] || _evalr mkdir -p ${path}
 	_evalr chown ${_LXD_UID}:${_LXD_UID} -R ${S_HOST_PATH_SHARE}/mail
 	_eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
@@ -43,9 +47,9 @@ else
 	_echot "------------------ profile exists ${profile}"
 fi
 
-if ! lxc list -f json ${S_SERVICE[proxy]}|jq -r '.[].profiles[]' | grep -q ^${_SSL_PROFILE_MAIL}$; then
-	_echot "------------------ profile add ${_SSL_PROFILE_MAIL} to ${S_SERVICE[proxy]}"
-	_eval lxc profile add ${S_SERVICE[proxy]} ${_SSL_PROFILE_MAIL}
+if ! lxc list -f json ${S_SERVICE[proxy]}|jq -r '.[].profiles[]' | grep -q ^${profile_ssl_mail}$; then
+	_echot "------------------ profile add ${profile_ssl_mail} to ${S_SERVICE[proxy]}"
+	_eval lxc profile add ${S_SERVICE[proxy]} ${profile_ssl_mail}
 fi
 
 ########################  INIT
@@ -65,12 +69,12 @@ if ! lxc list -f json | jq -r '.[] | select(.name == "'${_CT_NAME}'").devices[].
 	_eval lxc config device override ${_CT_NAME} eth0 ipv4.address=${s_base}.${S_SERVICE_BITS[mail]}
 fi
 
-_echot "------------------ ${_CT_NAME} start"
+_echot "------------------  ${_CT_NAME} start"
 _eval lxc start ${_CT_NAME}
 
 ########################  METADATA
 
-_echot "------------------ metadata"
+_echot "------------------  metadata"
 _lxc_meta_set ${_CT_NAME} profiles default global ssl-mail ${profile}
 
 ########################  UPDATE
@@ -79,43 +83,47 @@ _lxc_exec ${_CT_NAME} apk update
 
 ########################  PATH
 
-_echot "------------------ create paths"
-for path in ${_PATH_MAIL} ${_PATH_LMAIL}${_PATH_SSL}; do
-	_lxc_exec ${_CT_NAME} "[ -d '${path}' ] || mkdir -p ${path}; chown ${_VMAIL_USER}:${_VMAIL_USER} -R ${path}"
+_echot "------------------  paths mail"
+for path in ${_MEL_PATH} ${_MEL_PATH_LOCAL}; do
+	_lxc_exec ${_CT_NAME} "[ -d '${path}' ] || mkdir -p ${path}"
 done
+cmds="chown ${_MEL_VMAIL_USER}:${_MEL_VMAIL_USER} -R ${_MEL_PATH}
+chown ${_MEL_VMAIL_USER}:postdrop -R ${_MEL_PATH_LOCAL}
+find ${_MEL_PATH_LOCAL} -type d -exec chmod g+rwx -R {} \;
+find ${_MEL_PATH_LOCAL} -type f -exec chmod g+rw -R {} \;"
+_lxc_exec_e ${_CT_NAME} "${cmds}"
 
-_echot "------------------  rights path ${_PATH_SSL} ${S_PATH_CONF_SSL}"
-_lxc_exec ${_CT_NAME} chown -R ${_VMAIL_USER}:${_VMAIL_USER} ${_PATH_SSL} ${S_PATH_CONF_SSL}
-_lxc_exec ${_CT_NAME} chmod 640 -R ${_PATH_SSL} ${S_PATH_CONF_SSL}
-
-_echot "------------------  rights path ${_PATH_MAIL}"
-_lxc_exec_e ${_CT_NAME} chown ${_VMAIL_USER}:postdrop -R ${_PATH_LMAIL}
-_lxc_exec_e ${_CT_NAME} "find ${_PATH_LMAIL} -type d -exec chmod g+rwx -R {} \;"
-_lxc_exec_e ${_CT_NAME} "find ${_PATH_LMAIL} -type f -exec chmod g+rw -R {} \;"
+_echot "------------------  path ssl"
+for path in ${_MEL_PATH_SSL}/certs ${_MEL_PATH_SSL}/private; do
+	_lxc_exec ${_CT_NAME} "[ -d '${path}' ] || mkdir -p ${path}"
+done
+cmds="chown -R ${_MEL_VMAIL_USER}:${_MEL_VMAIL_USER} ${_MEL_PATH_SSL} ${S_PATH_CONF_SSL}
+chmod 640 -R ${_MEL_PATH_SSL} ${S_PATH_CONF_SSL}"
+_lxc_exec_e ${_CT_NAME} "${cmds}"
 
 ########################  _VMAIL_USER
 
 # group
 file=/etc/group
-cmd="addgroup -S ${_VMAIL_USER}"
-_lxc_exec ${_CT_NAME} "grep -q ^${_VMAIL_USER} ${file} || ${cmd}"
-_VMAIL_GID=`_lxc_exec ${_CT_NAME} grep ^${_VMAIL_USER} ${file}|cut -d: -f3`
+cmd="addgroup -S ${_MEL_VMAIL_USER}"
+_lxc_exec ${_CT_NAME} "grep -q ^${_MEL_VMAIL_USER} ${file} || ${cmd}"
+_MEL_VMAIL_GID=`_lxc_exec ${_CT_NAME} grep ^${_MEL_VMAIL_USER} ${file}|cut -d: -f3`
 # user
 file=/etc/passwd
-cmd="adduser -S -G ${_VMAIL_USER} -D -h ${_PATH_VMAIL} -s/sbin/nologin -g ${_VMAIL_USER} ${_VMAIL_USER}"
-_lxc_exec ${_CT_NAME} "grep -q ^${_VMAIL_USER} ${file} || ${cmd}"
-_VMAIL_UID=`_lxc_exec ${_CT_NAME} grep ^${_VMAIL_USER} ${file}|cut -d: -f3`
+cmd="adduser -S -G ${_MEL_VMAIL_USER} -D -h ${_MEL_PATH_VMAIL} -s/sbin/nologin -g ${_MEL_VMAIL_USER} ${_MEL_VMAIL_USER}"
+_lxc_exec ${_CT_NAME} "grep -q ^${_MEL_VMAIL_USER} ${file} || ${cmd}"
+_MEL_VMAIL_UID=`_lxc_exec ${_CT_NAME} grep ^${_MEL_VMAIL_USER} ${file}|cut -d: -f3`
 # path
-str=`_lxc_exec ${_CT_NAME} grep ^${_VMAIL_USER} ${file}|cut -d: -f6`
-_lxc_exec_e ${_CT_NAME} "sed -i '/^${_VMAIL_USER}/ s|${str}|${_PATH_VMAIL}|' ${file}"
+str=`_lxc_exec ${_CT_NAME} grep ^${_MEL_VMAIL_USER} ${file}|cut -d: -f6`
+_lxc_exec_e ${_CT_NAME} "sed -i '/^${_MEL_VMAIL_USER}/ s|${str}|${_MEL_PATH_VMAIL}|' ${file}"
 # gid
-str=`_lxc_exec ${_CT_NAME} grep ^${_VMAIL_USER} ${file}|cut -d: -f4`
-_lxc_exec_e ${_CT_NAME} "sed -i '/^${_VMAIL_USER}/ s|${str}|${_VMAIL_GID}|' ${file}"
+str=`_lxc_exec ${_CT_NAME} grep ^${_MEL_VMAIL_USER} ${file}|cut -d: -f4`
+_lxc_exec_e ${_CT_NAME} "sed -i '/^${_MEL_VMAIL_USER}/ s|${str}|${_MEL_VMAIL_GID}|' ${file}"
 # group
-_lxc_exec_e ${_CT_NAME} "sed -i '/^${_VMAIL_USER}/ s|^\(.*:.*:.*:\).*$|\1${_VMAIL_UID}|' /etc/group"
+_lxc_exec_e ${_CT_NAME} "sed -i '/^${_MEL_VMAIL_USER}/ s|^\(.*:.*:.*:\).*$|\1${_MEL_VMAIL_UID}|' /etc/group"
 
-_confset _VMAIL_UID "${_VMAIL_UID}" ${_FILE_INSTALL_CONF}
-_confset _VMAIL_GID "${_VMAIL_GID}" ${_FILE_INSTALL_CONF}
+_confset _MEL_VMAIL_UID "${_MEL_VMAIL_UID}"
+_confset _MEL_VMAIL_GID "${_MEL_VMAIL_GID}"
 
 ########################  IPTABLES
 
@@ -151,7 +159,7 @@ _lxc_exec ${_CT_NAME} "${cmds}"
 
 _echot "------------------  Unbound test"
 _lxc_exec ${_CT_NAME} unbound-checkconf || _exite "Configuration error(s) in file: ${file}"
-_lxc_exec ${_CT_NAME}  dig @127.0.0.1 ${_DOMAIN_FQDN} +short +dnssec
+_lxc_exec ${_CT_NAME}  dig @127.0.0.1 ${S_DOM_FQDN} +short +dnssec
 _askno "${yellow}Please verify the above outgoing & valid${cclear}"
 
 _echot "------------------  Unbound enable"
@@ -166,12 +174,12 @@ _lxc_exec ${_CT_NAME} "echo 'nameserver 127.0.0.1' >> /etc/resolv.conf"
 
 _evalq apt install -y resolvconf
 #_evalq "echo "nameserver 127.0.0.1" >> /etc/resolvconf/resolv.conf.d/head"
-_eval "nslookup ${_DOMAIN_FQDN} | grep Server"
+_eval "nslookup ${S_DOM_FQDN} | grep Server"
 _askno "${yellow}Please verify the above outgoing (127.0.0.1) & valid${cclear}"
 
 
 #_echot "------------------  resolvconf conf"
-#[ ! "$(grep 'mail\.' /etc/hosts)" ] && echo "127.0.1.1   mail.${_DOMAIN_FQDN}  mail" >> /etc/hosts
+#[ ! "$(grep 'mail\.' /etc/hosts)" ] && echo "127.0.1.1   mail.${S_DOM_FQDN}  mail" >> /etc/hosts
 KEEP
 
 
@@ -230,23 +238,23 @@ _lxc_exec ${_CT_NAME} "rc-service crond restart"
 ########################  MANUAL CONF
 
 _echot "------------------  DNS conf"
-_echo "IN MX 1   ${_DOMAIN_FQDN}.
+_echo "IN MX 1   ${S_DOM_FQDN}.
 IN TXT 'v=spf1 a mx ~all'
-imap				IN CNAME  ${_DOMAIN_FQDN}.
-mail				IN CNAME  ${_DOMAIN_FQDN}.
-smtp				IN CNAME  ${_DOMAIN_FQDN}.
+imap				IN CNAME  ${S_DOM_FQDN}.
+mail				IN CNAME  ${S_DOM_FQDN}.
+smtp				IN CNAME  ${S_DOM_FQDN}.
 
-${_DOMAIN_FQDN}  3600 IN TXT v=spf1 a:mx.${_DOMAIN_FQDN} ?all"
-_echoA "For each domain in: ${_DOMAIN_ALL_FQDN}"
-_echoa "${_DOMAIN_ALL_FQDN%% *}. 3600 IN TXT v=spf1 include:${_DOMAIN_FQDN} ?all"
+${S_DOM_FQDN}  3600 IN TXT v=spf1 a:mx.${S_DOM_FQDN} ?all"
+_echoA "For each domain in: ${S_DOM_ALL_FQDN}"
+_echoa "${S_DOM_ALL_FQDN%% *}. 3600 IN TXT v=spf1 include:${S_DOM_FQDN} ?all"
 
-_echoA "For each domain in: ${_DOMAIN_ALL_FQDN}"
-_echoa "_dmarc.${_DOMAIN_ALL_FQDN}. 'v=DMARC1; p=none; sp=none; aspf=r;'"
+_echoA "For each domain in: ${S_DOM_ALL_FQDN}"
+_echoa "_dmarc.${S_DOM_ALL_FQDN}. 'v=DMARC1; p=none; sp=none; aspf=r;'"
 _echoA "Verify the configuration of your DNS server about MAIL"
 
 _echot "------------------  reverse DNS conf"
 _echoA"Verify that the reverse DNS of your machine: ${_IPTHIS} is set to:"
-_echoa "mail.${_DOMAIN_FQDN}"
+_echoa "mail.${S_DOM_FQDN}"
 _askno "Valid to continue"
 
 

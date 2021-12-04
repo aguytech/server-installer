@@ -16,9 +16,8 @@ lxc list -f csv -c n | grep -q ^${S_SERVICE[log]}$ || _exite "Unable to find con
 
 file_conf_vim=${S_PATH_SCRIPT_CONF}/.vimrc
 file_conf_haproxy=${S_PATH_INSTALL_CONF}/haproxy/haproxy
-file_conf_letsencrypt=${S_PATH_INSTALL_CONF}/cron/letsencrypt-renew
+file_conf_certbot=${S_PATH_INSTALL_CONF}/cron/certbot-renew
 file_conf_ssl=${S_PATH_INSTALL_CONF}/ssl/openssl.cnf
-file_conf_ssl_dom=${S_PATH_INSTALL_CONF}/ssl/openssl-domains.cnf
 
 file_rsyslog_host=${S_PATH_INSTALL_CONF}/rsyslog/host-haproxy.conf
 file_rsyslog_client=${S_PATH_INSTALL_CONF}/rsyslog/client-haproxy.conf
@@ -28,7 +27,7 @@ file_logrotate_client=${S_PATH_INSTALL_CONF}/logrotate/client-haproxy
 path_haproxy=${S_PATH_INSTALL_CONF}/haproxy
 
 _echot "------------------ required files"
-_require ${file_conf_haproxy} ${file_conf_vim}  ${file_conf_letsencrypt}  ${file_conf_ssl}  ${file_conf_ssl_dom} ${file_rsyslog_host} ${file_rsyslog_client} ${file_logrotate_host} ${file_logrotate_client}
+_require ${file_conf_haproxy} ${file_conf_vim}  ${file_conf_certbot}  ${file_conf_ssl} ${file_rsyslog_host} ${file_rsyslog_client} ${file_logrotate_host} ${file_logrotate_client}
 
 _echot "------------------ required paths"
 _requirep ${path_haproxy}
@@ -44,14 +43,6 @@ _SERVER_DEFAULT=${_ANSWER}
 
 _echot "------------------  data"
 
-anstmp="17112018.fr.lxd 17112018.ovh.lxd ambau.fr.lxd ambau.ovh.lxd ggj.fr.lxd ggj.ovh.lxd han-sci.fr.lxd otokoz.ovh.lxd"
-[ "${_DOMAIN_FQDN%.lxd}" = "${_DOMAIN_FQDN}" ] && anstmp=${anstmp//.lxd/}
-_askno "All FQDN domains (${anstmp})"
-_HPX_DOMAIN_ALL_FQDN="${_ANSWER:-${anstmp}}" && _confset _HPX_DOMAIN_ALL_FQDN "${_HPX_DOMAIN_ALL_FQDN}" ${_FILE_INSTALL_CONF}
-
-_menu "A principal fqdn domain (ambau.fr)" ${_HPX_DOMAIN_ALL_FQDN}
-_HPX_DOMAIN_FQDN="${_ANSWER}" && _confset _HPX_DOMAIN_FQDN "${_HPX_DOMAIN_FQDN}" ${_FILE_INSTALL_CONF}
-
 anstmp=admin && _askno "Name for stats access (${anstmp})"
 _HPX_ACCESS_USER="${_ANSWER:-${anstmp}}" && _confset _HPX_ACCESS_USER "${_HPX_ACCESS_USER}"
 
@@ -61,28 +52,24 @@ _HPX_ACCESS_PWD="${_ANSWER:-${anstmp}}" && _confset _HPX_ACCESS_PWD "${_HPX_ACCE
 anstmp=/haproxy-stats && _askno "URI to access to admin site (${anstmp})"
 _HPX_ACCESS_URI="${_ANSWER:-${anstmp}}" && _confset _HPX_ACCESS_URI "${_HPX_ACCESS_URI}"
 
-anstmp=${S_EMAIL_ADMIN} && _askno "Technical email for certificates (${anstmp})"
-_HPX_EMAIL="${_ANSWER:-${anstmp}}" && _confset _HPX_EMAIL "${_HPX_EMAIL}"
+_echot "------------------  data certbot"
 
-_echot "------------------  data letsencrypt"
+_askyn "Use certbot" && _HPX_CERTBOT_ENABLE="${_ANSWER/n/}"
 
-_askyn "Use letsencrypt" && _HPX_LCRYPT_ENABLE="${_ANSWER/n/}"
+if [ "${_HPX_CERTBOT_ENABLE}" ]; then
+	anstmp="admin blog carte chat chiffres cloud cms code compta dev diaspora discord discourse down elastik files forum gestion git gitea gitlab graylog info kibana links log manage matomo metrics monitor nextcloud pfa pma riot roundcube shaarli snippet social stats test tuleap vma vmail webmail wiki www zabbix" # imap mail mail10 mx mx10 smtp
+	_askno "Subdomains to register to certbot: (${anstmp})"
+	_HPX_CERTBOT_SUBS="${_ANSWER:-${anstmp}}" && _confset _HPX_CERTBOT_SUBS "${_HPX_CERTBOT_SUBS}"
 
-if [ "${_HPX_LCRYPT_ENABLE}" ]; then
-	anstmp="ada admin blog carte chat chiffres cloud cms code compta dev diaspora discord discourse down elastik files forum gestion git gitea gitlab graylog info kibana links log manage matomo metrics monitor nextcloud pfa pma roundcube shaarli snippet social st stats test tuleap vma vmail webmail wiki www zabbix" # imap mail mail10 mx mx10 smtp
-	_askno "Subdomains to register to letsencrypt: (${anstmp})"
-	_HPX_LCRYPT_SUBS="${_ANSWER:-${anstmp}}" && _confset _HPX_LCRYPT_SUBS "${_HPX_LCRYPT_SUBS}"
-
-	[ -z ${_HPX_LCRYPT_PORT+x} ] && anstmp=8079 && _askno "Port for letsencrypt (${anstmp})"
-	_HPX_LCRYPT_PORT="${_ANSWER:-${anstmp}}" && _confset _HPX_LCRYPT_PORT "${_HPX_LCRYPT_PORT}"
+	[ -z ${_HPX_CERTBOT_PORT+x} ] && anstmp=8079 && _askno "Port for certbot (${anstmp})"
+	_HPX_CERTBOT_PORT="${_ANSWER:-${anstmp}}" && _confset _HPX_CERTBOT_PORT "${_HPX_CERTBOT_PORT}"
 fi
 
 _CT_NAME=${S_SERVICE[proxy]}
 eval ${S_HOST_VM_ETH[default]}
 _CT_IP=${s_base}.${S_SERVICE_BITS[proxy]}
 
-_HPX_DOMAIN_NAME=${_HPX_DOMAIN_FQDN%.lxd} && _HPX_DOMAIN_NAME="${_HPX_DOMAIN_NAME%.*}" && _confset _HPX_DOMAIN_NAME "${_HPX_DOMAIN_NAME}"
-_HPX_CT_NAME=${_HPX_DOMAIN_FQDN//./-} && _confset _HPX_CT_NAME "${_HPX_CT_NAME}"
+_HPX_CT_NAME=${S_DOM_FQDN//./-} && _confset _HPX_CT_NAME "${_HPX_CT_NAME}"
 _HPX_DNS_DEFAULT=${s_base}.1:53 && _confset _HPX_DNS_DEFAULT "${_HPX_DNS_DEFAULT}"
 
 _HPX_STATS_PORT=${S_HAPROXY_STATS_PORTS%% *} && _confset _HPX_STATS_PORT "${_HPX_STATS_PORT}"
@@ -99,15 +86,16 @@ _HPX_SSL_CA_PEM=${path_ssl_certs}/rootCA.pem.ca && _confset _HPX_SSL_CA_PEM "${_
 ########################  PROFILE
 
 profile=ssl-haproxy
-_echot "------------------  profile ${profile}"
-lxc profile list -f csv|grep -q "^${profile}," && _eval lxc profile rename ${profile} ${profile}.${_SDATE}
-_eval lxc profile create ${profile}
+if ! lxc profile list -f csv|grep -q "^${profile},"; then
+	_echot "------------------  profile ${profile}"
+	_eval lxc profile create ${profile}
 
-path=${S_HOST_PATH_SHARE}/ssl/haproxy
-path_ct=${_HPX_PATH_SSL}
-[ -d ${path} ] || _evalr mkdir -p ${path}
-_evalr chown -R ${_LXD_UID}:${_LXD_UID} ${S_HOST_PATH_SHARE}/ssl
-_eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
+	path=${S_HOST_PATH_SHARE}/ssl/haproxy
+	path_ct=${_HPX_PATH_SSL}
+	[ -d ${path} ] || _evalr mkdir -p ${path}
+	_evalr chown -R ${_LXD_UID}:${_LXD_UID} ${S_HOST_PATH_SHARE}/ssl
+	_eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
+fi
 
 ########################  INIT
 
@@ -116,6 +104,7 @@ if lxc list -f csv -c n | grep -q ^${_CT_NAME}$; then
 	lxc list -f csv -c n status=Running| grep -q ^${_CT_NAME}$ && _eval lxc stop ${_CT_NAME}
 	_echot "------------------ rename ${_CT_NAME} -> ${_CT_NAME}-${_SDATE}"
 	_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
+	#_eval lxc config set ${_CT_NAME} eth0 ipv4.address=
 fi
 _eval lxc init ${_CT_INIT_NAME} ${_CT_NAME} -p default -p global -p ssl-haproxy
 
@@ -143,9 +132,7 @@ _service restart ${_IPT_SERVICE}
 ########################  SYSCTL
 
 _echot "------------------  conf sysctl.conf"
-
 file=/etc/sysctl.d/20-lxd.conf
-
 txt="# server configuration
 net.ipv4.tcp_max_syn_backlog = ${_MAX_SYN_BACKLOG}
 net.ipv4.tcp_max_tw_buckets = ${_MAX_TW_BUCKETS}
@@ -153,7 +140,6 @@ net.ipv4.tcp_fin_timeout= ${_FIN_TIMEOUT}
 net.ipv4.tcp_keepalive_time= ${_KEEPALIVE_TIME}
 net.ipv4.tcp_keepalive_intvl= ${_KEEPALIVE_INTVL}
 net.ipv4.tcp_keepalive_probes = ${_KEEPALIVE_PROBES}"
-
 _lxc_exec ${_CT_NAME} "echo '${txt}' > ${file}"
 
 ########################  PROXY
@@ -171,11 +157,12 @@ done
 ########################  INSTALL
 
 _echot "------------------  install"
-_lxc_exec ${_CT_NAME} "apk update"
-_lxc_exec ${_CT_NAME} "apk add haproxy bash bash-completion vim curl" # lnav
+_lxc_exec ${_CT_NAME} apk update
+_lxc_exec ${_CT_NAME} apk add haproxy bash bash-completion vim curl # lnav
 
 _echot "------------------  service enable"
 _lxc_exec ${_CT_NAME} rc-update add haproxy
+_lxc_exec ${_CT_NAME} rc-service -S haproxy start
 
 ########################  CONF
 
@@ -194,105 +181,107 @@ path=/etc/haproxy
 _lxc_exec ${_CT_NAME} "[ -d '${path}' ] && rm -fR ${path} ${path}.${_SDATE}"
 _eval lxc file push -rq ${path_haproxy} ${_CT_NAME}/etc
 
-# select alpine configuration
-_lxc_exec ${_CT_NAME} "sed -i 's|^\(\s*\)#\(.*\) # alpine$|\1\2|' ${path}/haproxy.cfg"
-
 _echot "------------------  conf variables"
 # replace variables
 _lxc_var_replace ${_CT_NAME} ${path} haproxy rspamd
+# select alpine configuration
+_lxc_exec ${_CT_NAME} "sed -i 's|^\(\s*\)#\(.*\) # alpine$|\1\2|' ${path}/haproxy.cfg"
 
 _echot "------------------  conf enable"
 _lxc_exec ${_CT_NAME} "[ -d '${path}/conf-enabled' ] || mkdir -p ${path}/conf-enabled"
 files="10-defaults 12-listen-stats 14-resolvers-lxd 20-fronts-80 40-fronts-mail 50-backs-80 60-backs-mail"
-[ ${_HPX_DOMAIN_FQDN##*.} != lxd ] && files+=" 30-fronts-443"
-for str in ${files}; do
-	_lxc_exec ${_CT_NAME} "[ -e ${path}/conf-enabled/${str} ] || ln -s ${path}/conf-available/${str}  ${path}/conf-enabled/${str}"
+for file in ${files}; do
+	_lxc_exec ${_CT_NAME} "[ -e ${path}/conf-enabled/${file} ] || ln -s ${path}/conf-available/${file}  ${path}/conf-enabled/${file}"
 done
 
-_echot "------------------  haproxy start"
-_lxc_exec ${_CT_NAME} "rc-service haproxy -S start"
+_echot "------------------  haproxy restart"
+_lxc_exec ${_CT_NAME} rc-service haproxy restart
 
 _echot "------------------  conf init.d"
 file=/etc/init.d/${file_conf_haproxy##*/}
 _lxc_exec ${_CT_NAME} "[ -f ${file} ] && mv ${file} ${file}.${_SDATE} && chmod -x ${file}.${_SDATE}"
 _eval lxc file push -q ${file_conf_haproxy} ${_CT_NAME}/etc/init.d/haproxy
-_lxc_exec ${_CT_NAME} "chmod +x ${file}"
+_lxc_exec ${_CT_NAME} chmod +x ${file}
 
 ########################  OPENSSL
 
-_echot "------------------  openssl paths"
-for path in ${path_ssl_conf} ${path_ssl_private} ${path_ssl_certs} ${path_ssl_haproxy}; do
-	_lxc_exec ${_CT_NAME} "[ -d '${path}' ] || mkdir -p ${path}"
-done
+if ! _lxc_exec ${_CT_NAME}  "test -f '${_HPX_SSL_CA_KEY}' && test -f '${_HPX_SSL_CA_PEM}'"; then
+	_echot "------------------  openssl paths"
+	for path in ${path_ssl_conf} ${path_ssl_private} ${path_ssl_certs} ${path_ssl_haproxy}; do
+		_lxc_exec ${_CT_NAME} "[ -d '${path}' ] || mkdir -p ${path}"
+	done
 
-_echot "------------------  openssl install"
-_lxc_exec ${_CT_NAME} "apk add openssl"
+	_echot "------------------  openssl install"
+	_lxc_exec ${_CT_NAME} apk add openssl
 
-_echot "------------------  openssl conf"
-file_ssl_conf=${path_ssl_conf}/openssl-root.cnf
-_eval lxc file push -q ${file_conf_ssl} ${_CT_NAME}${file_ssl_conf}
-_lxc_var_replace ${_CT_NAME} ${file_ssl_conf} haproxy
+	_echot "------------------  openssl conf"
+	file_ssl_conf=${path_ssl_conf}/openssl-root.cnf
+	_eval lxc file push -q ${file_conf_ssl} ${_CT_NAME}${file_ssl_conf}
+	_lxc_var_replace ${_CT_NAME} ${file_ssl_conf} haproxy
 
-_echot "------------------  openssl conf CA"
-_lxc_exec ${_CT_NAME} openssl genrsa -out ${_HPX_SSL_CA_KEY} 4096
-_lxc_exec ${_CT_NAME} openssl req -x509 -new -nodes -key ${_HPX_SSL_CA_KEY} -sha256 -days 3650 -out ${_HPX_SSL_CA_PEM} -config ${file_ssl_conf}
+	_echot "------------------  openssl conf CA"
+	_lxc_exec ${_CT_NAME} openssl genrsa -out ${_HPX_SSL_CA_KEY} 4096
+	_lxc_exec ${_CT_NAME} openssl req -x509 -new -nodes -key ${_HPX_SSL_CA_KEY} -sha256 -days 3650 -out ${_HPX_SSL_CA_PEM} -config ${file_ssl_conf}
 
-_echot "------------------  openssl rights"
-_lxc_exec ${_CT_NAME} chown 0:0 -R ${_HPX_PATH_SSL}
-_lxc_exec ${_CT_NAME} chmod g=,o= -R ${path_ssl_private}
+	_echot "------------------  openssl rights"
+	_lxc_exec ${_CT_NAME} chown 0:0 -R ${_HPX_PATH_SSL}
+	_lxc_exec ${_CT_NAME} chmod g=,o= -R ${path_ssl_private}
+fi
 
-if [ "${_HPX_LCRYPT_ENABLE}" ]; then
+if [ "${_HPX_CERTBOT_ENABLE}" ]; then
+
 	########################  LETSENCRYPT
+
 	# cert.pem: Your domain’s certificate
 	# chain.pem: The Let’s Encrypt chain certificate
 	# privkey.pem: Your certificate’s private key
 	# fullchain.pem: cert.pem and chain.pem combined
 	# https://www.digitalocean.com/community/tutorials/how-to-secure-haproxy-with-let-s-encrypt-on-centos-7
 
-	_echot "------------------  letsencrypt install"
-	_lxc_exec ${_CT_NAME} "apk add certbot"
+	_echot "------------------  certbot install"
+	_lxc_exec ${_CT_NAME} apk add certbot
 
-	_echot "------------------  copy letsencrypt"
-	_echoA "Copy backup of letsencrypt certs" && read str
+	_echot "------------------  copy certbot"
+	_echoA "Make a backup of exiting certbot certs"
 	_askno "Valid to continue"
 
-	for domain in ${_HPX_DOMAIN_ALL_FQDN}; do
+	for domain in ${S_DOM_ALL_FQDN}; do
 		if ! _lxc_exec ${_CT_NAME} "[ -d /etc/letsencrypt/live/${domain} ]"; then
-			_echot "------------------  letsencrypt cert ${domain}"
+			_echot "------------------  certbot cert ${domain}"
 			str="-d ${domain}"
-			for sub in ${_HPX_LCRYPT_SUBS}; do
+			for sub in ${_HPX_CERTBOT_SUBS}; do
 				str+=" -d ${sub}.${domain}"
 			done
-			cmd="certbot certonly --standalone --preferred-challenges http --http-01-port 80 --non-interactive --agree-tos --email ${_HPX_EMAIL} ${str}"
+			cmd="certbot certonly --standalone --preferred-challenges http --http-01-port ${_HPX_CERTBOT_PORT} --non-interactive --agree-tos --email ${S_EMAIL_ADMIN} ${str}"
 			#cmd="certbot certonly --standalone --preferred-challenges http --http-01-port 80 -d example.com -d www.example.com"
 			_lxc_exec ${_CT_NAME} "${cmd}"
 		else
-			_echot "------------------  letsencrypt skip ${domain}"
+			_echot "------------------  certbot skip ${domain}"
 		fi
 	done
 
-	_echot "------------------  letsencrypt unify"
-	_lxc_exec ${_CT_NAME} "${S_PATH_SCRIPT}/scripts/letsencrypt-unify.sh"
+	_echot "------------------  certbot unify"
+	_lxc_exec ${_CT_NAME} ${S_PATH_SCRIPT}/scripts/certbot-unify.sh
 
-	_echot "------------------  letsencrypt unified"
-	_lxc_exec ${_CT_NAME} "cat ${S_PATH_CONF_SSL}/private/letsencrypt.pem.lst"
+	_echot "------------------  certbot unified"
+	_lxc_exec ${_CT_NAME} cat ${S_PATH_CONF_SSL}/private/certbot.pem.lst
 
-	_echot "------------------  letsencrypt cron"
-	file=/etc/periodic/weekly/${file_conf_letsencrypt##*/}
-	_eval lxc file push -q ${file_conf_letsencrypt} ${_CT_NAME}${file}
+	_echot "------------------  certbot cron"
+	file=/etc/periodic/weekly/${file_conf_certbot##*/}
+	_eval lxc file push -q ${file_conf_certbot} ${_CT_NAME}${file}
 	_lxc_var_replace ${_CT_NAME} ${file} haproxy script
-	_lxc_exec ${_CT_NAME} "chmod +x ${file}"
+	_lxc_exec ${_CT_NAME} chmod +x ${file}
 
 else
 
 	########################  OPENSSL
 
-	for domain in ${_HPX_DOMAIN_ALL_FQDN}; do
+	for domain in ${S_DOM_ALL_FQDN}; do
 
 		_echot "------------------  openssl certs ${domain}"
 		file_ssl_csr=${path_ssl_certs}/${domain}.csr
-		file_ssl_full=${path_ssl_certs}/${domain}-fullchain.pem
 		file_ssl_key=${path_ssl_private}/${domain}-privkey.pem
+		file_ssl_full=${path_ssl_certs}/${domain}-fullchain.pem
 
 		file_ssl_conf=${path_ssl_conf}/openssl-${domain}.cnf
 		_eval lxc file push -q ${file_conf_ssl} ${_CT_NAME}${file_ssl_conf}
@@ -306,13 +295,23 @@ else
 		_lxc_exec ${_CT_NAME} openssl req -text -noout -in ${file_ssl_csr}|grep -e '\(Subject:\|DNS:\)'
 		# Self-sign the certificate CSR to a CRT
 		_lxc_exec ${_CT_NAME} openssl x509 -req -days 3650 -sha512 -in ${file_ssl_csr} -CA ${_HPX_SSL_CA_PEM} -CAkey ${_HPX_SSL_CA_KEY} -CAcreateserial -out ${file_ssl_full} -extensions v3_req -extfile ${file_ssl_conf}
-		# Create pem file
+		# Compose
 		_lxc_exec ${_CT_NAME} "cat ${file_ssl_full} ${file_ssl_key} > ${path_ssl_haproxy}/${domain}.pem"
 	done
 	# create haproxy pem list
-	_lxc_exec ${_CT_NAME} "ls -1 ${path_ssl_haproxy}/*.pem > ${_HPX_PATH_SSL}/letsencrypt.pem.lst"
+	_lxc_exec ${_CT_NAME} "ls -1 ${path_ssl_haproxy}/*.pem > ${_HPX_PATH_SSL}/certbot.pem.lst"
 
 fi
+
+########################  SSL
+
+_echot "------------------  conf ssl enable"
+path=/etc/haproxy
+file=30-fronts-443
+_lxc_exec ${_CT_NAME} "[ -e ${path}/conf-enabled/${file} ] || ln -s ${path}/conf-available/${file}  ${path}/conf-enabled/${file}"
+
+_echot "------------------  haproxy restart"
+_lxc_exec_e ${_CT_NAME} "rc-service haproxy restart"
 
 ########################  RSYSLOG
 
@@ -324,7 +323,7 @@ if [ "${S_RSYSLOG_PTC}" = udp ]; then
 	_lxc_exec ${_CT_NAME} "sed -i '/^\s*port=/ s|=.*|=\"${S_RSYSLOG_PORT}\"|' ${file}"
 
 	_echot "------------------  ${_CT_NAME} restart rsyslog"
-	_lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
+	_lxc_exec ${_CT_NAME} rc-service rsyslog restart
 fi
 
 _echot "------------------  ${S_SERVICE[log]} host path"
@@ -337,7 +336,7 @@ _eval lxc file push -q ${file_rsyslog_host} ${S_SERVICE[log]}${file}
 _lxc_var_replace ${S_SERVICE[log]} ${file} rsyslog
 
 _echot "------------------  ${S_SERVICE[log]} restart rsyslog"
-_lxc_exec ${S_SERVICE[log]} "rc-service rsyslog restart"
+_lxc_exec ${S_SERVICE[log]} rc-service rsyslog restart
 
 _echot "------------------  ${_CT_NAME} client path"
 path=${S_PATH_LOG}/haproxy
@@ -349,7 +348,7 @@ _eval lxc file push -q ${file_rsyslog_client} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} rsyslog
 
 _echot "------------------  ${_CT_NAME} rsyslog restart"
-_lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
+_lxc_exec ${_CT_NAME} rc-service rsyslog restart
 
 ########################  LOGROTATE
 
@@ -361,7 +360,7 @@ _lxc_var_replace ${S_SERVICE[log]} ${file} logrotate
 _lxc_exec ${S_SERVICE[log]} "chmod g-w,o= /etc/logrotate.d/*"
 
 _echot "------------------  ${S_SERVICE[log]} crond restart"
-_lxc_exec ${S_SERVICE[log]} "rc-service crond restart"
+_lxc_exec ${S_SERVICE[log]} rc-service crond restart
 
 _echot "------------------  client logrotate"
 file=/etc/logrotate.d/${file_logrotate_client##*/}
@@ -370,7 +369,7 @@ _lxc_var_replace ${_CT_NAME} ${file} logrotate
 _lxc_exec ${_CT_NAME} "chmod g-w,o= /etc/logrotate.d/*"
 
 _echot "------------------  ${_CT_NAME} crond restart"
-_lxc_exec ${_CT_NAME} "rc-service crond restart"
+_lxc_exec ${_CT_NAME} rc-service crond restart
 
 ########################  CLEAN LOG
 
@@ -394,7 +393,7 @@ _echot "------------------  test ${_CT_NAME}"
 
 _echoA "To test connection type:"
 _echoa "curl ${_IPTHIS}:80"
-_echoa "curl ${_HPX_DOMAIN_FQDN}:80"
+_echoa "curl ${S_DOM_FQDN}:80"
 
 ########################  END
 

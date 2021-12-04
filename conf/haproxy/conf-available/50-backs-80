@@ -6,13 +6,13 @@ backend default
 	default-server	weight 20  maxconn 30  check  inter 4s  fall 2  rise 1  resolvers lxd  resolve-prefer ipv4 # resolve-net 10.0.0.1/24
 	server			_SERVER_DEFAULT  _SERVER_DEFAULT:80 maxconn 20 check
 
-backend letsencrypt
+backend certbot
 	mode			http
-	server			letsencrypt 127.0.0.1:_HPX_LCRYPT_PORT
+	server			certbot 127.0.0.1:_HPX_CERTBOT_PORT
 
-backend _HPX_DOMAIN_FQDN
+backend S_DOM_FQDN
 	mode			http
-	#option			httpchk GET /ping-monitor "HTTP/1.1\r\nHost: _HPX_DOMAIN_FQDN"
+	#option			httpchk GET /ping-monitor "HTTP/1.1\r\nHost: S_DOM_FQDN"
 	option			httpchk GET /ping-monitor
 	http-check		expect string pong
 	default-server	weight 20  maxconn 30  check  inter 4s  fall 2  rise 1  resolvers lxd  resolve-prefer ipv4 # resolve-net 10.0.0.1/24
@@ -33,9 +33,9 @@ backend _HPX_DOMAIN_FQDN
 	#server	wap-_HPX_CT_NAME-1	wap-_HPX_CT_NAME-1:80
 	#server	wap-_HPX_CT_NAME-2	wap-_HPX_CT_NAME-2:80  backup
 
-backend _HPX_DOMAIN_FQDN-cloud
+backend S_DOM_FQDN-cloud
 	mode			http
-	#option			httpchk GET /ping-monitor "HTTP/1.1\r\nHost: _HPX_DOMAIN_FQDN"
+	#option			httpchk GET /ping-monitor "HTTP/1.1\r\nHost: S_DOM_FQDN"
 	option			httpchk GET /ping-monitor
 	http-check		expect string pong
 	default-server	weight 20  maxconn 30  check  inter 4s  fall 2  rise 1  resolvers lxd  resolve-prefer ipv4 # resolve-net 10.0.0.1/24
@@ -45,9 +45,9 @@ backend _HPX_DOMAIN_FQDN-cloud
 	#server	wap-cloud-_HPX_CT_NAME-1	wap-cloud-_HPX_CT_NAME-1:80
 	#server	wap-cloud-_HPX_CT_NAME-2	wap-cloud-_HPX_CT_NAME-2:80  backup
 
-backend	_HPX_DOMAIN_FQDN-admin
+backend	S_DOM_FQDN-admin
 	mode			http
-	#option			httpchk GET /ping-wap HTTP/1.1\r\nHost:\ admin._HPX_DOMAIN_FQDN
+	#option			httpchk GET /ping-wap HTTP/1.1\r\nHost:\ admin.S_DOM_FQDN
 	option			httpchk GET /ping-monitor
 	http-check		expect string admin
 	default-server	weight 30 maxconn 5  check inter 4s fall 2 rise 1  resolvers lxd  resolve-prefer ipv4 # resolve-net 10.0.0.1/24

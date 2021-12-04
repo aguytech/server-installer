@@ -38,7 +38,7 @@ _MDB_SERVICE=mariadb && _confset _MDB_SERVICE "${_MDB_SERVICE}"
 _MDB_PATH_CONF=/etc/my.cnf.d && _confset _MDB_PATH_CONF "${_MDB_PATH_CONF}"
 
 
-anstmp=mdb-${S_DOMAIN_NAME} && _askno "Name of the mariadb container & profile (${anstmp})" && _MDB_NAME="${_ANSWER:-${anstmp}}"
+anstmp=mdb-${S_DOM_NAME} && _askno "Name of the mariadb container & profile (${anstmp})" && _MDB_NAME="${_ANSWER:-${anstmp}}"
 _CT_NAME=${_MDB_NAME}
 
 [ -z ${_MDB_VM_PATH+x} ] && anstmp=/var/lib/mysql && _askno "Path for data (${anstmp})" && _MDB_VM_PATH="${_ANSWER:-${anstmp}}" && _confset _MDB_VM_PATH "${_MDB_VM_PATH}"

@@ -19,8 +19,8 @@ $CONFIG = [
  */
 'trusted_domains' =>
    [
-    'nextcloud._DOMAIN_FQDN',
-    '_SUBDOMAIN._DOMAIN_FQDN',
+    'nextcloud._DOM_FQDN',
+    '_APA_SUB._DOM_FQDN',
     '_CT_NAME'
   ],
 

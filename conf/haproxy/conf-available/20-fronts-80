@@ -8,20 +8,20 @@ frontend http
 	http-request 	set-header X-Forwarded-Protocol http
 	default_backend	default
 
-	acl letsencrypt			path_beg /.well-known/acme-challenge/
+	acl certbot			path_beg /.well-known/acme-challenge/
 	
-	acl _HPX_DOMAIN_FQDN		hdr_end(host) -i _HPX_DOMAIN_FQDN
-	#acl _HPX_DOMAIN_FQDN			hdr_sub(host) -i _HPX_DOMAIN_FQDN
-	acl _HPX_DOMAIN_FQDN-check		path_dir /ping-monitor /server-status /server-info /status-www /status-www-admin /ping-www
-	#acl _HPX_DOMAIN_FQDN-check		path_reg ^/(ping-monitor|server-status|server-info|status-www|status-www-admin|ping-www)
-	#acl _HPX_DOMAIN_FQDN-check		path_beg /server-status /server-info /status-www /status-www-admin /ping-www /ping-monitor
-	acl _HPX_DOMAIN_FQDN-admin		hdr(host) admin._HPX_DOMAIN_FQDN matomo._HPX_DOMAIN_FQDN monitor._HPX_DOMAIN_FQDN pfa._HPX_DOMAIN_FQDN pma._HPX_DOMAIN_FQDN
-	#acl _HPX_DOMAIN_FQDN-cloud		hdr(host) cloud._HPX_DOMAIN_FQDN nextcloud._HPX_DOMAIN_FQDN
+	acl S_DOM_FQDN		hdr_end(host) -i S_DOM_FQDN
+	#acl S_DOM_FQDN			hdr_sub(host) -i S_DOM_FQDN
+	acl S_DOM_FQDN-check		path_dir /ping-monitor /server-status /server-info /status-www /status-www-admin /ping-www
+	#acl S_DOM_FQDN-check		path_reg ^/(ping-monitor|server-status|server-info|status-www|status-www-admin|ping-www)
+	#acl S_DOM_FQDN-check		path_beg /server-status /server-info /status-www /status-www-admin /ping-www /ping-monitor
+	acl S_DOM_FQDN-admin		hdr(host) admin.S_DOM_FQDN matomo.S_DOM_FQDN monitor.S_DOM_FQDN pfa.S_DOM_FQDN pma.S_DOM_FQDN
+	#acl S_DOM_FQDN-cloud		hdr(host) cloud.S_DOM_FQDN nextcloud.S_DOM_FQDN
 
-	#redirect		scheme https code 301 if _HPX_DOMAIN_FQDN !_HPX_DOMAIN_FQDN-check !letsencrypt !{ ssl_fc }
-	#redirect		scheme https code 301 if !_HPX_DOMAIN_FQDN-check !letsencrypt !{ ssl_fc }
+	#redirect		scheme https code 301 if S_DOM_FQDN !S_DOM_FQDN-check !certbot !{ ssl_fc }
+	redirect		scheme https code 301 if !S_DOM_FQDN-check !certbot !{ ssl_fc }
 
-	use_backend		letsencrypt if letsencrypt
-	use_backend		_HPX_DOMAIN_FQDN-admin if _HPX_DOMAIN_FQDN-admin
-	#use_backend		_HPX_DOMAIN_FQDN-cloud if _HPX_DOMAIN_FQDN-cloud
-	use_backend		_HPX_DOMAIN_FQDN if _HPX_DOMAIN_FQDN || _HPX_DOMAIN_FQDN-check
+	use_backend		certbot if certbot
+	use_backend		S_DOM_FQDN-admin if S_DOM_FQDN-admin
+	#use_backend		S_DOM_FQDN-cloud if S_DOM_FQDN-cloud
+	use_backend		S_DOM_FQDN if S_DOM_FQDN || S_DOM_FQDN-check

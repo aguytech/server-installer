@@ -1,5 +1,5 @@
-user = _DB_USER
-password = _DB_PWD
-hosts = _DB_HOST
-dbname = _DB_NAME
+user = _MEL_DB_USER
+password = _MEL_DB_PWD
+hosts = _MEL_DB_HOST
+dbname = _MEL_DB_NAME
 query = SELECT goto FROM alias WHERE address='%s' AND active =1 UNION DISTINCT SELECT goto FROM alias, alias_domain WHERE alias_domain.alias_domain='%d' AND alias.active = 1 AND alias_domain.active = 1 AND ( alias.address = CONCAT( '%u', '@', alias_domain.target_domain) OR alias.address = CONCAT( '@', alias_domain.target_domain)  )

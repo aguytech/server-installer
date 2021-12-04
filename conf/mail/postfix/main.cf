@@ -282,8 +282,8 @@ unknown_local_recipient_reject_code = 550
 #mynetworks = $config_directory/mynetworks
 #mynetworks = hash:/etc/postfix/network_table
 #
-#mynetworks = 127.0.0.0/8 _CIDR _IPS_CLUSTER
-mynetworks = 127.0.0.0/8 _CIDR _IPS_CLUSTER
+#mynetworks = 127.0.0.0/8 _MEL_CIDR _IPS_CLUSTER
+mynetworks = 127.0.0.0/8 _MEL_CIDR _IPS_CLUSTER
 
 # The relay_domains parameter restricts what destinations this system will
 # relay mail to.  See the smtpd_recipient_restrictions description in
@@ -316,7 +316,7 @@ mynetworks = 127.0.0.0/8 _CIDR _IPS_CLUSTER
 #relay_domains = $mydestination
 #
 # do not list domains in virtual_mailbox_domains & relay_domains
-#relay_domains = $mydestination, mysql:/etc/postfix/sql/domains.cf
+#relay_domains = $mydestination, mysql:_MEL_PATH_SQL/domains.cf
 
 # INTERNET OR INTRANET
 
@@ -448,7 +448,7 @@ recipient_delimiter = +
 #
 #mail_spool_directory = /var/mail
 #mail_spool_directory = /var/spool/mail
-mail_spool_directory = _PATH_LMAIL
+mail_spool_directory = _MEL_PATH_LOCAL
 
 # The mailbox_command parameter specifies the optional external
 # command to use instead of mailbox delivery. The command is run as
@@ -610,7 +610,7 @@ debug_peer_level = 2
 # debug_peer_level parameter.
 #
 #debug_peer_list = 127.0.0.1
-#debug_peer_list = 127.0.0.0/8 _CIDR
+#debug_peer_list = 127.0.0.0/8 _MEL_CIDR
 
 # The debugger_command specifies the external command that is executed
 # when a Postfix daemon program is run with the -D option.

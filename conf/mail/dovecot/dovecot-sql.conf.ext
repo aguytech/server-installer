@@ -71,14 +71,14 @@ driver = mysql
 #   connect = host=sql.example.com dbname=virtual user=virtual password=blarg
 #   connect = /etc/dovecot/authdb.sqlite
 #
-connect = host=_DB_HOST dbname=_DB_NAME user=_DB_USER password=_DB_PWD
+connect = host=_MEL_DB_HOST dbname=_MEL_DB_NAME user=_MEL_DB_USER password=_MEL_DB_PWD
 
 # Default password scheme.
 #
 # List of supported schemes is in
 # http://wiki2.dovecot.org/Authentication/PasswordSchemes
 #
-default_pass_scheme = _SSL_SCHEME
+default_pass_scheme = _MEL_SSL_SCHEME
 
 # passdb query to retrieve the password. It can return fields:
 #   password - The user's password. This field must be returned.

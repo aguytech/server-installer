@@ -1,11 +1,11 @@
 #!/bin/sh
 #
 # copy certificates from shared ssl path to local ssl path
-cp _PATH_SSL/* S_PATH_CONF_SSL/private/
+cp _MEL_PATH_SSL/private/*.pem S_PATH_CONF_SSL/private/
+cp _MEL_PATH_SSL/certs/*.pem S_PATH_CONF_SSL/certs/
 # rights
-chown _VMAIL_USER:postfix S_PATH_CONF_SSL
-find S_PATH_CONF_SSL -type f -exec chmod 550 {} \;
-find S_PATH_CONF_SSL -type f -exec chmod 440 {} \;
+chown _MEL_VMAIL_USER:postfix S_PATH_CONF_SSL
+chmod -R g-w,o= S_PATH_CONF_SSL
 # services
 rc-service -s postfix reload
 rc-service -s dovecot reload

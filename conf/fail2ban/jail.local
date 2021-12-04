@@ -8,4 +8,4 @@ maxretry = 5
 
 # mail
 destemail = S_EMAIL_TECH
-sender    = fail2ban@S_DOMAIN_FQDN
+sender    = fail2ban@S_DOM_FQDN

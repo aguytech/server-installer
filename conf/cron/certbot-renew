@@ -1,0 +1,4 @@
+#!/bin/sh
+#
+# renew certificate with certbot
+certbot renew --quiet --standalone --preferred-challenges http --http-01-port _HPX_CERTBOT_PORT --post-hook "S_PATH_SCRIPT/scripts/certbot-unify.sh && rc-service haproxy reload"

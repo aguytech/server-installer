@@ -1,5 +1,5 @@
-user = _DB_USER
-password = _DB_PWD
-hosts = _DB_HOST
-dbname = _DB_NAME
+user = _MEL_DB_USER
+password = _MEL_DB_PWD
+hosts = _MEL_DB_HOST
+dbname = _MEL_DB_NAME
 query = SELECT policy, params FROM domain WHERE domain = '%d';

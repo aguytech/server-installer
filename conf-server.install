@@ -188,30 +188,39 @@ fi
 
 ###################  DOMAIN
 
-_echot "------------------  S_DOMAIN_FQDN"
-if [ -z "${S_DOMAIN_FQDN}" ]; then
-	anstmp="ambau.fr"
-	_askno "FQDN of principal domain (${anstmp})"
-	S_DOMAIN_FQDN=${_ANSWER:-${anstmp}} && _confset S_DOMAIN_FQDN "${S_DOMAIN_FQDN}" "${S_GLOBAL_CONF}"
+_echot "------------------  S_DOM_ALL_FQDN"
+if [ -z "${S_DOM_ALL_FQDN}" ]; then
+	anstmp="17112018.fr.lxd 17112018.ovh.lxd ambau.fr.lxd ambau.ovh.lxd ggj.fr.lxd ggj.ovh.lxd han-sci.fr.lxd otokoz.ovh.lxd"
+	_askno "Local lxd. domains (y/N)"
+	[ "${_ANSWER}" != y ] && anstmp=${anstmp//.lxd/}
+	_askno "All domains (FQDN) (${anstmp})"
+	S_DOM_ALL_FQDN=${_ANSWER:-${anstmp}} && _confset S_DOM_ALL_FQDN "${S_DOM_ALL_FQDN}" "${S_GLOBAL_CONF}"
 fi
 
-_echot "------------------  S_DOMAIN_NAME"
-if [ -z "${S_DOMAIN_NAME}" ]; then
-	anstmp="${S_DOMAIN_FQDN%%.*}"
+_echot "------------------  S_DOM_FQDN"
+if [ -z "${S_DOM_FQDN}" ]; then
+	anstmp="ambau.fr"
+	_menu "A principal domain to use (ambau.fr)" ${S_DOM_ALL_FQDN}
+	S_DOM_FQDN=${_ANSWER} && _confset S_DOM_FQDN "${S_DOM_FQDN}" "${S_GLOBAL_CONF}"
+fi
+
+_echot "------------------  S_DOM_NAME"
+if [ -z "${S_DOM_NAME}" ]; then
+	anstmp="${S_DOM_FQDN%%.*}"
 	_askno "Simple name of principal domain (${anstmp})"
-	S_DOMAIN_NAME=${_ANSWER:-${anstmp}} && _confset S_DOMAIN_NAME "${S_DOMAIN_NAME}" "${S_GLOBAL_CONF}"
+	S_DOM_NAME=${_ANSWER:-${anstmp}} && _confset S_DOM_NAME "${S_DOM_NAME}" "${S_GLOBAL_CONF}"
 fi
 
 _echot "------------------  S_EMAIL_ADMIN"
 if [ -z "${S_EMAIL_ADMIN}" ]; then
-	anstmp="admin@${S_DOMAIN_FQDN}"
+	anstmp="admin@${S_DOM_FQDN}"
 	_askno "Administration email of principal domain (${anstmp})"
 	S_EMAIL_ADMIN="${_ANSWER:-${anstmp}}" && _confset S_EMAIL_ADMIN "${S_EMAIL_ADMIN}" "${S_GLOBAL_CONF}"
 fi
 
 _echot "------------------  S_EMAIL_TECH"
 if [ -z "${S_EMAIL_TECH}" ]; then
-	anstmp="tech@${S_DOMAIN_FQDN}"
+	anstmp="tech@${S_DOM_FQDN}"
 	_askno "Technical email of principal domain (${anstmp})"
 	S_EMAIL_TECH="${_ANSWER:-${anstmp}}" && _confset S_EMAIL_TECH "${S_EMAIL_TECH}" "${S_GLOBAL_CONF}"
 fi

@@ -58,6 +58,9 @@ fi
 _echot "------------------  install"
 _evalr apt install -y jq acl # criu lxd-tools
 
+_echot "------------------  snap version"
+snap list lxd|sed -n 's|^lxd *\([0-9\.]\+\) .*|\1|p'
+
 # core20
 if ! snap list|grep -q ^core20; then
 	if snap list|grep -q ^lxd; then

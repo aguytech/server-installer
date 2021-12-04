@@ -31,11 +31,11 @@ _require ${file_rsyslog_host} ${file_rsyslog_client} ${file_logrotate_host} ${fi
 
 _echot "------------------  data domain"
 
-anstmp=${S_DOMAIN_FQDN} && _askno "Domain name to use (${anstmp})"
-_DOMAIN_FQDN="${_ANSWER:-${anstmp}}"
-_DOMAIN_NAME="${_DOMAIN_FQDN%.*}"
+anstmp=${S_DOM_FQDN} && _askno "Domain name to use (${anstmp})"
+_DOM_FQDN="${_ANSWER:-${anstmp}}"
+_DOM_NAME="${_DOM_FQDN%.*}"
 
-anstmp=wa-${_DOMAIN_FQDN//./-} && _askno "Name of container to build (${anstmp})"
+anstmp=wa-${_DOM_FQDN//./-} && _askno "Name of container to build (${anstmp})"
 _CT_NAME="${_ANSWER:-${anstmp}}"
 
 anstmp=admin && _askno "Give the subdomain name for administration (${anstmp})"
@@ -71,19 +71,19 @@ path_conf=/etc/apache2/conf.d
 file_conf_http=/etc/apache2/httpd.conf
 
 _APA_PATH_WWW=/var/www/localhost/html &&  _confset _APA_PATH_WWW "${_APA_PATH_WWW}"
-_PATH_DOMAIN=${S_VM_PATH_SHARE}/www/${_DOMAIN_FQDN}
+path_dom=${S_VM_PATH_SHARE}/www/${_DOM_FQDN}
 
 
 ########################  PROFILE
 
-profile=www-${_DOMAIN_FQDN}
+profile=www-${_DOM_FQDN}
 _echot "------------------  profile ${profile}"
 
 lxc profile list -f csv|grep -q "^${profile}," && _eval lxc profile rename ${profile} ${profile}.${_SDATE}
 _eval lxc profile create ${profile}
 
-path=${S_HOST_PATH_SHARE}/www/${_DOMAIN_FQDN}
-path_ct=${_PATH_DOMAIN}
+path=${S_HOST_PATH_SHARE}/www/${_DOM_FQDN}
+path_ct=${path_dom}
 [ -d ${path} ] || _evalr mkdir -p ${path}
 _evalr chown -R ${_LXD_UID}:${_LXD_UID} ${S_HOST_PATH_SHARE}/www
 _eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
@@ -224,9 +224,9 @@ _echot "------------------  conf info & status"
 file=${path_conf}/info.conf
 _lxc_exec ${_CT_NAME} "[ ! -f '${file}.${_SDATE}' ] && cp -a '${file}' '${file}.${_SDATE}'"
 # optimize require for info
-_lxc_exec ${_CT_NAME} "sed -i '/<Location \/server-status>/,/<\/Location>/ {s|^\(\s*\)\(Require host\).*|\1\2 ${_DOMAIN_FQDN}\n\1Require ip ${_IPS_AUTH}|}' ${file}"
+_lxc_exec ${_CT_NAME} "sed -i '/<Location \/server-status>/,/<\/Location>/ {s|^\(\s*\)\(Require host\).*|\1\2 ${_DOM_FQDN}\n\1Require ip ${_IPS_AUTH}|}' ${file}"
 # optimize require for status
-_lxc_exec ${_CT_NAME} "sed -i '/<Location \/server-info>/,/<\/Location>/ {s|^\(\s*\)\(Require host\).*|\1\2 ${_DOMAIN_FQDN}\n\1Require ip ${_IPS_AUTH}|}' ${file}"
+_lxc_exec ${_CT_NAME} "sed -i '/<Location \/server-info>/,/<\/Location>/ {s|^\(\s*\)\(Require host\).*|\1\2 ${_DOM_FQDN}\n\1Require ip ${_IPS_AUTH}|}' ${file}"
 
 ########################  PING-MONITOR
 
@@ -239,22 +239,22 @@ cmd="echo 'Alias \"/ping-monitor\" \"${_APA_PATH_WWW}/ping-monitor.html
 </Files>' >  ${path_conf}/monitor.conf"
 _lxc_exec ${_CT_NAME} "${cmd}"
 
-########################  _DOMAIN_FQDN
+########################  _DOM_FQDN
 
-_echot "------------------  ${_DOMAIN_FQDN} path"
-path=${_PATH_DOMAIN}/html
+_echot "------------------  ${_DOM_FQDN} path"
+path=${path_dom}/html
 _lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
 
-_echot "------------------  ${_DOMAIN_FQDN} index.html"
-file=${_PATH_DOMAIN}/html/index.html
-_lxc_exec ${_CT_NAME} "echo '<html><body><h1>${_DOMAIN_FQDN} works!</h1></body></html>' > ${file}"
+_echot "------------------  ${_DOM_FQDN} index.html"
+file=${path_dom}/html/index.html
+_lxc_exec ${_CT_NAME} "echo '<html><body><h1>${_DOM_FQDN} works!</h1></body></html>' > ${file}"
 
-_echot "------------------  ${_DOMAIN_FQDN} conf"
+_echot "------------------  ${_DOM_FQDN} conf"
 file=${path_sites}/${file_site##*/}
 _eval lxc file push -q ${file_site} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} apache
 
-file_domain=${S_PATH_INSTALL_CONF}/apache2/${_DOMAIN_FQDN}.conf
+file_domain=${S_PATH_INSTALL_CONF}/apache2/${_DOM_FQDN}.conf
 if [ -f "${file_domain}" ]; then
 	file=${path_sites}/${file_domain##*/}
 	_eval lxc file push -q ${file_domain} ${_CT_NAME}${file}
@@ -265,7 +265,7 @@ if [ -f "${file_domain}" ]; then
 	_lxc_exec ${_CT_NAME} "mv ${file} ${file}.keep"
 fi
 
-_echot "------------------  ${_DOMAIN_FQDN} path"
+_echot "------------------  ${_DOM_FQDN} path"
 path=${S_VM_PATH_LOG}/apache2
 _lxc_exec ${S_SERVICE[log]} "[ -d ${path} ] || mkdir -p ${path}"
 
@@ -273,7 +273,7 @@ _lxc_exec ${S_SERVICE[log]} "[ -d ${path} ] || mkdir -p ${path}"
 
 _echot "------------------  rights"
 _lxc_exec ${_CT_NAME} "chown apache:apache -R ${_APA_PATH_WWW}"
-_lxc_exec ${_CT_NAME} "chown apache:apache -R ${_PATH_DOMAIN}/*"
+_lxc_exec ${_CT_NAME} "chown apache:apache -R ${path_dom}/*"
 
 ########################  RESTART
 
