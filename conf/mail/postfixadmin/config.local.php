@@ -54,9 +54,9 @@ $CONF['default_aliases'] = array (
     'abuse' => 'postmaster',
     'hostmaster' => 'postmaster',
     'webmaster' => 'postmaster',
-    'postmaster' => '_EMAIL_ADMIN',
-    'admin' => '_EMAIL_ADMIN',
-    'root' => '_EMAIL_TECH',
+    'postmaster' => 'S_EMAIL_ADMIN',
+    'admin' => 'S_EMAIL_ADMIN',
+    'root' => 'S_EMAIL_TECH',
 );
 // If you want to store the mailboxes per domain set this to 'YES'.
 $CONF['domain_path'] = 'YES';

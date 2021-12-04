@@ -45,7 +45,7 @@ alias_maps  hash:${file_aliases}"
 
 _echot "------------------  postfix aliases"
 _evalr cp -a ${file_conf_aliases} ${file_aliases}
-_evalr "sed -i '/_EMAIL_TECH/ {s|_EMAIL_TECH|${S_DOMAIN_EMAIL_TECH}|;s|^#||}' ${file_aliases}"
+_var_replace ${file_aliases} mail
 _evalr chmod g-w,o= ${file_aliases}
 newaliases
 

@@ -200,7 +200,7 @@ _echot "------------------  conf httpd"
 _lxc_exec ${_CT_NAME} "grep -q ${path_sites} ${file_conf_http} || echo 'IncludeOptional ${path_sites}/*.conf' >>  ${file_conf_http}"
 
 cmds="sed -i 's|^.\?\(ServerName\) .*$|\1 localhost|' ${file_conf_http}
-sed -i 's|^.\?\(ServerAdmin\) .*$|\1 ${S_DOMAIN_EMAIL_ADMIN}|' ${file_conf_http}
+sed -i 's|^.\?\(ServerAdmin\) .*$|\1 ${S_EMAIL_ADMIN}|' ${file_conf_http}
 sed -i 's|^\(ServerSignature\) .*$|\1 Off|' ${file_conf_http}
 sed -i 's|^\(ServerTokens\) .*$|\1 Prod|' ${file_conf_http}
 sed -i 's|/var/www/localhost/htdocs|${_APA_PATH_WWW}|' ${file_conf_http}"

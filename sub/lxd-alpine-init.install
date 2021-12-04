@@ -140,7 +140,7 @@ _lxc_exec ${_CT_NAME} "sed -i '/^\*\/15/ s|^|#|' ${file}"
 _lxc_exec ${_CT_NAME} rc-service -S crond start
 
 file=/etc/crontabs/mail
-_lxc_exec ${_CT_NAME} "echo 'MAILTO=${S_DOMAIN_EMAIL_TECH}' > ${file}"
+_lxc_exec ${_CT_NAME} "echo 'MAILTO=${S_EMAIL_TECH}' > ${file}"
 
 _echot "------------------  cron restart"
 _lxc_exec ${_CT_NAME} "rc-service crond restart"
@@ -229,10 +229,11 @@ while read str val; do
 done <<< "mydomain lxd
 mynetworks 127.0.0.1/32
 mynetworks_style host
-relayhost ${S_SERVICE[mail]}:25
-smtpd_relay_restrictions permit_mynetworks"
+inet_interfaces  127.0.0.1
+relayhost ${S_SERVICE[mail]}:25"
 
 _echot "------------------  postfix aliases"
+_lxc_exec ${_CT_NAME} "sed -i '/^#\?root:.*/ croot: ${S_EMAIL_TECH}' /etc/postfix/aliases"
 _lxc_exec ${_CT_NAME} newaliases
 
 _echot "------------------  postfix start"

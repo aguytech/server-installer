@@ -7,5 +7,5 @@ findtime  = 10m
 maxretry = 5
 
 # mail
-destemail = S_DOMAIN_EMAIL_TECH
+destemail = S_EMAIL_TECH
 sender    = fail2ban@S_DOMAIN_FQDN

@@ -19,14 +19,6 @@ _CT_NUM="${_ANSWER:-${anstmp}}" && _confset _CT_NUM "${_CT_NUM}" ${_FILE_INSTALL
 _CT_ALL_NAME="${_CT_NAME} $(for i in `seq 2 ${_CT_NUM}`; do echo ${_CT_NAME}-${i}; done)"
 _confset _CT_ALL_NAME "${_CT_ALL_NAME}" ${_FILE_INSTALL_CONF}
 
-_echot "------------------ data domain"
-
-anstmp=${S_DOMAIN_EMAIL_ADMIN} && _askno "Administration email adress (${anstmp})"
-_EMAIL_ADMIN=${_ANSWER:-${anstmp}} && _confset _EMAIL_ADMIN "${_EMAIL_ADMIN}" ${_FILE_INSTALL_CONF}
-
-anstmp=${S_DOMAIN_EMAIL_TECH} && _askno "Technical email adress (${anstmp})"
-_EMAIL_TECH=${_ANSWER:-${anstmp}} && _confset _EMAIL_TECH "${_EMAIL_TECH}" ${_FILE_INSTALL_CONF}
-
 _echot "------------------ data"
 
 anstmp=${S_VM_PATH_SHARE}/mail && _askno "shared path for mail (${anstmp})"

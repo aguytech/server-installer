@@ -61,7 +61,7 @@ _HPX_ACCESS_PWD="${_ANSWER:-${anstmp}}" && _confset _HPX_ACCESS_PWD "${_HPX_ACCE
 anstmp=/haproxy-stats && _askno "URI to access to admin site (${anstmp})"
 _HPX_ACCESS_URI="${_ANSWER:-${anstmp}}" && _confset _HPX_ACCESS_URI "${_HPX_ACCESS_URI}"
 
-anstmp=${S_DOMAIN_EMAIL_ADMIN} && _askno "Technical email for certificates (${anstmp})"
+anstmp=${S_EMAIL_ADMIN} && _askno "Technical email for certificates (${anstmp})"
 _HPX_EMAIL="${_ANSWER:-${anstmp}}" && _confset _HPX_EMAIL "${_HPX_EMAIL}"
 
 _echot "------------------  data letsencrypt"

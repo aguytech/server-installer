@@ -50,7 +50,7 @@ file=/etc/postfix/${file_conf_main##*/}
 _eval lxc file push -q ${file_conf_main} ${_CT_NAME}${file}
 
 _echot "------------------  conf alias"
-_lxc_exec ${_CT_NAME} "sed -i '/^#\?root:.*/ croot: ${_EMAIL_TECH}' /etc/postfix/aliases"
+_lxc_exec ${_CT_NAME} "sed -i '/^#\?root:.*/ croot: ${S_EMAIL_TECH}' /etc/postfix/aliases"
 _lxc_exec ${_CT_NAME} newaliases
 _echoa "test postmap -q root lmdb:/etc/postfix/aliases"
 _lxc_exec ${_CT_NAME} postmap -q root lmdb:/etc/postfix/aliases

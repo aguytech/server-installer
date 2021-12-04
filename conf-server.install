@@ -202,18 +202,18 @@ if [ -z "${S_DOMAIN_NAME}" ]; then
 	S_DOMAIN_NAME=${_ANSWER:-${anstmp}} && _confset S_DOMAIN_NAME "${S_DOMAIN_NAME}" "${S_GLOBAL_CONF}"
 fi
 
-_echot "------------------  S_DOMAIN_EMAIL_ADMIN"
-if [ -z "${S_DOMAIN_EMAIL_ADMIN}" ]; then
+_echot "------------------  S_EMAIL_ADMIN"
+if [ -z "${S_EMAIL_ADMIN}" ]; then
 	anstmp="admin@${S_DOMAIN_FQDN}"
 	_askno "Administration email of principal domain (${anstmp})"
-	S_DOMAIN_EMAIL_ADMIN="${_ANSWER:-${anstmp}}" && _confset S_DOMAIN_EMAIL_ADMIN "${S_DOMAIN_EMAIL_ADMIN}" "${S_GLOBAL_CONF}"
+	S_EMAIL_ADMIN="${_ANSWER:-${anstmp}}" && _confset S_EMAIL_ADMIN "${S_EMAIL_ADMIN}" "${S_GLOBAL_CONF}"
 fi
 
-_echot "------------------  S_DOMAIN_EMAIL_TECH"
-if [ -z "${S_DOMAIN_EMAIL_TECH}" ]; then
+_echot "------------------  S_EMAIL_TECH"
+if [ -z "${S_EMAIL_TECH}" ]; then
 	anstmp="tech@${S_DOMAIN_FQDN}"
 	_askno "Technical email of principal domain (${anstmp})"
-	S_DOMAIN_EMAIL_TECH="${_ANSWER:-${anstmp}}" && _confset S_DOMAIN_EMAIL_TECH "${S_DOMAIN_EMAIL_TECH}" "${S_GLOBAL_CONF}"
+	S_EMAIL_TECH="${_ANSWER:-${anstmp}}" && _confset S_EMAIL_TECH "${S_EMAIL_TECH}" "${S_GLOBAL_CONF}"
 fi
 
 

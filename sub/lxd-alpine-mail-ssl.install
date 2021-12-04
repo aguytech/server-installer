@@ -38,7 +38,7 @@ _echot "------------------  data letsencrypt"
 if [ "${ssl_api}" =  letsencrypt ]; then
 	########################  LETSENCRYPT
 
-	anstmp=${S_DOMAIN_EMAIL_TECH} && _askno "Technical email for letsencrypt (${anstmp})"
+	anstmp=${S_EMAIL_TECH} && _askno "Technical email for letsencrypt (${anstmp})"
 	lcrypt_email="${_ANSWER:-${anstmp}}" && _confset lcrypt_email "${lcrypt_email}" ${_FILE_INSTALL_CONF}
 
 	#### letsencrypt
