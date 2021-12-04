@@ -17,13 +17,14 @@ file_rsyslog_cron=${S_PATH_INSTALL_CONF}/rsyslog/cron.conf
 file_rsyslog_client_auth=${S_PATH_INSTALL_CONF}/rsyslog/client-auth.conf
 file_logrotate_server=${S_PATH_INSTALL_CONF}/logrotate/server
 
-file_vim=${S_PATH_SCRIPT_CONF}/.vimrc
-file_tmux=${S_PATH_SCRIPT_CONF}/.tmux.conf
+file_conf_vim=${S_PATH_SCRIPT_CONF}/.vimrc
+file_conf_tmux=${S_PATH_SCRIPT_CONF}/.tmux-server.conf
+file_path_tmux=${S_PATH_INSTALL_CONF}/tmux/.tmux.tar.gz
 
 _echot "------------------  required files"
 _require ${file_env} ${file_bash_aliases} ${file_bash_functions}
 _require ${file_rsyslog_cron} ${file_rsyslog_client_auth} ${file_logrotate_server}
-_require ${file_vim} ${file_tmux}
+_require ${file_conf_vim} ${file_conf_tmux} ${file_conf_tmux}
 _requirep ${path_install_bash_completion}
 
 ########################  DATA
@@ -61,7 +62,7 @@ if [ "${_DEV_DRIVER}" = zfs ]; then
 	anstmp=root && 	_askno "Give the name for pool 'root' using ${_DEV_ROOT} (${anstmp})"
 	_ZFS_ROOT=${_ANSWER:-${anstmp}} && _confset _ZFS_ROOT "${_ZFS_ROOT}"
 
-	anstmp= && _askno "Give the type of vdevs: mirror/raidz/... for ${_ZFS_ROOT} (${anstmp})"
+	anstmp= && _askno "Give the type of vdev (mirror/raidz/...) for ${_ZFS_ROOT} (${anstmp})"
 	_ZFS_ROOT_TYPE=${_ANSWER:-${anstmp}} && _confset _ZFS_ROOT_TYPE "${_ZFS_ROOT_TYPE}"
 fi
 
@@ -69,7 +70,7 @@ anstmp= && _askno "Give devices for pool 'ext' (${anstmp})"
 _DEV_EXT=${_ANSWER:-${anstmp}} && _confset _DEV_EXT "${_DEV_EXT}"
 
 if [ "${_DEV_EXT}" ] && [ "${_DEV_DRIVER}" = zfs ]; then
-	anstmp=ext && _askno "Give the name for pool 'save' using ${_DEV_EXT} (${anstmp})"
+	anstmp=ext && _askno "Give the name for pool 'ext' using ${_DEV_EXT} (${anstmp})"
 	_ZFS_EXT=${_ANSWER:-${anstmp}} && _confset _ZFS_EXT "${_ZFS_EXT}"
 fi
 
@@ -131,7 +132,7 @@ fi
 
 _echot "------------------  .bash_aliases"
 file=~/.bash_aliases
-[ -e ${file} ] && _eval rm ${file}
+[ -e ${file} ] && _evalr rm ${file}
 _eval ln -s ${file_bash_aliases} ${file}
 
 _echot "------------------  .bash_functions"
@@ -189,9 +190,9 @@ _keepcpts "${file}"
 for host in ${servers_list}; do
 	eval ${S_CLUSTER[${host}]}
 	[ "${s_ip}" ] && sudo sed -i "/${s_ip}/d" ${file}
-	! grep -q "${host}" ${file} && [ "${s_ip}" ] && sudo sh -c "echo '${s_ip}\t${host}\t${s_name}' >> ${file}"
+	[ "${s_ip}" ] && sudo sh -c "echo '${s_ip}\t${host}\t${s_name}' >> ${file}"
 done
-_eval "sed -i 's|^\(${_IPTHIS}.*\)$|#\1|' ${file}"
+_evalr "sed -i '/^${_IPTHIS}/ s|^|#|' ${file}"
 
 if ! grep -q '^# services' ${file}; then
 	_echot "------------------  hosts S_SERVICE_BITS"
@@ -223,16 +224,16 @@ wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key a
 ########################  INSTALL
 
 _echot "------------------  upgrade"
-_eval "upgrade"
+upgrade
 
 _echot "------------------  install base"
-_eval "apt install -y bsdmainutils cron curl less logrotate"
+_evalr apt install -y bsdmainutils cron curl less logrotate
 
 str=" ovh home "
 if [ "${str/ ${S_SERVER_TYPE} /}" != "${str}" ]; then
 
 	_echot "------------------  install tools"
-	_eval "apt-get install -y man openssh-server apt-utils net-tools rsync bash-completion htop iotop tree gnupg vim lnav multitail git"
+	_evalr apt-get install -y man openssh-server apt-utils net-tools rsync bash-completion htop iotop tree gnupg vim lnav multitail git
 	# acpid apt-file apt-utils dstat hdparm iputils-tracepath jwhois mlocate mtop p7zip p7zip-plugins netcat lsb-release pciutils rcconf sysstat wget telnet dirmngr mariadb-client postgresql-client
 fi
 
@@ -251,46 +252,54 @@ if [[ " ${str} " = *" ${S_SERVER_TYPE} "* ]]; then
 
 	if [ "${_DEV_DRIVER}" = zfs ]; then
 
-		_echot "------------------  zfs install"
-		_eval apt install -y zfsutils-linux
+		path_zfs=/zfs
+		[ -f "${path_zfs}" ] || mkdir -p ${path_zfs}
 
-		path=/zfs/root
+		_echot "------------------  zfs install"
+		_evalr apt install -y zfsutils-linux
+
+		for dev in ${_DEV_ROOT}; do
+			_echot "------------------  zfs clean ${dev}"
+			for i in `parted -s ${dev} print 2>/dev/null|awk '/^ / {print $1}'`; do
+				_evalr parted -s ${dev} rm "${i}"
+			done
+		done
+
+		path=${path_zfs}/${_ZFS_ROOT}
 		_echot "------------------  zfs zpool ${path}"
-		[ -d ${path} ] && rm -fR ${path}
-		_evalq zpool create ${_ZFS_ROOT} ${_DEV_ROOT} -m ${path}
+		_evalr zpool create ${_ZFS_ROOT} ${_DEV_ROOT} -m ${path}
 
 		if [ "${_DEV_EXT}" ];then
-			path=/zfs/ext
+			path=${path_zfs}/${_ZFS_EXT}
 			_echot "------------------  zfs zpool ${path}"
-			[ -d ${path} ] && rm -fR ${path}
-			_evalq zpool create ${_ZFS_EXT} ${_DEV_EXT} -m ${path}
+			_evalr zpool create ${_ZFS_EXT} ${_DEV_EXT} -m ${path}
 		fi
 
 		path=${S_PATH_SAVE}
 		_echot "------------------  zfs ${path}"
 		[ -d ${path} ] && rm -fR ${path}
 		[ "${_DEV_EXT}" ] && zpath=${_ZFS_EXT}${S_PATH_SAVE}|| zpath=${_ZFS_ROOT}${S_PATH_SAVE}
-		_eval zfs create -o mountpoint=${path} -o compression=lz4 ${zpath}
+		_evalr zfs create -o mountpoint=${path} -o compression=lz4 ${zpath}
 
 		path=${S_HOST_PATH}
 		_echot "------------------  zfs ${path}"
 		[ -d ${path} ] && rm -fR ${path}
-		_eval zfs create -o mountpoint=${path} -o compression=lz4 ${_ZFS_ROOT}${S_HOST_PATH}
+		_evalr zfs create -o mountpoint=${path} -o compression=lz4 ${_ZFS_ROOT}${S_HOST_PATH}
 
 		path=${S_HOST_PATH_SP}
 		_echot "------------------  zfs ${path}"
 		[ -d ${path} ] && rm -fR ${path}
-		_eval zfs create -o mountpoint=${path} -o compression=lz4 ${_ZFS_ROOT}${S_HOST_PATH_SP}
+		_evalr zfs create -o mountpoint=${path} -o compression=lz4 ${_ZFS_ROOT}${S_HOST_PATH_SP}
 
 		path=${S_HOST_PATH_SHARE}
 		_echot "------------------  zfs ${path}"
 		[ -d ${path} ] && rm -fR ${path}
-		_eval zfs create -o mountpoint=${path} -o compression=lz4 -o  acltype=posixacl ${_ZFS_ROOT}${S_HOST_PATH_SHARE}
+		_evalr zfs create -o mountpoint=${path} -o compression=lz4 -o  acltype=posixacl ${_ZFS_ROOT}${S_HOST_PATH_SHARE}
 
 		path=${S_HOST_PATH_SAVE}
 		_echot "------------------  zfs ${path}"
 		[ -d ${path} ] && rm -fR ${path}
-		_eval zfs create -o mountpoint=${path} -o compression=lz4 ${_ZFS_ROOT}${S_HOST_PATH_SAVE}
+		_evalr zfs create -o mountpoint=${path} -o compression=lz4 ${_ZFS_ROOT}${S_HOST_PATH_SAVE}
 
 		_echot "------------------  zfs zpool list"
 		zpool list -v
@@ -311,7 +320,7 @@ if [[ " ${str} " = *" ${S_SERVER_TYPE} "* ]]; then
 		_echot "------------------  btrfs paths"
 		paths="${S_HOST_PATH} ${S_HOST_PATH_SP} ${S_HOST_PATH_SHARE} ${S_HOST_PATH_SAVE} ${S_HOST_PATH_LOG} "
 		for path in ${paths}; do
-			[ -d ${path} ] || _eval mkdir /vm/${path}
+			[ -d ${path} ] || _evalr mkdir /vm/${path}
 		done
 
 	else
@@ -326,20 +335,22 @@ str=" ovh home "
 if [ "${str/ ${S_SERVER_TYPE} /}" != "${str}" ]; then
 
 	_echot "------------------  conf tmux"
-	file="${HOME}/.tmux.conf"
-	_keepmvts "${file}"
-	_eval ln -s "${file_tmux}" "${file}"
+	file=${HOME}/.tmux.conf
+	_keepmvts ${file}
+	_eval ln -s ${file_conf_tmux} ${file}
+
+	_eval tar xzf ${file_path_tmux} -C ${HOME}/
 
 	# colorscheme
-	_eval cp ${S_PATH_INSTALL_CONF}/vim/*.vim /usr/share/vim/vim*/colors/
+	_evalr cp ${S_PATH_INSTALL_CONF}/vim/*.vim /usr/share/vim/vim*/colors/
 
 	_echot "------------------  conf vim"
 	file="${HOME}/.vimrc"
 	_keepmvts "${file}"
-	_eval ln -s "${file_vim}" "${file}"
+	_evalr ln -s "${file_conf_vim}" "${file}"
 
 	# colorscheme
-	_eval cp ${S_PATH_INSTALL_CONF}/vim/*.vim /usr/share/vim/vim*/colors/
+	_evalr cp ${S_PATH_INSTALL_CONF}/vim/*.vim /usr/share/vim/vim*/colors/
 fi
 
 _echot "------------------  conf nano"
@@ -352,10 +363,10 @@ done
 file=/etc/nanorc
 _keepcpts "${file}"
 
-_eval "sed -i 's|^.*\(set tabsize\).*|\1 4|' ${file}"
-_eval "sed -i 's|^\(set cut.*\)$|# \1|' ${file}"
-_eval "sed -i 's|^\(set linenumbers.*\)$|# \1|' ${file}"
-_eval "sed -i '/^# *include/ s/^# //' ${file}"
+_evalr "sed -i 's|^.*\(set tabsize\).*|\1 4|' ${file}"
+_evalr "sed -i 's|^\(set cut.*\)$|# \1|' ${file}"
+_evalr "sed -i 's|^\(set linenumbers.*\)$|# \1|' ${file}"
+_evalr "sed -i '/^# *include/ s/^# //' ${file}"
 
 # various
 opts="constantshow historylog matchbrackets multibuffer nohelp softwrap"
@@ -363,7 +374,7 @@ opts="constantshow historylog matchbrackets multibuffer nohelp softwrap"
 opts+="errorcolor functioncolor keycolor numbercolor selectedcolor statuscolor stripecolor titlecolor"
 # uncomment
 for opt in $opts; do
-	_eval "sed -i 's|^.*\(set ${opt}.*\)$|\1|' ${file}"
+	_evalr "sed -i 's|^.*\(set ${opt}.*\)$|\1|' ${file}"
 done
 
 ########################  NTP
@@ -372,7 +383,7 @@ str=" ovh "
 if [ "${str/ "${S_SERVER_TYPE}" /}" != "${str}" ]; then
 
 	_echot "------------------  install ntp"
-	_eval "apt-get install -y ntp"
+	_evalr "apt-get install -y ntp"
 
 	_echot "------------------  conf ntp"
 	file=/etc/ntp.conf
@@ -388,8 +399,8 @@ _echot "------------------  cron conf"
 
 file=/etc/crontab
 _keepcpts ${file}
-str="MAILTO=${S_DOMAIN_EMAIL_TECH}"
-grep -q '^MAILTO' "${file}" || _eval "sed -i '/^PATH=.*/ a ${str}' ${file}"
+str="MAILTO=${S_EMAIL_TECH}"
+grep -q '^MAILTO' "${file}" || _evalr "sed -i '/^PATH=.*/ a ${str}' ${file}"
 
 ########################  RSYSLOG
 
@@ -400,12 +411,12 @@ _keepcpts "${file}"
 
 # udp
 if [ "${S_RSYSLOG_PTC}" = udp ]; then
-	_eval "sed -i 's|^#\?\(module(load=\"imudp.*\)$|\1|' ${file}"
-	_eval "sed -i 's|^#\?\(input(type=\"imudp\"\).*$|\1 port=\"${S_RSYSLOG_PORT}\")|' ${file}"
+	_evalr "sed -i 's|^#\?\(module(load=\"imudp.*\)$|\1|' ${file}"
+	_evalr "sed -i 's|^#\?\(input(type=\"imudp\"\).*$|\1 port=\"${S_RSYSLOG_PORT}\")|' ${file}"
 # tcp
 elif [ "${S_RSYSLOG_PTC}" = tcp ]; then
-	_eval "sed -i 's|^#\?\(module(load=\"imtcp.*\)$|\1|' ${file}"
-	_eval "sed -i 's|^#\?\(input(type=\"imtcp\"\).*$|\1 port=\"${S_RSYSLOG_PORT}\")|' ${file}"
+	_evalr "sed -i 's|^#\?\(module(load=\"imtcp.*\)$|\1|' ${file}"
+	_evalr "sed -i 's|^#\?\(input(type=\"imtcp\"\).*$|\1 port=\"${S_RSYSLOG_PORT}\")|' ${file}"
 fi
 
 _echot "------------------  rsyslog restart"
@@ -429,7 +440,7 @@ _var_replace ${file} rsyslog
 
 _echot "------------------  logrotate global"
 file=/etc/logrotate.conf
-_eval  "sed -i '/^#dateext/ s|^#||' ${file}"
+_evalr  "sed -i '/^#dateext/ s|^#||' ${file}"
 
 _echot "------------------  logrotate server"
 file=/etc/logrotate.d/${file_logrotate_server##*/}
