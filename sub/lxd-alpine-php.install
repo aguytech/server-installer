@@ -450,7 +450,6 @@ _lxc_exec ${_CT_NAME} "rc-service crond restart"
 _echot "------------------  ${_CT_NAME} log clean"
 _lxc_exec ${_CT_NAME} "find ${S_PATH_LOG}/php7 -name *.log -exec rm {} \;"
 
-
 ########################  COPY
 
 for i in `seq 2 ${ct_num}`; do
@@ -464,7 +463,6 @@ for i in `seq 2 ${ct_num}`; do
 	_eval lxc copy ${_CT_NAME} ${ct_name}
 	_eval lxc start ${ct_name}
 done
-
 
 ########################  TEST
 
@@ -489,23 +487,19 @@ _echoA "To verify 'www-admin' pool informations, type:"
 _echoa "curl ${_CT_NAME}/status-www-admin"
 _echoa "curl ${_CT_NAME}/status-www-admin?full"
 
-
 ########################  HAPROXY
 
 _echoA "\nAdjust backend in proxy for domain: ${_DOM_FQDN} with:"
 _echoa $(for i in `seq 1 ${ct_num}`; do echo ${ct_base}-${i};done)
 
-
 ########################  PUBLISH
 
 for i in `seq 1 ${ct_num}`; do
  	ct_name=${ct_base}-${i}
-
 	_echot "------------------  publish ${ct_name}"
 	lxc image list -f csv -c l | grep -q ^${ct_name}$ && _eval lxc image alias rename ${ct_name} ${ct_name}-${_SDATE}
 	_eval lxc publish --force ${ct_name} --alias ${ct_name}
 done
-
 
 ########################  END
 

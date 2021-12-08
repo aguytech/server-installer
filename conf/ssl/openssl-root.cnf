@@ -1,0 +1,27 @@
+[ req ]
+default_bits		= 4096
+default_md		= sha512
+#default_keyfile	= privkey.pem
+prompt			= no
+encrypt_key		= no
+distinguished_name	= req_distinguished_name
+x509_extensions		= v3_ca
+#req_extensions		= v3_req
+
+[ req_distinguished_name ]
+countryName		= FR
+localityName		= Nantes
+organizationName	= S_DOM_NAME
+organizationalUnitName	= Research and development
+commonName		= S_DOM_NAME
+emailAddress		= S_EMAIL_ADMIN
+
+[ v3_req ]
+basicConstraints	= CA:FALSE
+keyUsage		= nonRepudiation, digitalSignature, keyEncipherment
+#subjectAltName		= DNS:smtp.S_DOM_FQDN,DNS:mail.S_DOM_FQDN,DNS:imap.S_DOM_FQDN
+
+[ v3_ca ]
+subjectKeyIdentifier	= hash
+authorityKeyIdentifier	= keyid:always,issuer
+basicConstraints	= critical,CA:true

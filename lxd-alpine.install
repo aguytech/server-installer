@@ -54,7 +54,7 @@ while [ "${_PART}" != "quit" ]; do
 	_echod "partsmade='${partsmade}'"
 	_echod "parts2do='${parts2do}'"
 
-	_echo "Part already made: ${cyanb}${partsmade}${cclear}"
+	_echo "Part already made: ${cyanb}${partsmade# }${cclear}"
 	PS3="Give your choice: "
 	select _PART in quit ${parts2do}; do
 		# update time
@@ -113,6 +113,9 @@ while [ "${_PART}" != "quit" ]; do
 				_source "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PART#++}.install"
 				;;
 			++phpmyadmin) # ovh home
+				_source "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PART#++}.install"
+				;;
+			++redis) # ovh home
 				_source "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PART#++}.install"
 				;;
 			*)
