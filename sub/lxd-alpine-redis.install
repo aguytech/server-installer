@@ -14,12 +14,21 @@ lxc image list -f csv -c l | grep -q ^${_CT_INIT_NAME}$ || _exite "Unable to fin
 _echot "------------------ required vm"
 lxc list -f csv -c n | grep -q ^${S_SERVICE[log]}$ || _exite "Unable to find container: '${S_SERVICE[log]}'"
 
+file_conf_redis=${S_PATH_INSTALL_CONF}/redis/redis.conf
+file_conf_sentinel=${S_PATH_INSTALL_CONF}/redis/sentinel.conf
+file_conf_sentinel_notify=${S_PATH_INSTALL_CONF}/redis/notify.sh
+
+file_conf_ha_front=${S_PATH_INSTALL_CONF}/haproxy/conf-available/40-fronts-redis
+file_conf_ha_back=${S_PATH_INSTALL_CONF}/haproxy/conf-available/60-backs-redis
+
 file_rsyslog_host=${S_PATH_INSTALL_CONF}/rsyslog/host-redis.conf
 file_rsyslog_client=${S_PATH_INSTALL_CONF}/rsyslog/client-redis.conf
 file_logrotate_host=${S_PATH_INSTALL_CONF}/logrotate/host-redis
 file_logrotate_client=${S_PATH_INSTALL_CONF}/logrotate/client-redis
 
 _echot "------------------ required files"
+_require ${file_conf_redis} ${file_conf_sentinel} ${file_conf_sentinel_notify}
+_require ${file_conf_ha_front} ${file_conf_ha_back}
 _require ${file_rsyslog_host} ${file_rsyslog_client} ${file_logrotate_host} ${file_logrotate_client}
 
 ########################  DATA
@@ -27,14 +36,20 @@ _require ${file_rsyslog_host} ${file_rsyslog_client} ${file_logrotate_host} ${fi
 _echot "------------------  data domain"
 
 anstmp=rds-${S_DOM_NAME//./-} && _askno "Base name of containers to build (${anstmp})"
-ct_base="${_ANSWER:-$anstmp}"
-
-anstmp=1 && _askno "Number of containers to build (${anstmp})"
-ct_num="${_ANSWER:-$anstmp}"
-
-_echot "------------------  data"
+_RDS_CT_NAME="${_ANSWER:-$anstmp}" && _confset _HPX_CT_NAME "${_HPX_CT_NAME}"
 
 [ -z ${_RDS_CLIENT+x} ] && anstmp=y && _askno "Install redis-client on Host (${anstmp})" && _RDS_CLIENT="${_ANSWER:-$anstmp}" && _confset _RDS_CLIENT "${_RDS_CLIENT}"
+
+anstmp=${S_DOM_FQDN%.lxd} && _askno "Prefix for proxy name (${anstmp})"
+_RDS_PROXY="${_ANSWER:-$anstmp}" && _confset _RDS_PROXY "${_RDS_PROXY}"
+
+_echot "------------------  data sentinel"
+
+anstmp=2000 && _askno "Time to consider server are down (${anstmp})"
+_RDS_DOWN="${_ANSWER:-$anstmp}" && _confset _RDS_DOWN "${_RDS_DOWN}"
+
+anstmp=4000 && _askno "Sentinel failover-timeout (${anstmp})"
+_RDS_FAILOVER="${_ANSWER:-$anstmp}" && _confset _RDS_FAILOVER "${_RDS_FAILOVER}"
 
 _echot "------------------  data sysctl.conf"
 
@@ -75,13 +90,19 @@ _echo "# allkeys-lru -> Evict any key using approximated LRU
 # allkeys-random -> Remove a random key, any key
 # volatile-ttl -> Remove the key with the nearest expire time (minor TTL)
 # noeviction -> Don't evict anything, just return an error on write operations"
-anstmp=volatile-ttl && _askno "Policy to remove keys when maxmemory is reached (${anstmp})"
+_menu "Policy to remove keys when maxmemory is reached (volatile-ttl) " volatile-ttl volatile-lfu allkeys-lfu volatile-random allkeys-random noeviction
 _RDS_MEM_POL="${_ANSWER:-$anstmp}" && _confset _RDS_MEM_POL "${_RDS_MEM_POL}"
 
-anstmp=notice && _askno "Give the log level 'loglevel': debug/verbose/notice/warning (${anstmp})"
+_menu "Give the log level (notice)" notice debug verbose warning
 _RDS_LOGLEVEL="${_ANSWER:-$anstmp}" && _confset _RDS_LOGLEVEL "${_RDS_LOGLEVEL}"
 
-_CT_NAME=${ct_base}-1
+_RDS_FILE_SENTINEL=/etc/sentinel.conf
+_CT_NAME=${_RDS_CT_NAME}-1
+_RDS_PATH_LIB=/var/lib/redis
+_RDS_QUORUM=1
+_RDS_SYNC=1
+
+################################################  MASTER
 
 ########################  INIT
 
@@ -106,10 +127,11 @@ _lxc_meta_add ${_CT_NAME} apps redis
 
 _echot "------------------  host conf sysctl.conf"
 if grep -q vm.overcommit_memory ${_SYS_FILE}; then
-	sed -i "/vm.overcommit_memory/ s|=.*|= 1|" >> ${_SYS_FILE}
+	_evalr "sed -i '/vm.overcommit_memory/ s|=.*|= 1|' ${_SYS_FILE}"
 else
-	echo "vm.overcommit_memory = 1" >> ${_SYS_FILE}
+	_evalr "sh -c \"echo 'vm.overcommit_memory = 1' >> ${_SYS_FILE}\""
 fi
+_service restart systemd-sysctl
 
 _echot "------------------  conf sysctl.conf"
 file=/etc/sysctl.d/20-lxd.conf
@@ -134,34 +156,35 @@ _lxc_exec ${_CT_NAME} "apk update"
 _lxc_exec ${_CT_NAME} "apk add redis"
 
 _echot "------------------  service set"
-service=redis
-_lxc_exec ${_CT_NAME} "rc-update add ${service}"
-_lxc_exec ${_CT_NAME} "rc-service ${service} start"
+_lxc_exec ${_CT_NAME} "rc-update add redis"
+_lxc_exec_t ${_CT_NAME} "rc-service redis start"
 
 ########################  CONF
 
-_echot "------------------  conf"
-file=/etc/redis.conf
-_lxc_exec ${_CT_NAME} "sed -i 's|^\(bind\) .*$|\1 * -::*|'  ${file}"
-_lxc_exec ${_CT_NAME} "sed -i '/^logfile / s|^|#|'  ${file}"
-
-cmds=; while read str val; do
-	cmds+="sed -i 's|^#\?\s*\(${str}\) .*|\1 ${val}|' ${file}
-"; done <<< "port  ${S_CACHE_PORT}
-tcp-backlog  ${_RDS_BACKLOG}
-timeout  ${_RDS_TIMEOUT}
-tcp-keepalive  ${_RDS_KEEPALIVE}
-maxmemory ${_RDS_MEM_MAX}
-maxmemory-policy ${_RDS_MEM_POL}
-databases  ${_RDS_DATABASES}
-loglevel  ${_RDS_LOGLEVEL}
-syslog-enabled  yes
-syslog-ident  redis
-syslog-facility  local7"
-_lxc_exec ${_CT_NAME} "${cmds}"
+_echot "------------------  redis conf"
+file=/etc/${file_conf_redis##*/}
+_eval lxc file push -q ${file_conf_redis} ${_CT_NAME}${file}
+_lxc_var_replace ${_CT_NAME} ${file} redis
 
 _echot "------------------  restart redis"
-_lxc_exec ${_CT_NAME} "rc-service redis restart"
+_lxc_exec_t ${_CT_NAME} "rc-service redis restart"
+
+########################  SENTINEL
+
+_echot "------------------  sentinel service"
+file=/etc/init.d/redis-sentinel
+_lxc_exec ${_CT_NAME} "sed -i '/command_user:/ s|redis|root|g'  ${file}"
+
+_echot "------------------  sentinel conf"
+file=${_RDS_FILE_SENTINEL}
+_eval lxc file push -q ${file_conf_sentinel} ${_CT_NAME}${file}
+_lxc_var_replace ${_CT_NAME} ${file} redis
+
+_echot "------------------  sentinel notify"
+file=${_RDS_PATH_LIB}/${file_conf_sentinel_notify##*/}
+_eval lxc file push -q ${file_conf_sentinel_notify} ${_CT_NAME}${file}
+_lxc_var_replace ${_CT_NAME} ${file} redis
+_lxc_exec ${_CT_NAME} "chown redis:redis ${file} && chmod 550 ${file}"
 
 ########################  RSYSLOG
 
@@ -178,17 +201,17 @@ _lxc_var_replace ${S_SERVICE[log]} ${file} rsyslog
 _echot "------------------  restart rsyslog ${S_SERVICE[log]}"
 _lxc_exec ${S_SERVICE[log]} "rc-service rsyslog restart"
 
-_echot "------------------  ${S_SERVICE[log]} client path"
+_echot "------------------  ${_CT_NAME} client path"
 path=${S_PATH_LOG}/redis
 _lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
-_lxc_exec ${_CT_NAME} "rm ${path}/redis.log 2>/dev/null"
+_lxc_exec ${_CT_NAME} "[ -f ${path}/redis.log ]  && rm ${path}/redis.log"
 
-_echot "------------------  ${S_SERVICE[log]} client-redis"
+_echot "------------------  ${_CT_NAME} client-redis"
 file=/etc/rsyslog.d/${file_rsyslog_client##*/}
 _eval lxc file push -q ${file_rsyslog_client} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} rsyslog
 
-_echot "------------------  rsyslog restart ${_CT_NAME}"
+_echot "------------------  ${_CT_NAME} rsyslog restart"
 _lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
 
 ########################  LOGROTATE
@@ -211,16 +234,59 @@ _lxc_exec ${_CT_NAME} "chmod g-w,o= /etc/logrotate.d/*"
 _echot "------------------  ${_CT_NAME} crond restart"
 _lxc_exec ${_CT_NAME} "rc-service crond restart"
 
-########################  CLEAN LOG
 
-_echot "------------------  ${_CT_NAME} log clean"
-_lxc_exec ${_CT_NAME} "find ${S_PATH_LOG}/redis -name *.log -exec rm {} \;"
+################################################  SLAVE
+
+_CT_NAME_2=${_RDS_CT_NAME}-2
+
+_echot "------------------ init ${_CT_NAME_2}"
+if lxc list -f csv -c n | grep -q ^${_CT_NAME_2}$; then
+	lxc list -f csv -c n status=Running| grep -q ^${_CT_NAME_2}$ && _eval lxc stop ${_CT_NAME_2}
+	_eval lxc rename ${_CT_NAME_2} ${_CT_NAME_2}-${_SDATE}
+fi
+_eval lxc copy ${_CT_NAME} ${_CT_NAME_2}
+_eval lxc start ${_CT_NAME_2}
+
+_echot "------------------ conf replica ${_CT_NAME_2}"
+file=/etc/redis.conf
+_lxc_exec ${_CT_NAME_2} "sed -i '/^replica-priority / c\replica-priority 200' ${file}"
+_lxc_exec ${_CT_NAME_2} "echo -e '\n# replica settings\nreplicaof ${_CT_NAME} ${S_CACHE_PORT}' >> ${file}"
+_echot "------------------  restart redis ${_CT_NAME_2}"
+_lxc_exec_t ${_CT_NAME_2} "rc-service redis restart"
+
+_echot "------------------  service sentinel"
+file=/etc/init.d/redis-sentinel
+_lxc_exec ${_CT_NAME_2} "rc-update add redis-sentinel"
+_lxc_exec_t ${_CT_NAME_2} "rc-service redis-sentinel start"
+
+########################  HAPROXY
+
+ct_proxy=${S_SERVICE[proxy]}
+
+_echot "------------------  haproxy conf"
+path=/etc/haproxy
+for file in ${file_conf_ha_front} ${file_conf_ha_back}; do
+	_eval lxc file push -q ${file} ${ct_proxy}${path}/conf-available/${file##*/}
+	file=${file##*/}
+	_lxc_exec ${ct_proxy} "[ -h ${path}/conf-enabled/${file} ] || ln -s ${path}/conf-available/${file}  ${path}/conf-enabled/${file}"
+done
+_lxc_var_replace ${ct_proxy} /etc/haproxy/conf-available redis
+
+_echot "------------------  haproxy restart"
+_lxc_exec_e ${ct_proxy} "rc-service haproxy restart"
+
+########################  SHOW
+
+_echot "------------------  show role"
+for i in 1 2; do
+	ct=${_RDS_CT_NAME}-$i
+	echo -n "$ct - "; redis-cli -h ${ct} -p ${S_CACHE_PORT} info replication|sed -n 's/role://p'
+done
+
+_echot "------------------  show role"
+redis-cli -h ${_RDS_CT_NAME}-$i -p 2${S_CACHE_PORT} info sentinel
 
 ########################  TEST
-
-_echot "------------------  redis test access"
-_echoa "timeout 3 redis-cli -h ${_CT_NAME} ping"
-_eval "timeout 3 redis-cli -h ${_CT_NAME} ping 2>/dev/null"
 
 _echoA "To do a benchmark, just type:" && sleep 0.1
 _echoa "redis-benchmark -h ${_CT_NAME} -p ${S_CACHE_PORT} -n 1000 -c 10 -k 1 -q"
@@ -230,9 +296,12 @@ _echoa "redis-cli -h ${_CT_NAME} -p ${S_CACHE_PORT} --latency-dist"
 
 ########################  PUBLISH
 
-_echot "------------------  publish ${_CT_NAME}"
-lxc image list -f csv -c l | grep -q ^${_CT_NAME}$ && _eval lxc image alias rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
-_eval lxc publish --force ${_CT_NAME} --alias ${_CT_NAME}
+for i in 1 2; do
+ 	ct_name=${_RDS_CT_NAME}-${i}
+	_echot "------------------  publish ${ct_name}"
+	lxc image list -f csv -c l | grep -q ^${ct_name}$ && _eval lxc image alias rename ${ct_name} ${ct_name}-${_SDATE}
+	_eval lxc publish --force ${ct_name} --alias ${ct_name}
+done
 
 ########################  END
 
