@@ -5,7 +5,7 @@ listen stats
 
 	log				global
 	mode			http
-	maxconn		5
+	maxconn		10
 
 	option			contstats
 

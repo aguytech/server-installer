@@ -2,12 +2,9 @@
 
 frontend mail
 # smtp
-	bind :25
-	bind :465
-	bind :587
+	bind :25,465,587
 # imap
-	bind :143
-	bind :993
+	bind :143,:993
 #sieve
 	bind :4190
 	mode				tcp

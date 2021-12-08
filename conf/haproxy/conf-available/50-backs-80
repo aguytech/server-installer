@@ -3,8 +3,8 @@
 backend default
 	mode			http
 	option			httpchk
-	default-server	weight 20  maxconn 30  check  inter 4s  fall 2  rise 1  resolvers lxd  resolve-prefer ipv4 # resolve-net 10.0.0.1/24
-	server			_SERVER_DEFAULT  _SERVER_DEFAULT:80 maxconn 20 check
+	default-server	weight 20  maxconn 32  check  inter 2s  fall 2  rise 1  resolvers lxd  resolve-prefer ipv4 # resolve-net 10.0.0.1/24
+	server			_SERVER_DEFAULT  _SERVER_DEFAULT:80 check
 
 backend certbot
 	mode			http
@@ -15,7 +15,7 @@ backend S_DOM_FQDN
 	#option			httpchk GET /ping-monitor "HTTP/1.1\r\nHost: S_DOM_FQDN"
 	option			httpchk GET /ping-monitor
 	http-check		expect string pong
-	default-server	weight 20  maxconn 30  check  inter 4s  fall 2  rise 1  resolvers lxd  resolve-prefer ipv4 # resolve-net 10.0.0.1/24
+	default-server	weight 20  maxconn 128  check  inter 2s  fall 2  rise 1  resolvers lxd  resolve-prefer ipv4 # resolve-net 10.0.0.1/24
 	http-response		set-header  Strict-Transport-Security "max-age=16000000; includeSubDomains; preload;" # 16000000 seconds ~ 6 months
 
 	## balance
@@ -38,7 +38,7 @@ backend S_DOM_FQDN-cloud
 	#option			httpchk GET /ping-monitor "HTTP/1.1\r\nHost: S_DOM_FQDN"
 	option			httpchk GET /ping-monitor
 	http-check		expect string pong
-	default-server	weight 20  maxconn 30  check  inter 4s  fall 2  rise 1  resolvers lxd  resolve-prefer ipv4 # resolve-net 10.0.0.1/24
+	default-server	weight 20  maxconn 128  check  inter 2s  fall 2  rise 1  resolvers lxd  resolve-prefer ipv4 # resolve-net 10.0.0.1/24
 	http-response		set-header  Strict-Transport-Security "max-age=16000000; includeSubDomains; preload;" # 16000000 seconds ~ 6 months
 
 	## backup
@@ -50,7 +50,7 @@ backend	S_DOM_FQDN-admin
 	#option			httpchk GET /ping-wap HTTP/1.1\r\nHost:\ admin.S_DOM_FQDN
 	option			httpchk GET /ping-monitor
 	http-check		expect string admin
-	default-server	weight 30 maxconn 5  check inter 4s fall 2 rise 1  resolvers lxd  resolve-prefer ipv4 # resolve-net 10.0.0.1/24
+	default-server	weight 30 maxconn 16  check inter 2s fall 2 rise 1  resolvers lxd  resolve-prefer ipv4 # resolve-net 10.0.0.1/24
 	http-response	set-header  Strict-Transport-Security "max-age=16000000; includeSubDomains; preload;" # 16000000 seconds ~ 6 months
 	#option			allbackups
 

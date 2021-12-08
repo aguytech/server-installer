@@ -10,7 +10,7 @@ defaults
 	#option			httplog
 	#option			httpchk
 	#option			forwardfor except 127.0.0.0/8
-	maxconn		30
+	#maxconn		512
 
 	timeout		connect				2000	# Set the maximum time to wait for a connection attempt to a server to succeed
 	timeout		client					30000	# Set the maximum inactivity time on the client side

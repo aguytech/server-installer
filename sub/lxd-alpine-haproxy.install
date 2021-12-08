@@ -17,7 +17,8 @@ lxc list -f csv -c n | grep -q ^${S_SERVICE[log]}$ || _exite "Unable to find con
 file_conf_vim=${S_PATH_SCRIPT_CONF}/.vimrc
 file_conf_haproxy=${S_PATH_INSTALL_CONF}/haproxy/haproxy
 file_conf_certbot=${S_PATH_INSTALL_CONF}/cron/certbot-renew
-file_conf_ssl=${S_PATH_INSTALL_CONF}/ssl/openssl.cnf
+file_conf_ssl_root=${S_PATH_INSTALL_CONF}/ssl/openssl-root.cnf
+file_conf_ssl=${S_PATH_INSTALL_CONF}/ssl/openssl-domains.cnf
 
 file_rsyslog_host=${S_PATH_INSTALL_CONF}/rsyslog/host-haproxy.conf
 file_rsyslog_client=${S_PATH_INSTALL_CONF}/rsyslog/client-haproxy.conf
@@ -27,7 +28,7 @@ file_logrotate_client=${S_PATH_INSTALL_CONF}/logrotate/client-haproxy
 path_haproxy=${S_PATH_INSTALL_CONF}/haproxy
 
 _echot "------------------ required files"
-_require ${file_conf_haproxy} ${file_conf_vim}  ${file_conf_certbot}  ${file_conf_ssl} ${file_rsyslog_host} ${file_rsyslog_client} ${file_logrotate_host} ${file_logrotate_client}
+_require ${file_conf_haproxy} ${file_conf_vim}  ${file_conf_certbot}  ${file_conf_ssl_root}  ${file_conf_ssl} ${file_rsyslog_host} ${file_rsyslog_client} ${file_logrotate_host} ${file_logrotate_client}
 
 _echot "------------------ required paths"
 _requirep ${path_haproxy}
@@ -158,7 +159,7 @@ done
 
 _echot "------------------  install"
 _lxc_exec ${_CT_NAME} apk update
-_lxc_exec ${_CT_NAME} apk add haproxy bash bash-completion vim curl # lnav
+_lxc_exec ${_CT_NAME} apk add haproxy openssl bash bash-completion curl # lnav vim
 
 _echot "------------------  service enable"
 _lxc_exec ${_CT_NAME} rc-update add haproxy
@@ -170,11 +171,14 @@ _echot "------------------  conf bash"
 _lxc_exec ${_CT_NAME} "sed -i 's|^\(root.*\):[^:]*$|\1:/bin/bash|' /etc/passwd"
 _eval lxc file push -q ${S_PATH_INSTALL_CONF}/bash-completion/haconf ${_CT_NAME}/usr/share/bash-completion/completions/
 
-path=$(lxc exec ${_CT_NAME} -- sh -c  "ls -d /usr/share/vim/vim*/colors")
-_eval "lxc file push -q ${S_PATH_INSTALL_CONF}/vim/* ${_CT_NAME}${path}/"
+if _lxc_exec ${_CT_NAME} "type vim >/dev/null 2>&1"; then
+	_echot "------------------  conf vim"
+	path=$(lxc exec ${_CT_NAME} -- sh -c  "ls -d /usr/share/vim/vim*/colors")
+	_eval "lxc file push -q ${S_PATH_INSTALL_CONF}/vim/* ${_CT_NAME}${path}/"
 
-file=/root/.vimrc
-_lxc_exec ${_CT_NAME} "[ -e ${file} ] || ln -s ${file_conf_vim} ${file}"
+	file=/root/.vimrc
+	_lxc_exec ${_CT_NAME} "[ -e ${file} ] || ln -s ${file_conf_vim} ${file}"
+fi
 
 _echot "------------------  conf haproxy"
 path=/etc/haproxy
@@ -203,7 +207,7 @@ _lxc_exec ${_CT_NAME} "[ -f ${file} ] && mv ${file} ${file}.${_SDATE} && chmod -
 _eval lxc file push -q ${file_conf_haproxy} ${_CT_NAME}/etc/init.d/haproxy
 _lxc_exec ${_CT_NAME} chmod +x ${file}
 
-########################  OPENSSL
+########################  OPENSSL ROOT
 
 if ! _lxc_exec ${_CT_NAME}  "test -f '${_HPX_SSL_CA_KEY}' && test -f '${_HPX_SSL_CA_PEM}'"; then
 	_echot "------------------  openssl paths"
@@ -211,12 +215,9 @@ if ! _lxc_exec ${_CT_NAME}  "test -f '${_HPX_SSL_CA_KEY}' && test -f '${_HPX_SSL
 		_lxc_exec ${_CT_NAME} "[ -d '${path}' ] || mkdir -p ${path}"
 	done
 
-	_echot "------------------  openssl install"
-	_lxc_exec ${_CT_NAME} apk add openssl
-
 	_echot "------------------  openssl conf"
-	file_ssl_conf=${path_ssl_conf}/openssl-root.cnf
-	_eval lxc file push -q ${file_conf_ssl} ${_CT_NAME}${file_ssl_conf}
+	file_ssl_conf=${path_ssl_conf}/openssl-rootCA.cnf
+	_eval lxc file push -q ${file_conf_ssl_root} ${_CT_NAME}${file_ssl_conf}
 	_lxc_var_replace ${_CT_NAME} ${file_ssl_conf} haproxy
 
 	_echot "------------------  openssl conf CA"
@@ -302,6 +303,10 @@ else
 	_lxc_exec ${_CT_NAME} "ls -1 ${path_ssl_haproxy}/*.pem > ${_HPX_PATH_SSL}/certbot.pem.lst"
 
 fi
+
+_echot "------------------  haproxy rights"
+_lxc_exec ${_CT_NAME} "chown 0:0 -R ${_HPX_PATH_SSL}
+chmod g=,o= -R ${path_ssl_private} ${path_ssl_haproxy}"
 
 ########################  SSL
 
