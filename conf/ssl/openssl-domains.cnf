@@ -11,7 +11,7 @@ req_extensions		= v3_req
 [ req_distinguished_name ]
 countryName		= FR
 localityName		= Nantes
-organizationName	= Ambau
+organizationName	= S_DOM_NAME
 organizationalUnitName	= Research and development
 commonName		= S_DOM_FQDN
 emailAddress		= S_EMAIL_ADMIN
@@ -19,7 +19,7 @@ emailAddress		= S_EMAIL_ADMIN
 [ v3_req ]
 basicConstraints	= CA:FALSE
 keyUsage		= nonRepudiation, digitalSignature, keyEncipherment
-subjectAltName		= DNS:smtp.S_DOM_FQDN,DNS:imap.S_DOM_FQDN
+subjectAltName		= DNS:S_DOM_FQDN,DNS:*.S_DOM_FQDN
 
 [ v3_ca ]
 subjectKeyIdentifier	= hash

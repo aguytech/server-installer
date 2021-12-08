@@ -11,7 +11,7 @@ x509_extensions		= v3_ca
 [ req_distinguished_name ]
 countryName		= FR
 localityName		= Nantes
-organizationName	= Ambau
+organizationName	= S_DOM_NAME
 organizationalUnitName	= Research and development
 commonName		= *.S_DOM_FQDN
 emailAddress		= S_EMAIL_ADMIN
