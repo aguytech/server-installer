@@ -23,7 +23,7 @@ ssh root@${server} -p${ssh_port}
 
 #lshw -class disk -short
 lsblk -o NAME,PATH,FSTYPE,FSUSED,SIZE,TYPE,MOUNTPOINT|grep -v ^loop
-parted /dev/sda print free
+parted /dev/sda print free|sed 1,6d
 fdisk /dev/sda # m p F n w | extend with lxd:+50G / save:available
 
 #apt update && apt -y dist-upgrade

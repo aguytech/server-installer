@@ -59,7 +59,7 @@ _echot "------------------  install"
 _evalr apt install -y jq acl # criu lxd-tools
 
 _echot "------------------  snap version"
-snap list lxd|sed -n 's|^lxd *\([0-9\.]\+\) .*|\1|p'
+snap list|sed -n 's|^lxd *\([0-9\.]\+\) .*|\1|p'
 
 # core20
 if ! snap list|grep -q ^core20; then
@@ -76,7 +76,7 @@ if ! snap list|grep -q ^core20; then
 fi
 
 # lxd
-if snap list lxd|grep -q ^lxd; then
+if snap list|grep -q ^lxd; then
 	_echot "------------------  snap refresh lxd"
 	_evalr snap refresh --channel=latest lxd
 else
