@@ -313,6 +313,7 @@ _echot "------------------  S_CACHE_READ_PORT"
 if [ -z "${S_CACHE_READ_PORT}" ]; then
 	anstmp="6380"
 	_askno "port for redis connection: only read (${anstmp})"
+	S_CACHE_READ_PORT=${_ANSWER:-${anstmp}} && _confset S_CACHE_READ_PORT "${S_CACHE_READ_PORT}" "${S_GLOBAL_CONF}"
 fi
 
 ########################  DB

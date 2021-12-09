@@ -47,7 +47,7 @@ _echot "------------------  data storage"
 
 anstmp=zfs
 _menu "Select a driver for storage (${anstmp})" zfs btrfs
-_DEV_DRIVER=${_ANSWER} && _confset _DEV_DRIVER "${_DEV_DRIVER}" "${S_GLOBAL_CONF}"
+_DEV_DRIVER=${_ANSWER} && _confset _DEV_DRIVER "${_DEV_DRIVER}"
 
 _echoa "State of available disk devices:"
 #lsblk -ro NAME|grep -v [0-9]$|grep -v NAME # shortly list of devices
