@@ -102,6 +102,11 @@ __init() {
 	__ipt -P OUTPUT DROP
 	__ipt -P FORWARD DROP
 
+	# loopback
+	_echo "- Allow all INPUT/OUTPUT for lo"
+	__ipt -A INPUT -i lo -j ACCEPT
+	__ipt -A OUTPUT -o lo -j ACCEPT
+
 	# Allow all connections in nat table
 	_echo "- Allow all PREROUTING/POSTROUTING/OUTPUT in Nat table"
 	__ipt -t nat -P PREROUTING ACCEPT
@@ -118,22 +123,17 @@ __init() {
 
 	# CONNECTIONS
 	_echo "- Allow existing INPUT & new OUTPUT for ${_ETH}"
-	__ipt -A INPUT -p all -i ${_ETH} -m state --state ESTABLISHED,RELATED -j ACCEPT
-	__ipt -A OUTPUT -p all -o ${_ETH} -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+	__ipt -A INPUT -p all -i ${_ETH} -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+	__ipt -A OUTPUT -p all -o ${_ETH} -m conntrack --ctstate NEW,ESTABLISHED,RELATED -j ACCEPT
 
 	# FORWARD
 	_echo "- Allow existing & new incomming FORWARD for ${_ETH}"
-	__ipt -A FORWARD -p all -i ${_ETH} -m state --state ESTABLISHED,RELATED -j ACCEPT
-	__ipt -A FORWARD -p all -o ${_ETH} -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+	__ipt -A FORWARD -p all -i ${_ETH} -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+	__ipt -A FORWARD -p all -o ${_ETH} -m conntrack --ctstate NEW,ESTABLISHED,RELATED -j ACCEPT
 
 	_echo "- Allow existing & new incomming FORWARD for ${_ETH_VM}"
-	__ipt -A FORWARD -p all -i ${_ETH_VM} -m state --state ESTABLISHED,RELATED -j ACCEPT
-	__ipt -A FORWARD -p all -o ${_ETH_VM} -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
-
-	# LO
-	_echo "- Allow all INPUT/OUTPUT for lo"
-	__ipt -A INPUT -i lo -j ACCEPT
-	__ipt -A OUTPUT -o lo -j ACCEPT
+	__ipt -A FORWARD -p all -i ${_ETH_VM} -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+	__ipt -A FORWARD -p all -o ${_ETH_VM} -m conntrack --ctstate NEW,ESTABLISHED,RELATED -j ACCEPT
 
 
 	_echo "\n-------------------------- INIT IPv6"
@@ -144,8 +144,13 @@ __init() {
 	__ipt6 -P OUTPUT DROP
 	__ipt6 -P FORWARD DROP
 
+	# loopback
+	_echo "- Allow all INPUT/OUTPUT for lo - IPV6"
+	__ipt6 -A INPUT -i lo -j ACCEPT
+	__ipt6 -A OUTPUT -o lo -j ACCEPT
+
 	# Allow all connections in nat table
-	_echo "- Allow all PREROUTING/POSTROUTING/OUTPUT in Nat table"
+	_echo "- Allow all PREROUTING/POSTROUTING/OUTPUT in Nat table - IPV6"
 	__ipt6 -t nat -P PREROUTING ACCEPT
 	__ipt6 -t nat -P POSTROUTING ACCEPT
 	__ipt6 -t nat -P OUTPUT ACCEPT
@@ -160,18 +165,18 @@ __init() {
 
 	# CONNECTIONS
 	_echo "- Allow existing INPUT & new OUTPUT for ${_ETH} - IPV6"
-	__ipt6 -A INPUT -p all -i ${_ETH} -m state --state ESTABLISHED,RELATED -j ACCEPT
-	__ipt6 -A OUTPUT -p all -o ${_ETH} -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+	__ipt6 -A INPUT -p all -i ${_ETH} -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+	__ipt6 -A OUTPUT -p all -o ${_ETH} -m conntrack --ctstate NEW,ESTABLISHED,RELATED -j ACCEPT
 
 	# FORWARD
 	_echo "- Allow existing incomming FORWARD & new outcomming FORWARD for ${_ETH} - IPV6"
-	__ipt6 -A FORWARD -p all -i ${_ETH} -m state --state ESTABLISHED,RELATED -j ACCEPT
-	__ipt6 -A FORWARD -p all -o ${_ETH} -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+	__ipt6 -A FORWARD -p all -i ${_ETH} -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+	__ipt6 -A FORWARD -p all -o ${_ETH} -m conntrack --ctstate NEW,ESTABLISHED,RELATED -j ACCEPT
 
-	# LO
-	_echo "- Allow all INPUT/OUTPUT for lo - IPV6"
-	__ipt6 -A INPUT -i lo -j ACCEPT
-	__ipt6 -A OUTPUT -o lo -j ACCEPT
+	# ICMP
+	_echo "- Allow ICMP INPUT/OUTPUT for ${_ETH} - IPV6"
+	__ipt6 -A INPUT -i ${_ETH} -p ipv6-icmp -j ACCEPT
+	__ipt6 -A OUTPUT -o ${_ETH} -p ipv6-icmp -j ACCEPT
 }
 
 __init_end() {
@@ -184,17 +189,17 @@ __init_end() {
 
 	_echo "- Drop all INPUT"
 	__ipt -A INPUT -j DROP-INPUT
-	${_LOG} && __ipt "-A DROP-INPUT -m limit --limit 2/min -j LOG --log-prefix \"ipt-drop-input \" --log-level 4"
+	${_LOG} && __ipt "-A DROP-INPUT -m limit --limit 4/min -j LOG --log-prefix \"ipt-drop-input \" --log-level 4"
 	__ipt -A DROP-INPUT -j DROP
 
 	_echo "- Drop all OUTPUT"
 	__ipt -A OUTPUT -j DROP-OUTPUT
-	${_LOG} && __ipt "-A DROP-OUTPUT -m limit --limit 2/min -j LOG --log-prefix \"ipt-drop-output \" --log-level 4"
+	${_LOG} && __ipt "-A DROP-OUTPUT -m limit --limit 4/min -j LOG --log-prefix \"ipt-drop-output \" --log-level 4"
 	__ipt -A DROP-OUTPUT -j DROP
 
 	_echo "- Drop all FORWARD"
 	__ipt -A FORWARD -j DROP-FORWARD
-	${_LOG} && __ipt "-A DROP-FORWARD -m limit --limit 2/min -j LOG --log-prefix \"ipt-drop-forward \" --log-level 4"
+	${_LOG} && __ipt "-A DROP-FORWARD -m limit --limit 4/min -j LOG --log-prefix \"ipt-drop-forward \" --log-level 4"
 	__ipt -A DROP-FORWARD -j DROP
 
 	${_LOG} && _echo "\nLOG IPV4 activated"
@@ -250,7 +255,8 @@ __input() {
 
 	# NTP (time) server
 	message="- Allow INPUT port: ${_PORT_NTP}, UDP NTP for IP:"
-	chain="iptables -A INPUT -i ${_ETH} -p udp --sport ${_PORT_NTP} --dport ${_PORT_NTP} -j ACCEPT"
+	#chain="iptables -A INPUT -i ${_ETH} -p udp --sport ${_PORT_NTP} --dport ${_PORT_NTP} -j ACCEPT"
+	chain="iptables -A INPUT -i ${_ETH} -p udp --sport ${_PORT_NTP} --dport ${_PORT_NTP} -m state --state ESTABLISHED -j ACCEPT"
 	__add_chain -c "${chain}" -v "${_IPS_NTP}" -m "${message}"
 
 	# HTTP
