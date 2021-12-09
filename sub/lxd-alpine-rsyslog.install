@@ -15,22 +15,21 @@ file_rsyslog_host_auth=${S_PATH_INSTALL_CONF}/rsyslog/host-auth.conf
 file_rsyslog_host_iptables=${S_PATH_INSTALL_CONF}/rsyslog/host-iptables.conf
 file_rsyslog_host_fail2ban=${S_PATH_INSTALL_CONF}/rsyslog/host-fail2ban.conf
 file_rsyslog_host_lxd=${S_PATH_INSTALL_CONF}/rsyslog/host-lxd.conf
+file_rsyslog_host_mail=${S_PATH_INSTALL_CONF}/rsyslog/host-mail.conf
 
 file_logrotate_host_rsyslog=${S_PATH_INSTALL_CONF}/logrotate/host-rsyslog
 file_logrotate_host_iptables=${S_PATH_INSTALL_CONF}/logrotate/host-iptables
 file_logrotate_host_fail2ban=${S_PATH_INSTALL_CONF}/logrotate/host-fail2ban
 file_logrotate_host_lxd=${S_PATH_INSTALL_CONF}/logrotate/host-lxd
+file_logrotate_host_mail=${S_PATH_INSTALL_CONF}/logrotate/host-mail
 
 _echot "------------------ required files"
-_require ${file_rsyslog_host_auth} ${file_logrotate_host_rsyslog}
-_require ${file_rsyslog_host_iptables} ${file_logrotate_host_iptables}
-_require ${file_rsyslog_host_fail2ban} ${file_logrotate_host_fail2ban}
-_require ${file_rsyslog_host_lxd} ${file_logrotate_host_lxd}
+_require ${file_rsyslog_host_auth} ${file_rsyslog_host_iptables} ${file_rsyslog_host_fail2ban} ${file_rsyslog_host_lxd} ${file_rsyslog_host_mail}
+_require ${file_logrotate_host_rsyslog} ${file_logrotate_host_iptables} ${file_logrotate_host_fail2ban} ${file_logrotate_host_lxd} ${file_logrotate_host_mail}
 
 ########################  DATA
 
 _CT_NAME=${S_SERVICE[log]}
-
 eval ${S_HOST_VM_ETH[default]}
 _CT_IP=${s_base}.${S_SERVICE_BITS[log]}
 
@@ -79,28 +78,32 @@ _service restart ${_IPT_SERVICE}
 
 ########################  CONF
 
-if [ "${S_RSYSLOG_PTC}" = udp ]; then
-	_echot "------------------  conf udp"
-
-	file=/etc/rsyslog.conf
-	_lxc_exec ${_CT_NAME} "sed -i '/#module(load=.imudp/,/#)/ s|^#||' ${file}"
-	_lxc_exec ${_CT_NAME} "sed -i '/^\s*port=/ s|=.*|=\"${S_RSYSLOG_PORT}\"|' ${file}"
-
-	_echot "------------------  restart rsyslog ${_CT_NAME}"
-
-	_lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
-fi
-
 _echot "------------------  conf client-auth"
-
 file=/etc/rsyslog.d/client-auth.conf
 _lxc_exec ${_CT_NAME} "[ -f ${file} ] && rm ${file}"
 
-_echot "------------------  conf host-auth"
+_echot "------------------  conf client-mail"
+file=/etc/rsyslog.d/client-mail.conf
+_lxc_exec ${_CT_NAME} "[ -f ${file} ] && rm ${file}"
 
+file=/etc/rsyslog.conf
+if [ "${S_RSYSLOG_PTC}" = udp ]; then
+	_echot "------------------  conf udp"
+	_lxc_exec ${_CT_NAME} "grep -q type=.imudp ${file} || echo -e '\n# tcp\ninput(\n\ttype=\"imudp\"\n\tport=\"${S_RSYSLOG_PORT}\"\n)' >> ${file}"
+else
+	_echot "------------------  conf tcp"
+	_lxc_exec ${_CT_NAME} "grep -q type=.imtcp ${file} || echo -e '\n# tcp\ninput(\n\ttype=\"imtcp\"\n\tport=\"${S_RSYSLOG_PORT}\"\n)' >> ${file}"
+fi
+_echot "------------------  restart rsyslog ${_CT_NAME}"
+_lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
+
+_echot "------------------  conf host-auth"
 file=/etc/rsyslog.d/${file_rsyslog_host_auth##*/}
 _eval lxc file push -q ${file_rsyslog_host_auth} ${_CT_NAME}${file}
-_lxc_var_replace ${_CT_NAME} ${file} rsyslog
+
+_echot "------------------  conf host-mail"
+file=/etc/rsyslog.d/${file_rsyslog_host_mail##*/}
+_eval lxc file push -q ${file_rsyslog_host_mail} ${_CT_NAME}${file}
 
 ########################  RSYSLOG IPTABLES
 
@@ -110,13 +113,6 @@ _lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
 
 file=/etc/rsyslog.d/${file_rsyslog_host_iptables##*/}
 _eval lxc file push -q ${file_rsyslog_host_iptables} ${_CT_NAME}${file}
-_lxc_var_replace ${_CT_NAME} ${file} rsyslog
-
-_echot "------------------  iptables host restart"
-_lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
-
-_echot "------------------  iptables client restart"
-_service restart rsyslog
 
 ########################  RSYSLOG FAIL2BAN
 
@@ -126,13 +122,6 @@ _lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
 
 file=/etc/rsyslog.d/${file_rsyslog_host_lxd##*/}
 _eval lxc file push -q ${file_rsyslog_host_lxd} ${_CT_NAME}${file}
-_lxc_var_replace ${_CT_NAME} ${file} rsyslog
-
-_echot "------------------  fail2ban host restart"
-_lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
-
-_echot "------------------  fail2ban client restart"
-_service restart rsyslog
 
 ########################  RSYSLOG LXD
 
@@ -143,12 +132,16 @@ _lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
 
 file=/etc/rsyslog.d/${file_rsyslog_host_lxd##*/}
 _eval lxc file push -q ${file_rsyslog_host_lxd} ${_CT_NAME}${file}
-_lxc_var_replace ${_CT_NAME} ${file} rsyslog
 
-_echot "------------------  lxd host restart"
+
+########################  RSYSLOG RESTART
+
+_echot "------------------  ${_CT_NAME} conf"
+_lxc_var_replace ${_CT_NAME} /etc/rsyslog.d rsyslog
+_echot "------------------  ${_CT_NAME} restart"
 _lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
 
-_echot "------------------  lxd client restart"
+_echot "------------------  ${HOSTNAME} restart"
 _service restart rsyslog
 
 ########################  LOGROTATE HOST
@@ -164,6 +157,10 @@ _eval lxc file push -q ${file_logrotate_host_iptables} ${_CT_NAME}${file}
 _echot "------------------  logrotate lxd host"
 file=/etc/logrotate.d/${file_logrotate_host_lxd##*/}
 _eval lxc file push -q ${file_logrotate_host_lxd} ${_CT_NAME}${file}
+
+_echot "------------------  logrotate mail host"
+file=/etc/logrotate.d/${file_logrotate_host_mail##*/}
+_eval lxc file push -q ${file_logrotate_host_mail} ${_CT_NAME}${file}
 
 _lxc_var_replace ${_CT_NAME} /etc/logrotate.d logrotate
 _lxc_exec ${_CT_NAME} "chmod g-w,o= /etc/logrotate.d/*"
