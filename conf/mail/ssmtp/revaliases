@@ -1,0 +1,12 @@
+# sSMTP aliases
+#
+# Format:local_account:outgoing_address:mailhub
+#
+# Example: root:your_login@your.domain:mailhub.your.domain[:port]
+# where [:port] is an optional port number that defaults to 25.
+postmaster:S_EMAIL_TECH:${S_SERVICE[mail]}:25
+bin:S_EMAIL_TECH:${S_SERVICE[mail]}:25
+nobody:S_EMAIL_TECH:${S_SERVICE[mail]}:25
+daemon:S_EMAIL_TECH:${S_SERVICE[mail]}:25
+abuse:S_EMAIL_TECH:${S_SERVICE[mail]}:25
+git:S_EMAIL_TECH:${S_SERVICE[mail]}:25
