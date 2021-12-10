@@ -21,7 +21,7 @@ cts_all_maria=`lxc list -f json | jq -r '.[] | select(.profiles | any(contains("
 
 file_conf=${S_PATH_INSTALL_CONF}/php/pma-config.inc.php
 file_conf_part=${S_PATH_INSTALL_CONF}/php/pma-part-config.inc.php
-file_conf_site=${S_PATH_INSTALL_CONF}/apache2/site/sub-admin.conf
+file_conf_site=${S_PATH_INSTALL_CONF}/apache2/sites/sub-admin.conf
 
 _echot "------------------ required files"
 _require ${file_conf} ${file_conf_part} ${file_conf_site}
@@ -36,7 +36,7 @@ _echot "------------------  data domain"
 anstmp=${S_DOM_FQDN} && _askno "Domain name to use (${anstmp})"
 _DOM_FQDN="${_ANSWER:-${anstmp}}"
 
-anstmp=wap-${_APA_ADMIN}-${S_DOM_NAME//./-} && _askno "Base name of containers to build (${anstmp})"
+anstmp=wap-${_APA_DOM_ADMIN}-${S_DOM_NAME//./-} && _askno "Base name of containers to build (${anstmp})"
 ct_base="${_ANSWER:-${anstmp}}"
 
 anstmp=2 && _askno "Number of containers to build (${anstmp})"
@@ -53,7 +53,7 @@ ct_www=${_ANSWER}
 profiles=`lxc profile list -f csv|grep "^www.*,"|cut -d, -f1`
 [ "${profiles}" ] && _menu "Select an available www profile to apply or none" none ${profiles} || _ANSWER=
 profile_www="${_ANSWER/none/}" && profile_www_exist=${profile_www}
-[ -z "${profile_www_exist}" ] && anstmp=www-${_APA_ADMIN}.${_DOM_FQDN} && _askno "Name of the new  www profile (${anstmp})" && profile_www="${_ANSWER:-${anstmp}}"
+[ -z "${profile_www_exist}" ] && anstmp=www-${_APA_DOM_ADMIN}.${_DOM_FQDN} && _askno "Name of the new  www profile (${anstmp})" && profile_www="${_ANSWER:-${anstmp}}"
 
 _echot "------------------  data php"
 
@@ -100,7 +100,7 @@ _APP_PATH_DW=${S_VM_PATH_SHARE}/php/down
 
 cts_php=`for i in $(seq 1 ${ct_num}); do echo ${ct_base}-${i}; done`
 path_sites=/etc/apache2/sites
-path_dom=${S_VM_PATH_SHARE}/www/${_APA_ADMIN}.${_DOM_FQDN}
+path_dom=${S_VM_PATH_SHARE}/www/${_APA_DOM_ADMIN}.${_DOM_FQDN}
 strpass=
 
 ########################  PROFILE
@@ -114,7 +114,7 @@ if [ -z "${profile_www_exist}" ]; then
 	lxc profile list -f csv|grep -q "^${profile}," && _eval lxc profile rename ${profile} ${profile}.${_SDATE}
 	_eval lxc profile create ${profile}
 
-	path=${S_HOST_PATH_SHARE}/www/${_APA_ADMIN}.${_DOM_FQDN}
+	path=${S_HOST_PATH_SHARE}/www/${_APA_DOM_ADMIN}.${_DOM_FQDN}
 	path_ct=${path_dom}
 	[ -d ${path} ] || _evalr mkdir -p ${path}
 	_evalr chown -R ${_LXD_UID}:${_LXD_UID} ${S_HOST_PATH_SHARE}/www
@@ -157,20 +157,20 @@ _lxc_exec ${_CT_NAME} "echo '<?php echo \"admin\"; ?>' > ${_APA_PATH_WWW}/ping-m
 
 #############  SITE ADMIN
 
-_APA_SUB=${_APA_ADMIN}
+_APA_SUB=${_APA_DOM_ADMIN}
 domain=${_APA_SUB}.${_DOM_FQDN}
 
 _echot "------------------  ${domain} path"
-path=${path_dom}/${_APA_ADMIN}
+path=${path_dom}/${_APA_DOM_ADMIN}
 _lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
 
 _echot "------------------  ${domain} index.php"
-file=${path_dom}/${_APA_ADMIN}/index.php
-_lxc_exec ${_CT_NAME} "echo '<html><body><h1><?php echo \"php ${_APA_ADMIN} works! \" ?></h1></body></html>' > ${file}"
+file=${path_dom}/${_APA_DOM_ADMIN}/index.php
+_lxc_exec ${_CT_NAME} "echo '<html><body><h1><?php echo \"php ${_APA_DOM_ADMIN} works! \" ?></h1></body></html>' > ${file}"
 
 
 _echot "------------------  ${domain} conf apache"
-file=${path_sites}/${_APA_ADMIN}.conf
+file=${path_sites}/${_APA_DOM_ADMIN}.conf
 _eval lxc file push -q ${file_conf_site} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} apache
 
@@ -303,7 +303,7 @@ _echoa "${strpass%\\n}"
 
 ########################  HAPROXY
 
-_echoA "Adjust backend for domain: ${_APA_ADMIN}.${_DOM_FQDN} with:"
+_echoA "Adjust backend for domain: ${_APA_DOM_ADMIN}.${_DOM_FQDN} with:"
 _echoa "${cts_php}"
 
 ########################  PUBLISH

@@ -44,7 +44,7 @@ _MEL_SSL_SCHEME=SHA512 && _confset _MEL_SSL_SCHEME "${_MEL_SSL_SCHEME}"
 
 _MEL_PATH_SSL=${S_VM_PATH_SHARE}/ssl/mail && _confset _MEL_PATH_SSL "${_MEL_PATH_SSL}"
 _MEL_PATH_DKIM="${_MEL_PATH_SPAM}/dkim" && _confset _MEL_PATH_DKIM "${_MEL_PATH_DKIM}"
-_MEL_CIDR=`echo ${S_HOST_VM_ETH[default]}|sed -n 's|.*s_cidr=\([^ ]\+\).*|\1|p'` && _MEL_CIDR=${_MEL_CIDR/1\//0\/} && _confset _MEL_CIDR "${_MEL_CIDR}"
+_MEL_CIDR=${_CIDR_VM/1\//0\/} && _confset _MEL_CIDR "${_MEL_CIDR}"
 
 ########################  END
 

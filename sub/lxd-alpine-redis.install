@@ -38,7 +38,7 @@ _echot "------------------  data domain"
 anstmp=rds-${S_DOM_FQDN//./-} && _askno "Base name of containers to build (${anstmp})"
 _RDS_CT_NAME="${_ANSWER:-$anstmp}" && _confset _HPX_CT_NAME "${_HPX_CT_NAME}"
 
-[ -z ${_RDS_CLIENT+x} ] && _askyn "Install redis-client on Host: y" && _RDS_CLIENT="${_ANSWER}" && _confset _RDS_CLIENT "${_RDS_CLIENT}"
+[ -z ${_RDS_CLIENT+x} ] && _askyn "Install redis-client on Host" && _RDS_CLIENT="${_ANSWER}" && _confset _RDS_CLIENT "${_RDS_CLIENT}"
 
 anstmp=${S_DOM_FQDN%.lxd} && _askno "Prefix for proxy name (${anstmp})"
 _RDS_PROXY="${_ANSWER:-$anstmp}" && _confset _RDS_PROXY "${_RDS_PROXY}"

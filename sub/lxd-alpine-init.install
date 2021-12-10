@@ -42,16 +42,15 @@ fi
 ########################  PROFILE
 
 profile=global
-_echot "------------------  profiles ${profile}"
-
-lxc profile list -f csv|grep -q "^${profile}," && _eval lxc profile rename ${profile} ${profile}.${_SDATE}
-_eval lxc profile create ${profile}
-
-path=${S_HOST_PATH_SHARE}/global
-path_ct=${S_VM_PATH_SHARE}/global
-[ -d ${path} ] || _evalr mkdir -p ${path}
-_evalr chown -R ${_LXD_UID}:${_LXD_UID} ${S_HOST_PATH_SHARE}/global
-_eval lxc profile device add ${profile} global disk source=${path} path=${path_ct}
+if ! lxc profile list -f csv|grep -q "^${profile},"; then
+	_echot "------------------  profiles ${profile}"
+	_eval lxc profile create ${profile}
+	path=${S_HOST_PATH_SHARE}/global
+	path_ct=${S_VM_PATH_SHARE}/global
+	[ -d ${path} ] || _evalr mkdir -p ${path}
+	_evalr chown -R ${_LXD_UID}:${_LXD_UID} ${S_HOST_PATH_SHARE}/global
+	_eval lxc profile device add ${profile} global disk source=${path} path=${path_ct}
+fi
 
 ########################  INIT
 

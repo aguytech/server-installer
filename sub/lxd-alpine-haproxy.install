@@ -251,7 +251,7 @@ if [ "${_HPX_CERTBOT_ENABLE}" ]; then
 	_lxc_exec ${_CT_NAME} apk add certbot
 
 	_echot "------------------  copy certbot"
-	_echoA "Make a backup of exiting certbot certs"
+	_echoA "To renew existing certificates, delete them"
 	_askno "Valid to continue"
 
 	for domain in ${S_DOM_ALL_FQDN}; do

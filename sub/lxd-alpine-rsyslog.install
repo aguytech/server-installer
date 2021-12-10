@@ -36,15 +36,15 @@ _CT_IP=${s_base}.${S_SERVICE_BITS[log]}
 ########################  PROFILE
 
 profile=${_CT_NAME}
-_echot "------------------  profiles ${profile}"
-
-lxc profile list -f csv|grep -q "^${profile}," && lxc profile rename ${profile} ${profile}.${_SDATE}
-_eval lxc profile create ${profile}
-
-path="${S_HOST_PATH_LOG}"
-path_ct="${S_VM_PATH_LOG}"
-[ -d ${path} ] || _evalr mkdir -p ${path}
-_eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
+if ! lxc profile list -f csv|grep -q "^${profile},"; then
+	_echot "------------------  profiles ${profile}"
+	_eval lxc profile create ${profile}
+	path="${S_HOST_PATH_LOG}"
+	path_ct="${S_VM_PATH_LOG}"
+	[ -d ${path} ] || _evalr mkdir -p ${path}
+	_evalr chown -R ${_LXD_UID}:${_LXD_UID} ${S_HOST_PATH_LOG}
+	_eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
+fi
 
 ########################  INIT
 
