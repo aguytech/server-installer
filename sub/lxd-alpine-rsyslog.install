@@ -87,12 +87,20 @@ file=/etc/rsyslog.d/client-mail.conf
 _lxc_exec ${_CT_NAME} "[ -f ${file} ] && rm ${file}"
 
 file=/etc/rsyslog.conf
+str="# ${S_RSYSLOG_PTC}
+module(load=\"im${S_RSYSLOG_PTC}\")
+input(
+\ttype=\"im${S_RSYSLOG_PTC}\"
+\tport=\"${S_RSYSLOG_PORT}\"
+)"
+_lxc_exec ${_CT_NAME} "grep -q '^ *type=.im${S_RSYSLOG_PTC}' ${file} || echo -e '${str}'  >> ${file}"
+
 if [ "${S_RSYSLOG_PTC}" = udp ]; then
 	_echot "------------------  conf udp"
-	_lxc_exec ${_CT_NAME} "grep -q type=.imudp ${file} || echo -e '\n# tcp\ninput(\n\ttype=\"imudp\"\n\tport=\"${S_RSYSLOG_PORT}\"\n)' >> ${file}"
+	_lxc_exec ${_CT_NAME} "grep -q '^ *type=.im${S_RSYSLOG_PTC}' ${file} || echo -e '\n# ${S_RSYSLOG_PTC}\ninput(\n\ttype=\"im${S_RSYSLOG_PTC}\"\n\tport=\"${S_RSYSLOG_PORT}\"\n)' >> ${file}"
 else
 	_echot "------------------  conf tcp"
-	_lxc_exec ${_CT_NAME} "grep -q type=.imtcp ${file} || echo -e '\n# tcp\ninput(\n\ttype=\"imtcp\"\n\tport=\"${S_RSYSLOG_PORT}\"\n)' >> ${file}"
+	_lxc_exec ${_CT_NAME} "grep -q '^ *type=.imtcp' ${file} || echo -e '\n# tcp\ninput(\n\ttype=\"imtcp\"\n\tport=\"${S_RSYSLOG_PORT}\"\n)' >> ${file}"
 fi
 _echot "------------------  restart rsyslog ${_CT_NAME}"
 _lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
@@ -171,7 +179,6 @@ _lxc_exec ${_CT_NAME} "rc-service crond restart"
 ########################  PUBLISH
 
 _echot "------------------  publish ${_CT_NAME}"
-
 lxc image list -f csv -c l | grep -q ^${_CT_NAME}$ && _eval lxc image alias rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
 _eval lxc publish --force ${_CT_NAME} --alias ${_CT_NAME}
 

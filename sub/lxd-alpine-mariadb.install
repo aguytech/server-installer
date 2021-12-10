@@ -23,7 +23,6 @@ file_logrotate_host=${S_PATH_INSTALL_CONF}/logrotate/host-mariadb
 _echot "------------------ required files"
 _require ${file_server} ${file_rsyslog_client} ${file_rsyslog_host} ${file_logrotate_client} ${file_logrotate_host}
 
-
 ########################  DATA
 
 _echot "------------------  data pwd"
@@ -34,11 +33,7 @@ _MDB_PWD_REMOTE=`_pwd`
 
 _echot "------------------  data"
 
-_MDB_SERVICE=mariadb && _confset _MDB_SERVICE "${_MDB_SERVICE}"
-_MDB_PATH_CONF=/etc/my.cnf.d && _confset _MDB_PATH_CONF "${_MDB_PATH_CONF}"
-
-
-anstmp=mdb-${S_DOM_NAME} && _askno "Name of the mariadb container & profile (${anstmp})" && _MDB_NAME="${_ANSWER:-${anstmp}}"
+anstmp=mdb-${S_DOM_FQDN//./-} && _askno "Name of the mariadb container & profile (${anstmp})" && _MDB_NAME="${_ANSWER:-${anstmp}}"
 _CT_NAME=${_MDB_NAME}
 
 [ -z ${_MDB_VM_PATH+x} ] && anstmp=/var/lib/mysql && _askno "Path for data (${anstmp})" && _MDB_VM_PATH="${_ANSWER:-${anstmp}}" && _confset _MDB_VM_PATH "${_MDB_VM_PATH}"
@@ -47,9 +42,9 @@ _CT_NAME=${_MDB_NAME}
 
 [ -z ${_MDB_PATH_LOG+x} ] && anstmp=${S_PATH_LOG}/mysql && _askno "Path for logs (${anstmp})" && _MDB_PATH_LOG="${_ANSWER:-${anstmp}}" && _confset _MDB_PATH_LOG "${_MDB_PATH_LOG}"
 
-
+_MDB_SERVICE=mariadb && _confset _MDB_SERVICE "${_MDB_SERVICE}"
+_MDB_PATH_CONF=/etc/my.cnf.d && _confset _MDB_PATH_CONF "${_MDB_PATH_CONF}"
 _MDB_HOST_PATH=${S_HOST_PATH}/mariadb/${_MDB_NAME} && _confset _MDB_HOST_PATH "${_MDB_HOST_PATH}"
-
 
 ########################  STORAGE MARIADB
 
@@ -61,7 +56,6 @@ if [ "${_DEV_DRIVER}" = zfs ]; then
 	path=${S_HOST_PATH}/mariadb
 	opts="-o mountpoint=${path} -o compression=lz4 -o  acltype=posixacl -o recordsize=8K -o primarycache=metadata"
 	_evalr zfs list ${path_zfs} >/dev/null 2>&1 || _evalr zfs create ${opts} ${path_zfs}
-
 
 	name=${_MDB_NAME}
 	_echot "------------------  zfs ${name}"
@@ -78,7 +72,6 @@ if [ "${_DEV_DRIVER}" = zfs ]; then
 
 	_echot "------------------  zfs create ${path_zfs}"
 	_evalr zfs create -o mountpoint=${path} ${path_zfs}
-
 
 elif [ "${_DEV_DRIVER}" = btrfs ]; then
 

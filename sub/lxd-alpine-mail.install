@@ -105,20 +105,6 @@ fi
 #	_echO "performed *** ${_PARTMAIL}"
 #fi
 
-########################  COPY
-
-for i in `seq 2 ${_CT_NUM}`; do
-	ct_name=${_CT_NAME}-${i}
-	_echot "---------- build ${ct_name}"
-
-	if lxc list -f csv -c n | grep -q ^${ct_name}$; then
-		lxc list -f csv -c n status=Running| grep -q ^${ct_name}$ && _eval lxc stop ${ct_name}
-		_eval lxc rename ${ct_name} ${ct_name}-${_SDATE}
-	fi
-	_eval lxc copy ${_CT_NAME} ${ct_name}
-	_eval lxc start ${ct_name}
-done
-
 ########################  FIX IP
 
 _echot "------------------ network fixed ip"
