@@ -35,20 +35,20 @@ _require ${file_rsyslog_host} ${file_rsyslog_client} ${file_logrotate_host} ${fi
 
 _echot "------------------  data domain"
 
-anstmp=rds-${S_DOM_NAME//./-} && _askno "Base name of containers to build (${anstmp})"
+anstmp=rds-${S_DOM_FQDN//./-} && _askno "Base name of containers to build (${anstmp})"
 _RDS_CT_NAME="${_ANSWER:-$anstmp}" && _confset _HPX_CT_NAME "${_HPX_CT_NAME}"
 
-[ -z ${_RDS_CLIENT+x} ] && anstmp=y && _askno "Install redis-client on Host (${anstmp})" && _RDS_CLIENT="${_ANSWER:-$anstmp}" && _confset _RDS_CLIENT "${_RDS_CLIENT}"
+[ -z ${_RDS_CLIENT+x} ] && _askyn "Install redis-client on Host: y" && _RDS_CLIENT="${_ANSWER}" && _confset _RDS_CLIENT "${_RDS_CLIENT}"
 
 anstmp=${S_DOM_FQDN%.lxd} && _askno "Prefix for proxy name (${anstmp})"
 _RDS_PROXY="${_ANSWER:-$anstmp}" && _confset _RDS_PROXY "${_RDS_PROXY}"
 
 _echot "------------------  data sentinel"
 
-anstmp=2000 && _askno "Time to consider server are down (${anstmp})"
+anstmp=1000 && _askno "Time to consider server are down (${anstmp})"
 _RDS_DOWN="${_ANSWER:-$anstmp}" && _confset _RDS_DOWN "${_RDS_DOWN}"
 
-anstmp=4000 && _askno "Sentinel failover-timeout (${anstmp})"
+anstmp=10000 && _askno "Sentinel failover-timeout (${anstmp})"
 _RDS_FAILOVER="${_ANSWER:-$anstmp}" && _confset _RDS_FAILOVER "${_RDS_FAILOVER}"
 
 _echot "------------------  data sysctl.conf"
@@ -96,11 +96,9 @@ _RDS_MEM_POL="${_ANSWER:-$anstmp}" && _confset _RDS_MEM_POL "${_RDS_MEM_POL}"
 _menu "Give the log level (notice)" notice debug verbose warning
 _RDS_LOGLEVEL="${_ANSWER:-$anstmp}" && _confset _RDS_LOGLEVEL "${_RDS_LOGLEVEL}"
 
-_RDS_FILE_SENTINEL=/etc/sentinel.conf
 _CT_NAME=${_RDS_CT_NAME}-1
 _RDS_PATH_LIB=/var/lib/redis
 _RDS_QUORUM=1
-_RDS_SYNC=1
 
 ################################################  MASTER
 
@@ -157,7 +155,7 @@ _lxc_exec ${_CT_NAME} "apk add redis"
 
 _echot "------------------  service set"
 _lxc_exec ${_CT_NAME} "rc-update add redis"
-_lxc_exec_t ${_CT_NAME} "rc-service redis start"
+_lxc_exec_t ${_CT_NAME} "rc-service -S redis start"
 
 ########################  CONF
 
@@ -165,6 +163,8 @@ _echot "------------------  redis conf"
 file=/etc/${file_conf_redis##*/}
 _eval lxc file push -q ${file_conf_redis} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} redis
+_lxc_exec_t ${_CT_NAME} "chmod 644 ${file}"
+_lxc_exec_t ${_CT_NAME} "cp -a ${file} ${file}.keep"
 
 _echot "------------------  restart redis"
 _lxc_exec_t ${_CT_NAME} "rc-service redis restart"
@@ -176,9 +176,11 @@ file=/etc/init.d/redis-sentinel
 _lxc_exec ${_CT_NAME} "sed -i '/command_user:/ s|redis|root|g'  ${file}"
 
 _echot "------------------  sentinel conf"
-file=${_RDS_FILE_SENTINEL}
+file=/etc/sentinel.conf
 _eval lxc file push -q ${file_conf_sentinel} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} redis
+_lxc_exec_t ${_CT_NAME} "chmod 644 ${file}"
+_lxc_exec_t ${_CT_NAME} "cp -a ${file} ${file}.keep"
 
 _echot "------------------  sentinel notify"
 file=${_RDS_PATH_LIB}/${file_conf_sentinel_notify##*/}
@@ -234,7 +236,6 @@ _lxc_exec ${_CT_NAME} "chmod g-w,o= /etc/logrotate.d/*"
 _echot "------------------  ${_CT_NAME} crond restart"
 _lxc_exec ${_CT_NAME} "rc-service crond restart"
 
-
 ################################################  SLAVE
 
 _CT_NAME_2=${_RDS_CT_NAME}-2
@@ -272,8 +273,8 @@ for file in ${file_conf_ha_front} ${file_conf_ha_back}; do
 done
 _lxc_var_replace ${ct_proxy} /etc/haproxy/conf-available redis
 
-_echot "------------------  haproxy restart"
-_lxc_exec_e ${ct_proxy} "rc-service haproxy restart"
+_echot "------------------  haproxy reload"
+_lxc_exec_e ${ct_proxy} "rc-service haproxy reload"
 
 ########################  SHOW
 

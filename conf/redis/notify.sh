@@ -6,7 +6,7 @@
 #
 # settings
 # file settings for sentinel
-file_sentinel=_RDS_FILE_SENTINEL
+file_sentinel=/etc/sentinel.conf
 # options: syslog or file
 log=syslog
 # syslog programe name
@@ -18,13 +18,15 @@ time_before=0
 # time in seconds between repeat
 time_repeat=2
 # time in seconds between switch to replicate data
-time_switch=10
+time_switch=8
+# time in seconds to wait before last check
+time_check=4
 # number of repeat to switch master to slave
-repeat=4
+repeat=10
 # debugging log (everything not empty)
 debug=
 
-########################   functions
+########################  functions
 
 _log() { echo ${log_date}${id} $* | ${logcmd}; }
 #_log_d() { echo ${log_date} ${id} debug $* >> ${file_log}; }
@@ -71,6 +73,14 @@ _get_ip() {
 		echo $(nslookup -type=a $1|grep '^Address: '|cut -d' ' -f2)
 	fi
 }
+_send() {
+	eval redis-cli $*
+	_log "[send] $*"
+}
+_sleep() {
+	_log "[sleep] $1"
+	sleep $1
+}
 
 ########################  variables
 
@@ -111,33 +121,45 @@ _log_d "s1_ip=${s1_ip} s1_port=${s1_port} s2_ip=${s2_ip} s2_port=${s2_port}"
 #nslookup -type=a redis-2|grep '^Address: '|cut -d' ' -f2
 _log_d "s1_ip=${s1_ip} s1_port=${s1_port} s2_ip=${s2_ip} s2_port=${s2_port}"
 
-_log "[start] $*"
-# switch s1 to slave
-sleep ${time_before}
-i=0
-while [ $i -lt $repeat ]; do
-	let "i = i + 1"
-	role_s1=$(_get_role ${s1_ip} ${s1_port})
-	role_s2=$(_get_role ${s2_ip} ${s2_port})
-	if [ "${role_s1}" = master ] && [ "${role_s2}" = master ]; then
-		redis-cli -h ${s1_ip} -p ${s1_port} REPLICAOF ${s2_ip} ${s2_port}
-		_log "[send] ${s1_ip} ${s1_port} replicaof ${s2_ip} ${s2_port}"
-		send_fail=1
-		i=$repeat
-	fi
-	sleep ${time_repeat}
-done
+if [ "$action" = "-sdown" -a "${type}" = "slave" ]; then
 
-if [ "${send_fail}" ]; then
+	_log "[start] $*"
+	# switch s1 to slave
+	_sleep ${time_before}
+	i=0
+	while [ $i -lt $repeat ]; do
+		let "i = i + 1"
+		role_s1=$(_get_role ${s1_ip} ${s1_port})
+		role_s2=$(_get_role ${s2_ip} ${s2_port})
+		if [ "${role_s1}" = master ]; then
+			_send -h ${s2_ip} -p ${s_port} REPLICAOF no one
+			_send -h ${s1_ip} -p ${s1_port} REPLICAOF ${s2_ip} ${s2_port}
+			role_s1=$(_get_role ${s1_ip} ${s1_port})
+			role_s2=$(_get_role ${s2_ip} ${s2_port})
+			i=$repeat
+		fi
+		_sleep ${time_repeat}
+	done
+
 	# switch s1 to master with a failobver on s2
-	sleep ${time_switch}
-	redis-cli -h ${s1_ip} -p ${s1_port} REPLICAOF no one
-	_log "[send] ${s1_ip} ${s1_port} replicaof no one"
-	redis-cli -h ${s2_ip} -p ${s2_port} REPLICAOF ${s1_ip} ${s1_port}
-	_log "[send] ${s2_ip} ${s2_port} replicaof ${s1_ip} ${s1_port}"
+	_sleep ${time_switch}
+	#_send -h ${s2_ip} -p 2${s2_port} sentinel failover mymaster
 
-	role_s1=$(_get_role ${s1_ip} ${s1_port})
-	role_s2=$(_get_role ${s2_ip} ${s2_port})
+	# check both server are the same state
+	for i in $(seq 1 ${repeat}); do
+		role_s1=$(_get_role ${s1_ip} ${s1_port})
+		role_s2=$(_get_role ${s2_ip} ${s2_port})
+		if [ "${role_s1}" != master ] || [ "${role_s1}" = "${role_s2}" ]; then
+			_send -h ${s1_ip} -p ${s1_port} REPLICAOF no one
+			_send -h ${s2_ip} -p ${s2_port} REPLICAOF ${s1_ip} ${s1_port}
+			role_s1=$(_get_role ${s1_ip} ${s1_port})
+			role_s2=$(_get_role ${s2_ip} ${s2_port})
+		fi
+		_sleep ${time_check}
+	done
+
+else
+	_exit
 fi
 
 _exit "[end]"
