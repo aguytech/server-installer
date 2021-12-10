@@ -6,15 +6,29 @@ _echoT "\n======================  ${_INSTALL}-${_PARTMAIL}"
 
 grep -q "^# ${_PARTMAIL#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PARTMAIL}" >> ${S_FILE_INSTALL_CONF}
 
+########################  REQUIRED
+
+file_conf_ha_front=${S_PATH_INSTALL_CONF}/haproxy/conf-available/40-fronts-mail
+file_conf_ha_back=${S_PATH_INSTALL_CONF}/haproxy/conf-available/60-backs-mail
+
+_echot "------------------ required files"
+_require ${file_conf_ha_front} ${file_conf_ha_back}
+
 ########################  MAIN
 
-_echot "------------------  proxy enable ${_CT_NAME}"
-file=/etc/haproxy/conf-available/80-backends
-_lxc_exec ${S_SERVICE[proxy]} "ls ${file}>/dev/null" || _exite "Unable to find file: ${file}"
-_lxc_exec ${S_SERVICE[proxy]} "sed-i '/^\s*#server ${S_SERVICE[mail]}/ s|#server|server|' ${file}"
+ct_proxy=${S_SERVICE[proxy]}
 
-_echot "------------------  proxy reload"
-_lxc_exec ${S_SERVICE[proxy]} "rc-service -s haproxy reload"
+_echot "------------------  haproxy conf"
+path=/etc/haproxy
+for file in ${file_conf_ha_front} ${file_conf_ha_back}; do
+	_eval lxc file push -q ${file} ${ct_proxy}${path}/conf-available/${file##*/}
+	file=${file##*/}
+	_lxc_exec ${ct_proxy} "[ -h ${path}/conf-enabled/${file} ] || ln -s ${path}/conf-available/${file}  ${path}/conf-enabled/${file}"
+done
+_lxc_var_replace ${ct_proxy} /etc/haproxy/conf-available redis
+
+_echot "------------------  haproxy reload"
+_lxc_exec ${S_SERVICE[proxy]} "rc-service haproxy reload"
 
 ########################  END
 
