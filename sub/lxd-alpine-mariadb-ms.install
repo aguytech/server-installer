@@ -11,7 +11,6 @@ _echot "------------------ required vm"
 cts_all_mdb=`lxc list -f csv -c n| grep '^mdb-'|xargs`
 [ "${cts_all_mdb}" ] || _exite "unable to find mariadb container"
 
-
 file_master="${S_PATH_INSTALL_CONF}/mariadb/mariadb-master.cnf"
 file_slave="${S_PATH_INSTALL_CONF}/mariadb/mariadb-slave.cnf"
 
@@ -22,15 +21,16 @@ _askyn "To install a master/slave mariadb cluster, you need to have 2 available 
 
 ########################  DATA
 
-_echot "------------------  data"
+_echot "------------------  data ct"
 
+cts_all_mdb=" ${cts_all_mdb} "
 # ct_master
 _menu "Select one available mariadb container for MASTER " ${cts_all_mdb}
 ct_master=${_ANSWER}
 
 # ct_slave
-cts_maria="${cts_maria/ ${ct_master} / }"
-[ "${cts_maria}" ] && _menu "Select one available mariadb container for SLAVE" ${cts_maria} || _exite "Unable to find container maria-* to use"
+cts_all_mdb="${cts_all_mdb/ ${ct_master} / }"
+[ "${cts_all_mdb}" ] && _menu "Select one available mariadb container for SLAVE" ${cts_all_mdb} || _exite "Unable to find container maria-* to use"
 ct_slave=${_ANSWER}
 
 # pwd_master
@@ -50,6 +50,11 @@ ok=false; while ! ${ok}; do
 done
 pwd_slave=${_ANSWER}
 
+_echot "------------------  data"
+
+[ -z ${_MDB_PWD_REPLIC+x} ] && anstmp=`_pwd` && _askno "Password for root local access (${anstmp})"
+_MDB_PWD_REPLIC="${_ANSWER:-${anstmp}}"
+
 anstmp=256M && _askno "max_binlog_size (${anstmp})"
 _MDB_MAX_BIN_SIZE="${_ANSWER:-$anstmp}"
 
@@ -68,9 +73,6 @@ _MDB_REPLICATE_EXCEPT="${_ANSWER:-$anstmp}"
 
 anstmp="" && _askno "databases name to USE for replication: only these, not others (${anstmp})"
 _MDB_REPLICATE_ONLY="${_ANSWER:-$anstmp}"
-
-pwd_replic=`_pwd`
-
 
 ########################  CONF MASTER
 
@@ -98,7 +100,7 @@ _echot "------------------  ${ct_name} restart"
 _lxc_exec ${ct_name} "rc-service ${_MDB_SERVICE} restart"
 
 _echot "------------------  ${ct_name} replic"
-cmd="CREATE OR REPLACE USER 'replic'@'${ct_slave}.lxd' IDENTIFIED BY '${pwd_replic}';
+cmd="CREATE OR REPLACE USER 'replic'@'${ct_slave}.lxd' IDENTIFIED BY '${_MDB_PWD_REPLIC}';
 GRANT REPLICATION SLAVE ON *.* TO 'replic'@'${ct_slave}.lxd';"
 _eval "mysql -h${ct_name} -uroothost -p${pwd_master} -e \"${cmd}\""
 _eval "mysql -s -h${ct_name} -uroothost -p${pwd_master} -e \"SELECT user,host FROM mysql.user WHERE user like 'replic';\""
@@ -106,7 +108,7 @@ _eval "mysql -h${ct_name} -uroothost -p${pwd_master} -e \"FLUSH PRIVILEGES;\""
 
 _echot "------------------  ${ct_name} passwd"
 file=${S_PATH_CONF}/mariadb
-strpass="replic @ ${ct_slave}.lxd - ${pwd_replic}"
+strpass="replic @ ${ct_slave}.lxd - ${_MDB_PWD_REPLIC}"
 cmd="grep -q ^replic ${file} && sed -i '/^replic/c ${strpass}'  ${file} || sed -i '\$a ${strpass}' ${file}"
 _lxc_exec ${ct_name} "${cmd}"
 
@@ -159,7 +161,7 @@ _eval "mysql -h${ct_name} -uroothost -p${pwd_slave} -e \"STOP SLAVE;\""
 cmd="CHANGE MASTER TO
 MASTER_HOST='${ct_master}',
 MASTER_USER='replic',
-MASTER_PASSWORD='${pwd_replic}',
+MASTER_PASSWORD='${_MDB_PWD_REPLIC}',
 MASTER_PORT=${S_DB_MARIA_PORT},
 MASTER_LOG_FILE='${master_file}',
 MASTER_LOG_POS=${master_pos},

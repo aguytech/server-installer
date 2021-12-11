@@ -26,9 +26,14 @@ _require ${file_server} ${file_rsyslog_client} ${file_rsyslog_host} ${file_logro
 
 _echot "------------------  data pwd"
 
-_MDB_PWD_LOCAL=`_pwd`
-_MDB_PWD_REMOTE=`_pwd`
-[ -z ${_MDB_DB_HOST_PWD+x} ] && _MDB_DB_HOST_PWD=`_pwd` && _confset _MDB_DB_HOST_PWD "${_MDB_DB_HOST_PWD}"
+[ -z ${_MDB_PWD_LOCAL+x} ] && anstmp=`_pwd` && _askno "Password for root local access (${anstmp})"
+_MDB_PWD_LOCAL="${_ANSWER:-${anstmp}}"
+
+[ -z ${_MDB_PWD_HOST+x} ] && anstmp=`_pwd` && _askno "Password for root host access (${anstmp})"
+_MDB_PWD_HOST="${_ANSWER:-${anstmp}}"
+
+[ -z ${_MDB_PWD_REMOTE+x} ] && anstmp=`_pwd` && _askno "Password for root remote access (${anstmp})"
+_MDB_PWD_REMOTE="${_ANSWER:-${anstmp}}"
 
 _echot "------------------  data"
 
@@ -195,8 +200,8 @@ strpass="root @ localhost - ${_MDB_PWD_LOCAL}\n"
 
 _echot "------------------  right roothost"
 for ip in ${_IPS_CLUSTER} ${_CIDR_VM%/*}; do
-	strpass+="roothost @ ${ip} - ${_MDB_DB_HOST_PWD}\n"
-	cmd="GRANT ALL PRIVILEGES ON *.* TO roothost@'${ip}' IDENTIFIED BY '${_MDB_DB_HOST_PWD}' WITH GRANT OPTION"
+	strpass+="roothost @ ${ip} - ${_MDB_PWD_HOST}\n"
+	cmd="GRANT ALL PRIVILEGES ON *.* TO roothost@'${ip}' IDENTIFIED BY '${_MDB_PWD_HOST}' WITH GRANT OPTION"
 	_lxc_exec ${_CT_NAME} "mysql -uroot -p${_MDB_PWD_LOCAL} -e \"${cmd}\""
 done
 
@@ -284,13 +289,13 @@ _lxc_exec ${_CT_NAME} "mysql -uroot -p${_MDB_PWD_LOCAL} -e 'SELECT user,host FRO
 
 _echot "------------------  show passwords"
 _echoA "Keep this passwords:"
-_echoa"${strpass}"
+_echoa "${strpass}"
 
 #########################  TEST
 
 _echot "------------------  maria test"
 _echoA "To verify maria configuration, from the host type:"
-_echoa "mysql -uroothost -h${_CT_NAME} -p${_MDB_DB_HOST_PWD} "
+_echoa "mysql -uroothost -h${_CT_NAME} -p${_MDB_PWD_HOST} "
 
 #######################  PUBLISH
 
