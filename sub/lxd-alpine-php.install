@@ -2,9 +2,8 @@
 #
 # write by Aguy
 
-_echoT "\n==========================================  ${_INSTALL}-${_PART}"
-
-grep -q "^# ${_PART#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART}" >> ${S_FILE_INSTALL_CONF}
+_echoT "\n==========================================  ${_INSTALL}-${_PART#++}"
+grep -q "^# ${_PART#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART#++}" >> ${S_FILE_INSTALL_CONF}
 
 ########################  REQUIRED
 
@@ -13,19 +12,31 @@ cts_all_www=`lxc image list -f csv -c l| grep -e '^\(wa-\|wn-\)'`
 [ "${cts_all_www}" ] || _exite "Unable to find image container start with wa-|wn-"
 
 imgs_all_rds=`lxc list -f csv -c n| grep '^rds-'`
+lxc list -f csv -c n| grep -q "^${S_SERVICE[proxy]}" && imgs_all_rds="${S_SERVICE[proxy]} ${imgs_all_rds}"
 [ "${imgs_all_rds}" ] || _exite "Unable to find redis container (name starts with rds-)"
 
-file_phpfpm="${S_PATH_INSTALL_CONF}/apache2/php7-fpm.conf"
-file_monitor="${S_PATH_INSTALL_CONF}/apache2/monitor.conf"
-file_opcache="${S_PATH_INSTALL_CONF}/apache2/opcache.conf"
-file_xdebug="${S_PATH_INSTALL_CONF}/php/xdebug.ini"
-file_rsyslog_client=${S_PATH_INSTALL_CONF}/rsyslog/client-phpfpm7.conf
-file_rsyslog_host=${S_PATH_INSTALL_CONF}/rsyslog/host-phpfpm7.conf
-file_logrotate_client=${S_PATH_INSTALL_CONF}/logrotate/client-phpfpm7
-file_logrotate_host=${S_PATH_INSTALL_CONF}/logrotate/host-phpfpm7
+
+file_conf_php_ini="${S_PATH_INSTALL_CONF}/php/php.ini"
+file_conf_php_fpm="${S_PATH_INSTALL_CONF}/php/php-fpm.conf"
+file_conf_php_fpmd_www="${S_PATH_INSTALL_CONF}/php/php-fpm.d/www.conf"
+file_conf_php_fpmd_admin="${S_PATH_INSTALL_CONF}/php/php-fpm.d/admin.conf"
+file_conf_php_xdebug="${S_PATH_INSTALL_CONF}/php/xdebug.ini"
+
+file_conf_apache_phpfpm="${S_PATH_INSTALL_CONF}/apache2/php7-fpm.conf"
+file_conf_apache_monitor="${S_PATH_INSTALL_CONF}/apache2/monitor-php.conf"
+file_conf_apache_opcache="${S_PATH_INSTALL_CONF}/apache2/opcache.conf"
+file_conf_apache_index=${S_PATH_INSTALL_CONF}/apache2/sites/index.php
+file_conf_apache_index_dom=${S_PATH_INSTALL_CONF}/apache2/sites/index-dom.php
+
+file_conf_rsyslog_client=${S_PATH_INSTALL_CONF}/rsyslog/client-phpfpm7.conf
+file_conf_rsyslog_host=${S_PATH_INSTALL_CONF}/rsyslog/host-phpfpm7.conf
+file_conf_logrotate_client=${S_PATH_INSTALL_CONF}/logrotate/client-phpfpm7
+file_conf_logrotate_host=${S_PATH_INSTALL_CONF}/logrotate/host-phpfpm7
 
 _echot "------------------ required files"
-_require ${file_phpfpm} ${file_monitor} ${file_opcache} ${file_xdebug} ${file_rsyslog_host} ${file_rsyslog_client} ${file_logrotate_host}
+_require ${file_conf_php_ini} ${file_conf_php_fpm} ${file_conf_php_fpmd_www} ${file_conf_php_fpmd_admin} ${file_conf_php_xdebug}
+_require ${file_conf_apache_phpfpm} ${file_conf_apache_monitor} ${file_conf_apache_opcache} ${file_conf_apache_index}
+_require ${file_conf_rsyslog_host} ${file_conf_rsyslog_client} ${file_conf_logrotate_host}
 
 ########################  DATA
 
@@ -52,37 +63,44 @@ profiles=`lxc profile list -f csv|grep "^www.*,"|cut -d, -f1`
 [ "${profiles}" ] && _menu "Select an available WWW profile to apply" ${profiles}
 profile_www="${_ANSWER}" || _ANSWER=
 
-_menu "Select one available container for cache" ${imgs_all_rds}
-ct_rds=${_ANSWER}
+_menu "Select one available container to caching" ${imgs_all_rds}
+_PHP_CACHE_CT=${_ANSWER}
 
-_echot "------------------  data php"
+_echot "------------------  data ct"
 
 profiles=`lxc profile list -f csv|grep "^php.*,"|cut -d, -f1`
-[ "${profiles}" ] && _menu "Select an available PHP profile to apply or none" none ${profiles} || _ANSWER=
+[ "${profiles}" ] && _menu "Select an available PHP profile to apply or none to create a new one" ${profiles} none || _ANSWER=
 profile="${_ANSWER/none/}"
 [ -z "${profile}" ] && anstmp=php7-${_DOM_FQDN} && _askno "Name of the new  PHP profile (${anstmp})" && profile="${_ANSWER:-$anstmp}"
 
+_echot "------------------  data php"
 
-anstmp="20" && _askno "max_execution_time (${anstmp})s"
+anstmp="${php_modules}" && _askno "php modules to install: \n${anstmp}\n"
+_PHP_MODULES="${_ANSWER:-$anstmp}" && _confset _PHP_MODULES "${_PHP_MODULES}"
+
+anstmp=30 && _askno "max_execution_time (${anstmp})s"
 _PHP_MAX_EXECUTION_TIME="${_ANSWER:-$anstmp}" && _confset _PHP_MAX_EXECUTION_TIME "${_PHP_MAX_EXECUTION_TIME}"
 
-anstmp="30" && _askno "max_input_time (${anstmp})s"
+anstmp=60 && _askno "max_input_time (${anstmp})s"
 _PHP_MAX_INPUT_TIME="${_ANSWER:-$anstmp}" && _confset _PHP_MAX_INPUT_TIME "${_PHP_MAX_INPUT_TIME}"
 
-anstmp="128M" && _askno "memory_limit (${anstmp})"
+anstmp=128M && _askno "memory_limit (${anstmp})"
 _PHP_MEMORY_LIMIT="${_ANSWER:-$anstmp}" && _confset _PHP_MEMORY_LIMIT "${_PHP_MEMORY_LIMIT}"
 
-anstmp="8M" && _askno "post_max_size (${anstmp})"
+anstmp=32M && _askno "post_max_size (${anstmp})"
 _PHP_POST_MAX_SIZE="${_ANSWER:-$anstmp}" && _confset _PHP_POST_MAX_SIZE "${_PHP_POST_MAX_SIZE}"
 
-anstmp="8M" && _askno "upload_max_filesize (${anstmp})"
+anstmp=16M && _askno "upload_max_filesize (${anstmp})"
 _PHP_UPLOAD_MAX_FILESIZE="${_ANSWER:-$anstmp}" && _confset _PHP_UPLOAD_MAX_FILESIZE "${_PHP_UPLOAD_MAX_FILESIZE}"
 
-anstmp="1" && _askno "session.use_strict_mode (${anstmp})"
+anstmp=1 && _askno "session.use_strict_mode (${anstmp})"
 _PHP_SESSION_STRICT_MODE="${_ANSWER:-$anstmp}" && _confset _PHP_SESSION_STRICT_MODE "${_PHP_SESSION_STRICT_MODE}"
 
-anstmp="${php_modules}" && _askno "php modules to install: \n${anstmp}"
-_PHP_MODULES="${_ANSWER:-$anstmp}" && _confset _PHP_MODULES "${_PHP_MODULES}"
+anstmp=256M && _askno "opcache, memory consumption ${anstmp}"
+_PHP_OPCACHE_SIZE="${_ANSWER:-$anstmp}" && _confset _PHP_OPCACHE_SIZE "${_PHP_OPCACHE_SIZE}"
+
+anstmp=4 && _askno "opcache, revalidate frequency ${anstmp}"
+_PHP_OPCACHE_REV="${_ANSWER:-$anstmp}" && _confset _PHP_OPCACHE_REV "${_PHP_OPCACHE_REV}"
 
 _echot "------------------  data php-fpm"
 
@@ -115,24 +133,21 @@ _PHP_W_MAX_REQUESTS="${_ANSWER:-$anstmp}" && _confset _PHP_W_MAX_REQUESTS "${_PH
 anstmp='2' && _askno "Give value for 'request_SLOWLOG_TIMEOUT' (${anstmp})"
 _PHP_SLOWLOG_TIMEOUT="${_ANSWER:-$anstmp}" && _confset _PHP_SLOWLOG_TIMEOUT "${_PHP_SLOWLOG_TIMEOUT}"
 
-
+_PHP_MAX_SYN_BACKLOG=$(( ${_APA_MAX_SYN_BACKLOG} / 2 - 1 ))
 _PHP_SERVICE=php-fpm7 && _confset _PHP_SERVICE "${_PHP_SERVICE}"
 _PHP_FPM_SOCK=/run/${_PHP_SERVICE}/php-fpm.sock && _confset _PHP_SERVICE "${_PHP_SERVICE}"
 _PHP_FPM_ADMIN_SOCK=/run/${_PHP_SERVICE}/php-fpm-admin.sock && _confset _PHP_SERVICE "${_PHP_SERVICE}"
 
-file_php_conf=/etc/php7/php.ini
-file_fpm_conf=/etc/php7/php-fpm.conf
-
-path_php_conf=/etc/php7/conf.d
-path_fpm_conf=/etc/php7/php-fpm.d
-path_apache_conf=/etc/apache2/conf.d
+path_php_base=/etc/php7
+path_fpm_confd=${path_php_base}/php-fpm.d
+path_apache_confd=/etc/apache2/conf.d
 
 # shared
+_PHP_PATH_SHARE=${S_VM_PATH_SHARE}/php/${_DOM_FQDN}
+_PHP_PATH_POOL=${_PHP_PATH_SHARE}/pools
 path_dom=${S_VM_PATH_SHARE}/www/${_DOM_FQDN}
-path_php_share=${S_VM_PATH_SHARE}/php/${_DOM_FQDN}
-path_fpm_pool=${path_php_share}/pools
-path_xdebug_profile=${path_php_share}/xdebug/profile
-path_xdebug_trace=${path_php_share}/xdebug/trace
+path_xdebug_profile=${_PHP_PATH_SHARE}/xdebug/profile
+path_xdebug_trace=${_PHP_PATH_SHARE}/xdebug/trace
 
 _CT_NAME=${ct_base}-1
 
@@ -143,7 +158,7 @@ if ! lxc profile list -f csv|grep -q "^${profile},"; then
 	_eval lxc profile create ${profile}
 
 	path=${S_HOST_PATH_SHARE}/php/${_DOM_FQDN}
-	path_ct=${path_php_share}
+	path_ct=${_PHP_PATH_SHARE}
 	[ -d ${path} ] || _evalr mkdir -p ${path}
 	_evalr chown -R ${_LXD_UID}:${_LXD_UID} ${S_HOST_PATH_SHARE}/php
 	_eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
@@ -177,188 +192,81 @@ _echot "------------------  metadata"
 _lxc_meta_set ${_CT_NAME} profiles default global ${profile_www} ${profile}
 _lxc_meta_add ${_CT_NAME} apps php7
 
+########################  INSTALL
+
+_echot "------------------  install php7-fpm"
+_lxc_exec ${_CT_NAME} "apk update"
+_lxc_exec ${_CT_NAME} "apk add php7-fpm ${php_modules}"
+
+_echot "------------------  service set & start"
+_lxc_exec ${_CT_NAME} "rc-update add ${_PHP_SERVICE}"
+_lxc_exec ${_CT_NAME} "rc-service ${_PHP_SERVICE} start"
+
 ########################  PATHS
 
 _echot "------------------  paths ${_PHP_SERVICE}"
-
-paths="${path_php_share}/tmp ${path_php_share}/sessions ${path_php_share}/soap ${path_xdebug_profile} ${path_xdebug_trace} ${path_fpm_pool}/www ${path_fpm_pool}/www-admin"
+paths="${_PHP_PATH_SHARE}/tmp ${_PHP_PATH_SHARE}/sessions ${_PHP_PATH_SHARE}/soap ${path_xdebug_profile} ${path_xdebug_trace}"
 cmd="for path in ${paths}; do [ -d \${path} ] || mkdir -p \${path}; done"
 _lxc_exec ${_CT_NAME} "${cmd}"
 
-########################  INSTALL
-
-_echot "------------------  update"
-_lxc_exec ${_CT_NAME} "apk update"
-
-_echot "------------------  install php7-fpm"
-_lxc_exec ${_CT_NAME} "apk add php7-fpm"
-
-_echot "------------------  install php7 modules"
-_lxc_exec ${_CT_NAME} "apk add ${php_modules}"
-
-_echot "------------------  service set & start"
-service=${_PHP_SERVICE}
-_lxc_exec ${_CT_NAME} "rc-update add ${service}"
-_lxc_exec ${_CT_NAME} "rc-service ${service} start"
-
 ########################  CONF PHP.INI
 
-_echot "------------------  conf php.ini global"
-file=${file_php_conf}
-_lxc_exec ${_CT_NAME} "[ -f ${file} ] && cp -a ${file} ${file}.${_SDATE}"
-
-# global
-cmds=; while read str val; do
-	cmds+="sed -i 's|^;\?\(${str}\s*=\).*|\1 ${val}|' ${file}
-"; done <<< "track_errors Off
-max_execution_time  ${_PHP_MAX_EXECUTION_TIME}
-max_input_time  ${_PHP_MAX_INPUT_TIME}
-memory_limit  ${_PHP_MEMORY_LIMIT}
-post_max_size  ${_PHP_POST_MAX_SIZE}
-file_uploads  On
-upload_max_filesize  ${_PHP_UPLOAD_MAX_FILESIZE}
-date.timezone  'Europe/Paris'
-session.use_strict_mode  ${_PHP_SESSION_STRICT_MODE}
-session.save_handler  redis
-session.save_path  \"tcp://${ct_rds}:${S_CACHE_PORT}\"
-mail.log  syslog"
-#error_log  syslog
-#syslog.ident  php
-#syslog.facility  user
-_lxc_exec ${_CT_NAME} "${cmds}"
-
-_echot "------------------  conf php.ini opcache"
-cmds=; while read str val; do
-	cmds+="sed -i 's|^;\?\(${str}\s*=\).*|\1 ${val}|' ${file}
-"; done <<< "opcache.enable 1
-opcache.enable_cli  0
-opcache.memory_consumption  128
-opcache.interned_strings_buffer  16
-opcache.max_accelerated_files  10000
-validate_timestamps  1
-opcache.revalidate_freq  4
-opcache.save_comments  1"
-_lxc_exec ${_CT_NAME} "${cmds}"
-
-_echot "------------------  conf php.ini paths"
-
-cmds=; while read str val; do
-	cmds+="sed -i 's|^;\?\(${str}\s*=\).*|\1 ${val}|' ${file}
-"; done <<< "upload_tmp_dir  ${path_php_share}/tmp
-sys_temp_dir  ${path_php_share}/tmp
-soap.wsdl_cache_dir  ${path_php_share}/soap"
-_lxc_exec ${_CT_NAME} "${cmds}"
+_echot "------------------  conf php.ini"
+file=${path_php_base}/${file_conf_php_ini##*/}
+_lxc_exec_t ${_CT_NAME} "cp -a ${file} ${file}.${_SDATE}"
+_eval lxc file push -q ${file_conf_php_ini} ${_CT_NAME}${file}
 
 ########################  CONF PHP-FPM
 
-file=${file_fpm_conf}
-_lxc_exec ${_CT_NAME} "[ -f ${file} ] && cp -a ${file} ${file}.${_SDATE}"
-
-_echot "------------------  conf php.fpm global"
-
-cmds=; while read str val; do
-	cmds+="sed -i 's|^;\?\(${str}\s*=\).*|\1 ${val}|' ${file}
-"; done <<< "emergency_restart_threshold  ${_PHP_RESTART_THRESHOLD}
-emergency_restart_interval  ${_PHP_RESTART_INTERVAL}
-process_control_timeout  ${_PHP_CONTROL_TIMEOUT}
-error_log  syslog
-syslog.facility  daemon
-syslog.ident  ${_PHP_SERVICE}
-log_level  notice
-log_limit  1024
-log_buffering  yes"
-_lxc_exec ${_CT_NAME} "${cmds}"
+_echot "------------------  conf php.fpm"
+file=${path_php_base}/${file_conf_php_fpm##*/}
+_lxc_exec_t ${_CT_NAME} "cp -a ${file} ${file}.${_SDATE}"
+_eval lxc file push -q ${file_conf_php_fpm} ${_CT_NAME}${file}
 
 ########################  POOL - WWW
 
 pool=www
-_echot "------------------  file pool ${pool}"
-file=${path_fpm_conf}/${pool}.conf
+_echot "------------------  path pool ${pool}"
+path="${_PHP_PATH_POOL}/${pool}"
+_lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
 
-_lxc_exec ${_CT_NAME} "[ -f ${file} ] && cp -a ${file} ${file}.${_SDATE}"
 _echot "------------------  conf pool ${pool}"
-cmds=; while read str val; do
-	cmds+="sed -i 's|^;\?\(${str}\s*=\).*|\1 ${val}|' ${file}
-"; done <<< "prefix  ${path_fpm_pool}/www
-user apache
-group apache
-listen  ${_PHP_FPM_SOCK}
-listen.backlog  $(( ${_APA_MAX_SYN_BACKLOG} / 2 ))
-listen.owner  apache
-listen.group  apache
-listen.mode  0666
-process.priority  0
-process.dumpable  yes
-pm dynamic
-pm.max_children  ${_PHP_W_MAX_CHILDREN}
-pm.start_servers  ${_PHP_W_START_SERVERS}
-pm.min_spare_servers  ${_PHP_W_MIN_SPARE_SERVERS}
-pm.max_spare_servers  ${_PHP_W_MAX_SPARE_SERVERS}
-pm.max_requests  ${_PHP_W_MAX_REQUESTS}
-pm.status_path  /status-www
-ping.path  /ping-www
-ping.response  pong
-access.log  ${S_PATH_LOG}/php7/\$pool.access.info
-slowlog  ${S_PATH_LOG}/php7/\$pool.slow.info
-request_slowlog_timeout  ${_PHP_SLOWLOG_TIMEOUT}
-catch_workers_output  yes"
-_lxc_exec ${_CT_NAME} "${cmds}"
-
-_lxc_exec ${_CT_NAME} "sed -i 's|^;\?\(access.format\s*=\).*|\1  \"%R - %u %t \\\\\"%m %r%Q%q\\\\\" %s %f %{mili}d %{kilo}M %C%%\"|' ${file}"
+file=${path_fpm_confd}/${file_conf_php_fpmd_www##*/}
+_lxc_exec_t ${_CT_NAME} "[ -f '${file}' ] && cp -a ${file} ${file}.${_SDATE}"
+_eval lxc file push -q ${file_conf_php_fpmd_www} ${_CT_NAME}${file}
 
 ########################  POOL - WWW-ADMIN
 
-pool=www-admin
-
-_echot "------------------  file pool ${pool}"
-file=${path_fpm_conf}/${pool}.conf
-_lxc_exec ${_CT_NAME} "[ -f ${file} ] && cp -a ${file} ${file}.${_SDATE}"
-_lxc_exec ${_CT_NAME} "cp -a ${path_fpm_conf}/www.conf.${_SDATE} ${file}"
+pool=admin
+_echot "------------------  path pool ${pool}"
+path="${_PHP_PATH_POOL}/${pool}"
+_lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
 
 _echot "------------------  conf pool ${pool}"
-_lxc_exec ${_CT_NAME} "sed -i 's|^\[.*\]$|[${pool}]|' ${file}"
-
-cmds=; while read str val; do
-	cmds+="sed -i 's|^;\?\(${str}\s*=\).*$|\1 ${val}|' ${file}
-"; done <<< "prefix  ${path_fpm_pool}/www-admin
-user apache
-group apache
-listen  ${_PHP_FPM_ADMIN_SOCK}
-listen.backlog  $(( ${_APA_MAX_SYN_BACKLOG} / 2 ))
-listen.owner  apache
-listen.group  apache
-listen.mode  0666
-process.priority  0
-process.dumpable  yes
-pm static
-pm.max_children  1
-pm.max_requests  100000
-pm.status_path  /status-www-admin
-ping.path  /ping-www-admin
-ping.response  pong"
-_lxc_exec ${_CT_NAME} "${cmds}"
+file=${path_fpm_confd}/${file_conf_php_fpmd_admin##*/}
+_lxc_exec_t ${_CT_NAME} "[ -f '${file}' ] && cp -a ${file} ${file}.${_SDATE}"
+_eval lxc file push -q ${file_conf_php_fpmd_admin} ${_CT_NAME}${file}
 
 ########################  APACHE
 
 _echot "------------------  apache php-fpm"
-
-file=${path_apache_conf}/${file_phpfpm##*/}
-_eval lxc file push -q ${file_phpfpm} ${_CT_NAME}${file}
-_lxc_var_replace ${_CT_NAME} ${file} php apache
+file=${path_apache_confd}/${file_conf_apache_phpfpm##*/}
+_eval lxc file push -q ${file_conf_apache_phpfpm} ${_CT_NAME}${file}
 
 _echot "------------------  localhost files"
-_lxc_exec ${_CT_NAME} "echo '<?php phpinfo() ?>' > ${_APA_PATH_WWW}/phpinf.php"
-file=${_APA_PATH_WWW}/index.php
-_lxc_exec ${_CT_NAME} "echo '<html><body><h1><?php echo \"php works!\" ?></h1></body></html>' > ${file}"
+file=${path_apache_confd}/${file_conf_apache_index##*/}
+_eval lxc file push -q ${file_conf_apache_index} ${_CT_NAME}${file}
 file=${_APA_PATH_WWW}/index.html
-_lxc_exec ${_CT_NAME} "[ -f ${file} ] && mv ${file} ${file}.keep"
+_lxc_exec ${_CT_NAME} "[ -f '${file}' ] && mv ${file} ${file}.${_SDATE}"
+_lxc_exec ${_CT_NAME} "echo '<?php phpinfo() ?>' > ${_APA_PATH_WWW}/phpinf.php"
 
 _echot "------------------  ${_DOM_FQDN} files"
 _lxc_exec ${_CT_NAME} "echo '<?php phpinfo() ?>' > ${path_dom}/html/phpinf.php"
 file=${path_dom}/html/index.php
-_lxc_exec ${_CT_NAME} "echo '<html><body><h1>${_DOM_FQDN} php works!</h1></body></html>' > ${file}"
-file=${path_dom}/index.html
-_lxc_exec ${_CT_NAME} "[ -f ${file} ] && mv ${file} ${file}.keep"
+_eval lxc file push -q ${file_conf_apache_index_dom} ${_CT_NAME}${file}
+_lxc_var_replace ${_CT_NAME} ${file} apache
+file=${path_dom}/html/index.html
+_lxc_exec ${_CT_NAME} "[ -f '${file}' ] && mv ${file} ${file}.${_SDATE}"
 
 ########################  PING-MONITOR
 
@@ -366,10 +274,9 @@ _echot "------------------  ping-monitor file"
 _lxc_exec ${_CT_NAME} "echo '<?php echo \"pong\"; ?>' > ${_APA_PATH_WWW}/ping-monitor.php"
 
 _echot "------------------  ping-monitor conf"
-file=${path_apache_conf}/${file_monitor##*/}
+file=${path_apache_confd}/monitor.conf
 _keepcpts ${file}
-_eval lxc file push -q ${file_monitor} ${_CT_NAME}${file}
-_lxc_var_replace ${_CT_NAME} ${file} apache php
+_eval lxc file push -q ${file_conf_apache_monitor} ${_CT_NAME}${file}
 
 ########################  OPCACHE
 
@@ -379,25 +286,26 @@ file=${_APA_PATH_WWW}/opcache.php
 _lxc_exec ${_CT_NAME} "wget -q ${url} -O ${file}"
 
 _echot "------------------  opcache conf"
-file=${path_apache_conf}/${file_opcache##*/}
+file=${path_apache_confd}/${file_conf_apache_opcache##*/}
 _keepcpts ${file}
-_eval lxc file push -q ${file_opcache} ${_CT_NAME}${file}
-_lxc_var_replace ${_CT_NAME} ${file} apache php
-
-########################  RIGHTS
-
-_echot "------------------  rights"
-_lxc_exec ${_CT_NAME} "chown apache:apache -R ${path_php_share}/*"
-_lxc_exec ${_CT_NAME} "chown apache:apache -R ${_APA_PATH_WWW}"
-_lxc_exec ${_CT_NAME} "chown apache:apache -R ${path_dom}/*"
+_eval lxc file push -q ${file_conf_apache_opcache} ${_CT_NAME}${file}
 
 ########################  RESTART
+
+_echot "------------------  var replace"
+_lxc_var_replace ${_CT_NAME} ${path_php_base} php php2
+_lxc_var_replace ${_CT_NAME} ${path_apache_confd} apache php2
 
 _echot "------------------  ${_PHP_SERVICE} restart"
 _lxc_exec ${_CT_NAME} "rc-service ${_PHP_SERVICE} restart"
 
 _echot "------------------  apache2 restart"
 _lxc_exec ${_CT_NAME} "rc-service apache2 restart"
+
+########################  RIGHTS
+
+_echot "------------------  rights"
+_lxc_exec ${_CT_NAME} "chown apache:apache -R ${_APA_PATH_WWW} ${path_dom} ${_PHP_PATH_SHARE}"
 
 ########################  RSYSLOG
 
@@ -406,8 +314,8 @@ path=${S_VM_PATH_LOG}/php7
 _lxc_exec ${S_SERVICE[log]} "[ -d ${path} ] || mkdir -p ${path}"
 
 _echot "------------------  ${S_SERVICE[log]} host"
-file=/etc/rsyslog.d/${file_rsyslog_host##*/}
-_eval lxc file push -q ${file_rsyslog_host} ${S_SERVICE[log]}${file}
+file=/etc/rsyslog.d/${file_conf_rsyslog_host##*/}
+_eval lxc file push -q ${file_conf_rsyslog_host} ${S_SERVICE[log]}${file}
 _lxc_var_replace ${S_SERVICE[log]} ${file} rsyslog php
 
 _echot "------------------  rsyslog restart ${S_SERVICE[log]}"
@@ -418,8 +326,8 @@ path=${S_PATH_LOG}/php7
 _lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
 
 _echot "------------------  ${_CT_NAME} client"
-file=/etc/rsyslog.d/${file_rsyslog_client##*/}
-_eval lxc file push -q ${file_rsyslog_client} ${_CT_NAME}${file}
+file=/etc/rsyslog.d/${file_conf_rsyslog_client##*/}
+_eval lxc file push -q ${file_conf_rsyslog_client} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} rsyslog php
 
 _echot "------------------  rsyslog restart ${_CT_NAME}"
@@ -428,8 +336,8 @@ _lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
 ########################  LOGROTATE
 
 _echot "------------------  ${S_SERVICE[log]} logrotate"
-file=/etc/logrotate.d/${file_logrotate_host##*/}
-_eval lxc file push -q ${file_logrotate_host} ${S_SERVICE[log]}${file}
+file=/etc/logrotate.d/${file_conf_logrotate_host##*/}
+_eval lxc file push -q ${file_conf_logrotate_host} ${S_SERVICE[log]}${file}
 _lxc_var_replace ${S_SERVICE[log]} ${file} logrotate
 _lxc_exec ${S_SERVICE[log]} "chmod g-w,o= /etc/logrotate.d/*"
 
@@ -437,8 +345,8 @@ _echot "------------------  ${S_SERVICE[log]} crond restart"
 _lxc_exec ${S_SERVICE[log]} "rc-service crond restart"
 
 _echot "------------------  ${_CT_NAME} logrotate"
-file=/etc/logrotate.d/${file_logrotate_client##*/}
-_eval lxc file push -q ${file_logrotate_client} ${_CT_NAME}${file}
+file=/etc/logrotate.d/${file_conf_logrotate_client##*/}
+_eval lxc file push -q ${file_conf_logrotate_client} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} logrotate
 _lxc_exec ${_CT_NAME} "chmod g-w,o= /etc/logrotate.d/*"
 
@@ -464,33 +372,36 @@ for i in `seq 2 ${ct_num}`; do
 	_eval lxc start ${ct_name}
 done
 
+########################  HAPROXY
+
+_echot "------------------  haproxy conf"
+_echoA "Adjust proxy settings for domain ${_DOM_FQDN} with this data"
+_echoa $(for i in `seq 1 ${ct_num}`; do echo ${ct_base}-${i};done)
+_echo "Use the container: ${S_SERVICE[proxy]}"
+_echo "the file: /etc/haproxy/conf-available/50-backs-80"
+_echo ""
+
 ########################  TEST
 
 _echot "------------------  php test"
+_echoa "To verify php configuration, type:"
+_echo "curl ${_IPTHIS}/phpinf.php"
+_echo "curl ${_CT_NAME}/phpinf.php"
+_echo "curl ${_DOM_FQDN}:80"
 
-_echoA "To verify php configuration, type:"
-_echoa "curl ${_IPTHIS}/phpinf.php"
-_echoa "curl ${_CT_NAME}/phpinf.php"
-_echoa "curl ${_DOM_FQDN}:80"
+_echoa "To verify ping response, type:"
+_echo "curl ${_CT_NAME}/ping-monitor"
 
-_echoA "To verify ping response, type:"
-_echoa "curl ${_CT_NAME}/ping-monitor"
+_echoa "To verify opcache response, type:"
+_echo "curl ${_CT_NAME}/opcache"
 
-_echoA "To verify opcache response, type:"
-_echoa "curl ${_CT_NAME}/opcache"
+_echoa "To verify 'www' pool informations, type:"
+_echo "curl ${_CT_NAME}/status-www"
+_echo "curl ${_CT_NAME}/status-www?full"
 
-_echoA "To verify 'www' pool informations, type:"
-_echoa "curl ${_CT_NAME}/status-www"
-_echoa "curl ${_CT_NAME}/status-www?full"
-
-_echoA "To verify 'www-admin' pool informations, type:"
-_echoa "curl ${_CT_NAME}/status-www-admin"
-_echoa "curl ${_CT_NAME}/status-www-admin?full"
-
-########################  HAPROXY
-
-_echoA "\nAdjust backend in proxy for domain: ${_DOM_FQDN} with:"
-_echoa $(for i in `seq 1 ${ct_num}`; do echo ${ct_base}-${i};done)
+_echoa "To verify 'admin' pool informations, type:"
+_echo "curl ${_CT_NAME}/status-admin"
+_echo "curl ${_CT_NAME}/status-admin?full"
 
 ########################  PUBLISH
 
