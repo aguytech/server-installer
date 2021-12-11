@@ -2,9 +2,8 @@
 #
 # write by Aguy
 
-_echoT "\n==========================================  ${_INSTALL}-${_PART}"
-
-grep -q "^# ${_PART#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART}" >> ${S_FILE_INSTALL_CONF}
+_echoT "\n==========================================  ${_INSTALL}-${_PART#++}"
+grep -q "^# ${_PART#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART#++}" >> ${S_FILE_INSTALL_CONF}
 
 ########################  REQUIRED
 
@@ -195,7 +194,7 @@ _echot "------------------  variables set"
 strpass="root @ localhost - ${_MDB_PWD_LOCAL}\n"
 
 _echot "------------------  right roothost"
-for ip in ${_IPS_CLUSTER} ${_IP_HOST_VM}; do
+for ip in ${_IPS_CLUSTER} ${_CIDR_VM%/*}; do
 	strpass+="roothost @ ${ip} - ${_MDB_DB_HOST_PWD}\n"
 	cmd="GRANT ALL PRIVILEGES ON *.* TO roothost@'${ip}' IDENTIFIED BY '${_MDB_DB_HOST_PWD}' WITH GRANT OPTION"
 	_lxc_exec ${_CT_NAME} "mysql -uroot -p${_MDB_PWD_LOCAL} -e \"${cmd}\""

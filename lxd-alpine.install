@@ -34,7 +34,6 @@ done
 #don't mix with S_* variables from host
 [ -z ${_RELEASE_ID+x} ] && _RELEASE_ID=alpine && _confset _RELEASE_ID "${_RELEASE_ID}"
 [ -z ${_RELEASE_PART+x} ] && _RELEASE_PART=lxd-${_RELEASE_ID} && _confset _RELEASE_PART "${_RELEASE_PART}"
-_IP_HOST_VM=${_CIDR_VM%/*} && _confset _IP_HOST_VM "${_IP_HOST_VM}"
 
 ########################  MENU
 

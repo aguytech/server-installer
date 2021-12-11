@@ -2,9 +2,8 @@
 #
 # write by Aguy
 
-_echoT "\n==========================================  ${_INSTALL}-${_PART}"
-
-grep -q "^# ${_PART#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART}" >> ${S_FILE_INSTALL_CONF}
+_echoT "\n==========================================  ${_INSTALL}-${_PART#++}"
+grep -q "^# ${_PART#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART#++}" >> ${S_FILE_INSTALL_CONF}
 
 ########################  REQUIRED
 
