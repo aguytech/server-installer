@@ -33,7 +33,7 @@
 # If you use the same .cnf file for MySQL and MariaDB,
 # you can put MariaDB-only options here
 [mariadb]
-port=S_DB_MARIA_PORT
+port=S_DB_MARIA_PORT_RW
 skip-networking = 0
 bind-address = 0.0.0.0
 #innodb_strict_mode=1 # certain InnoDB warnings become errors instead

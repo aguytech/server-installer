@@ -42,13 +42,13 @@ server_id = _MDB_SLAVE_ID
 # The host name or IP address the replica reports to the primary when it registers
 report_host = slave_MDB_SLAVE_ID
 # databases name to use for bin log
-#binlog-do-db = _MDB_REPLICATE_ONLY
+#binlog-do-db =
 # databases name to ignore for bin log
-#binlog-ignore-db = _MDB_REPLICATE_EXCEPT
+#binlog-ignore-db =
 # restrict database names used for replication
-#replicate-do-db = _MDB_REPLICATE_ONLY
+#replicate-do-db =
 # database names to exclude of replication
-#replicate-ignore-db = _MDB_REPLICATE_EXCEPT
+#replicate-ignore-db =
 # restrict table names used for replication
 #replicate-do-table =
 # table names to exclude of replication

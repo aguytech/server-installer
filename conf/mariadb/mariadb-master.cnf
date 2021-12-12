@@ -42,9 +42,9 @@ server_id = _MDB_MASTER_ID
 # The host name or IP address the replica reports to the primary when it registers
 report_host = master_MDB_MASTER_ID
 # databases name to use for bin log
-#binlog-do-db = _MDB_REPLICATE_ONLY
+#binlog-do-db=
 # databases name to ignore for bin log
-#binlog-ignore-db = _MDB_REPLICATE_EXCEPT
+#binlog-ignore-db=
 
 # This group is only read by MariaDB-10.5 servers.
 # If you use the same .cnf file for MariaDB of different versions,
