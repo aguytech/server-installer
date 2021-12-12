@@ -24,18 +24,18 @@ _require ${file_rsyslog_client_iptables} ${file_logrotate_client_iptables}
 
 _echot "------------------  data"
 
+[ -z ${_IPT_PRE_SSH+x} ] && { anstmp=20; _askno "PREFIX of port for 'SSH' VMs connections (${anstmp})"; _IPT_PRE_SSH="${_ANSWER:-$anstmp}"; }
+_confset _IPT_PRE_SSH "${_IPT_PRE_SSH}"
+
+[ -z ${_IPT_PRE_HTTP+x} ] && { anstmp=8; _askno "PREFIX of port for 'HTTP' VMs connections  (${anstmp})"; _IPT_PRE_HTTP="${_ANSWER:-$anstmp}"; }
+_confset _IPT_PRE_HTTP "${_IPT_PRE_HTTP}"
+
+[ -z ${_IPT_PRE_HTTPS+x} ] && { anstmp=9; _askno "PREFIX of port for 'HTTP' VMs connections (${anstmp})"; _IPT_PRE_HTTPS="${_ANSWER:-$anstmp}"; }
+_confset _IPT_PRE_HTTPS "${_IPT_PRE_HTTPS}"
+
 # host
-_IPT_SERVICE=iptables-firewall && _confset _IPT_SERVICE "${_IPT_SERVICE}"
+_IPT_SERVICE=iptables-firewall; _confset _IPT_SERVICE "${_IPT_SERVICE}"
 _IPT_FILE_CONF=${S_PATH_CONF}/iptables-firewall.conf; _confset _IPT_FILE_CONF "${_IPT_FILE_CONF}"
-
-[ -z ${_IPT_PRE_SSH+x} ] && { anstmp=20; _askno "PREFIX of port for 'SSH' VMs connections (${anstmp})"
-	_IPT_PRE_SSH="${_ANSWER:-$anstmp}"; _confset _IPT_PRE_SSH "${_IPT_PRE_SSH}"; }
-
-[ -z ${_IPT_PRE_HTTP+x} ] && { anstmp=8; _askno "PREFIX of port for 'HTTP' VMs connections  (${anstmp})"
-_IPT_PRE_HTTP="${_ANSWER:-$anstmp}"; _confset _IPT_PRE_HTTP "${_IPT_PRE_HTTP}"; }
-
-[ -z ${_IPT_PRE_HTTPS+x} ] && { anstmp=9; _askno "PREFIX of port for 'HTTP' VMs connections (${anstmp})"
-_IPT_PRE_HTTPS="${_ANSWER:-$anstmp}"; _confset _IPT_PRE_HTTPS "${_IPT_PRE_HTTPS}"; }
 
 ########################  CONFIGURATION
 

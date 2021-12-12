@@ -28,13 +28,12 @@ _SSH_PORT=${s_port}
 
 eval ${S_HOST_VM_ETH[default]} # get s_inet s_cidr s_base
 
-if [ -z ${_IPS_IGNORED+x} ]; then
-	anstmp="127.0.0.0/8 [::1]/128 ${s_cidr}"
+[ -z ${_IPS_IGNORED+x} ] && { anstmp="127.0.0.0/8 [::1]/128 ${s_cidr}"
 	anstmp+=" $(echo "${S_CLUSTER[*]}"|tr ' ' '\n'|sed -n 's|s_ip=\([^ ]\+\)$|\1|p'|xargs)"
 	anstmp+=" $(echo "${S_CLUSTER[*]}"|tr ' ' '\n'|sed -n 's|s_ip6=\([^ ]\+\)$|\1|p'|xargs)"
 	_askno "ignored IPs (${anstmp})"
-	_IPS_IGNORED="${_ANSWER:-$anstmp}" && _confset _IPS_IGNORED "${_IPS_IGNORED}"
-fi
+	_IPS_IGNORED="${_ANSWER:-$anstmp}"; }
+_confset _IPS_IGNORED "${_IPS_IGNORED}"
 
 ########################  CONFIGURATION
 
