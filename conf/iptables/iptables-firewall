@@ -131,10 +131,9 @@ __init() {
 	__ipt -A FORWARD -p all -i ${_ETH} -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
 	__ipt -A FORWARD -p all -o ${_ETH} -m conntrack --ctstate NEW,ESTABLISHED,RELATED -j ACCEPT
 
-	_echo "- Allow existing & new incomming FORWARD for ${_ETH_VM}"
-	__ipt -A FORWARD -p all -i ${_ETH_VM} -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
-	__ipt -A FORWARD -p all -o ${_ETH_VM} -m conntrack --ctstate NEW,ESTABLISHED,RELATED -j ACCEPT
-
+	#_echo "- Allow existing & new incomming FORWARD for ${_ETH_VM}"
+	#__ipt -A FORWARD -p all -i ${_ETH_VM} -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+	#__ipt -A FORWARD -p all -o ${_ETH_VM} -m conntrack --ctstate NEW,ESTABLISHED,RELATED -j ACCEPT
 
 	_echo "\n-------------------------- INIT IPv6"
 
@@ -169,9 +168,9 @@ __init() {
 	__ipt6 -A OUTPUT -p all -o ${_ETH} -m conntrack --ctstate NEW,ESTABLISHED,RELATED -j ACCEPT
 
 	# FORWARD
-	_echo "- Allow existing incomming FORWARD & new outcomming FORWARD for ${_ETH} - IPV6"
-	__ipt6 -A FORWARD -p all -i ${_ETH} -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
-	__ipt6 -A FORWARD -p all -o ${_ETH} -m conntrack --ctstate NEW,ESTABLISHED,RELATED -j ACCEPT
+	#_echo "- Allow existing incomming FORWARD & new outcomming FORWARD for ${_ETH} - IPV6"
+	#__ipt6 -A FORWARD -p all -i ${_ETH} -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+	#__ipt6 -A FORWARD -p all -o ${_ETH} -m conntrack --ctstate NEW,ESTABLISHED,RELATED -j ACCEPT
 
 	# ICMP
 	_echo "- Allow ICMP INPUT/OUTPUT for ${_ETH} - IPV6"
