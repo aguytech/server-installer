@@ -38,53 +38,60 @@ _echot "------------------  data domain"
 
 cts_www=`lxc list -f json | jq -r '.[] | select(.profiles | any(contains("www-"))).name'`
 [ "${cts_www}" ] || _exite "Unable to find a container with a www* profile"
-_menu "Select one available container for www default server" ${cts_www}
-_SERVER_DEFAULT=${_ANSWER}
+
+[ -z ${_SERVER_DEFAULT+x} ] && { _menu "Select one available container for www default server" ${cts_www}
+	_SERVER_DEFAULT=${_ANSWER}; }
 
 _echot "------------------  data"
 
-anstmp=admin && _askno "Name for stats access (${anstmp})"
-_HPX_ACCESS_USER="${_ANSWER:-${anstmp}}" && _confset _HPX_ACCESS_USER "${_HPX_ACCESS_USER}"
+[ -z ${_HPX_ACCESS_USER+x} ] && { anstmp=admin; _askno "Name for stats access (${anstmp})"; _HPX_ACCESS_USER="${_ANSWER:-${anstmp}}"; }
+_confset _HPX_ACCESS_USER "${_HPX_ACCESS_USER}"
 
-anstmp=`_pwd` && _askno "Password to stats access (${anstmp})"
-_HPX_ACCESS_PWD="${_ANSWER:-${anstmp}}" && _confset _HPX_ACCESS_PWD "${_HPX_ACCESS_PWD}"
+[ -z ${_HPX_ACCESS_PWD+x} ] && { anstmp=`_pwd`; _askno "Password to stats access (${anstmp})"; _HPX_ACCESS_PWD="${_ANSWER:-${anstmp}}"; }
+_confset _HPX_ACCESS_PWD "${_HPX_ACCESS_PWD}"
 
-anstmp=/haproxy-stats && _askno "URI to access to admin site (${anstmp})"
-_HPX_ACCESS_URI="${_ANSWER:-${anstmp}}" && _confset _HPX_ACCESS_URI "${_HPX_ACCESS_URI}"
+[ -z ${_HPX_ACCESS_URI+x} ] && { anstmp=/haproxy-stats; _askno "URI to access to admin site (${anstmp})"; _HPX_ACCESS_URI="${_ANSWER:-${anstmp}}"; }
+_confset _HPX_ACCESS_URI "${_HPX_ACCESS_URI}"
 
 _echot "------------------  data certbot"
 
-_askyn "Use certbot" && _HPX_CERTBOT_ENABLE="${_ANSWER/n/}"
+[ -z ${_HPX_CERTBOT_ON+x} ] && { _askyn "Use certbot"
+	_HPX_CERTBOT_ON="${_ANSWER/n/}"; }
 
-if [ "${_HPX_CERTBOT_ENABLE}" ]; then
-	anstmp="admin blog carte chat chiffres cloud cms code compta dev diaspora discord discourse down elastik \
+if [ "${_HPX_CERTBOT_ON}" ] ; then
+	[ -z ${_HPX_CERTBOT_SUBS+x} ] && { anstmp="admin blog carte chat chiffres cloud cms code compta dev diaspora discord discourse down elastik \
 files forum gestion git gitea gitlab graylog info kibana links log manage matomo metrics monitor nextcloud pfa \
 pma pro project projet riot roundcube shaarli snippet social stats test tuleap vma vmail webmail wiki www zabbix" # imap mail mail10 mx mx10 smtp
-	_askno "Subdomains to register to certbot: (${anstmp})"
-	_HPX_CERTBOT_SUBS="${_ANSWER:-${anstmp}}" && _confset _HPX_CERTBOT_SUBS "${_HPX_CERTBOT_SUBS}"
+	_askno "Subdomains to register to certbot: (${anstmp})"; _HPX_CERTBOT_SUBS="${_ANSWER:-${anstmp}}"; }
+	_confset _HPX_CERTBOT_SUBS "${_HPX_CERTBOT_SUBS}"
 
-	anstmp=8079 && _askno "Port for certbot (${anstmp})"
-	_HPX_CERTBOT_PORT="${_ANSWER:-${anstmp}}" && _confset _HPX_CERTBOT_PORT "${_HPX_CERTBOT_PORT}"
+	[ -z ${_HPX_CERTBOT_PORT+x} ] && { anstmp=8079; _askno "Port for certbot (${anstmp})"; _HPX_CERTBOT_PORT="${_ANSWER:-${anstmp}}"; }
+	_confset _HPX_CERTBOT_PORT "${_HPX_CERTBOT_PORT}"
 fi
 
 _CT_NAME=${S_SERVICE[proxy]}
 eval ${S_HOST_VM_ETH[default]}
 _CT_IP=${s_base}.${S_SERVICE_BITS[proxy]}
 
-_HPX_CT_NAME=${S_DOM_FQDN//./-} && _confset _HPX_CT_NAME "${_HPX_CT_NAME}"
-_HPX_DNS_DEFAULT=${s_base}.1:53 && _confset _HPX_DNS_DEFAULT "${_HPX_DNS_DEFAULT}"
+_HPX_CT_NAME=${S_DOM_FQDN//./-}; _confset _HPX_CT_NAME "${_HPX_CT_NAME}"
+_HPX_DNS_DEFAULT=${s_base}.1:53; _confset _HPX_DNS_DEFAULT "${_HPX_DNS_DEFAULT}"
 
-_HPX_STATS_PORT=${S_HAPROXY_STATS_PORTS%% *} && _confset _HPX_STATS_PORT "${_HPX_STATS_PORT}"
-_HPX_STATS_2_PORT=${S_HAPROXY_STATS_PORTS#* } && _HPX_STATS_2_PORT=${_HPX_STATS_2_PORT%% *} && _confset _HPX_STATS_2_PORT "${_HPX_STATS_2_PORT}"
+_HPX_STATS_PORT=${S_HAPROXY_STATS_PORTS%% *}; _confset _HPX_STATS_PORT "${_HPX_STATS_PORT}"
+_HPX_STATS_2_PORT=${S_HAPROXY_STATS_PORTS#* }; _HPX_STATS_2_PORT=${_HPX_STATS_2_PORT%% *}; _confset _HPX_STATS_2_PORT "${_HPX_STATS_2_PORT}"
 
-_HPX_PATH_SSL=${S_VM_PATH_SHARE}/ssl/haproxy && _confset _HPX_PATH_SSL "${_HPX_PATH_SSL}"
+_HPX_PATH_SSL=${S_VM_PATH_SHARE}/ssl/haproxy; _confset _HPX_PATH_SSL "${_HPX_PATH_SSL}"
 path_ssl_conf=${_HPX_PATH_SSL}/conf
 path_ssl_private=${_HPX_PATH_SSL}/private
 path_ssl_certs=${_HPX_PATH_SSL}/certs
 path_ssl_haproxy=${_HPX_PATH_SSL}/haproxy
 path_ssl_letsencrypt=${_HPX_PATH_SSL}/letsencrypt
-_HPX_SSL_CA_KEY=${path_ssl_private}/rootCA.key.ca && _confset _HPX_SSL_CA_KEY "${_HPX_SSL_CA_KEY}"
-_HPX_SSL_CA_PEM=${path_ssl_certs}/rootCA.pem.ca && _confset _HPX_SSL_CA_PEM "${_HPX_SSL_CA_PEM}"
+_HPX_SSL_CA_KEY=${path_ssl_private}/rootCA.key.ca; _confset _HPX_SSL_CA_KEY "${_HPX_SSL_CA_KEY}"
+_HPX_SSL_CA_PEM=${path_ssl_certs}/rootCA.pem.ca; _confset _HPX_SSL_CA_PEM "${_HPX_SSL_CA_PEM}"
+
+########################  CONFIGURATION
+
+# load configuration file
+. ${S_FILE_INSTALL_CONF}
 
 ########################  PROFILE
 
@@ -231,7 +238,7 @@ if ! _lxc_exec ${_CT_NAME}  "[ -f '${_HPX_SSL_CA_KEY}' -a -f '${_HPX_SSL_CA_PEM}
 	_lxc_exec ${_CT_NAME} chmod g=,o= -R ${path_ssl_private}
 fi
 
-if [ "${_HPX_CERTBOT_ENABLE}" ]; then
+if [ "${_HPX_CERTBOT_ON}" ]; then
 
 	########################  LETSENCRYPT
 
@@ -251,7 +258,7 @@ if [ "${_HPX_CERTBOT_ENABLE}" ]; then
 
 	_echot "------------------  copy certbot"
 	_echoA "To renew existing certificates, delete them"
-	_askno "Valid to continue"
+	[ -z "${_INSTALL_AUTO}" ] && _askno "Valid to continue"
 
 	for domain in ${S_DOM_ALL_FQDN}; do
 		if ! _lxc_exec ${_CT_NAME} "[ -d /etc/letsencrypt/live/${domain} ]"; then

@@ -22,8 +22,8 @@ _require ${file_ssmtp_conf} ${file_ssmtp_alias}
 ########################  DATA
 
 _echot "------------------  data"
-[ -z ${_RELEASE_NAME+x} ] && { anstmp=3.15; _askno "Give a version image container for LXC ${_RELEASE_ID} (${anstmp})"
-	_RELEASE_NAME="${_ANSWER:-$anstmp}"; _confset _RELEASE_NAME "${_RELEASE_NAME}"; }
+[ -z ${_RELEASE_NAME+x} ] && { anstmp=3.15; _askno "Give a version image container for LXC ${_RELEASE_ID} (${anstmp})"; _RELEASE_NAME="${_ANSWER:-$anstmp}"; }
+_confset _RELEASE_NAME "${_RELEASE_NAME}"
 
 _RELEASE=${_RELEASE_ID}${_RELEASE_NAME} && _confset _RELEASE "${_RELEASE}"
 _IMG_NAME="${_RELEASE/./}"

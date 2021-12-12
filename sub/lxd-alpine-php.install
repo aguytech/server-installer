@@ -8,12 +8,15 @@ grep -q "^# ${_PART#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART#++}" >> ${S
 ########################  REQUIRED
 
 _echot "------------------ required vm"
-cts_all_www=`lxc image list -f csv -c l| grep -e '^\(wa-\|wn-\)'`
+cts_all_www=$(lxc image list -f csv -c l| grep -e '^\(wa-\|wn-\)')
 [ "${cts_all_www}" ] || _exite "Unable to find image container start with wa-|wn-"
 
 imgs_all_rds=`lxc list -f csv -c n| grep '^rds-'`
 lxc list -f csv -c n| grep -q "^${S_SERVICE[proxy]}" && imgs_all_rds="${S_SERVICE[proxy]} ${imgs_all_rds}"
 [ "${imgs_all_rds}" ] || _exite "Unable to find redis container (name starts with rds-)"
+
+profiles_www=$(lxc profile list -f csv|grep "^www.*,"|cut -d, -f1)
+[ "${profiles_www}" ] || _exite "Unable to find a www profile (profile name starts with www-)"
 
 file_conf_php_ini="${S_PATH_INSTALL_CONF}/php/php.ini"
 file_conf_php_fpm="${S_PATH_INSTALL_CONF}/php/php-fpm.conf"
@@ -44,125 +47,128 @@ php_modules="php7-bcmath php7-bz2 php7-ctype php7-curl php7-exif php7-fileinfo p
 
 _echot "------------------  data domain"
 
-anstmp=${S_DOM_FQDN} && _askno "Domain name to use (${anstmp})"
-_DOM_FQDN="${_ANSWER:-$anstmp}"
+[ -z ${_APA_DOM_FQDN+x} ] && { anstmp=${S_DOM_FQDN} && _askno "Domain name to use (${anstmp})"; _APA_DOM_FQDN="${_ANSWER:-$anstmp}"; }
 
-anstmp=wap-${_DOM_FQDN//./-} && _askno "Base name of containers to build (${anstmp})"
-ct_base="${_ANSWER:-$anstmp}"
+[ -z ${_PHP_CT_NAME+x} ] && { anstmp=wap-${_APA_DOM_FQDN//./-} && _askno "Base name of containers to build (${anstmp})"; _PHP_CT_NAME="${_ANSWER:-$anstmp}"; }
 
-anstmp=2 && _askno "Number of containers to build (${anstmp})"
-ct_num="${_ANSWER:-$anstmp}"
+[ -z ${_PHP_CT_NUM+x} ] && { anstmp=2 && _askno "Number of containers to build (${anstmp})"; _PHP_CT_NUM="${_ANSWER:-$anstmp}"; }
 
 _echot "------------------  data image"
 
-_menu "Select one available image Apache container for www base" ${cts_all_www}
-ct_www=${_ANSWER}
+[ -z ${_PHP_CT_WWW+x} ] && { _menu "Select one available image Apache container for www base" ${cts_all_www}; _PHP_CT_WWW=${_ANSWER}; }
 
-profiles=`lxc profile list -f csv|grep "^www.*,"|cut -d, -f1`
-[ "${profiles}" ] && _menu "Select an available WWW profile to apply" ${profiles}
-profile_www="${_ANSWER}" || _ANSWER=
+[ -z ${_PHP_WWW_PROFILE+x} ] && { _menu "Select an available WWW profile to apply" ${profiles_www}; _PHP_WWW_PROFILE="${_ANSWER}"; }
 
-_menu "Select one available container to caching" ${imgs_all_rds}
-_PHP_CACHE_CT=${_ANSWER}
+[ -z ${_PHP_CACHE_CT+x} ] && { _menu "Select one available container for caching" ${imgs_all_rds}; _PHP_CACHE_CT="${_ANSWER}"; }
 
 _echot "------------------  data ct"
 
-profiles=`lxc profile list -f csv|grep "^php.*,"|cut -d, -f1`
-[ "${profiles}" ] && _menu "Select an available PHP profile to apply or none to create a new one" ${profiles} none || _ANSWER=
-profile="${_ANSWER/none/}"
-[ -z "${profile}" ] && anstmp=php7-${_DOM_FQDN} && _askno "Name of the new  PHP profile (${anstmp})" && profile="${_ANSWER:-$anstmp}"
+[ -z ${_PHP_PROFILE+x} ] && { 
+	profiles=$(lxc profile list -f csv|grep "^php.*,"|cut -d, -f1)
+	[ "${profiles}" ] && _menu "Select an available PHP profile to apply or none to create a new one" ${profiles} none || _ANSWER=
+	_PHP_PROFILE="${_ANSWER/none/}"
+	[ -z "${_PHP_PROFILE}" ] && anstmp=php7-${_APA_DOM_FQDN} && _askno "Name of the new  PHP profile (${anstmp})" && _PHP_PROFILE="${_ANSWER:-$anstmp}"
+}
 
 _echot "------------------  data php"
 
-anstmp="${php_modules}" && _askno "php modules to install: \n${anstmp}\n"
-_PHP_MODULES="${_ANSWER:-$anstmp}" && _confset _PHP_MODULES "${_PHP_MODULES}"
+[ -z ${_PHP_MODULES+x} ] && { anstmp="${php_modules}"; _askno "php modules to install: \n${anstmp}\n"; _PHP_MODULES="${_ANSWER:-$anstmp}"; }
+_confset _PHP_MODULES "${_PHP_MODULES}"
 
-anstmp=30 && _askno "max_execution_time (${anstmp})s"
-_PHP_MAX_EXECUTION_TIME="${_ANSWER:-$anstmp}" && _confset _PHP_MAX_EXECUTION_TIME "${_PHP_MAX_EXECUTION_TIME}"
+[ -z ${_PHP_MAX_EXECUTION_TIME+x} ] && { anstmp=30; _askno "max_execution_time (${anstmp})s"; _PHP_MAX_EXECUTION_TIME="${_ANSWER:-$anstmp}"; }
+_confset _PHP_MAX_EXECUTION_TIME "${_PHP_MAX_EXECUTION_TIME}"
 
-anstmp=60 && _askno "max_input_time (${anstmp})s"
-_PHP_MAX_INPUT_TIME="${_ANSWER:-$anstmp}" && _confset _PHP_MAX_INPUT_TIME "${_PHP_MAX_INPUT_TIME}"
+[ -z ${_PHP_MAX_INPUT_TIME+x} ] && { anstmp=60; _askno "max_input_time (${anstmp})s"; _PHP_MAX_INPUT_TIME="${_ANSWER:-$anstmp}"; }
+_confset _PHP_MAX_INPUT_TIME "${_PHP_MAX_INPUT_TIME}"
 
-anstmp=128M && _askno "memory_limit (${anstmp})"
-_PHP_MEMORY_LIMIT="${_ANSWER:-$anstmp}" && _confset _PHP_MEMORY_LIMIT "${_PHP_MEMORY_LIMIT}"
+[ -z ${_PHP_MEMORY_LIMIT+x} ] && { anstmp=128M; _askno "memory_limit (${anstmp})"; _PHP_MEMORY_LIMIT="${_ANSWER:-$anstmp}"; }
+_confset _PHP_MEMORY_LIMIT "${_PHP_MEMORY_LIMIT}"
 
-anstmp=32M && _askno "post_max_size (${anstmp})"
-_PHP_POST_MAX_SIZE="${_ANSWER:-$anstmp}" && _confset _PHP_POST_MAX_SIZE "${_PHP_POST_MAX_SIZE}"
+[ -z ${_PHP_POST_MAX_SIZE+x} ] && { anstmp=32M; _askno "post_max_size (${anstmp})"; _PHP_POST_MAX_SIZE="${_ANSWER:-$anstmp}"; }
+_confset _PHP_POST_MAX_SIZE "${_PHP_POST_MAX_SIZE}"
 
-anstmp=16M && _askno "upload_max_filesize (${anstmp})"
-_PHP_UPLOAD_MAX_FILESIZE="${_ANSWER:-$anstmp}" && _confset _PHP_UPLOAD_MAX_FILESIZE "${_PHP_UPLOAD_MAX_FILESIZE}"
+[ -z ${_PHP_UPLOAD_MAX_FILESIZE+x} ] && { anstmp=16M; _askno "upload_max_filesize (${anstmp})"; _PHP_UPLOAD_MAX_FILESIZE="${_ANSWER:-$anstmp}"; }
+_confset _PHP_UPLOAD_MAX_FILESIZE "${_PHP_UPLOAD_MAX_FILESIZE}"
 
-anstmp=1 && _askno "session.use_strict_mode (${anstmp})"
-_PHP_SESSION_STRICT_MODE="${_ANSWER:-$anstmp}" && _confset _PHP_SESSION_STRICT_MODE "${_PHP_SESSION_STRICT_MODE}"
+[ -z ${_PHP_SESSION_STRICT_MODE+x} ] && { anstmp=1; _askno "session.use_strict_mode (${anstmp})"; _PHP_SESSION_STRICT_MODE="${_ANSWER:-$anstmp}"; }
+_confset _PHP_SESSION_STRICT_MODE "${_PHP_SESSION_STRICT_MODE}"
 
-anstmp=256M && _askno "opcache, memory consumption ${anstmp}"
-_PHP_OPCACHE_SIZE="${_ANSWER:-$anstmp}" && _confset _PHP_OPCACHE_SIZE "${_PHP_OPCACHE_SIZE}"
+[ -z ${_PHP_OPCACHE_SIZE+x} ] && { anstmp=256M; _askno "opcache, memory consumption ${anstmp}"; _PHP_OPCACHE_SIZE="${_ANSWER:-$anstmp}"; }
+_confset _PHP_OPCACHE_SIZE "${_PHP_OPCACHE_SIZE}"
 
-anstmp=4 && _askno "opcache, revalidate frequency ${anstmp}"
-_PHP_OPCACHE_REV="${_ANSWER:-$anstmp}" && _confset _PHP_OPCACHE_REV "${_PHP_OPCACHE_REV}"
+[ -z ${_PHP_OPCACHE_REV+x} ] && { anstmp=4; _askno "opcache, revalidate frequency ${anstmp}"; _PHP_OPCACHE_REV="${_ANSWER:-$anstmp}"; }
+_confset _PHP_OPCACHE_REV "${_PHP_OPCACHE_REV}"
 
 _echot "------------------  data php-fpm"
 
-anstmp='30' && _askno "Give value for 'emergency_restart_threshold' (${anstmp})"
-_PHP_RESTART_THRESHOLD="${_ANSWER:-$anstmp}" && _confset _PHP_RESTART_THRESHOLD "${_PHP_RESTART_THRESHOLD}"
+[ -z ${_PHP_RESTART_THRESHOLD+x} ] && { anstmp=30; _askno "Give value for 'emergency_restart_threshold' (${anstmp})"; _PHP_RESTART_THRESHOLD="${_ANSWER:-$anstmp}"; }
+_confset _PHP_RESTART_THRESHOLD "${_PHP_RESTART_THRESHOLD}"
 
-anstmp='60s' && _askno "Give value for 'emergency_restart_interval' (${anstmp})"
-_PHP_RESTART_INTERVAL="${_ANSWER:-$anstmp}" && _confset _PHP_RESTART_INTERVAL "${_PHP_RESTART_INTERVAL}"
+[ -z ${_PHP_RESTART_INTERVAL+x} ] && { anstmp=60s; _askno "Give value for 'emergency_restart_interval' (${anstmp})"; _PHP_RESTART_INTERVAL="${_ANSWER:-$anstmp}"; }
+_confset _PHP_RESTART_INTERVAL "${_PHP_RESTART_INTERVAL}"
 
-anstmp='0' && _askno "Give value for 'process_control_timeout' (${anstmp})s"
-_PHP_CONTROL_TIMEOUT="${_ANSWER:-$anstmp}" && _confset _PHP_CONTROL_TIMEOUT "${_PHP_CONTROL_TIMEOUT}"
+[ -z ${_PHP_CONTROL_TIMEOUT+x} ] && { anstmp=0; _askno "Give value for 'process_control_timeout' (${anstmp})s"; _PHP_CONTROL_TIMEOUT="${_ANSWER:-$anstmp}"; }
+_confset _PHP_CONTROL_TIMEOUT "${_PHP_CONTROL_TIMEOUT}"
 
 _echot "------------------  data pool www"
 
-anstmp='20' && _askno "Give value for 'pm.max_children' (${anstmp})"
-_PHP_W_MAX_CHILDREN="${_ANSWER:-$anstmp}" && _confset _PHP_W_MAX_CHILDREN "${_PHP_W_MAX_CHILDREN}"
+[ -z ${_PHP_W_MAX_CHILDREN+x} ] && { anstmp=20; _askno "Give value for 'pm.max_children' (${anstmp})"; _PHP_W_MAX_CHILDREN="${_ANSWER:-$anstmp}"; }
+_confset _PHP_W_MAX_CHILDREN "${_PHP_W_MAX_CHILDREN}"
 
-anstmp='4' && _askno "Give value for 'pm.start_servers' (${anstmp})"
-_PHP_W_START_SERVERS="${_ANSWER:-$anstmp}" && _confset _PHP_W_START_SERVERS "${_PHP_W_START_SERVERS}"
+[ -z ${_PHP_W_START_SERVERS+x} ] && { anstmp=4; _askno "Give value for 'pm.start_servers' (${anstmp})"; _PHP_W_START_SERVERS="${_ANSWER:-$anstmp}"; }
+_confset _PHP_W_START_SERVERS "${_PHP_W_START_SERVERS}"
 
-anstmp='4' && _askno "Give value for 'pm.min_spare_servers' (${anstmp})"
-_PHP_W_MIN_SPARE_SERVERS="${_ANSWER:-$anstmp}" && _confset _PHP_W_MIN_SPARE_SERVERS "${_PHP_W_MIN_SPARE_SERVERS}"
+[ -z ${_PHP_W_MIN_SPARE_SERVERS+x} ] && { anstmp=4; _askno "Give value for 'pm.min_spare_servers' (${anstmp})"; _PHP_W_MIN_SPARE_SERVERS="${_ANSWER:-$anstmp}"; }
+_confset _PHP_W_MIN_SPARE_SERVERS "${_PHP_W_MIN_SPARE_SERVERS}"
 
-anstmp='15' && _askno "Give value for 'pm.max_spare_servers' (${anstmp})"
-_PHP_W_MAX_SPARE_SERVERS="${_ANSWER:-$anstmp}" && _confset _PHP_W_MAX_SPARE_SERVERS "${_PHP_W_MAX_SPARE_SERVERS}"
+[ -z ${_PHP_W_MAX_SPARE_SERVERS+x} ] && { anstmp=15; _askno "Give value for 'pm.max_spare_servers' (${anstmp})"; _PHP_W_MAX_SPARE_SERVERS="${_ANSWER:-$anstmp}"; }
+_confset _PHP_W_MAX_SPARE_SERVERS "${_PHP_W_MAX_SPARE_SERVERS}"
 
-anstmp='100000' && _askno "Give value for 'pm.max_requests' (${anstmp})"
-_PHP_W_MAX_REQUESTS="${_ANSWER:-$anstmp}" && _confset _PHP_W_MAX_REQUESTS "${_PHP_W_MAX_REQUESTS}"
+[ -z ${_PHP_W_MAX_REQUESTS+x} ] && { anstmp=100000; _askno "Give value for 'pm.max_requests' (${anstmp})"; _PHP_W_MAX_REQUESTS="${_ANSWER:-$anstmp}"; }
+_confset _PHP_W_MAX_REQUESTS "${_PHP_W_MAX_REQUESTS}"
 
-anstmp='2' && _askno "Give value for 'request_SLOWLOG_TIMEOUT' (${anstmp})"
-_PHP_SLOWLOG_TIMEOUT="${_ANSWER:-$anstmp}" && _confset _PHP_SLOWLOG_TIMEOUT "${_PHP_SLOWLOG_TIMEOUT}"
+[ -z ${_PHP_SLOWLOG_TIMEOUT+x} ] && { anstmp=2; _askno "Give value for 'request_SLOWLOG_TIMEOUT' (${anstmp})"; _PHP_SLOWLOG_TIMEOUT="${_ANSWER:-$anstmp}"; }
+_confset _PHP_SLOWLOG_TIMEOUT "${_PHP_SLOWLOG_TIMEOUT}"
 
-_PHP_MAX_SYN_BACKLOG=$(( ${_APA_MAX_SYN_BACKLOG} / 2 - 1 ))
-_PHP_SERVICE=php-fpm7 && _confset _PHP_SERVICE "${_PHP_SERVICE}"
-_PHP_FPM_SOCK=/run/${_PHP_SERVICE}/php-fpm.sock && _confset _PHP_SERVICE "${_PHP_SERVICE}"
-_PHP_FPM_ADMIN_SOCK=/run/${_PHP_SERVICE}/php-fpm-admin.sock && _confset _PHP_SERVICE "${_PHP_SERVICE}"
+_APA_PATH_WWW=${S_VM_PATH_SHARE}/www
+_APA_PATH_DOM=${S_VM_PATH_SHARE}/www/${_APA_DOM_FQDN}
+
+_PHP_MAX_SYN_BACKLOG=$(( ${_APA_MAX_SYN_BACKLOG} / 2 - 1 )) &&  _confset _PHP_MAX_SYN_BACKLOG "${_PHP_MAX_SYN_BACKLOG}"
+_PHP_SERVICE=php-fpm7; _confset _PHP_SERVICE "${_PHP_SERVICE}"
+_PHP_FPM_SOCK=/run/${_PHP_SERVICE}/php-fpm.sock; _confset _PHP_FPM_SOCK "${_PHP_FPM_SOCK}"
+_PHP_FPM_ADMIN_SOCK=/run/${_PHP_SERVICE}/php-fpm-admin.sock; _confset _PHP_FPM_ADMIN_SOCK "${_PHP_FPM_ADMIN_SOCK}"
 
 path_php_base=/etc/php7
 path_fpm_confd=${path_php_base}/php-fpm.d
 path_apache_confd=/etc/apache2/conf.d
 
 # shared
-_PHP_PATH_SHARE=${S_VM_PATH_SHARE}/php/${_DOM_FQDN}
+_PHP_PATH_SHARE=${S_VM_PATH_SHARE}/php/${_APA_DOM_FQDN}
 _PHP_PATH_POOL=${_PHP_PATH_SHARE}/pools
-path_dom=${S_VM_PATH_SHARE}/www/${_DOM_FQDN}
+path_dom=${S_VM_PATH_SHARE}/www/${_APA_DOM_FQDN}
 path_xdebug_profile=${_PHP_PATH_SHARE}/xdebug/profile
 path_xdebug_trace=${_PHP_PATH_SHARE}/xdebug/trace
 
-_CT_NAME=${ct_base}-1
+_CT_NAME=${_PHP_CT_NAME}-1
+
+########################  CONFIGURATION
+
+# load configuration file
+. ${S_FILE_INSTALL_CONF}
 
 ########################  PROFILE
 
-if ! lxc profile list -f csv|grep -q "^${profile},"; then
-	_echot "------------------  profile create ${profile}"
-	_eval lxc profile create ${profile}
+if ! lxc profile list -f csv|grep -q "^${_PHP_PROFILE},"; then
+	_echot "------------------  profile create ${_PHP_PROFILE}"
+	_eval lxc profile create ${_PHP_PROFILE}
 
-	path=${S_HOST_PATH_SHARE}/php/${_DOM_FQDN}
+	path=${S_HOST_PATH_SHARE}/php/${_APA_DOM_FQDN}
 	path_ct=${_PHP_PATH_SHARE}
 	[ -d ${path} ] || _evalr mkdir -p ${path}
 	_evalr chown -R ${_LXD_UID}:${_LXD_UID} ${S_HOST_PATH_SHARE}/php
-	_eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
+	_eval lxc profile device add ${_PHP_PROFILE} ${_PHP_PROFILE} disk source=${path} path=${path_ct}
 else
-	_echot "------------------  existing profile ${profile}"
+	_echot "------------------  existing profile ${_PHP_PROFILE}"
 fi
 
 ########################  INIT
@@ -173,7 +179,7 @@ if lxc list -f csv -c n | grep -q ^${_CT_NAME}$; then
 	_echot "------------------ rename ${_CT_NAME} -> ${_CT_NAME}-${_SDATE}"
 	_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
 fi
-_eval lxc init ${ct_www} ${_CT_NAME} -p default -p global -p ${profile_www} -p ${profile}
+_eval lxc init ${_PHP_CT_WWW} ${_CT_NAME} -p default -p global -p ${_PHP_WWW_PROFILE} -p ${_PHP_PROFILE}
 
 #_echot "------------------  network fixed ip"
 #
@@ -188,7 +194,7 @@ _eval lxc start ${_CT_NAME}
 ########################  METADATA
 
 _echot "------------------  metadata"
-_lxc_meta_set ${_CT_NAME} profiles default global ${profile_www} ${profile}
+_lxc_meta_set ${_CT_NAME} profiles default global ${_PHP_WWW_PROFILE} ${_PHP_PROFILE}
 _lxc_meta_add ${_CT_NAME} apps php7
 
 ########################  INSTALL
@@ -259,7 +265,7 @@ file=${_APA_PATH_WWW}/index.html
 _lxc_exec ${_CT_NAME} "[ -f '${file}' ] && mv ${file} ${file}.${_SDATE}"
 _lxc_exec ${_CT_NAME} "echo '<?php phpinfo() ?>' > ${_APA_PATH_WWW}/phpinf.php"
 
-_echot "------------------  ${_DOM_FQDN} files"
+_echot "------------------  ${_APA_DOM_FQDN} files"
 _lxc_exec ${_CT_NAME} "echo '<?php phpinfo() ?>' > ${path_dom}/html/phpinf.php"
 file=${path_dom}/html/index.php
 _eval lxc file push -q ${file_conf_apache_index_dom} ${_CT_NAME}${file}
@@ -359,8 +365,8 @@ _lxc_exec ${_CT_NAME} "find ${S_PATH_LOG}/php7 -name *.log -exec rm {} \;"
 
 ########################  COPY
 
-for i in `seq 2 ${ct_num}`; do
-	ct_name=${ct_base}-${i}
+for i in `seq 2 ${_PHP_CT_NUM}`; do
+	ct_name=${_PHP_CT_NAME}-${i}
 	_echot "---------- build ${ct_name}"
 
 	if lxc list -f csv -c n | grep -q ^${ct_name}$; then
@@ -374,8 +380,8 @@ done
 ########################  HAPROXY
 
 _echot "------------------  haproxy conf"
-_echoA "Adjust proxy settings for domain ${_DOM_FQDN} with this data"
-_echoa $(for i in `seq 1 ${ct_num}`; do echo ${ct_base}-${i};done)
+_echoA "Adjust proxy settings for domain ${_APA_DOM_FQDN} with this data"
+_echoa $(for i in `seq 1 ${_PHP_CT_NUM}`; do echo ${_PHP_CT_NAME}-${i};done)
 _echo "Use the container: ${S_SERVICE[proxy]}"
 _echo "the file: /etc/haproxy/conf-available/50-backs-80"
 _echo ""
@@ -386,7 +392,7 @@ _echot "------------------  php test"
 _echoa "To verify php configuration, type:"
 _echo "curl ${_IPTHIS}/phpinf.php"
 _echo "curl ${_CT_NAME}/phpinf.php"
-_echo "curl ${_DOM_FQDN}:80"
+_echo "curl ${_APA_DOM_FQDN}:80"
 
 _echoa "To verify ping response, type:"
 _echo "curl ${_CT_NAME}/ping-monitor"
@@ -404,8 +410,8 @@ _echo "curl ${_CT_NAME}/status-admin?full"
 
 ########################  PUBLISH
 
-for i in `seq 1 ${ct_num}`; do
- 	ct_name=${ct_base}-${i}
+for i in `seq 1 ${_PHP_CT_NUM}`; do
+ 	ct_name=${_PHP_CT_NAME}-${i}
 	_echot "------------------  publish ${ct_name}"
 	lxc image list -f csv -c l | grep -q ^${ct_name}$ && _eval lxc image alias rename ${ct_name} ${ct_name}-${_SDATE}
 	_eval lxc publish --force ${ct_name} --alias ${ct_name}
