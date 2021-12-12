@@ -302,34 +302,48 @@ fi
 
 ########################  CACHE
 
-_echot "------------------  S_CACHE_PORT"
-if [ -z "${S_CACHE_PORT}" ]; then
+_echot "------------------  S_CACHE_PORT_RW"
+if [ -z "${S_CACHE_PORT_RW}" ]; then
 	anstmp="6379"
 	_askno "port for redis connection: write/read (${anstmp})"
-	S_CACHE_PORT=${_ANSWER:-${anstmp}} && _confset S_CACHE_PORT "${S_CACHE_PORT}" "${S_GLOBAL_CONF}"
+	S_CACHE_PORT_RW=${_ANSWER:-${anstmp}} && _confset S_CACHE_PORT_RW "${S_CACHE_PORT_RW}" "${S_GLOBAL_CONF}"
 fi
 
-_echot "------------------  S_CACHE_READ_PORT"
-if [ -z "${S_CACHE_READ_PORT}" ]; then
+_echot "------------------  S_CACHE_PORT_RO"
+if [ -z "${S_CACHE_PORT_RO}" ]; then
 	anstmp="6380"
 	_askno "port for redis connection: only read (${anstmp})"
-	S_CACHE_READ_PORT=${_ANSWER:-${anstmp}} && _confset S_CACHE_READ_PORT "${S_CACHE_READ_PORT}" "${S_GLOBAL_CONF}"
+	S_CACHE_PORT_RO=${_ANSWER:-${anstmp}} && _confset S_CACHE_PORT_RO "${S_CACHE_PORT_RO}" "${S_GLOBAL_CONF}"
 fi
 
 ########################  DB
 
-_echot "------------------  S_DB_MARIA_PORT"
-if [ -z "${S_DB_MARIA_PORT}" ]; then
+_echot "------------------  S_DB_MARIA_PORT_RW"
+if [ -z "${S_DB_MARIA_PORT_RW}" ]; then
 	anstmp="3306"
-	_askno "connections port for mariadb (${anstmp})"
-	S_DB_MARIA_PORT=${_ANSWER:-${anstmp}} && _confset S_DB_MARIA_PORT "${S_DB_MARIA_PORT}" "${S_GLOBAL_CONF}"
+	_askno "Port for mariadb connections: read/write (${anstmp})"
+	S_DB_MARIA_PORT_RW=${_ANSWER:-${anstmp}} && _confset S_DB_MARIA_PORT_RW "${S_DB_MARIA_PORT_RW}" "${S_GLOBAL_CONF}"
 fi
 
-_echot "------------------  S_DB_PGSQL_PORT"
-if [ -z "${S_DB_PGSQL_PORT}" ]; then
+_echot "------------------  S_DB_MARIA_PORT_RO"
+if [ -z "${S_DB_MARIA_PORT_RO}" ]; then
+	anstmp="3307"
+	_askno "Port for mariadb connections: read only (${anstmp})"
+	S_DB_MARIA_PORT_RO=${_ANSWER:-${anstmp}} && _confset S_DB_MARIA_PORT_RO "${S_DB_MARIA_PORT_RO}" "${S_GLOBAL_CONF}"
+fi
+
+_echot "------------------  S_DB_PGSQL_PORT_RW"
+if [ -z "${S_DB_PGSQL_PORT_RW}" ]; then
 	anstmp="5432"
-	_askno "connections ports for postgresql (${anstmp})"
-	S_DB_PGSQL_PORT=${_ANSWER:-${anstmp}} && _confset S_DB_PGSQL_PORT "${S_DB_PGSQL_PORT}" "${S_GLOBAL_CONF}"
+	_askno "Port for postgresql connections: read/write (${anstmp})"
+	S_DB_PGSQL_PORT_RW=${_ANSWER:-${anstmp}} && _confset S_DB_PGSQL_PORT_RW "${S_DB_PGSQL_PORT_RW}" "${S_GLOBAL_CONF}"
+fi
+
+_echot "------------------  S_DB_PGSQL_PORT_RO"
+if [ -z "${S_DB_PGSQL_PORT_RO}" ]; then
+	anstmp="5433"
+	_askno "Port for postgresql connections: read/write (${anstmp})"
+	S_DB_PGSQL_PORT_RO=${_ANSWER:-${anstmp}} && _confset S_DB_PGSQL_PORT_RO "${S_DB_PGSQL_PORT_RO}" "${S_GLOBAL_CONF}"
 fi
 
 ########################  PATHS

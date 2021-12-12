@@ -25,9 +25,11 @@ done
 
 echo -e "${cyan}----------  data${cclear}"
 
-echo "Unable to find initial configuration"
-_menu "Do you want to copy an pre configuration file or none" none `ls ${S_PATH_INSTALL_CONF}/server-*.conf 2>/dev/null`
-file_conf_pre_server=${_ANSWER/none/}
+if ! [ -f "${S_GLOBAL_CONF}" ]; then
+	echo "Unable to find initial configuration"
+	_menu "Do you want to copy an pre configuration file or none" none `ls ${S_PATH_INSTALL_CONF}/server-*.conf 2>/dev/null`
+	file_conf_pre_server=${_ANSWER/none/}
+fi
 
 ########################  MAIN
 
