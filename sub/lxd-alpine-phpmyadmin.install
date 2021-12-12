@@ -89,7 +89,7 @@ done
 _CT_NAME=${ct_base}-1
 
 _APP_URI=https://${sub_pma}.${_DOM_FQDN}
-_APP_DB_PORT=${S_DB_MARIA_PORT}
+_APP_DB_PORT=${S_DB_MARIA_PORT_RW}
 _APP_DB_NAME=phpmyadmin
 _APP_DB_USER=pma
 _APP_DB_PWD=`_pwd`
