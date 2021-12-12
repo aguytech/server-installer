@@ -15,7 +15,6 @@ imgs_all_rds=`lxc list -f csv -c n| grep '^rds-'`
 lxc list -f csv -c n| grep -q "^${S_SERVICE[proxy]}" && imgs_all_rds="${S_SERVICE[proxy]} ${imgs_all_rds}"
 [ "${imgs_all_rds}" ] || _exite "Unable to find redis container (name starts with rds-)"
 
-
 file_conf_php_ini="${S_PATH_INSTALL_CONF}/php/php.ini"
 file_conf_php_fpm="${S_PATH_INSTALL_CONF}/php/php-fpm.conf"
 file_conf_php_fpmd_www="${S_PATH_INSTALL_CONF}/php/php-fpm.d/www.conf"

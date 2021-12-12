@@ -1,14 +1,14 @@
 # included file for haproxy configuration
 
 frontend _RDS_PROXY-redis
-	bind :S_CACHE_PORT
+	bind :S_CACHE_PORT_RW
 	mode			tcp
 	option			tcplog
 	timeout client		30s
 	default_backend		_RDS_PROXY-redis
 
 frontend _RDS_PROXY-redis_read
-	bind :S_CACHE_READ_PORT
+	bind :S_CACHE_PORT_RO
 	mode			tcp
 	option			tcplog
 	timeout client		30s

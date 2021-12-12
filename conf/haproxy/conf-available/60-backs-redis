@@ -9,8 +9,8 @@ backend _RDS_PROXY-redis
 	tcp-check send info\ replication\r\n
 	tcp-check expect string role:master
 
-	server _RDS_CT_NAME-1 _RDS_CT_NAME-1:S_CACHE_PORT
-	server _RDS_CT_NAME-2 _RDS_CT_NAME-2:S_CACHE_PORT
+	server _RDS_CT_NAME-1 _RDS_CT_NAME-1:S_CACHE_PORT_RW
+	server _RDS_CT_NAME-2 _RDS_CT_NAME-2:S_CACHE_PORT_RW
 
 backend _RDS_PROXY-redis_read
 	mode tcp
@@ -21,5 +21,5 @@ backend _RDS_PROXY-redis_read
 	tcp-check send PING\r\n
 	tcp-check expect string +PONG
 
-	server _RDS_CT_NAME-1 _RDS_CT_NAME-1:S_CACHE_PORT
-	server _RDS_CT_NAME-2 _RDS_CT_NAME-2:S_CACHE_PORT
+	server _RDS_CT_NAME-1 _RDS_CT_NAME-1:S_CACHE_PORT_RW
+	server _RDS_CT_NAME-2 _RDS_CT_NAME-2:S_CACHE_PORT_RW

@@ -250,7 +250,7 @@ _eval lxc start ${_CT_NAME_2}
 _echot "------------------ conf replica ${_CT_NAME_2}"
 file=/etc/redis.conf
 _lxc_exec ${_CT_NAME_2} "sed -i '/^replica-priority / c\replica-priority 200' ${file}"
-_lxc_exec ${_CT_NAME_2} "echo -e '\n# replica settings\nreplicaof ${_CT_NAME} ${S_CACHE_PORT}' >> ${file}"
+_lxc_exec ${_CT_NAME_2} "echo -e '\n# replica settings\nreplicaof ${_CT_NAME} ${S_CACHE_PORT_RW}' >> ${file}"
 _echot "------------------  restart redis ${_CT_NAME_2}"
 _lxc_exec_t ${_CT_NAME_2} "rc-service redis restart"
 
@@ -280,19 +280,19 @@ _lxc_exec_e ${ct_proxy} "rc-service haproxy reload"
 _echot "------------------  show role"
 for i in 1 2; do
 	ct=${_RDS_CT_NAME}-$i
-	echo -n "$ct - "; redis-cli -h ${ct} -p ${S_CACHE_PORT} info replication|sed -n 's/role://p'
+	echo -n "$ct - "; redis-cli -h ${ct} -p ${S_CACHE_PORT_RW} info replication|sed -n 's/role://p'
 done
 
 _echot "------------------  show role"
-redis-cli -h ${_RDS_CT_NAME}-$i -p 2${S_CACHE_PORT} info sentinel
+redis-cli -h ${_RDS_CT_NAME}-$i -p 2${S_CACHE_PORT_RW} info sentinel
 
 ########################  TEST
 
 _echoA "To do a benchmark, just type:" && sleep 0.1
-_echoa "redis-benchmark -h ${_CT_NAME} -p ${S_CACHE_PORT} -n 1000 -c 10 -k 1 -q"
-_echoa "redis-benchmark -h ${_CT_NAME} -p ${S_CACHE_PORT} -n 10000 -c 10 -k 1"
+_echoa "redis-benchmark -h ${_CT_NAME} -p ${S_CACHE_PORT_RW} -n 1000 -c 10 -k 1 -q"
+_echoa "redis-benchmark -h ${_CT_NAME} -p ${S_CACHE_PORT_RW} -n 10000 -c 10 -k 1"
 _echoA "To see latency, just type:" && sleep 0.1
-_echoa "redis-cli -h ${_CT_NAME} -p ${S_CACHE_PORT} --latency-dist"
+_echoa "redis-cli -h ${_CT_NAME} -p ${S_CACHE_PORT_RW} --latency-dist"
 
 ########################  PUBLISH
 
