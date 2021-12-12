@@ -9,5 +9,5 @@ S_PATH_LOG/fail2ban/*.info {
 	compress
 	delaycompress
 	notifempty
-    create 640 root adm
+    create 640 syslog adm
 }
