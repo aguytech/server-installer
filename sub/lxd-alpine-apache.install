@@ -37,75 +37,74 @@ _require ${file_rsyslog_host} ${file_rsyslog_client} ${file_logrotate_host} ${fi
 
 _echot "------------------  data domain"
 
-[ -z ${_DOM_FQDN+x} ] && { anstmp=${S_DOM_FQDN}; _askno "Domain name to use (${anstmp})"
-	_DOM_FQDN="${_ANSWER:-${anstmp}}"; }
+[ -z ${_APA_DOM_FQDN+x} ] && { anstmp=${S_DOM_FQDN}; _askno "Domain name to use (${anstmp})"; _APA_DOM_FQDN="${_ANSWER:-${anstmp}}"; }
 
-[ -z ${_APA_CT_NAME+x} ] && { anstmp=wa-${_DOM_FQDN//./-}; _askno "Name of container to build (${anstmp})"
-	_APA_CT_NAME="${_ANSWER:-${anstmp}}"; }
+[ -z ${_APA_CT_NAME+x} ] && { anstmp=wa-${_APA_DOM_FQDN//./-}; _askno "Name of container to build (${anstmp})"; _APA_CT_NAME="${_ANSWER:-${anstmp}}"; }
 
-[ -z ${_APA_DOM_ADMIN+x} ] && { anstmp=admin; _askno "Give the subdomain name for administration (${anstmp})"
-	_APA_DOM_ADMIN="${_ANSWER:-${anstmp}}"; _confset _APA_DOM_ADMIN "${_APA_DOM_ADMIN}"; }
+[ -z ${_APA_DOM_ADMIN+x} ] && { anstmp=admin; _askno "Give the subdomain name for administration (${anstmp})"; _APA_DOM_ADMIN="${_ANSWER:-${anstmp}}"; }
+_confset _APA_DOM_ADMIN "${_APA_DOM_ADMIN}"
 
-[ -z ${_APA_PWD_ADMIN+x} ] && { anstmp=$(_pwd); _askno "Password for admin user to access to info data for apache & php (${anstmp})"
-	_APA_PWD_ADMIN="${_ANSWER:-${anstmp}}"; _confset _APA_PWD_ADMIN "${_APA_PWD_ADMIN}"; }
+[ -z ${_APA_PWD_ADMIN+x} ] && { anstmp=$(_pwd); _askno "Password for admin user to access to info/status of apache/php (${anstmp})"; _APA_PWD_ADMIN="${_ANSWER:-${anstmp}}"; }
+_confset _APA_PWD_ADMIN "${_APA_PWD_ADMIN}"
 
 _echot "------------------  data sysctl.conf"
 
-[ -z ${_APA_MAX_SYN_BACKLOG+x} ] && { anstmp="${_MAX_SYN_BACKLOG}"; _askno "Set $(sysctl net.ipv4.tcp_max_syn_backlog) - (${anstmp})"
-	_APA_MAX_SYN_BACKLOG="${_ANSWER:-${anstmp}}"; _confset _APA_MAX_SYN_BACKLOG "${_APA_MAX_SYN_BACKLOG}"; }
+[ -z ${_APA_MAX_SYN_BACKLOG+x} ] && { anstmp="${_MAX_SYN_BACKLOG}"; _askno "Set $(sysctl net.ipv4.tcp_max_syn_backlog) - (${anstmp})"; _APA_MAX_SYN_BACKLOG="${_ANSWER:-${anstmp}}"; }
+_confset _APA_MAX_SYN_BACKLOG "${_APA_MAX_SYN_BACKLOG}"
 
-[ -z ${_APA_MAX_TW_BUCKETS+x} ] && { anstmp="${_MAX_TW_BUCKETS}"; _askno "Set $(sysctl net.ipv4.tcp_max_tw_buckets) - (${anstmp})"
-	_APA_MAX_TW_BUCKETS="${_ANSWER:-${anstmp}}"; _confset _APA_MAX_TW_BUCKETS "${_APA_MAX_TW_BUCKETS}"; }
+[ -z ${_APA_MAX_TW_BUCKETS+x} ] && { anstmp="${_MAX_TW_BUCKETS}"; _askno "Set $(sysctl net.ipv4.tcp_max_tw_buckets) - (${anstmp})"; _APA_MAX_TW_BUCKETS="${_ANSWER:-${anstmp}}"; }
+_confset _APA_MAX_TW_BUCKETS "${_APA_MAX_TW_BUCKETS}"
 
-[ -z ${_APA_FIN_TIMEOUT+x} ] && { anstmp="${_FIN_TIMEOUT}"; _askno "Set $(sysctl net.ipv4.tcp_fin_timeout) - (${anstmp})"
-	_APA_FIN_TIMEOUT="${_ANSWER:-${anstmp}}"; _confset _APA_FIN_TIMEOUT "${_APA_FIN_TIMEOUT}"; }
+[ -z ${_APA_FIN_TIMEOUT+x} ] && { anstmp="${_FIN_TIMEOUT}"; _askno "Set $(sysctl net.ipv4.tcp_fin_timeout) - (${anstmp})"; _APA_FIN_TIMEOUT="${_ANSWER:-${anstmp}}"; }
+_confset _APA_FIN_TIMEOUT "${_APA_FIN_TIMEOUT}"
 
-[ -z ${_APA_KEEPALIVE_TIME+x} ] && { anstmp="240"; _askno "Set $(sysctl net.ipv4.tcp_keepalive_time) - (${anstmp})"
-	_APA_KEEPALIVE_TIME="${_ANSWER:-${anstmp}}"; _confset _APA_KEEPALIVE_TIME "${_APA_KEEPALIVE_TIME}"; }
+[ -z ${_APA_KEEPALIVE_TIME+x} ] && { anstmp="240"; _askno "Set $(sysctl net.ipv4.tcp_keepalive_time) - (${anstmp})"; _APA_KEEPALIVE_TIME="${_ANSWER:-${anstmp}}"; }
+_confset _APA_KEEPALIVE_TIME "${_APA_KEEPALIVE_TIME}"
 
-[ -z ${_APA_KEEPALIVE_INTVL+x} ] && { anstmp="30"; _askno "Set $(sysctl net.ipv4.tcp_keepalive_intvl) - (${anstmp})"
-	_APA_KEEPALIVE_INTVL="${_ANSWER:-${anstmp}}"; _confset _APA_KEEPALIVE_INTVL "${_APA_KEEPALIVE_INTVL}"; }
+[ -z ${_APA_KEEPALIVE_INTVL+x} ] && { anstmp="30"; _askno "Set $(sysctl net.ipv4.tcp_keepalive_intvl) - (${anstmp})"; _APA_KEEPALIVE_INTVL="${_ANSWER:-${anstmp}}"; }
+_confset _APA_KEEPALIVE_INTVL "${_APA_KEEPALIVE_INTVL}"
 
-[ -z ${_APA_KEEPALIVE_PROBES+x} ] && { anstmp="9"; _askno "Set $(sysctl net.ipv4.tcp_keepalive_probes) - (${anstmp})"
-	_APA_KEEPALIVE_PROBES="${_ANSWER:-${anstmp}}"; _confset _APA_KEEPALIVE_PROBES "${_APA_KEEPALIVE_PROBES}"; }
+[ -z ${_APA_KEEPALIVE_PROBES+x} ] && { anstmp="9"; _askno "Set $(sysctl net.ipv4.tcp_keepalive_probes) - (${anstmp})"; _APA_KEEPALIVE_PROBES="${_ANSWER:-${anstmp}}"; }
+_confset _APA_KEEPALIVE_PROBES "${_APA_KEEPALIVE_PROBES}"
 
 _echot "------------------  data apache"
 
-[ -z ${_APA_TIMEOUT+x} ] && { anstmp="60"; _askno "Time before receives and sends time out (${anstmp})"
-	_APA_TIMEOUT="${_ANSWER:-${anstmp}}"; _confset _APA_TIMEOUT "${_APA_TIMEOUT}"; }
+[ -z ${_APA_TIMEOUT+x} ] && { anstmp="60"; _askno "Time before receives and sends time out (${anstmp})"; _APA_TIMEOUT="${_ANSWER:-${anstmp}}"; }
+_confset _APA_TIMEOUT "${_APA_TIMEOUT}"
 
-[ -z ${_APA_KEEPALIVE_ON+x} ] && { anstmp="On"; _askno "Allow persistent connections On/Off (${anstmp})"
-	_APA_KEEPALIVE_ON="${_ANSWER:-${anstmp}}"; _confset _APA_KEEPALIVE_ON "${_APA_KEEPALIVE_ON}"; }
+[ -z ${_APA_KEEPALIVE_ON+x} ] && { anstmp="On"; _askno "Allow persistent connections On/Off (${anstmp})"; _APA_KEEPALIVE_ON="${_ANSWER:-${anstmp}}"; }
+_confset _APA_KEEPALIVE_ON "${_APA_KEEPALIVE_ON}"
 
-[ -z ${_APA_KEEPALIVE_REQUEST+x} ] && { anstmp="100"; _askno "The maximum number of requests to allow during a persistent connection (${anstmp})"
-	_APA_KEEPALIVE_REQUEST="${_ANSWER:-${anstmp}}"; _confset _APA_KEEPALIVE_REQUEST "${_APA_KEEPALIVE_REQUEST}"; }
+[ -z ${_APA_KEEPALIVE_REQUEST+x} ] && { anstmp="100"; _askno "The maximum number of requests to allow during a persistent connection (${anstmp})"; _APA_KEEPALIVE_REQUEST="${_ANSWER:-${anstmp}}"; }
+_confset _APA_KEEPALIVE_REQUEST "${_APA_KEEPALIVE_REQUEST}"
 
- [ -z ${_APA_KEEPALIVE_TIMEOUT+x} ] && { anstmp="5"; _askno "Number of seconds to wait for the next request (${anstmp})"
-	_APA_KEEPALIVE_TIMEOUT="${_ANSWER:-${anstmp}}"; _confset _APA_KEEPALIVE_TIMEOUT "${_APA_KEEPALIVE_TIMEOUT}"; }
+ [ -z ${_APA_KEEPALIVE_TIMEOUT+x} ] && { anstmp="5"; _askno "Number of seconds to wait for the next request (${anstmp})"; _APA_KEEPALIVE_TIMEOUT="${_ANSWER:-${anstmp}}"; }
+_confset _APA_KEEPALIVE_TIMEOUT "${_APA_KEEPALIVE_TIMEOUT}"
 
 _echot "------------------  data apache mpm"
 
-[ -z ${_APA_START_SERVERS+x} ] && { anstmp="13"; _askno "StartServers (${anstmp})"
-	_APA_START_SERVERS="${_ANSWER:-${anstmp}}"; _confset _APA_START_SERVERS "${_APA_START_SERVERS}"; }
+[ -z ${_APA_START_SERVERS+x} ] && { anstmp="13"; _askno "StartServers (${anstmp})"; _APA_START_SERVERS="${_ANSWER:-${anstmp}}"; }
+_confset _APA_START_SERVERS "${_APA_START_SERVERS}"
 
-[ -z ${_APA_MIN_SPARE_THREADS+x} ] && { anstmp="50"; _askno "MinSpareThreads (${anstmp})"
-	_APA_MIN_SPARE_THREADS="${_ANSWER:-${anstmp}}"; _confset _APA_MIN_SPARE_THREADS "${_APA_MIN_SPARE_THREADS}"; }
+[ -z ${_APA_MIN_SPARE_THREADS+x} ] && { anstmp="50"; _askno "MinSpareThreads (${anstmp})"; _APA_MIN_SPARE_THREADS="${_ANSWER:-${anstmp}}"; }
+_confset _APA_MIN_SPARE_THREADS "${_APA_MIN_SPARE_THREADS}"
 
-[ -z ${_APA_MAX_SPARE_THREADS+x} ] && { anstmp="250"; _askno "MaxSpareThreads (${anstmp})"
-	_APA_MAX_SPARE_THREADS="${_ANSWER:-${anstmp}}"; _confset _APA_MAX_SPARE_THREADS "${_APA_MAX_SPARE_THREADS}"; }
+[ -z ${_APA_MAX_SPARE_THREADS+x} ] && { anstmp="250"; _askno "MaxSpareThreads (${anstmp})"; _APA_MAX_SPARE_THREADS="${_ANSWER:-${anstmp}}"; }
+_confset _APA_MAX_SPARE_THREADS "${_APA_MAX_SPARE_THREADS}"
 
-[ -z ${_APA_THREADS_PER_CHILD+x} ] && { anstmp="25"; _askno "ThreadsPerChild (${anstmp})"
-	_APA_THREADS_PER_CHILD="${_ANSWER:-${anstmp}}"; _confset _APA_THREADS_PER_CHILD "${_APA_THREADS_PER_CHILD}"; }
+[ -z ${_APA_THREADS_PER_CHILD+x} ] && { anstmp="25"; _askno "ThreadsPerChild (${anstmp})"; _APA_THREADS_PER_CHILD="${_ANSWER:-${anstmp}}"; }
+_confset _APA_THREADS_PER_CHILD "${_APA_THREADS_PER_CHILD}"
 
-[ -z ${_APA_MAX_REQUEST_WORKERS+x} ] && { anstmp="400"; _askno "MaxRequestWorkers (${anstmp})"
-	_APA_MAX_REQUEST_WORKERS="${_ANSWER:-${anstmp}}"; _confset _APA_MAX_REQUEST_WORKERS "${_APA_MAX_REQUEST_WORKERS}"; }
+[ -z ${_APA_MAX_REQUEST_WORKERS+x} ] && { anstmp="400"; _askno "MaxRequestWorkers (${anstmp})"; _APA_MAX_REQUEST_WORKERS="${_ANSWER:-${anstmp}}"; }
+_confset _APA_MAX_REQUEST_WORKERS "${_APA_MAX_REQUEST_WORKERS}"
 
-[ -z ${_APA_MAX_CONNECTIONS_PER_CHILD+x} ] && { anstmp="0"; _askno "MaxConnectionsPerChild (${anstmp})"
-	_APA_MAX_CONNECTIONS_PER_CHILD="${_ANSWER:-${anstmp}}"; _confset _APA_MAX_CONNECTIONS_PER_CHILD "${_APA_MAX_CONNECTIONS_PER_CHILD}"; }
+[ -z ${_APA_MAX_CONNECTIONS_PER_CHILD+x} ] && { anstmp="0"; _askno "MaxConnectionsPerChild (${anstmp})"; _APA_MAX_CONNECTIONS_PER_CHILD="${_ANSWER:-${anstmp}}"; }
+_confset _APA_MAX_CONNECTIONS_PER_CHILD "${_APA_MAX_CONNECTIONS_PER_CHILD}"
 
 _CT_NAME=${_APA_CT_NAME}
 _APA_PATH_WWW=${S_VM_PATH_SHARE}/www;  _confset _APA_PATH_WWW "${_APA_PATH_WWW}"
-_APA_PATH_DOM=${S_VM_PATH_SHARE}/www/${_DOM_FQDN};  _confset _APA_PATH_DOM "${_APA_PATH_DOM}"
+_APA_PATH_DOM=${S_VM_PATH_SHARE}/www/${_APA_DOM_FQDN};  _confset _APA_PATH_DOM "${_APA_PATH_DOM}"
+_APA_PROFILE=www-${_APA_DOM_FQDN};  _confset _APA_PROFILE "${_APA_PROFILE}"
 
 path_sites=/etc/apache2/sites
 path_confd=/etc/apache2/conf.d
@@ -118,11 +117,11 @@ file_httpd_conf=/etc/apache2/httpd.conf
 
 ########################  PROFILE
 
-profile=www-${_DOM_FQDN}
+profile=${_APA_PROFILE}
 if ! lxc profile list -f csv|grep -q "^${profile},"; then
 	_echot "------------------  profile ${profile}"
 	_eval lxc profile create ${profile}
-	path=${S_HOST_PATH_SHARE}/www/${_DOM_FQDN}
+	path=${S_HOST_PATH_SHARE}/www/${_APA_DOM_FQDN}
 	path_ct=${_APA_PATH_DOM}
 	[ -d ${path} ] || _evalr mkdir -p ${path}
 	_evalr chown -R ${_LXD_UID}:${_LXD_UID} ${S_HOST_PATH_SHARE}/www
@@ -227,9 +226,9 @@ _eval lxc file push -q ${file_conf_monitor} ${_CT_NAME}${file}
 _echot "------------------  ping-monitor"
 _lxc_exec ${_CT_NAME} "echo pong > ${_APA_PATH_WWW}/ping-monitor.html"
 
-########################  _DOM_FQDN
+########################  _APA_DOM_FQDN
 
-_echot "------------------  ${_DOM_FQDN} index.html"
+_echot "------------------  ${_APA_DOM_FQDN} index.html"
 file=${_APA_PATH_DOM}/html/index.html
 _lxc_exec_t ${_CT_NAME} "[ -f '${file}' ] && cp -a ${file} ${file}.${_SDATE}"
 _eval lxc file push -q ${file_conf_index} ${_CT_NAME}${file}
@@ -239,8 +238,8 @@ _echot "------------------  conf site default"
 file=${path_sites}/${file_conf_site##*/}
 _eval lxc file push -q ${file_conf_site} ${_CT_NAME}${file}
 
-_echot "------------------  ${_DOM_FQDN} conf"
-file_conf_domain=${S_PATH_INSTALL_CONF}/apache2/sites/${_DOM_FQDN}.conf
+_echot "------------------  ${_APA_DOM_FQDN} conf"
+file_conf_domain=${S_PATH_INSTALL_CONF}/apache2/sites/${_APA_DOM_FQDN}.conf
 if [ -f "${file_conf_domain}" ]; then
 	file=${path_sites}/${file_conf_domain##*/}
 	_eval lxc file push -q ${file_conf_domain} ${_CT_NAME}${file}
