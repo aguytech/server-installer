@@ -19,8 +19,14 @@ _require ${file_rsyslog_client_lxd} ${file_logrotate_client_lxd}
 
 _echot "------------------  data"
 
-[ -z ${_LXD_DHCP_MIN+x} ] && anstmp="20" && _askno "Give minimal range IP for DHCP container (${anstmp})" && _LXD_DHCP_MIN="${_ANSWER:-$anstmp}" && _confset _LXD_DHCP_MIN "${_LXD_DHCP_MIN}"
-[ -z ${_LXD_DHCP_MAX+x} ] && anstmp="254" && _askno "Give maximal range IP for DHCP container (${anstmp})" && _LXD_DHCP_MAX="${_ANSWER:-$anstmp}" && _confset _LXD_DHCP_MAX "${_LXD_DHCP_MAX}"
+_LXD_VERSION=$(snap list|awk '/^lxd/ {print $2}')
+
+
+[ -z ${_LXD_DHCP_MIN+x} ] && { anstmp="20"; _askno "Give minimal range IP for DHCP container (${anstmp})"
+	_LXD_DHCP_MIN="${_ANSWER:-$anstmp}"; _confset _LXD_DHCP_MIN "${_LXD_DHCP_MIN}"; }
+
+[ -z ${_LXD_DHCP_MAX+x} ] && { anstmp="254"; _askno "Give maximal range IP for DHCP container (${anstmp})"
+	_LXD_DHCP_MAX="${_ANSWER:-$anstmp}"; _confset _LXD_DHCP_MAX "${_LXD_DHCP_MAX}"; }
 
 # root path of lxd
 _LXD_PATH_ROOT=/var/snap/lxd && _confset _LXD_PATH_ROOT "${_LXD_PATH_ROOT}"
@@ -39,9 +45,14 @@ _LXD_PORT=8443 && _confset _LXD_PORT "${_LXD_PORT}"
 # uid for shared path
 _LXD_UID=1000000 && _confset _LXD_UID "${_LXD_UID}"
 
+########################  CONFIGURATION
+
+# load configuration file
+. ${S_FILE_INSTALL_CONF}
+
 ########################  STORAGE
 
-if [ "${_DEV_DRIVER}" = zfs ]; then
+if [ "${_DEV_DRIVER}" = zfs ] && ! zfs list -r ${_ZFS_ROOT}|grep -q ${_ZFS_ROOT}/lxd; then
 
 	if snap list|grep -q ^lxd; then
 		_echot "------------------  snap remove lxd"
@@ -57,9 +68,6 @@ fi
 
 _echot "------------------  install"
 _evalr apt install -y jq acl # criu lxd-tools
-
-_echot "------------------  snap version"
-snap list|sed -n 's|^lxd *\([0-9\.]\+\) .*|\1|p'
 
 # core20
 if ! snap list|grep -q ^core20; then

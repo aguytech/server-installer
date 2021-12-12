@@ -26,16 +26,21 @@ _echot "------------------  data"
 
 # host
 _IPT_SERVICE=iptables-firewall && _confset _IPT_SERVICE "${_IPT_SERVICE}"
-_IPT_FILE_CONF=${S_PATH_CONF}/iptables-firewall.conf && _confset _IPT_FILE_CONF "${_IPT_FILE_CONF}"
+_IPT_FILE_CONF=${S_PATH_CONF}/iptables-firewall.conf; _confset _IPT_FILE_CONF "${_IPT_FILE_CONF}"
 
-anstmp=20 && _askno "PREFIX of port for 'SSH' VMs connections (${anstmp})"
-_IPT_PRE_SSH="${_ANSWER:-$anstmp}" && _confset _IPT_PRE_SSH "${_IPT_PRE_SSH}"
+[ -z ${_IPT_PRE_SSH+x} ] && { anstmp=20; _askno "PREFIX of port for 'SSH' VMs connections (${anstmp})"
+	_IPT_PRE_SSH="${_ANSWER:-$anstmp}"; _confset _IPT_PRE_SSH "${_IPT_PRE_SSH}"; }
 
-anstmp=8 && _askno "PREFIX of port for 'HTTP' VMs connections  (${anstmp})"
-_IPT_PRE_HTTP="${_ANSWER:-$anstmp}" && _confset _IPT_PRE_HTTP "${_IPT_PRE_HTTP}"
+[ -z ${_IPT_PRE_HTTP+x} ] && { anstmp=8; _askno "PREFIX of port for 'HTTP' VMs connections  (${anstmp})"
+_IPT_PRE_HTTP="${_ANSWER:-$anstmp}"; _confset _IPT_PRE_HTTP "${_IPT_PRE_HTTP}"; }
 
-anstmp=9 && _askno "PREFIX of port for 'HTTP' VMs connections (${anstmp})"
-_IPT_PRE_HTTPS="${_ANSWER:-$anstmp}" && _confset _IPT_PRE_HTTPS "${_IPT_PRE_HTTPS}"
+[ -z ${_IPT_PRE_HTTPS+x} ] && { anstmp=9; _askno "PREFIX of port for 'HTTP' VMs connections (${anstmp})"
+_IPT_PRE_HTTPS="${_ANSWER:-$anstmp}"; _confset _IPT_PRE_HTTPS "${_IPT_PRE_HTTPS}"; }
+
+########################  CONFIGURATION
+
+# load configuration file
+. ${S_FILE_INSTALL_CONF}
 
 ########################  SYSCTL
 
@@ -78,18 +83,22 @@ _evalr "chown root:root ${file} && chmod 644 ${file}"
 _echot "------------------  systemd reload daemon"
 _evalr systemctl daemon-reload
 
-_echot "------------------  ${_IPT_SERVICE}-test"
-_echoA "To launch iptables rules for TEST, run:"
-_echo "systemctl start ${_IPT_SERVICE}-test"
-_echoa "You have 2 minutes after to verify iptables rules"
+if [ -z "${_INSTALL_AUTO}" ]; then
+	_echot "------------------  ${_IPT_SERVICE}-test"
+	_echoA "To launch iptables rules for TEST, run:"
+	_echo "systemctl start ${_IPT_SERVICE}-test"
+	_echoa "You have 2 minutes after to verify iptables rules"
 
-_echot "------------------  systemd ${_IPT_SERVICE}"
-_echoa  "START the service: ${_IPT_SERVICE}"
-_askno "Valid to process"
-_service start ${_IPT_SERVICE}
-_echoa  "ENABLE the service: ${_IPT_SERVICE}"
-_askno "Valid to process"
-_service enable ${_IPT_SERVICE}
+	_echot "------------------  systemd ${_IPT_SERVICE}"
+	_echoa  "START the service: ${_IPT_SERVICE}"
+	_askno "Valid to process"
+	_service start ${_IPT_SERVICE}
+	_echoa  "ENABLE the service: ${_IPT_SERVICE}"
+	_askno "Valid to process"
+	_service enable ${_IPT_SERVICE}
+else
+	_service enable ${_IPT_SERVICE}
+fi
 
 ########################  RSYSLOG
 

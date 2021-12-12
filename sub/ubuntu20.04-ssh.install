@@ -6,6 +6,11 @@ _echoT "\n==========================================  ${S_RELEASE}-${_PART}"
 
 grep -q "^# ${_PART#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART}" >> ${S_FILE_INSTALL_CONF}
 
+########################  CONFIGURATION
+
+# load configuration file
+. ${S_FILE_INSTALL_CONF}
+
 ########################  MAIN
 
 # set s_port

@@ -8,50 +8,29 @@ grep -q "^# ${_PART#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART}" >> ${S_FI
 
 ########################  REQUIRED
 
-file_conf_aliases=${S_PATH_INSTALL_CONF}/mail/postfix/aliases
+file_ssmtp_conf=${S_PATH_INSTALL_CONF}/mail/ssmtp/ssmtp.conf
+file_ssmtp_alias=${S_PATH_INSTALL_CONF}/mail/ssmtp/revaliases
 
-_echot "------------------ required files"
-_require ${file_conf_aliases}
+_echot "------------------  required files"
+_require ${file_ssmtp_conf} ${file_ssmtp_alias}
+
+########################  CONFIGURATION
+
+# load configuration file
+. ${S_FILE_INSTALL_CONF}
 
 ########################  MAIN
 
-_echot "------------------  postfix install"
-_echoA "Choose 'Internet Site' and just valid for all default values"
-_askno "valid to continue"
-_eval apt install -y postfix
+_echot "------------------  ssmtp install"
+_evalr apt install -y ssmtp
 
-_echot "------------------  postfix trick"
-link=/etc/postfix/makedefs.out
-[ -h ${link} ] && rm ${link} && ln /usr/share/postfix/makedefs.out ${link}
+_echot "------------------  ssmtp conf"
+file=/etc/ssmtp/${file_ssmtp_conf##*/}
+_evalr cp ${file_ssmtp_conf} ${_CT_NAME}${file}
+file=/etc/ssmtp/${file_ssmtp_alias##*/}
+_evalr cp ${file_ssmtp_alias} ${_CT_NAME}${file}
 
-_echot "------------------  postfix conf"
-file=/etc/postfix/main.cf
-_keepcpts ${file}
-_eval "sed -i /^my/d ${file}"
-_eval "sed -i /^smtp_tls/d ${file}"
-_eval "sed -i /^smtpd_tls/d ${file}"
-
-file_aliases=/etc/postfix/${file_conf_aliases##*/}
-while read str val; do
-	_eval postconf "${str}=${val}"
-done <<< "mydomain  ovh
-mynetworks  127.0.0.1/32
-mynetworks_style host
-inet_interfaces  127.0.0.1
-relayhost  ${S_SERVICE[mail]}:25
-alias_database  hash:${file_aliases}
-alias_maps  hash:${file_aliases}"
-#smtpd_relay_restrictions  permit_mynetworks,check_relay_domains
-
-_echot "------------------  postfix aliases"
-_evalr cp -a ${file_conf_aliases} ${file_aliases}
-_var_replace ${file_aliases} mail
-_evalr chmod g-w,o= ${file_aliases}
-newaliases
-
-_echot "------------------  postfix enable"
-systemctl is-enabled postfix || _service enable postfix
-_service restart postfix
+_var_replace /etc/ssmtp mail
 
 _echoT "===================== ${_PART} end"
 _partadd ${_PART#++} ${S_FILE_INSTALL_DONE}
