@@ -41,6 +41,8 @@ _echot "------------------  data domain"
 
 [ -z ${_APA_CT_NAME+x} ] && { anstmp=wa-${_APA_DOM_FQDN//./-}; _askno "Name of container to build (${anstmp})"; _APA_CT_NAME="${_ANSWER:-${anstmp}}"; }
 
+[ -z ${_APA_CT_PROFILE+x} ] && { anstmp=www-${_APA_DOM_FQDN}; _askno "Base name of the mariadb profile (${anstmp})"; _APA_CT_PROFILE="${_ANSWER:-${anstmp}}"; }
+
 [ -z ${_APA_DOM_ADMIN+x} ] && { anstmp=admin; _askno "Give the subdomain name for administration (${anstmp})"; _APA_DOM_ADMIN="${_ANSWER:-${anstmp}}"; }
 _confset _APA_DOM_ADMIN "${_APA_DOM_ADMIN}"
 
@@ -104,7 +106,6 @@ _confset _APA_MAX_CONNECTIONS_PER_CHILD "${_APA_MAX_CONNECTIONS_PER_CHILD}"
 _CT_NAME=${_APA_CT_NAME}
 _APA_PATH_WWW=${S_VM_PATH_SHARE}/www;  _confset _APA_PATH_WWW "${_APA_PATH_WWW}"
 _APA_PATH_DOM=${S_VM_PATH_SHARE}/www/${_APA_DOM_FQDN};  _confset _APA_PATH_DOM "${_APA_PATH_DOM}"
-_APA_PROFILE=www-${_APA_DOM_FQDN};  _confset _APA_PROFILE "${_APA_PROFILE}"
 
 path_sites=/etc/apache2/sites
 path_confd=/etc/apache2/conf.d
@@ -117,7 +118,7 @@ file_httpd_conf=/etc/apache2/httpd.conf
 
 ########################  PROFILE
 
-profile=${_APA_PROFILE}
+profile=${_APA_CT_PROFILE}
 if ! lxc profile list -f csv|grep -q "^${profile},"; then
 	_echot "------------------  profile ${profile}"
 	_eval lxc profile create ${profile}
