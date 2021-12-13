@@ -11,14 +11,14 @@ _echot "------------------ required vm"
 cts_all_mdb=`lxc list -f csv -c n| grep '^mdb-'|xargs`
 [ "${cts_all_mdb}" ] || _exite "unable to find mariadb container"
 
-file_master="${S_PATH_INSTALL_CONF}/mariadb/mariadb-master.cnf"
-file_slave="${S_PATH_INSTALL_CONF}/mariadb/mariadb-slave.cnf"
+file_conf_master="${S_PATH_INSTALL_CONF}/mariadb/mariadb-master.cnf"
+file_conf_slave="${S_PATH_INSTALL_CONF}/mariadb/mariadb-slave.cnf"
 
 file_conf_ha_front=${S_PATH_INSTALL_CONF}/haproxy/conf-available/40-fronts-mariadb
 file_conf_ha_back=${S_PATH_INSTALL_CONF}/haproxy/conf-available/60-backs-mariadb
 
 _echot "------------------ required files"
-_require ${file_master} ${file_slave}
+_require ${file_conf_master} ${file_conf_slave}
 _require ${file_conf_ha_front} ${file_conf_ha_back}
 
 #_askyn "To install a master/slave mariadb cluster, you need to have 2 available instances of mariadb?" && [ ${_ANSWER} = n ] && _exit 0
@@ -27,55 +27,54 @@ _require ${file_conf_ha_front} ${file_conf_ha_back}
 
 _echot "------------------  data ct"
 
-# master
-[ -z "${_MDB_CT_NAME1}" ] && { cts_all_mdb=" ${cts_all_mdb} "
+[ -z ${_MDB_MS_CT_NAME+x} ] && { anstmp=mdb-${S_DOM_FQDN//./-}; _askno "Base name of the mariadb container to build (${anstmp})"; _MDB_MS_CT_NAME="${_ANSWER:-${anstmp}}"; }
+
+[ -z ${_MDB_MS_CT_NUM+x} ] && { anstmp=2 && _askno "Number of containers to build (${anstmp})"; _MDB_MS_CT_NUM="${_ANSWER:-$anstmp}"; }
+
+[ -z "${_MDB_MS_CT_MASTER}" ] && { cts_all_mdb=" ${cts_all_mdb} "
 	_menu "Select one available mariadb container for MASTER " ${cts_all_mdb}
-	_MDB_CT_NAME1=${_ANSWER}; }
+	_MDB_MS_CT_MASTER=${_ANSWER}; }
 
 # slave
-[ -z "${_MDB_CT_NAME2}" ] && { cts_all_mdb="${cts_all_mdb/ ${_MDB_CT_NAME1} / }"
+[ -z "${_MDB_MS_CT_SLAVES}" ] && { cts_all_mdb="${cts_all_mdb/ ${_MDB_MS_CT_MASTER} / }"
 	[ "${cts_all_mdb}" ] && _menu "Select one available mariadb container for SLAVE" ${cts_all_mdb} || _exite "Unable to find container maria-* to use"
-	_MDB_CT_NAME2=${_ANSWER}; }
+	_MDB_MS_CT_SLAVES=${_ANSWER}; }
 
-# _MDB_PWD_MASTER
-ct_name=${_MDB_CT_NAME1}
-if ! mysql -s -h${ct_name} -uroothost -p${_MDB_PWD_MASTER} -e ''; then
+if [ -z "${_MDB_MS_PWD_HOST+x}" ]; then
+	# _MDB_MS_PWD_HOST
 	ok=false; while ! ${ok}; do
-		_askno "Password for user: 'roothost' for '${ct_name}'"
-		mysql -s -h${ct_name} -uroothost -p${_ANSWER} -e '' && ok=true || _echo "Unable to connect to: ${ct_name} with pwd: ${_ANSWER}"
+		_askno "Password for user: roothost"
+		ok=true
+		for ct_name in ${_MDB_MS_CT_MASTER} ${_MDB_MS_CT_SLAVES}; do
+			mysql -s -h${ct_name} -uroothost -p${_MDB_MS_PWD_HOST} -e '' || { _echoe "Unable to connect to: ${ct_name} with pwd: ${_ANSWER}"; ok=false; }
+		done
 	done
-	_MDB_PWD_MASTER=${_ANSWER}
-fi
-
-# _MDB_PWD_SLAVE
-ct_name=${_MDB_CT_NAME2}
-if ! mysql -s -h${ct_name} -uroothost -p${_MDB_PWD_SLAVE} -e ''; then
-	ok=false; while ! ${ok}; do
-		anstmp=${_MDB_PWD_SLAVE:-${_MDB_PWD_MASTER}} && _askno "Password for user: 'roothost' for '${ct_name}' (${anstmp})"
-		_ANSWER="${_ANSWER:-$anstmp}"
-		mysql -s -h${ct_name} -uroothost -p${_ANSWER} -e '' && ok=true || _echo "Unable to connect to: ${ct_name}"
+	_MDB_MS_PWD_HOST=${_ANSWER}
+else
+	# check password
+	for ct_name in ${_MDB_MS_CT_MASTER} ${_MDB_MS_CT_SLAVES}; do
+		mysql -s -h${ct_name} -uroothost -p${_MDB_MS_PWD_HOST} -e '' || _exite "Unable to connect to: ${ct_name} with pwd: ${_ANSWER}"
 	done
-	_MDB_PWD_SLAVE=${_ANSWER}
 fi
 
 _echot "------------------  data"
 
-[ -z ${_MDB_PWD_REPLIC+x} ] && { anstmp=`_pwd`; _askno "Password for replication access (${anstmp})"; _MDB_PWD_REPLIC="${_ANSWER:-${anstmp}}"; }
+[ -z ${_MDB_MS_PWD_REPLIC+x} ] && { anstmp=`_pwd`; _askno "Password for replication access (${anstmp})"; _MDB_MS_PWD_REPLIC="${_ANSWER:-${anstmp}}"; }
 
-[ -z ${_MDB_PROXY+x} ] && { anstmp=${S_DOM_FQDN%.lxd}; _askno "Prefix for proxy name (${anstmp})"; _MDB_PROXY="${_ANSWER:-$anstmp}"; }
-_confset _MDB_PROXY "${_MDB_PROXY}"
+[ -z ${_MDB_MS_PROXY+x} ] && { anstmp=${S_DOM_FQDN%.lxd}; _askno "Prefix for proxy name (${anstmp})"; _MDB_MS_PROXY="${_ANSWER:-$anstmp}"; }
+_confset _MDB_MS_PROXY "${_MDB_MS_PROXY}"
 
-[ -z ${_MDB_MAX_BIN_SIZE+x} ] && { anstmp=256M; _askno "max_binlog_size (${anstmp})"; _MDB_MAX_BIN_SIZE="${_ANSWER:-$anstmp}"; }
+[ -z ${_MDB_MS_MAX_BIN_SIZE+x} ] && { anstmp=256M; _askno "max_binlog_size (${anstmp})"; _MDB_MS_MAX_BIN_SIZE="${_ANSWER:-$anstmp}"; }
 
-[ -z ${_MDB_EXPIRE_LOGS_DAYS+x} ] && { anstmp=30; _askno "expire_logs_days (${anstmp})"; _MDB_EXPIRE_LOGS_DAYS="${_ANSWER:-$anstmp}"; }
+[ -z ${_MDB_MS_EXPIRE_LOGS_DAYS+x} ] && { anstmp=30; _askno "expire_logs_days (${anstmp})"; _MDB_MS_EXPIRE_LOGS_DAYS="${_ANSWER:-$anstmp}"; }
 
-[ -z ${_MDB_MASTER_ID+x} ] && { anstmp=1; _askno "the server id for master (${anstmp})"; _MDB_MASTER_ID="${_ANSWER:-$anstmp}"; }
+[ -z ${_MDB_MS_MASTER_ID+x} ] && { anstmp=1; _askno "the server id for master (${anstmp})"; _MDB_MS_MASTER_ID="${_ANSWER:-$anstmp}"; }
 
-[ -z ${_MDB_SLAVE_ID+x} ] && { anstmp=100; _askno "the server id for slave (${anstmp})"; _MDB_SLAVE_ID="${_ANSWER:-$anstmp}"; }
+[ -z ${_MDB_MS_SLAVE_ID+x} ] && { anstmp=100; _askno "the server id for slave (${anstmp})"; _MDB_MS_SLAVE_ID="${_ANSWER:-$anstmp}"; }
 
-[ -z ${_MDB_DB_IGNORE+x} ] && { anstmp="information_schema mysql performance_schema"; _askno "database names to IGNORE for replication (${anstmp})"; _MDB_DB_IGNORE="${_ANSWER:-$anstmp}"; }
+[ -z ${_MDB_MS_DB_IGNORE+x} ] && { anstmp="information_schema mysql performance_schema"; _askno "database names to IGNORE for replication (${anstmp})"; _MDB_MS_DB_IGNORE="${_ANSWER:-$anstmp}"; }
 
-[ -z ${_MDB_DB_DO+x} ] && { anstmp=; _askno "database names to USE for replication (set ignored db to null) (${anstmp})"; 	_MDB_DB_DO="${_ANSWER:-$anstmp}"; }
+[ -z ${_MDB_MS_DB_DO+x} ] && { anstmp=; _askno "database names to USE for replication (set ignored db to null) (${anstmp})"; 	_MDB_MS_DB_DO="${_ANSWER:-$anstmp}"; }
 
 ########################  CONFIGURATION
 
@@ -84,117 +83,121 @@ _confset _MDB_PROXY "${_MDB_PROXY}"
 
 ########################  CONF MASTER
 
-ct_name=${_MDB_CT_NAME1}
+_CT_NAME=${_MDB_MS_CT_MASTER}
+_echot "\n++++++++++++++++++  ${_CT_NAME}"
 
 #  METADATA
 _echot "------------------  metadata"
-_lxc_meta_add ${ct_name} apps mariadb-master
+_lxc_meta_add ${_CT_NAME} apps mariadb-master
 
-if lxc list -f csv -c n status=Stopped | grep -q ^${ct_name}$; then
-	_echot "------------------  ${ct_name} start"
-	_eval lxc start ${ct_name}
+if lxc list -f csv -c n status=Stopped | grep -q ^${_CT_NAME}$; then
+	_echot "------------------  ${_CT_NAME} start"
+	_eval lxc start ${_CT_NAME}
 fi
 
-_echot "------------------  ${ct_name} conf"
-file=${_MDB_PATH_CONF}/${file_master##*/}
-_lxc_exec ${ct_name} "[ -f ${file} ] && cp -a ${file} ${file}.${_SDATE}"
-_eval lxc file push -q ${file_master} ${ct_name}${file}
-_lxc_var_replace ${ct_name} ${file} mariadb
+_echot "------------------  ${_CT_NAME} conf"
+file=${_MDB_PATH_CONF}/${file_conf_master##*/}
+_lxc_exec ${_CT_NAME} "[ -f ${file} ] && cp -a ${file} ${file}.${_SDATE}"
+_eval lxc file push -q ${file_conf_master} ${_CT_NAME}${file}
+_lxc_var_replace ${_CT_NAME} ${file} mariadb
 
-if [ "${_MDB_DB_DO}" ]; then
-	_echot "------------------  ${ct_name} db-do"
-	str="$(echo "binlog-do-db=${_MDB_DB_DO// / binlog-do-db=}"|tr ' ' '\n')"
-	_lxc_exec ${ct_name} "sed -i '/^binlog-do-db/ d' ${file}"
-	_lxc_exec ${ct_name} "sed -i '/^#binlog-do-db/ a${str}' ${file}"
-elif [ "${_MDB_DB_IGNORE}" ]; then
-	_echot "------------------  ${ct_name} db-ignore"
-	str="$(echo "binlog-ignore-db=${_MDB_DB_IGNORE// /\\ binlog-ignore-db=}"|tr ' ' '\n')"
-	_lxc_exec ${ct_name} "sed -i '/^binlog-ignore-db/ d' ${file}"
-	_lxc_exec ${ct_name} "sed -i '/^#binlog-ignore-db/ a${str}' ${file}"
+if [ "${_MDB_MS_DB_DO}" ]; then
+	_echot "------------------  ${_CT_NAME} db-do"
+	str="$(echo "binlog-do-db=${_MDB_MS_DB_DO// / binlog-do-db=}"|tr ' ' '\n')"
+	_lxc_exec ${_CT_NAME} "sed -i '/^binlog-do-db/ d' ${file}"
+	_lxc_exec ${_CT_NAME} "sed -i '/^#binlog-do-db/ a${str}' ${file}"
+elif [ "${_MDB_MS_DB_IGNORE}" ]; then
+	_echot "------------------  ${_CT_NAME} db-ignore"
+	str="$(echo "binlog-ignore-db=${_MDB_MS_DB_IGNORE// /\\ binlog-ignore-db=}"|tr ' ' '\n')"
+	_lxc_exec ${_CT_NAME} "sed -i '/^binlog-ignore-db/ d' ${file}"
+	_lxc_exec ${_CT_NAME} "sed -i '/^#binlog-ignore-db/ a${str}' ${file}"
 fi
 
-_echot "------------------  ${ct_name} restart"
-_lxc_exec ${ct_name} "rc-service mariadb restart"
+_echot "------------------  ${_CT_NAME} restart"
+_lxc_exec ${_CT_NAME} "rc-service mariadb restart"
 
-_echot "------------------  ${ct_name} replic"
-cmd="CREATE OR REPLACE USER 'replic'@'${_MDB_CT_NAME2}.lxd' IDENTIFIED BY '${_MDB_PWD_REPLIC}';
-GRANT REPLICATION SLAVE ON *.* TO 'replic'@'${_MDB_CT_NAME2}.lxd';"
-_eval "mysql -h${ct_name} -uroothost -p${_MDB_PWD_MASTER} -e \"${cmd}\""
-_eval "mysql -s -h${ct_name} -uroothost -p${_MDB_PWD_MASTER} -e \"SELECT user,host FROM mysql.user WHERE user like 'replic';\""
-_eval "mysql -h${ct_name} -uroothost -p${_MDB_PWD_MASTER} -e \"FLUSH PRIVILEGES;\""
+_echot "------------------  ${_CT_NAME} replic"
+for ct_slave in ${_MDB_MS_CT_SLAVES}; do
+	cmd="CREATE OR REPLACE USER 'replic'@'${ct_slave}.lxd' IDENTIFIED BY '${_MDB_MS_PWD_REPLIC}';
+	GRANT REPLICATION SLAVE ON *.* TO 'replic'@'${ct_slave}.lxd';"
+	strpass+="replic @ ${ct_slave}.lxd - ${_MDB_MS_PWD_REPLIC}\n"
+done
+_eval "mysql -h${_CT_NAME} -uroothost -p${_MDB_MS_PWD_HOST} -e \"${cmd}\""
+_eval "mysql -s -h${_CT_NAME} -uroothost -p${_MDB_MS_PWD_HOST} -e \"SELECT user,host FROM mysql.user WHERE user like 'replic';\""
+_eval "mysql -h${_CT_NAME} -uroothost -p${_MDB_MS_PWD_HOST} -e \"FLUSH PRIVILEGES;\""
 
-_echot "------------------  ${ct_name} passwd"
-file=${S_PATH_CONF}/mariadb
-strpass="replic @ ${_MDB_CT_NAME2}.lxd - ${_MDB_PWD_REPLIC}"
-cmd="grep -q ^replic ${file} && sed -i '/^replic/c ${strpass}'  ${file} || sed -i '\$a ${strpass}' ${file}"
-_lxc_exec ${ct_name} "${cmd}"
+_echot "------------------  ${_CT_NAME} lock"
+_eval "mysql -h${_CT_NAME} -uroothost -p${_MDB_MS_PWD_HOST} -e \"FLUSH TABLES WITH READ LOCK;\""
+_eval "mysql -s -h${_CT_NAME} -uroothost -p${_MDB_MS_PWD_HOST} -e \"SHOW MASTER STATUS;\""
+_echot "------------------  ${_CT_NAME} pos"
+master_file=$(mysql -s -h${_CT_NAME} -uroothost -p${_MDB_MS_PWD_HOST} -e "SHOW MASTER STATUS;"|tail -n1|cut -f1)
+master_pos=$(mysql -s -h${_CT_NAME} -uroothost -p${_MDB_MS_PWD_HOST} -e "SHOW MASTER STATUS;"|tail -n1|cut -f2)
 
-_echot "------------------  ${ct_name} lock"
-_eval "mysql -h${ct_name} -uroothost -p${_MDB_PWD_MASTER} -e \"FLUSH TABLES WITH READ LOCK;\""
-_eval "mysql -s -h${ct_name} -uroothost -p${_MDB_PWD_MASTER} -e \"SHOW MASTER STATUS;\""
-_echot "------------------  ${ct_name} pos"
-master_file=`mysql -s -h${ct_name} -uroothost -p${_MDB_PWD_MASTER} -e "SHOW MASTER STATUS;"|tail -n1|cut -f1`
-master_pos=`mysql -s -h${ct_name} -uroothost -p${_MDB_PWD_MASTER} -e "SHOW MASTER STATUS;"|tail -n1|cut -f2`
-
-_echot "------------------  ${ct_name} backup"
+_echot "------------------  ${_CT_NAME} backup"
 [ -z "${_INSTALL_AUTO}" ] && _askno "Backup data from master & valid to continue"
 
-_echot "------------------  ${ct_name} unlock"
-_eval "mysql -h${ct_name} -uroothost -p${_MDB_PWD_MASTER} -e \"UNLOCK TABLES;\""
+_echot "------------------  ${_CT_NAME} unlock"
+_eval "mysql -h${_CT_NAME} -uroothost -p${_MDB_MS_PWD_HOST} -e \"UNLOCK TABLES;\""
 
 ########################  CONF SLAVE
 
-ct_name=${_MDB_CT_NAME2}
+for _CT_NAME in ${_MDB_MS_CT_SLAVES}; do
+	_echot "\n++++++++++++++++++  ${_CT_NAME}"
 
-#  METADATA
-_echot "------------------  metadata"
-_lxc_meta_add ${ct_name} apps mariadb-slave
+	#  METADATA
+	_echot "------------------  metadata"
+	_lxc_meta_add ${_CT_NAME} apps mariadb-slave
 
-if lxc list -f csv -c n status=Stopped | grep -q ^${ct_name}$; then
-	_echot "------------------  ${ct_name} start"
-	_eval lxc start ${ct_name}
-fi
+	if lxc list -f csv -c n status=Stopped | grep -q ^${_CT_NAME}$; then
+		_echot "------------------  ${_CT_NAME} start"
+		_eval lxc start ${_CT_NAME}
+	fi
 
-_echot "------------------  ${ct_name} restore"
-[ -z "${_INSTALL_AUTO}" ] && _askno "Restore backuped data from master to slave & continue"
+	_echot "------------------  ${_CT_NAME} restore"
+	[ -z "${_INSTALL_AUTO}" ] && _askno "Restore backuped data from master to slave & continue"
 
-_echot "------------------  ${ct_name} conf"
-file=${_MDB_PATH_CONF}/${file_slave##*/}
-_lxc_exec ${ct_name} "[ -f ${file} ] && cp -a ${file} ${file}.${_SDATE}"
-_eval lxc file push -q ${file_slave} ${ct_name}${file}
-_lxc_var_replace ${ct_name} ${file} mariadb
+	_echot "------------------  ${_CT_NAME} conf"
+	file=${_MDB_PATH_CONF}/${file_conf_slave##*/}
+	_lxc_exec ${_CT_NAME} "[ -f ${file} ] && cp -a ${file} ${file}.${_SDATE}"
+	_eval lxc file push -q ${file_conf_slave} ${_CT_NAME}${file}
+	_lxc_var_replace ${_CT_NAME} ${file} mariadb
 
-if [ "${_MDB_DB_DO}" ]; then
-	_echot "------------------  ${ct_name} db-do"
-	str="$(echo "binlog-do-db=${_MDB_DB_DO// / binlog-do-db=}"|tr ' ' '\n')"
-	_lxc_exec ${ct_name} "sed -i '/^binlog-do-db/ d' ${file}"
-	_lxc_exec ${ct_name} "sed -i '/^#binlog-do-db/ a${str}' ${file}"
-elif [ "${_MDB_DB_IGNORE}" ]; then
-	_echot "------------------  ${ct_name} db-ignore"
-	str="$(echo "binlog-ignore-db=${_MDB_DB_IGNORE// /\\ binlog-ignore-db=}"|tr ' ' '\n')"
-	_lxc_exec ${ct_name} "sed -i '/^binlog-ignore-db/ d' ${file}"
-	_lxc_exec ${ct_name} "sed -i '/^#binlog-ignore-db/ a${str}' ${file}"
-fi
+	if [ "${_MDB_MS_DB_DO}" ]; then
+		_echot "------------------  ${_CT_NAME} db-do"
+		str="$(echo "binlog-do-db=${_MDB_MS_DB_DO// / binlog-do-db=}"|tr ' ' '\n')"
+		_lxc_exec ${_CT_NAME} "sed -i '/^binlog-do-db/ d' ${file}"
+		_lxc_exec ${_CT_NAME} "sed -i '/^#binlog-do-db/ a${str}' ${file}"
+	elif [ "${_MDB_MS_DB_IGNORE}" ]; then
+		_echot "------------------  ${_CT_NAME} db-ignore"
+		str="$(echo "binlog-ignore-db=${_MDB_MS_DB_IGNORE// /\\ binlog-ignore-db=}"|tr ' ' '\n')"
+		_lxc_exec ${_CT_NAME} "sed -i '/^binlog-ignore-db/ d' ${file}"
+		_lxc_exec ${_CT_NAME} "sed -i '/^#binlog-ignore-db/ a${str}' ${file}"
+	fi
 
-_echot "------------------  ${ct_name} mariadb restart"
-_lxc_exec ${ct_name} "rc-service mariadb restart"
+	_echot "------------------  ${_CT_NAME} mariadb restart"
+	_lxc_exec ${_CT_NAME} "rc-service mariadb restart"
 
-_echot "------------------  ${ct_name} conf master"
-#_eval "mysql -h${ct_name} -uroothost -p${_MDB_PWD_SLAVE} -e \"SET default_master_connection = '${_MDB_CT_NAME1}';\""
-_eval "mysql -h${ct_name} -uroothost -p${_MDB_PWD_SLAVE} -e \"STOP SLAVE;\""
+	_echot "------------------  ${_CT_NAME} change master"
+	#_eval "mysql -h${_CT_NAME} -uroothost -p${_MDB_MS_PWD_HOST} -e \"SET default_master_connection = '${_MDB_MS_CT_MASTER}';\""
+	_eval "mysql -h${_CT_NAME} -uroothost -p${_MDB_MS_PWD_HOST} -e \"STOP SLAVE;\""
 
-cmd="CHANGE MASTER TO
-MASTER_HOST='${_MDB_CT_NAME1}',
-MASTER_USER='replic',
-MASTER_PASSWORD='${_MDB_PWD_REPLIC}',
-MASTER_PORT=${S_DB_MARIA_PORT_RW},
-MASTER_LOG_FILE='${master_file}',
-MASTER_LOG_POS=${master_pos},
-MASTER_CONNECT_RETRY=10;"
-_eval "mysql -h${ct_name} -uroothost -p${_MDB_PWD_SLAVE} -e \"${cmd}\""
+	cmd="CHANGE MASTER TO
+	MASTER_HOST='${_MDB_MS_CT_MASTER}',
+	MASTER_USER='replic',
+	MASTER_PASSWORD='${_MDB_MS_PWD_REPLIC}',
+	MASTER_PORT=${S_DB_MARIA_PORT_RW},
+	MASTER_LOG_FILE='${master_file}',
+	MASTER_LOG_POS=${master_pos},
+	MASTER_CONNECT_RETRY=10;"
+	_eval "mysql -h${_CT_NAME} -uroothost -p${_MDB_MS_PWD_HOST} -e \"${cmd}\""
 
-_echot "------------------  ${ct_name} start slave"
-_eval "mysql -h${ct_name} -uroothost -p${_MDB_PWD_SLAVE} -e \"START SLAVE;\""
+	_echot "------------------  ${_CT_NAME} start slave"
+	_eval "mysql -h${_CT_NAME} -uroothost -p${_MDB_MS_PWD_HOST} -e \"START SLAVE;\""
+
+	_echot "------------------  increment id"
+	_MDB_MS_SLAVE_ID=$((${_MDB_MS_SLAVE_ID} + 1))
+
+done
 
 ########################  HAPROXY
 
@@ -209,30 +212,39 @@ for file in ${file_conf_ha_front} ${file_conf_ha_back}; do
 done
 _lxc_var_replace ${ct_proxy} /etc/haproxy/conf-available mariadb
 
+_echot "------------------  haproxy slaves"
+file=${path}/conf-available/${file_conf_ha_back##*/}
+for ct_name in ${_MDB_MS_CT_SLAVES}; do
+	str="\\\\tserver ${ct_name} ${ct_name}:${S_DB_MARIA_PORT_RW}"
+	_lxc_exec ${ct_proxy} "sed -i '/^\s*server ${ct_name}/d' ${file}"
+	_lxc_exec ${ct_proxy} "sed -i '/#mbd_ms_slaves_end/ i${str}' ${file}"
+done
+
 _echot "------------------  haproxy reload"
 _lxc_exec_e ${ct_proxy} "rc-service haproxy reload"
 
 ########################  SHOW
 
 _echot "------------------  status master"
-_eval "mysql -h${_MDB_CT_NAME1} -uroothost -p${_MDB_PWD_MASTER} -e \"SHOW MASTER STATUS;\""
+_eval "mysql -h${_MDB_MS_CT_MASTER} -uroothost -p${_MDB_MS_PWD_HOST} -e \"SHOW MASTER STATUS;\""
 
 _echot "------------------  status slave"
-_eval "mysql -h${_MDB_CT_NAME2} -uroothost -p${_MDB_PWD_SLAVE} -e \"SHOW SLAVE STATUS \G;\" | head -n19"
+for ct_name in ${_MDB_MS_CT_SLAVES}; do
+	_eval "mysql -h${ct_name} -uroothost -p${_MDB_MS_PWD_HOST} -e \"SHOW SLAVE STATUS \G;\" | head -n19"
+done
 
-_echot "------------------  proxy show privileges"
+_echot "------------------  proxy show replic"
 _echoa "Wait 4s for proxy updating"
 _eval sleep 4
-_eval "mysql -h${S_SERVICE[proxy]} -uroothost -p${_MDB_PWD_MASTER} -e \"SELECT user,host FROM mysql.user WHERE user like 'replic';\""
+_eval "mysql -h${S_SERVICE[proxy]} -uroothost -p${_MDB_MS_PWD_HOST} -e \"SELECT user,host FROM mysql.user WHERE user like 'replic';\""
 
 _echot "------------------  show passwords"
 _echoA "Keep this passwords:"
 _echoa "${strpass%\\n}"
 
-
 ########################  PUBLISH
 
-for ct_name in ${_MDB_CT_NAME1} ${_MDB_CT_NAME2}; do
+for ct_name in ${_MDB_MS_CT_MASTER} ${_MDB_MS_CT_SLAVES}; do
 	_echot "------------------  publish ${ct_name}"
 	lxc image list -f csv -c l | grep -q ^${ct_name}$ && _eval lxc image alias rename ${ct_name} ${ct_name}-${_SDATE}
 	_eval lxc publish --force ${ct_name} --alias ${ct_name}

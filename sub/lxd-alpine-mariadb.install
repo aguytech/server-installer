@@ -98,7 +98,7 @@ _service restart ${_IPT_SERVICE}
 
 for i in $(seq 1 ${_PHP_CT_NUM}); do
 
-	_echot "++++++++++++++++++  zfs ${_CT_NAME}"
+	_echot "\n++++++++++++++++++  ${_CT_NAME}"
 	_CT_NAME=${_MDB_CT_NAME}-${i}
 	path_host=${S_HOST_PATH}/mariadb/${_CT_NAME}
 
@@ -228,7 +228,8 @@ for i in $(seq 1 ${_PHP_CT_NUM}); do
 	_echot "------------------  right roothost"
 	for ip in ${_IPS_CLUSTER} ${_CIDR_VM%/*}; do
 		strpass+="roothost @ ${ip} - ${_MDB_PWD_HOST}\n"
-		cmd="GRANT ALL PRIVILEGES ON *.* TO roothost@'${ip}' IDENTIFIED BY '${_MDB_PWD_HOST}' WITH GRANT OPTION"
+		cmd="GRANT ALL PRIVILEGES ON *.* TO roothost@'${ip}' IDENTIFIED BY '${_MDB_PWD_HOST}' WITH GRANT OPTION; "
+		cmd+="GRANT ALL PRIVILEGES ON *.* TO roothost@'${S_SERVICE[proxy]}.lxd' IDENTIFIED BY '${_MDB_PWD_HOST}' WITH GRANT OPTION; "
 		_lxc_exec ${_CT_NAME} "mysql -uroot -p${_MDB_PWD_LOCAL} -e \"${cmd}\""
 	done
 
@@ -261,7 +262,7 @@ for i in $(seq 1 ${_PHP_CT_NUM}); do
 	_echot "------------------  ${_CT_NAME} client"
 	file=/etc/rsyslog.d/${file_conf_rsyslog_client##*/}
 	_eval lxc file push -q ${file_conf_rsyslog_client} ${_CT_NAME}${file}
-	_lxc_var_replace ${_CT_NAME} ${file} rsyslog php
+	_lxc_var_replace ${_CT_NAME} ${file} rsyslog
 
 	_echot "------------------  ${_CT_NAME} rsyslog restart"
 	_lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
@@ -281,13 +282,6 @@ for i in $(seq 1 ${_PHP_CT_NUM}); do
 
 	_echot "------------------  ${_CT_NAME} log clean"
 	_lxc_exec ${_CT_NAME} "find ${S_PATH_LOG}/mysql -name *.log -exec rm {} \;"
-
-	########################  STRPASS
-
-	#_echot "------------------  ${_CT_NAME} passwd"
-	#file=${S_PATH_CONF}/mariadb
-	#strpass=${strpass%\\n}
-	#_lxc_exec ${_CT_NAME} "echo -e ${strpass//\\n/\\\\n} > ${file}"
 
 	########################  SHOW
 
@@ -313,7 +307,7 @@ _lxc_exec ${S_SERVICE[log]} "[ -d ${path} ] || mkdir -p ${path}"
 _echot "------------------  ${S_SERVICE[log]} host"
 file=/etc/rsyslog.d/${file_conf_rsyslog_host##*/}
 _eval lxc file push -q ${file_conf_rsyslog_host} ${S_SERVICE[log]}${file}
-_lxc_var_replace ${S_SERVICE[log]} ${file} rsyslog php
+_lxc_var_replace ${S_SERVICE[log]} ${file} rsyslog
 
 _echot "------------------  ${S_SERVICE[log]} rsyslog restart"
 _lxc_exec ${S_SERVICE[log]} "rc-service rsyslog restart"

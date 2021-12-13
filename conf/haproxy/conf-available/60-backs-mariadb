@@ -1,19 +1,20 @@
 # included file for haproxy configuration
 
-backend _MDB_PROXY-mariadb
+backend _MDB_MS_PROXY-mariadb
 	mode tcp
 	default-server	maxconn 128 check inter 2s  fall 1  rise 2  resolvers lxd  resolve-prefer ipv4 # resolve-net 10.0.0.1/24
 
 	option mysql-check user check
 
-	server _MDB_CT_NAME1 _MDB_CT_NAME1:S_DB_MARIA_PORT_RW
+	server _MDB_MS_CT_MASTER _MDB_MS_CT_MASTER:S_DB_MARIA_PORT_RW
 
-backend _MDB_PROXY-mariadb_read
+backend _MDB_MS_PROXY-mariadb_read
 	mode tcp
 	balance roundrobin
 	default-server	maxconn 128 check inter 2s  fall 1  rise 2  resolvers lxd  resolve-prefer ipv4 # resolve-net 10.0.0.1/24
 
 	option mysql-check user check
 
-	server _MDB_CT_NAME1 _MDB_CT_NAME1:S_DB_MARIA_PORT_RW
-	server _MDB_CT_NAME2 _MDB_CT_NAME2:S_DB_MARIA_PORT_RW
+	#server _MDB_MS_CT_MASTER _MDB_MS_CT_MASTER:S_DB_MARIA_PORT_RW
+	#mbd_ms_slaves_start
+	#mbd_ms_slaves_end

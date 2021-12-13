@@ -29,18 +29,18 @@ relay_log_index = _MDB_PATH_BINLOG/relay-bin.index
 # binary logging format - mixed recommended
 binlog-format = mixed
 # mas file size for bin logs, overhead rotates the file
-max_binlog_size = _MDB_MAX_BIN_SIZE
+max_binlog_size = _MDB_MS_MAX_BIN_SIZE
 # days after which the binary log can be automatically removed
-expire_logs_days = _MDB_EXPIRE_LOGS_DAYS
+expire_logs_days = _MDB_MS_EXPIRE_LOGS_DAYS
 
 ################ replication
 #
 # required unique id between 1 and 2^32 - 1
 # defaults to 1 if master-host is not set
 # but will not function as a master if omitted
-server_id = _MDB_SLAVE_ID
+server_id = _MDB_MS_SLAVE_ID
 # The host name or IP address the replica reports to the primary when it registers
-report_host = slave_MDB_SLAVE_ID
+report_host = slave_MDB_MS_SLAVE_ID
 # databases name to use for bin log
 #binlog-do-db =
 # databases name to ignore for bin log
