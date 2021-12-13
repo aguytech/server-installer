@@ -156,17 +156,18 @@ _CT_NAME=${_PHP_CT_NAME}-1
 
 ########################  PROFILE
 
-if ! lxc profile list -f csv|grep -q "^${_PHP_CT_PROFILE},"; then
-	_echot "------------------  profile create ${_PHP_CT_PROFILE}"
-	_eval lxc profile create ${_PHP_CT_PROFILE}
+profile=${_PHP_CT_PROFILE}
+if ! lxc profile list -f csv|grep -q "^${profile},"; then
+	_echot "------------------  profile create ${profile}"
+	_eval lxc profile create ${profile}
 
 	path=${S_HOST_PATH_SHARE}/php/${_APA_DOM_FQDN}
 	path_ct=${_PHP_PATH_SHARE}
 	[ -d ${path} ] || _evalr mkdir -p ${path}
 	_evalr chown -R ${_LXD_UID}:${_LXD_UID} ${S_HOST_PATH_SHARE}/php
-	_eval lxc profile device add ${_PHP_CT_PROFILE} ${_PHP_CT_PROFILE} disk source=${path} path=${path_ct}
+	_eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
 else
-	_echot "------------------  existing profile ${_PHP_CT_PROFILE}"
+	_echot "------------------  existing profile ${profile}"
 fi
 
 ########################  INIT
@@ -374,6 +375,15 @@ for i in `seq 2 ${_PHP_CT_NUM}`; do
 	_eval lxc copy ${_CT_NAME} ${ct_name}
 	_eval lxc start ${ct_name}
 done
+
+########################  HAPROXY
+
+file=/etc/haproxy/conf-available/50-backs-80
+_lxc_exec ${S_SERVICE[proxy]} "sed -i '/^backend\s*${_APA_DOM_FQDN}$/,/balance/ s|^\(\s*\)server|\1#server|' ${file}"
+_lxc_exec ${S_SERVICE[proxy]} "sed -i '/^backend\s*${_APA_DOM_FQDN}$/,/balance/ s|#server *wap-${_HPX_CT_NAME}|server wap-${_HPX_CT_NAME}|' ${file}"
+
+_echot "------------------  ${S_SERVICE[proxy]} reload"
+_lxc_exec ${S_SERVICE[proxy]} "rc-service haproxy reload"
 
 ########################  HAPROXY
 
