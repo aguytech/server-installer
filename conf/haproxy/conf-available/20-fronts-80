@@ -10,18 +10,18 @@ frontend http
 
 	acl certbot			path_beg /.well-known/acme-challenge/
 	
-	acl S_DOM_FQDN		hdr_end(host) -i S_DOM_FQDN
-	#acl S_DOM_FQDN			hdr_sub(host) -i S_DOM_FQDN
-	acl S_DOM_FQDN-check		path_dir /ping-monitor /server-status /server-info /status-www /status-www-admin /ping-www
-	#acl S_DOM_FQDN-check		path_reg ^/(ping-monitor|server-status|server-info|status-www|status-www-admin|ping-www)
-	#acl S_DOM_FQDN-check		path_beg /server-status /server-info /status-www /status-www-admin /ping-www /ping-monitor
-	acl S_DOM_FQDN-admin		hdr(host) admin.S_DOM_FQDN matomo.S_DOM_FQDN monitor.S_DOM_FQDN pfa.S_DOM_FQDN pma.S_DOM_FQDN
-	#acl S_DOM_FQDN-cloud		hdr(host) cloud.S_DOM_FQDN nextcloud.S_DOM_FQDN
+	acl _APA_DOM_FQDN		hdr_end(host) -i _APA_DOM_FQDN
+	#acl _APA_DOM_FQDN			hdr_sub(host) -i _APA_DOM_FQDN
+	acl check-_APA_DOM_FQDN		path_dir /ping-monitor /server-status /server-info /status-www /status-www-admin /ping-www
+	#acl check-_APA_DOM_FQDN		path_reg ^/(ping-monitor|server-status|server-info|status-www|status-www-admin|ping-www)
+	#acl check-_APA_DOM_FQDN		path_beg /server-status /server-info /status-www /status-www-admin /ping-www /ping-monitor
+	acl admin-_APA_DOM_FQDN		hdr(host) admin._APA_DOM_FQDN matomo._APA_DOM_FQDN monitor._APA_DOM_FQDN pfa._APA_DOM_FQDN pma._APA_DOM_FQDN
+	#acl cloud-_APA_DOM_FQDN		hdr(host) cloud._APA_DOM_FQDN nextcloud._APA_DOM_FQDN
 
-	#redirect		scheme https code 301 if S_DOM_FQDN !S_DOM_FQDN-check !certbot !{ ssl_fc }
-	redirect		scheme https code 301 if !S_DOM_FQDN-check !certbot !{ ssl_fc }
+	#redirect		scheme https code 301 if _APA_DOM_FQDN !check-_APA_DOM_FQDN !certbot !{ ssl_fc }
+	redirect		scheme https code 301 if !check-_APA_DOM_FQDN !certbot !{ ssl_fc }
 
 	use_backend		certbot if certbot
-	use_backend		S_DOM_FQDN-admin if S_DOM_FQDN-admin
-	#use_backend		S_DOM_FQDN-cloud if S_DOM_FQDN-cloud
-	use_backend		S_DOM_FQDN if S_DOM_FQDN || S_DOM_FQDN-check
+	use_backend		admin-_APA_DOM_FQDN if admin-_APA_DOM_FQDN
+	#use_backend		cloud-_APA_DOM_FQDN if cloud-_APA_DOM_FQDN
+	use_backend		_APA_DOM_FQDN if _APA_DOM_FQDN || check-_APA_DOM_FQDN

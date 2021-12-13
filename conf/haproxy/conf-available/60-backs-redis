@@ -1,9 +1,9 @@
 # included file for haproxy configuration
 
-backend _RDS_PROXY-redis
+backend redis-_RDS_PROXY
 	mode tcp
 	balance first
-	default-server	maxconn 256 check inter 1s  fall 1  rise 1  resolvers lxd  resolve-prefer ipv4 # resolve-net 10.0.0.1/24
+	default-server maxconn 256 check inter 1s  fall 1  rise 1  resolvers lxd  resolve-prefer ipv4 # resolve-net 10.0.0.1/24
 
 	option tcp-check
 	tcp-check send info\ replication\r\n
@@ -12,7 +12,7 @@ backend _RDS_PROXY-redis
 	server _RDS_CT_NAME-1 _RDS_CT_NAME-1:S_CACHE_PORT_RW
 	server _RDS_CT_NAME-2 _RDS_CT_NAME-2:S_CACHE_PORT_RW
 
-backend _RDS_PROXY-redis_read
+backend redis_read-_RDS_PROXY
 	mode tcp
 	balance roundrobin
 	default-server	maxconn 256 check inter 1s  fall 1  rise 1  resolvers lxd  resolve-prefer ipv4 # resolve-net 10.0.0.1/24

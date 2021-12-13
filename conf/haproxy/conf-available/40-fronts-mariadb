@@ -1,15 +1,15 @@
 # included file for haproxy configuration
 
-frontend _MDB_MS_PROXY-mariadb
+frontend mariadb-_MDB_MS_PROXY
 	bind :S_DB_MARIA_PORT_RW
 	mode			tcp
 	option			tcplog
 	timeout client		30s
-	default_backend		_MDB_MS_PROXY-mariadb
+	default_backend		mariadb-_MDB_MS_PROXY
 
-frontend _MDB_MS_PROXY-mariadb_read
+frontend mariadb_read-_MDB_MS_PROXY
 	bind :S_DB_MARIA_PORT_RO
 	mode			tcp
 	option			tcplog
 	timeout client		30s
-	default_backend		_MDB_MS_PROXY-mariadb_read
+	default_backend		mariadb_read-_MDB_MS_PROXY
