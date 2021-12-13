@@ -142,7 +142,6 @@ _lxc_exec ${_CT_NAME} "chmod 700 -R ${S_PATH_CONF}"
 ########################  MAIL
 
 _echot "------------------  ssmtp install"
-_lxc_exec ${_CT_NAME} apk update
 _lxc_exec ${_CT_NAME} apk add ssmtp
 
 _echot "------------------  ssmtp conf"
@@ -180,8 +179,7 @@ path="/etc/rsyslog.d"
 _lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir ${path}"
 
 _echot "------------------  rsyslog vm enable"
-service="rsyslog"
-_lxc_exec ${_CT_NAME} "rc-update add ${service}"
+_lxc_exec ${_CT_NAME} "rc-update add rsyslog"
 
 _echot "------------------  rsyslog conf"
 
@@ -214,18 +212,18 @@ file=/etc/rsyslog.d/${file_rsyslog_client_mail##*/}
 _eval lxc file push -q ${file_rsyslog_client_mail} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} rsyslog
 
-_echot "------------------  rsyslog vm start"
-_lxc_exec ${_CT_NAME} "rc-update add rsyslog"
-_lxc_exec ${_CT_NAME} "rc-service -S rsyslog start"
-
 ########################  LOGROTATE
 
 _echot "------------------  logrotate install"
 _lxc_exec ${_CT_NAME} "apk list -I | grep -q ^logrotate || apk add logrotate"
 
 _echot "------------------  logrotate global"
-file=/etc/logrotate.conf
+file=/etc/logrotate.con
 _lxc_exec ${_CT_NAME} "sed -i '/^#dateext/ s|^#||' ${file}"
+
+_echot "------------------  logrotate rsyslog"
+file=/etc/logrotate.d/rsyslog
+_lxc_exec ${_CT_NAME} "grep -q missingok ${file} || sed -i '/{/ a \\\\tmissingok' ${file}"
 
 _echot "------------------  logrotate conf server"
 file=/etc/logrotate.d/${file_logrotate_server##*/}
@@ -234,8 +232,8 @@ _lxc_var_replace ${_CT_NAME} ${file} logrotate
 _lxc_exec ${_CT_NAME} "chmod g-w,o= /etc/logrotate.d/*"
 
 _echot "------------------  logrotate start"
-_lxc_exec ${_CT_NAME} rc-service -s rsyslog restart
-_lxc_exec ${_CT_NAME} rc-service -S rsyslog start
+_lxc_exec ${_CT_NAME} "rc-service -s rsyslog restart"
+_lxc_exec ${_CT_NAME} "rc-service -S rsyslog start"
 
 ########################  PUBLISH
 
