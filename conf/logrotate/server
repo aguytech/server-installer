@@ -1,10 +1,10 @@
 #S_PATH_LOG_INSTALL/*.log
-S_PATH_LOG/redis/*.emerg
-S_PATH_LOG/redis/*.err
-S_PATH_LOG/redis/*.warning
-S_PATH_LOG/redis/*.notice
-S_PATH_LOG/redis/*.info
-S_PATH_LOG/redis/*.debug {
+S_PATH_LOG/server/*.emerg
+S_PATH_LOG/server/*.err
+S_PATH_LOG/server/*.warning
+S_PATH_LOG/server/*.notice
+S_PATH_LOG/server/*.info
+S_PATH_LOG/server/*.debug {
 	daily
 	rotate 14
 	missingok

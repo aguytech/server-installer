@@ -1,8 +1,8 @@
-S_VM_PATH_LOG/apache2/*.emerg
-S_VM_PATH_LOG/apache2/*.err
-S_VM_PATH_LOG/apache2/*.warning
-S_VM_PATH_LOG/apache2/*.notice
-S_VM_PATH_LOG/apache2/*.info {
+S_VM_PATH_LOG/php7/*.emerg
+S_VM_PATH_LOG/php7/*.err
+S_VM_PATH_LOG/php7/*.warning
+S_VM_PATH_LOG/php7/*.notice
+S_VM_PATH_LOG/php7/*.info {
  	daily
 	rotate 14
 	missingok
