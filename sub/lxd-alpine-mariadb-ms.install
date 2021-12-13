@@ -28,18 +28,14 @@ _require ${file_conf_ha_front} ${file_conf_ha_back}
 _echot "------------------  data ct"
 
 # master
-if ! [ "${_MDB_CT_NAME1}" ]; then
-	cts_all_mdb=" ${cts_all_mdb} "
+[ -z "${_MDB_CT_NAME1}" ] && { cts_all_mdb=" ${cts_all_mdb} "
 	_menu "Select one available mariadb container for MASTER " ${cts_all_mdb}
-	_MDB_CT_NAME1=${_ANSWER}
-fi
+	_MDB_CT_NAME1=${_ANSWER}; }
 
 # slave
-if ! [ "${_MDB_CT_NAME2}" ]; then
-	cts_all_mdb="${cts_all_mdb/ ${_MDB_CT_NAME1} / }"
+[ -z "${_MDB_CT_NAME2}" ] && { cts_all_mdb="${cts_all_mdb/ ${_MDB_CT_NAME1} / }"
 	[ "${cts_all_mdb}" ] && _menu "Select one available mariadb container for SLAVE" ${cts_all_mdb} || _exite "Unable to find container maria-* to use"
-	_MDB_CT_NAME2=${_ANSWER}
-fi
+	_MDB_CT_NAME2=${_ANSWER}; }
 
 # _MDB_PWD_MASTER
 ct_name=${_MDB_CT_NAME1}
@@ -64,30 +60,22 @@ fi
 
 _echot "------------------  data"
 
-[ -z ${_MDB_PWD_REPLIC+x} ] && { anstmp=`_pwd`; _askno "Password for replication access (${anstmp})"
-	_MDB_PWD_REPLIC="${_ANSWER:-${anstmp}}"; }
+[ -z ${_MDB_PWD_REPLIC+x} ] && { anstmp=`_pwd`; _askno "Password for replication access (${anstmp})"; _MDB_PWD_REPLIC="${_ANSWER:-${anstmp}}"; }
 
-[ -z ${_MDB_PROXY+x} ] && { anstmp=${S_DOM_FQDN%.lxd}; _askno "Prefix for proxy name (${anstmp})"
-	_MDB_PROXY="${_ANSWER:-$anstmp}" && _confset _MDB_PROXY "${_MDB_PROXY}"; }
+[ -z ${_MDB_PROXY+x} ] && { anstmp=${S_DOM_FQDN%.lxd}; _askno "Prefix for proxy name (${anstmp})"; _MDB_PROXY="${_ANSWER:-$anstmp}"; }
+_confset _MDB_PROXY "${_MDB_PROXY}"
 
-[ -z ${_MDB_MAX_BIN_SIZE+x} ] && { anstmp=256M; _askno "max_binlog_size (${anstmp})"
-	_MDB_MAX_BIN_SIZE="${_ANSWER:-$anstmp}"; }
+[ -z ${_MDB_MAX_BIN_SIZE+x} ] && { anstmp=256M; _askno "max_binlog_size (${anstmp})"; _MDB_MAX_BIN_SIZE="${_ANSWER:-$anstmp}"; }
 
-[ -z ${_MDB_EXPIRE_LOGS_DAYS+x} ] && { anstmp=30; _askno "expire_logs_days (${anstmp})"
-	_MDB_EXPIRE_LOGS_DAYS="${_ANSWER:-$anstmp}"; }
+[ -z ${_MDB_EXPIRE_LOGS_DAYS+x} ] && { anstmp=30; _askno "expire_logs_days (${anstmp})"; _MDB_EXPIRE_LOGS_DAYS="${_ANSWER:-$anstmp}"; }
 
-[ -z ${_MDB_MASTER_ID+x} ] && { anstmp=1; _askno "the server id for master (${anstmp})"
-	_MDB_MASTER_ID="${_ANSWER:-$anstmp}"; }
+[ -z ${_MDB_MASTER_ID+x} ] && { anstmp=1; _askno "the server id for master (${anstmp})"; _MDB_MASTER_ID="${_ANSWER:-$anstmp}"; }
 
-[ -z ${_MDB_SLAVE_ID+x} ] && { anstmp=100; _askno "the server id for slave (${anstmp})"
-	_MDB_SLAVE_ID="${_ANSWER:-$anstmp}"; }
+[ -z ${_MDB_SLAVE_ID+x} ] && { anstmp=100; _askno "the server id for slave (${anstmp})"; _MDB_SLAVE_ID="${_ANSWER:-$anstmp}"; }
 
-[ -z ${_MDB_DB_IGNORE+x} ] && { anstmp="information_schema mysql performance_schema"
-	_askno "database names to IGNORE for replication (${anstmp})"
-	_MDB_DB_IGNORE="${_ANSWER:-$anstmp}"; }
+[ -z ${_MDB_DB_IGNORE+x} ] && { anstmp="information_schema mysql performance_schema"; _askno "database names to IGNORE for replication (${anstmp})"; _MDB_DB_IGNORE="${_ANSWER:-$anstmp}"; }
 
-[ -z ${_MDB_DB_DO+x} ] && { anstmp=; _askno "database names to USE for replication (set ignored db to null) (${anstmp})"
-	_MDB_DB_DO="${_ANSWER:-$anstmp}"; }
+[ -z ${_MDB_DB_DO+x} ] && { anstmp=; _askno "database names to USE for replication (set ignored db to null) (${anstmp})"; 	_MDB_DB_DO="${_ANSWER:-$anstmp}"; }
 
 ########################  CONFIGURATION
 
