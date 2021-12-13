@@ -104,10 +104,10 @@ _confset _APA_MAX_REQUEST_WORKERS "${_APA_MAX_REQUEST_WORKERS}"
 _confset _APA_MAX_CONNECTIONS_PER_CHILD "${_APA_MAX_CONNECTIONS_PER_CHILD}"
 
 _CT_NAME=${_APA_CT_NAME}
-_APA_PATH_WWW=${S_VM_PATH_SHARE}/www;  _confset _APA_PATH_WWW "${_APA_PATH_WWW}"
+_APA_PATH_WWW=/var/www/localhost/html;  _confset _APA_PATH_WWW "${_APA_PATH_WWW}"
 _APA_PATH_DOM=${S_VM_PATH_SHARE}/www/${_APA_DOM_FQDN};  _confset _APA_PATH_DOM "${_APA_PATH_DOM}"
+_APA_PATH_SITES=/etc/apache2/sites;  _confset _APA_PATH_SITES "${_APA_PATH_SITES}"
 
-path_sites=/etc/apache2/sites
 path_confd=/etc/apache2/conf.d
 file_httpd_conf=/etc/apache2/httpd.conf
 
@@ -186,13 +186,12 @@ _lxc_exec ${_CT_NAME} "rc-update add apache2"
 ########################  PATHS
 
 _echot "------------------  paths create"
-cmds="for path in ${path_sites} ${_APA_PATH_DOM}/html; do [ -d \${path} ] || mkdir -p \${path}; done"
+cmds="for path in ${_APA_PATH_SITES} ${_APA_PATH_DOM}/html; do [ -d \${path} ] || mkdir -p \${path}; done"
 _lxc_exec ${_CT_NAME} "${cmds}"
 
 _echot "------------------  path html"
-path=/var/www/localhost/htdocs
-_lxc_exec ${_CT_NAME} "[ -d /var/www/localhost/htdocs ] && mv /var/www/localhost/htdocs ${_APA_PATH_WWW}"
-#_lxc_exec ${_CT_NAME} "chown -R apache/apache ${path_sites}"
+_lxc_exec ${_CT_NAME} "[ -d '${_APA_PATH_WWW}' ] || mv /var/www/localhost/htdocs ${_APA_PATH_WWW}"
+#_lxc_exec ${_CT_NAME} "chown -R apache/apache ${_APA_PATH_SITES}"
 
 ########################  CONF
 
@@ -236,17 +235,17 @@ _eval lxc file push -q ${file_conf_index} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} apache
 
 _echot "------------------  conf site default"
-file=${path_sites}/${file_conf_site##*/}
+file=${_APA_PATH_SITES}/${file_conf_site##*/}
 _eval lxc file push -q ${file_conf_site} ${_CT_NAME}${file}
 
 _echot "------------------  ${_APA_DOM_FQDN} conf"
 file_conf_domain=${S_PATH_INSTALL_CONF}/apache2/sites/${_APA_DOM_FQDN}.conf
 if [ -f "${file_conf_domain}" ]; then
-	file=${path_sites}/${file_conf_domain##*/}
+	file=${_APA_PATH_SITES}/${file_conf_domain##*/}
 	_eval lxc file push -q ${file_conf_domain} ${_CT_NAME}${file}
 	_lxc_var_replace ${_CT_NAME} ${file} apache
 	# desactive default virtualhost site
-	file=${path_sites}/${file_conf_site##*/}
+	file=${_APA_PATH_SITES}/${file_conf_site##*/}
 	_lxc_exec ${_CT_NAME} "mv ${file} ${file}.keep"
 fi
 
@@ -268,7 +267,7 @@ _echot "------------------  service start"
 _lxc_exec ${_CT_NAME} "rc-service apache2 restart"
 
 if lxc image list -f csv -c l | grep -q ^${S_SERVICE[proxy]}$; then
-	_echot "------------------  ${S_SERVICE[proxy]} reload haproxy reload"
+	_echot "------------------  ${S_SERVICE[proxy]} reload"
 	_lxc_exec ${S_SERVICE[proxy]} "rc-service haproxy reload"
 fi
 
@@ -284,7 +283,7 @@ file=/etc/rsyslog.d/${file_rsyslog_host##*/}
 _eval lxc file push -q ${file_rsyslog_host} ${S_SERVICE[log]}${file}
 _lxc_var_replace ${S_SERVICE[log]} ${file} rsyslog
 
-_echot "------------------  rsyslog restart ${S_SERVICE[log]}"
+_echot "------------------  ${S_SERVICE[log]} restart rsyslog"
 _lxc_exec ${S_SERVICE[log]} "rc-service rsyslog restart"
 
 

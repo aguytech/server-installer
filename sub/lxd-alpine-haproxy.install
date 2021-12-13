@@ -73,7 +73,7 @@ _CT_NAME=${S_SERVICE[proxy]}
 eval ${S_HOST_VM_ETH[default]}
 _CT_IP=${s_base}.${S_SERVICE_BITS[proxy]}
 
-_HPX_CT_NAME=${S_DOM_FQDN//./-}; _confset _HPX_CT_NAME "${_HPX_CT_NAME}"
+_HPX_CT_NAME=${_APA_DOM_FQDN//./-}; _confset _HPX_CT_NAME "${_HPX_CT_NAME}"
 _HPX_DNS_DEFAULT=${s_base}.1:53; _confset _HPX_DNS_DEFAULT "${_HPX_DNS_DEFAULT}"
 
 _HPX_STATS_PORT=${S_HAPROXY_STATS_PORTS%% *}; _confset _HPX_STATS_PORT "${_HPX_STATS_PORT}"
@@ -414,7 +414,7 @@ _echot "------------------  test ${_CT_NAME}"
 
 _echoA "To test connection type:"
 _echoa "curl ${_IPTHIS}:80"
-_echoa "curl ${S_DOM_FQDN}:80"
+_echoa "curl ${_APA_DOM_FQDN}:80"
 
 ########################  END
 
