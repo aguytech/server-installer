@@ -108,7 +108,7 @@ path=${S_PATH_LOG}/iptables
 grep -q syslog /etc/passwd && _evalr chown syslog ${path}
 
 _echot "------------------  rsyslog client-iptables"
-file=/etc/rsyslog.d/74-${file_rsyslog_client_iptables##*/}
+file=/etc/rsyslog.d/14-${file_rsyslog_client_iptables##*/}
 _evalr cp -a ${file_rsyslog_client_iptables} ${file}
 _var_replace ${file} rsyslog
 
