@@ -228,8 +228,9 @@ for i in $(seq 1 ${_PHP_CT_NUM}); do
 	_echot "------------------  right roothost"
 	for ip in ${_IPS_CLUSTER} ${_CIDR_VM%/*}; do
 		strpass+="roothost @ ${ip} - ${_MDB_PWD_HOST}\n"
-		cmd="GRANT ALL PRIVILEGES ON *.* TO roothost@'${ip}' IDENTIFIED BY '${_MDB_PWD_HOST}' WITH GRANT OPTION; "
-		cmd+="GRANT ALL PRIVILEGES ON *.* TO roothost@'${S_SERVICE[proxy]}.lxd' IDENTIFIED BY '${_MDB_PWD_HOST}' WITH GRANT OPTION; "
+		cmd="GRANT ALL PRIVILEGES ON *.* TO roothost@'${ip}' IDENTIFIED BY '${_MDB_PWD_HOST}' WITH GRANT OPTION;"
+		_lxc_exec ${_CT_NAME} "mysql -uroot -p${_MDB_PWD_LOCAL} -e \"${cmd}\""
+		cmd="GRANT ALL PRIVILEGES ON *.* TO roothost@'${S_SERVICE[proxy]}.lxd' IDENTIFIED BY '${_MDB_PWD_HOST}' WITH GRANT OPTION;"
 		_lxc_exec ${_CT_NAME} "mysql -uroot -p${_MDB_PWD_LOCAL} -e \"${cmd}\""
 	done
 
@@ -327,7 +328,7 @@ _lxc_exec ${S_SERVICE[log]} "rc-service crond restart"
 
 _echot "------------------  show passwords"
 _echoA "Keep this passwords:"
-_echo "${strpass}"
+_echo "${strpass%\\n}"
 
 #########################  TEST
 
