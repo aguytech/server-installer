@@ -47,17 +47,17 @@ php_modules="php7-bcmath php7-bz2 php7-ctype php7-curl php7-exif php7-fileinfo p
 
 _echot "------------------  data name"
 
-[ -z ${_APA_DOM_FQDN+x} ] && { anstmp=${S_DOM_FQDN} && _askno "Domain name to use (${anstmp})"; _APA_DOM_FQDN="${_ANSWER:-$anstmp}"; }
+[ -z ${_APA_DOM_FQDN+x} ] && { anstmp=${S_DOM_FQDN}; _askno "Domain name to use (${anstmp})"; _APA_DOM_FQDN="${_ANSWER:-$anstmp}"; }
 
 [ -z ${_PHP_CT_PROFILE+x} ] && { 
 	profiles=$(lxc profile list -f csv|grep "^php.*,"|cut -d, -f1)
 	[ "${profiles}" ] && _menu "Select an available PHP profile to apply or none to create a new one" ${profiles} none || _ANSWER=
 	_PHP_CT_PROFILE="${_ANSWER/none/}"
-	[ -z "${_PHP_CT_PROFILE}" ] && anstmp=php7-${_APA_DOM_FQDN} && _askno "Name of the new  PHP profile (${anstmp})" && _PHP_CT_PROFILE="${_ANSWER:-$anstmp}"
+	[ -z "${_PHP_CT_PROFILE}" ] && { anstmp=php7-${_APA_DOM_FQDN}; _askno "Name of the new  PHP profile (${anstmp})"; _PHP_CT_PROFILE="${_ANSWER:-$anstmp}"; }
 }
-[ -z ${_PHP_CT_NAME+x} ] && { anstmp=wap-${_APA_DOM_FQDN//./-} && _askno "Base name of containers to build (${anstmp})"; _PHP_CT_NAME="${_ANSWER:-$anstmp}"; }
+[ -z ${_PHP_CT_NAME+x} ] && { anstmp=wap-${_APA_DOM_FQDN//./-}; _askno "Base name of containers to build (${anstmp})"; _PHP_CT_NAME="${_ANSWER:-$anstmp}"; }
 
-[ -z ${_PHP_CT_NUM+x} ] && { anstmp=2 && _askno "Number of containers to build (${anstmp})"; _PHP_CT_NUM="${_ANSWER:-$anstmp}"; }
+[ -z ${_PHP_CT_NUM+x} ] && { anstmp=2; _askno "Number of containers to build (${anstmp})"; _PHP_CT_NUM="${_ANSWER:-$anstmp}"; }
 
 _echot "------------------  data image"
 
@@ -130,10 +130,17 @@ _confset _PHP_SLOWLOG_TIMEOUT "${_PHP_SLOWLOG_TIMEOUT}"
 
 _APA_PATH_DOM=${S_VM_PATH_SHARE}/www/${_APA_DOM_FQDN}
 
-_PHP_MAX_SYN_BACKLOG=$(( ${_APA_MAX_SYN_BACKLOG} / 2 - 1 )) &&  _confset _PHP_MAX_SYN_BACKLOG "${_PHP_MAX_SYN_BACKLOG}"
-_PHP_SERVICE=php-fpm7; _confset _PHP_SERVICE "${_PHP_SERVICE}"
-_PHP_FPM_SOCK=/run/${_PHP_SERVICE}/php-fpm.sock; _confset _PHP_FPM_SOCK "${_PHP_FPM_SOCK}"
-_PHP_FPM_ADMIN_SOCK=/run/${_PHP_SERVICE}/php-fpm-admin.sock; _confset _PHP_FPM_ADMIN_SOCK "${_PHP_FPM_ADMIN_SOCK}"
+_PHP_MAX_SYN_BACKLOG=$(( ${_APA_MAX_SYN_BACKLOG} / 2 - 1 )) 
+_confset _PHP_MAX_SYN_BACKLOG "${_PHP_MAX_SYN_BACKLOG}"
+
+_PHP_SERVICE=php-fpm7
+_confset _PHP_SERVICE "${_PHP_SERVICE}"
+
+_PHP_FPM_SOCK=/run/${_PHP_SERVICE}/php-fpm.sock
+_confset _PHP_FPM_SOCK "${_PHP_FPM_SOCK}"
+
+_PHP_FPM_ADMIN_SOCK=/run/${_PHP_SERVICE}/php-fpm-admin.sock
+_confset _PHP_FPM_ADMIN_SOCK "${_PHP_FPM_ADMIN_SOCK}"
 
 path_php_base=/etc/php7
 path_fpm_confd=${path_php_base}/php-fpm.d
