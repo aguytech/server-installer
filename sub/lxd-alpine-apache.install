@@ -103,9 +103,11 @@ _confset _APA_MAX_REQUEST_WORKERS "${_APA_MAX_REQUEST_WORKERS}"
 [ -z ${_APA_MAX_CONNECTIONS_PER_CHILD+x} ] && { anstmp="0"; _askno "MaxConnectionsPerChild (${anstmp})"; _APA_MAX_CONNECTIONS_PER_CHILD="${_ANSWER:-${anstmp}}"; }
 _confset _APA_MAX_CONNECTIONS_PER_CHILD "${_APA_MAX_CONNECTIONS_PER_CHILD}"
 
+[ -z ${_APA_PATH_WWW+x} ] && { _APA_PATH_WWW=/var/www/localhost; }
+_confset _APA_PATH_WWW "${_APA_PATH_WWW}"
+
 _CT_NAME=${_APA_CT_NAME}
-_APA_PATH_WWW=/var/www/localhost/html;  _confset _APA_PATH_WWW "${_APA_PATH_WWW}"
-_APA_PATH_DOM=${S_VM_PATH_SHARE}/www/${_APA_DOM_FQDN};  _confset _APA_PATH_DOM "${_APA_PATH_DOM}"
+_APA_PATH_DOM=${S_VM_PATH_SHARE}/www/${_APA_DOM_FQDN}
 _APA_PATH_SITES=/etc/apache2/sites;  _confset _APA_PATH_SITES "${_APA_PATH_SITES}"
 
 path_confd=/etc/apache2/conf.d
@@ -190,7 +192,7 @@ cmds="for path in ${_APA_PATH_SITES} ${_APA_PATH_DOM}/html; do [ -d \${path} ] |
 _lxc_exec ${_CT_NAME} "${cmds}"
 
 _echot "------------------  path html"
-_lxc_exec ${_CT_NAME} "[ -d '${_APA_PATH_WWW}' ] || mv /var/www/localhost/htdocs ${_APA_PATH_WWW}"
+_lxc_exec ${_CT_NAME} "[ -d '${_APA_PATH_WWW}/html' ] || mv /var/www/localhost/htdocs ${_APA_PATH_WWW}/html"
 #_lxc_exec ${_CT_NAME} "chown -R apache/apache ${_APA_PATH_SITES}"
 
 ########################  CONF
@@ -224,7 +226,7 @@ file=${path_confd}/${file_conf_monitor##*/}
 _eval lxc file push -q ${file_conf_monitor} ${_CT_NAME}${file}
 
 _echot "------------------  ping-monitor"
-_lxc_exec ${_CT_NAME} "echo pong > ${_APA_PATH_WWW}/ping-monitor.html"
+_lxc_exec ${_CT_NAME} "echo pong > ${_APA_PATH_WWW}/html/ping-monitor.html"
 
 ########################  _APA_DOM_FQDN
 
@@ -249,14 +251,16 @@ if [ -f "${file_conf_domain}" ]; then
 	_lxc_exec ${_CT_NAME} "mv ${file} ${file}.keep"
 fi
 
-########################  RIGHTS
+########################  HTPASSWD
 
-_echot "------------------  rights user"
-file=${_APA_PATH_DOM}/pwd
+_echot "------------------  ${_APA_PATH_WWW} htpasswd"
+file=${_APA_PATH_WWW}/pwd
 _lxc_exec ${_CT_NAME} "[ -f '${file}' ] && opt=b || opt=cb; htpasswd -\${opt} ${file} admin ${_APA_PWD_ADMIN}"
 
+########################  RIGHTS
+
 _echot "------------------  rights file"
-_lxc_exec ${_CT_NAME} "chown apache:apache -R ${_APA_PATH_WWW} ${_APA_PATH_WWW} ${_APA_PATH_DOM}/*"
+_lxc_exec ${_CT_NAME} "chown apache:apache -R ${_APA_PATH_WWW} ${_APA_PATH_DOM}/*"
 
 ########################  RESTART
 
