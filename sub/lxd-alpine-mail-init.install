@@ -87,7 +87,7 @@ if _lxc_exec ${_CT_NAME} "apk list -I|grep ^ssmtp-"; then
 	_lxc_exec ${_CT_NAME} apk del --purge ssmtp
 fi
 _echot "------------------  install postfix"
-_lxc_exec ${_CT_NAME} apk add postfix
+_lxc_exec ${_CT_NAME} apk add postfix postfix-mysql postfix-pcre # mailx
 
 ########################  PATH
 

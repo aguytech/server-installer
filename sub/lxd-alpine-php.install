@@ -372,10 +372,9 @@ _lxc_exec ${_CT_NAME} "find ${S_PATH_LOG}/php7 -name *.log -exec rm {} \;"
 
 ########################  COPY
 
-for i in `seq 2 ${_PHP_CT_NUM}`; do
+for i in $(seq 2 ${_PHP_CT_NUM}); do
 	ct_name=${_PHP_CT_NAME}-${i}
 	_echot "---------- build ${ct_name}"
-
 	if lxc list -f csv -c n | grep -q ^${ct_name}$; then
 		lxc list -f csv -c n status=Running| grep -q ^${ct_name}$ && _eval lxc stop ${ct_name}
 		_eval lxc rename ${ct_name} ${ct_name}-${_SDATE}

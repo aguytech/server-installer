@@ -22,7 +22,8 @@ _requirep ${path_sql}
 
 ########################  DATA
 
-_MEL_PATH_SQL=/etc/postfix/sql && _confset _MEL_PATH_SQL "${_MEL_PATH_SQL}"
+[ -z ${_MEL_PF_PATH_SQL+x} ] && _MEL_PF_PATH_SQL=/etc/postfix/sql
+_confset _MEL_PF_PATH_SQL "${_MEL_PF_PATH_SQL}"
 
 ########################  METADATA
 
@@ -31,8 +32,8 @@ _lxc_meta_add ${_CT_NAME} apps postfix
 
 ########################  MAIN
 
-_echot "------------------  install postfix"
-_lxc_exec ${_CT_NAME} apk add postfix postfix-mysql postfix-pcre # mailx
+#_echot "------------------  install postfix"
+#_lxc_exec ${_CT_NAME} apk add postfix postfix-mysql postfix-pcre # mailx
 
 _echot "------------------  postfix start"
 _lxc_exec ${_CT_NAME} rc-update add postfix
@@ -87,11 +88,11 @@ file=/etc/postfix/${file_conf_client##*/}
 _eval lxc file push -q ${file_conf_client} ${_CT_NAME}${file}
 
 _echot "------------------  sql files"
-_lxc_exec_e ${_CT_NAME} "[ -d '${_MEL_PATH_SQL}' ] || mkdir -p ${_MEL_PATH_SQL}"
-_lxc_exec_e ${_CT_NAME} chmod 755 ${_MEL_PATH_SQL}
+_lxc_exec_e ${_CT_NAME} "[ -d '${_MEL_PF_PATH_SQL}' ] || mkdir -p ${_MEL_PF_PATH_SQL}"
+_lxc_exec_e ${_CT_NAME} chmod 755 ${_MEL_PF_PATH_SQL}
 for file in `ls ${path_sql}/mysql_*.cf`; do
 	_echo ${file##*/}
-	_eval lxc file push -q ${file} ${_CT_NAME}/${_MEL_PATH_SQL}/ || _exite "unable to push file"
+	_eval lxc file push -q ${file} ${_CT_NAME}/${_MEL_PF_PATH_SQL}/ || _exite "unable to push file"
 done
 
 _echot "------------------  conf var replace"
@@ -108,13 +109,13 @@ _lxc_exec_e ${_CT_NAME} postconf mynetworks
 
 _echot "------------------  services enabled"
 _echoA "Verify enabled smtp services"
-_lxc_exec ${_CT_NAME} grep "submission\|smtp" /etc/services
+_lxc_exec ${_CT_NAME} "grep 'submission\|smtp' /etc/services"
 _askno "valid to continue"
 
-queries=`_lxc_exec ${_CT_NAME} "sed -n 's|^[^#].*\( mysql:.*\)$|\1|p' /etc/postfix/main.cf"`
-queries+=" $(_lxc_exec ${_CT_NAME} "sed -n 's|^[^#].*\(proxy:mysql:.*\)$|\1|p' /etc/postfix/main.cf")"
-queries+=" $(_lxc_exec ${_CT_NAME} "sed -n 's|^[^#].*\( mysql:.*\)$|\n\1|p' /etc/postfix/master.cf")"
-queries+=" $(_lxc_exec ${_CT_NAME} "sed -n 's|^[^#].*\(proxy:mysql:.*\)$|\n\1|p' /etc/postfix/master.cf")"
+queries=`_lxc_exec ${_CT_NAME} "sed -n 's|^[^#].* \(mysql:.*\)$|\1|p' /etc/postfix/main.cf"`
+queries+=" $(_lxc_exec ${_CT_NAME} "sed -n 's|^[^#].*proxy:\(mysql:.*\)$|\1|p' /etc/postfix/main.cf")"
+queries+=" $(_lxc_exec ${_CT_NAME} "sed -n 's|^[^#].* \(mysql:.*\)$|\n\1|p' /etc/postfix/master.cf")"
+queries+=" $(_lxc_exec ${_CT_NAME} "sed -n 's|^[^#].*proxy:\(mysql:.*\)$|\n\1|p' /etc/postfix/master.cf")"
 _echot "------------------  test postmap ${S_DOM_FQDN}"
 _echoA "Verify results of postamp commands:"
 for query in ${queries}; do
@@ -126,30 +127,36 @@ for query in ${queries}; do
 	_echo "- ${query}"
 	_lxc_exec ${_CT_NAME} postmap -q ${S_EMAIL_TECH} ${query}
 done
-_askno "valid to continue"
+[ -z "${_INSTALL_AUTO}" ] && _askno "valid to continue"
 
-_echot "------------------  test send mail - root"
-_lxc_exec ${_CT_NAME} "echo first message | mail -s test root"
+_echot "------------------  test mail"
+#_lxc_exec ${_CT_NAME} "echo first message | mail -s test root" # with mailx
+mail="From: postmaster\nTo: root\nHi, this is a first message\n."
+_lxc_exec ${_CT_NAME} "echo -e ${mail}|sendmail postmaster"
 str=2
-_echoA "Verify the following content of the email received"
-_echoa "(in ${str}s)"
-sleep ${str}
-_lxc_exec ${_CT_NAME} cat ${_MEL_PATH_LOCAL}/root
-_askno "valid to continue"
+_echoA "Verify the following content of the email received in ${str}s"
+_eval sleep ${str}
+_lxc_exec ${_CT_NAME} "ls -t1 ${_MEL_PATH_LOCAL}/${_MEL_DOM_FQDN}/tech/new/*|tail -n1|xarg cat"
+[ -z "${_INSTALL_AUTO}" ] && _askno "valid to continue"
 
 _echot "------------------  test telnet 25"
-_echoa "Enter 'quit' to quit"
-telnet mx.${S_DOM_FQDN} 25
-
-_echot "------------------  test starttls 465"
-_echoa "Enter 'quit' to quit after connection"
-_askno "valid to continue"
-openssl s_client -connect mx.${S_DOM_FQDN}:465
+_echoa Use telnet to send a mail
+_echo telnet mx.${S_DOM_FQDN}:465 25
+_echo telnet ${S_SERVICE[mail]} 25
+_echoa "ehlo root|mail from:root|rcpt to:${S_EMAIL_TECH}|data|message|.|quit"
+[ -z "${_INSTALL_AUTO}" ] && _askno "valid to continue"
 
 _echot "------------------  test openssl 587"
-_echoa "Enter 'quit' to quit after connection"
-_askno "valid to continue"
-openssl s_client -starttls smtp -connect mx.${S_DOM_FQDN}:587
+_echoa "Use openssl to test SSL certificate | quit"
+_echo openssl s_client -starttls smtp -connect mx.${S_DOM_FQDN}:587
+_echo openssl s_client -starttls smtp -connect ${S_SERVICE[mail]}:587
+[ -z "${_INSTALL_AUTO}" ] && _askno "valid to continue"
+
+_echot "------------------  test starttls 465"
+_echoa "Use openssl to test STARTTLS certificate | quit"
+_echo openssl s_client -connect mx.${S_DOM_FQDN}:465
+_echo openssl s_client -connect ${S_SERVICE[mail]}:465
+[ -z "${_INSTALL_AUTO}" ] && _askno "valid to continue"
 
 ########################  END
 

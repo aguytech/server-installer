@@ -316,7 +316,7 @@ mynetworks = 127.0.0.0/8 _MEL_CIDR _IPS_CLUSTER
 #relay_domains = $mydestination
 #
 # do not list domains in virtual_mailbox_domains & relay_domains
-#relay_domains = $mydestination, mysql:_MEL_PATH_SQL/domains.cf
+#relay_domains = $mydestination, mysql:_MEL_PF_PATH_SQL/domains.cf
 
 # INTERNET OR INTRANET
 

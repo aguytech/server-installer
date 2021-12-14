@@ -75,11 +75,12 @@ _confset _MEL_PFA_POLICY "${_MEL_PFA_POLICY}"
 pfa_path=${file_app%.tar.gz}
 path_admin=${S_VM_PATH_SHARE}/www/admin.${S_DOM_FQDN}
 _APA_SUB=pfa
+_CT_ADMIN=${_MEL_CT_ADMIN}
 
 ########################  MARIADB
 
 _echot "------------------  create db ${ct}"
-cmd="CREATE DATABASE postfix;"
+cmd="CREATE DATABASE IF NOT EXISTS postfix;"
 cmd+="GRANT ALL PRIVILEGES ON ${_MEL_DB_NAME}.* TO '${_MEL_DB_PFA_USER}'@'${ct}.lxd';"
 _eval "mysql -h${_MEL_DB_HOST} -uroothost -p${_MEL_DB_HOST_PWD} -e \"${cmd}\""
 
@@ -98,10 +99,10 @@ _eval "mysql -h${_MEL_DB_HOST} -uroothost -p${_MEL_DB_HOST_PWD} -e \"FLUSH PRIVI
 ########################  MAIN
 
 _echot "------------------  create path ${path_admin}"
-_lxc_exec ${_MEL_CT_ADMIN} "[ -d ${path_admin} ] || mkdir -p ${path_admin}"
+_lxc_exec ${_CT_ADMIN} "[ -d ${path_admin} ] || mkdir -p ${path_admin}"
 
 _echot "------------------  install"
-_eval lxc file push -q ${file_app_tmp} ${_MEL_CT_ADMIN}/${path_admin}/
+_eval lxc file push -q ${file_app_tmp} ${_CT_ADMIN}/${path_admin}/
 
 cmds="cd ${path_admin}
 [ -e ${pfa_path} ] && mv ${pfa_path} ${pfa_path}.${_SDATE}
@@ -109,48 +110,48 @@ tar -xzf ${file_app}
 [ -e postfixadmin-${pfa_path} ] && mv postfixadmin-${pfa_path} ${pfa_path}
 [ -e '${_APA_SUB}' ] && rm ${_APA_SUB}
 ln -s ${pfa_path} ${_APA_SUB}"
-_lxc_exec ${_MEL_CT_ADMIN} "${cmds}"
+_lxc_exec ${_CT_ADMIN} "${cmds}"
 
 _echot "------------------  conf local"
 file=${path_admin}/${_APA_SUB}/${file_conf_pfa##*/}
-_lxc_exec ${_MEL_CT_ADMIN} "[ -e '${file}' ] && mv ${file} ${file}.${_SDATE}"
-_eval lxc file push -q ${file_conf_pfa} ${_MEL_CT_ADMIN}${file}
-_lxc_var_replace ${_MEL_CT_ADMIN} ${file} mail
+_lxc_exec ${_CT_ADMIN} "[ -e '${file}' ] && mv ${file} ${file}.${_SDATE}"
+_eval lxc file push -q ${file_conf_pfa} ${_CT_ADMIN}${file}
+_lxc_var_replace ${_CT_ADMIN} ${file} mail
 
 _echot "------------------  path templates_c"
 path=${path_admin}/${pfa_path}/templates_c
-_lxc_exec ${_MEL_CT_ADMIN} "[ -d '${path}' ] || mkdir ${path}"
+_lxc_exec ${_CT_ADMIN} "[ -d '${path}' ] || mkdir ${path}"
 
 _echot "------------------  rights  ${path_admin}"
-_lxc_exec ${_MEL_CT_ADMIN} "chown apache.apache -R ${path_admin}"
+_lxc_exec ${_CT_ADMIN} "chown apache.apache -R ${path_admin}"
 
 ########################  APACHE
 
 _echot "------------------  conf apache2"
 file=/etc/apache2/sites/${_APA_SUB}.conf
-_lxc_exec ${_MEL_CT_ADMIN} "[ -e '${file}' ] && mv ${file} ${file}.${_SDATE}"
-_eval lxc file push -q ${file_conf_apache} ${_MEL_CT_ADMIN}${file}
-_lxc_var_replace ${_MEL_CT_ADMIN} ${file} apache
-_lxc_exec ${_MEL_CT_ADMIN} "sed -i 's|/${_APA_DOM_ADMIN}.${S_DOM_FQDN}/${_APA_SUB}|/${_APA_DOM_ADMIN}.${S_DOM_FQDN}/${_APA_SUB}/public|' ${file}"
+_lxc_exec ${_CT_ADMIN} "[ -e '${file}' ] && mv ${file} ${file}.${_SDATE}"
+_eval lxc file push -q ${file_conf_apache} ${_CT_ADMIN}${file}
+_lxc_var_replace ${_CT_ADMIN} ${file} apache
+_lxc_exec ${_CT_ADMIN} "sed -i 's|/${_APA_DOM_ADMIN}.${S_DOM_FQDN}/${_APA_SUB}|/${_APA_DOM_ADMIN}.${S_DOM_FQDN}/${_APA_SUB}/public|' ${file}"
 
 _echot "------------------  apache2 restart"
-_lxc_exec ${_MEL_CT_ADMIN} "rc-service apache2 restart"
+_lxc_exec ${_CT_ADMIN} "rc-service apache2 restart"
 
 ########################  MANUAL
 
 _echot "------------------  manually app password"
 _echoA "Go to address: ${_APA_SUB}.${S_DOM_FQDN}/setup.php"
-_echoa "Use this password to configure postfixadmin: ${_MEL_DB_PFA_PWD}"
-_echoa "after this, paste to this terminal the text given by postfixadmin to configure it:"
+_echo "Use this password to configure postfixadmin: ${_MEL_DB_PFA_PWD}"
+_echo "after this, paste to this terminal the text given by postfixadmin to configure it:"
 str=
 while [ -z "${str}" ]; do read -r str; done
 file=${path_admin}/${_APA_SUB}/config.local.php
-lxc exec ${_MEL_CT_ADMIN} -- sed -i "/^.CONF..setup_password/ s|=.*|= '${str}';" ${file}
+lxc exec ${_CT_ADMIN} -- sed -i "/^.CONF..setup_password/ c ${str}" ${file}
 
 _echot "------------------  manually admin password"
 _echoA "Refresh page: ${_APA_SUB}.${S_DOM_FQDN}/setup.php"
-_echoa "and enter setup password: ${_MEL_DB_PFA_PWD} to continue"
-_echoa "After creation of tables succeed you have to setup an account for administration"
+_echo "and enter setup password: ${_MEL_DB_PFA_PWD} to continue"
+_echo "After creation of tables succeed you have to setup an account for administration"
 _askno "and valid after this"
 
 ########################  DB ADD
@@ -160,11 +161,25 @@ ALTER TABLE domain ADD COLUMN IF NOT EXISTS policy enum('none', 'may', 'encrypt'
 ALTER TABLE domain ADD COLUMN IF NOT EXISTS params varchar(255) DEFAULT NULL AFTER policy;
 \""
 
+########################  COPY
+
+cts_replace=" ${_MEL_CTS_ADMIN} "; cts_replace=${cts_replace/ ${_CT_ADMIN} /}
+
+for ct_name in ${cts_replace}; do
+	_echot "---------- replace ${ct_name}"
+	if lxc list -f csv -c n | grep -q ^${ct_name}$; then
+		lxc list -f csv -c n status=Running| grep -q ^${ct_name}$ && _eval lxc stop ${ct_name}
+		_eval lxc rename ${ct_name} ${ct_name}-${_SDATE}
+	fi
+	_eval lxc copy ${_CT_ADMIN} ${ct_name}
+	_eval lxc start ${ct_name}
+done
+
 ########################  SHOW
 
 _echot "------------------  show passwords"
 _echoA "Keep this passwords:"
-_echoa "${strpass}"
+_echo "${strpass}"
 
 ########################  COUNTS
 
@@ -172,7 +187,14 @@ _echot "------------------  domain & email account"
 _echoA "Now use Logging you in this address:"
 _echo " ${_APA_SUB}.${S_DOM_FQDN}/"
 _echoa "And create at least the domain: ${S_DOM_FQDN} & the email: ${S_EMAIL_TECH}"
-_askno "and valid after this"
+
+########################  PUBLISH
+
+for ct_name in ${_MEL_CTS_ADMIN}; do
+	_echot "------------------  publish ${ct_name}"
+	lxc image list -f csv -c l | grep -q ^${ct_name}$ && _eval lxc image alias rename ${ct_name} ${ct_name}-${_SDATE}
+	_eval lxc publish --force ${ct_name} --alias ${ct_name}
+done
 
 ########################  END
 
