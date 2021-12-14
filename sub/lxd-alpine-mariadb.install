@@ -210,6 +210,7 @@ for i in $(seq 1 ${_PHP_CT_NUM}); do
 	#_echoA "Use this password: ${_MDB_PWD_LOCAL}"
 	#_lxc_exec ${_CT_NAME} "mysql_secure_installation"
 	cmd="DELETE FROM mysql.user WHERE User=''; DROP DATABASE IF EXISTS test;"
+	# DROP USER ''@'%'
 	_lxc_exec ${_CT_NAME} "mysql -uroot -p${_MDB_PWD_LOCAL} -e \"${cmd}\""
 
 	########################  CONF

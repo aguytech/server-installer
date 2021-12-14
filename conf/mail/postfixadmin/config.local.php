@@ -6,7 +6,7 @@
 // configuration
 $CONF['configured'] = true;
 // password for www access
-$CONF['setup_password'] = '';
+$CONF['setup_password'] = '_MEL_PFA_HASH';
 
 // Language files are located in './languages', change as required..
 $CONF['default_language'] = 'en';

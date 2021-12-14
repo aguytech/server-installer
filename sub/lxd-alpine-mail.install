@@ -49,9 +49,6 @@ else
 	_echO "performed *** ${_PARTMAIL}"
 fi
 
-
-_exite debug
-
 ####################  _MEL_VMAIL_APP
 
 _PARTMAIL=mail-${_MEL_VMAIL_APP}
@@ -61,6 +58,9 @@ if ! _parthave ${_PARTMAIL} ${S_FILE_INSTALL_DONE}; then
 else
 	_echO "performed *** ${_PARTMAIL}"
 fi
+
+
+_exite debug
 
 ####################  POSTFIX
 

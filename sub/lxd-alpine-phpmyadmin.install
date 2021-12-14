@@ -250,7 +250,7 @@ _lxc_exec_e ${_CT_NAME} "rc-service apache2 restart"
 
 ########################  MARIADB
 
-for ct_maria in ${S_SERVICE[proxy]} ${_PMA_CT_DBS}; do
+for ct_maria in ${_PMA_CT_DBS}; do
 
 	_echoT "\n==========  for ${ct_maria}"
 
@@ -261,7 +261,7 @@ for ct_maria in ${S_SERVICE[proxy]} ${_PMA_CT_DBS}; do
 	_echot "------------------  ${ct_maria} tables create"
 	_eval "mysql -h${ct_maria} -uroothost -p${_MDB_PWD_HOST} < ${file_tables}"
 
-	for ct_php in ${cts_php}; do
+	for ct_php in ${cts_php}  ${S_SERVICE[proxy]}; do
 
 		_echot "------------------  ${ct_maria} ${_PMA_APP_DB_USER} grant"
 		cmd="GRANT USAGE ON *.* TO '${_PMA_APP_DB_USER}'@'${ct_php}.lxd' IDENTIFIED BY '${_PMA_APP_DB_PWD}';"

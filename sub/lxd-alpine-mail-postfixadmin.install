@@ -9,7 +9,7 @@ grep -q "^# ${_PARTMAIL#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PARTMAIL}" >
 ########################  REQUIRED
 
 _echot "------------------ required vm"
-cts_admin=`lxc list -f csv -c n | grep '\-admin-'`
+cts_admin=$(lxc list -f csv -c n | grep '\-admin-')
 [ -z "${cts_admin}" ] && _exite "Unable to find an 'admin' container"
 
 file_conf_pfa=${S_PATH_INSTALL_CONF}/mail/postfixadmin/config.local.php
@@ -22,29 +22,36 @@ _require ${file_conf_pfa} ${file_conf_apache}
 
 _echot "------------------  data container"
 # ct_master
-_menua "Select all available 'admin' containers to use" ${cts_admin}
-cts_name=`echo ${_ANSWER}`
-ct_name=${cts_name%% *}
+[ -z ${_MEL_CTS_ADMIN+x} ] && { _menua "Select all available 'admin' containers to use" ${cts_admin}; _MEL_CTS_ADMIN=$(echo ${_ANSWER}); }
+[ -z ${_MEL_CT_ADMIN+x} ] && { _MEL_CT_ADMIN=${_MEL_CTS_ADMIN%% *}; }
 
 _echot "------------------  data db"
-anstmp=pfa && _askno "User name to access to: ${_MEL_DB_NAME} (${anstmp})"
-_MEL_DB_PFA_USER=${_ANSWER:-${anstmp}} && _confset _MEL_DB_PFA_USER "${_MEL_DB_PFA_USER}"
 
-anstmp="$(_pwd)" && _askno "User password for ${_MEL_DB_PFA_USER} ! 2 digit at least ! (${anstmp})"
-_MEL_DB_PFA_PWD=${_ANSWER:-${anstmp}}
+[ -z ${_MEL_DB_PFA_USER+x} ] && { anstmp=pfa; _askno "User name to access to: ${_MEL_DB_NAME} (${anstmp})"; _MEL_DB_PFA_USER=${_ANSWER:-${anstmp}}; }
+_confset _MEL_DB_PFA_USER "${_MEL_DB_PFA_USER}"
 
-_echot "------------------  data"
-pfa_tmp=
-while ! [ -f "${pfa_tmp}" ]; do
-	anstmp=3.3.8 && _askno "Version to install? (${anstmp})"
-	pfa_ver=${_ANSWER:-${anstmp}} 
-	pfa_file=postfixadmin-${pfa_ver}.tar.gz
-	pfa_tmp=/tmp/${pfa_file}
-	if ! [ -f "${pfa_tmp}" ]; then
-		url=https://github.com/postfixadmin/postfixadmin/archive/refs/tags/${pfa_file}
-		wget -qO ${pfa_tmp} ${url} || echo "[error] Unable to get ${url}"
-	fi
-done
+[ -z ${_MEL_DB_PFA_PWD+x} ] && { anstmp="$(_pwd)"; _askno "User password for ${_MEL_DB_PFA_USER} ! 2 digit at least ! (${anstmp})"; _MEL_DB_PFA_PWD=${_ANSWER:-${anstmp}}; }
+
+if [ -z "${_PFA_APP_VERSION+x}" ]; then
+	ok=false; while ! ${ok}; do
+		anstmp=3.3.8 && _askno "version of phpMyAdmin to download (${anstmp})"
+		_PFA_APP_VERSION="${_ANSWER:-${anstmp}}"
+		file_app=postfixadmin-${_PFA_APP_VERSION}.tar.gz
+		file_app_tmp=/tmp/${file_app}
+		uri=https://github.com/postfixadmin/postfixadmin/archive/refs/tags/${file_app}
+		if ! [ -f "${file_app_tmp}" ] || [ "$(ls -s ${file_app_tmp}|cut -d' ' -f1)" = 0 ]; then
+			_echot "------------------  wget ${file_app}"
+			wget -q ${uri} -O ${file_app_tmp} && ok=true || _echoe "Unable to get file: ${uri}"
+		else
+			ok=true
+		fi
+	done
+else
+	file_app=postfixadmin-${_PFA_APP_VERSION}.tar.gz
+	file_app_tmp=/tmp/${file_app}
+	uri=https://github.com/postfixadmin/postfixadmin/archive/refs/tags/${file_app}
+	wget -q ${uri} -O ${file_app_tmp} && ok=true || _exite "Unable to get file: ${uri}"
+fi
 
 _echoA "Default policy to use for postfix"
 _echo "none: Don’t use encryption
@@ -61,23 +68,26 @@ _echo "none: Don’t use encryption
    Hostname given in MX record must match hostname in certificate.
 - secure: Encrypted connections only. Certificate must be issued by an accepted CA.
    Hostname in certificate must by domain or subdomain of e-mail domain. No DNS used.
-" && sleep 0.4
-_menu "Select a global default policy of security (may)" none may encrypt dane dane-only verify secure
-pfa_policy="${_ANSWER}" && _confset pfa_policy "${pfa_policy}"
+"; sleep 0.1
+[ -z ${_MEL_PFA_POLICY+x} ] && { _menu "Select a global default policy of security (may)" none may encrypt dane dane-only verify secure; _MEL_PFA_POLICY="${_ANSWER}"; }
+_confset _MEL_PFA_POLICY "${_MEL_PFA_POLICY}"
 
-pfa_path=${pfa_file%.tar.gz}
+pfa_path=${file_app%.tar.gz}
 path_admin=${S_VM_PATH_SHARE}/www/admin.${S_DOM_FQDN}
 _APA_SUB=pfa
-_APA_DOM_ADMIN=admin
 
 ########################  MARIADB
 
+_echot "------------------  create db ${ct}"
+cmd="CREATE DATABASE postfix;"
+cmd+="GRANT ALL PRIVILEGES ON ${_MEL_DB_NAME}.* TO '${_MEL_DB_PFA_USER}'@'${ct}.lxd';"
+_eval "mysql -h${_MEL_DB_HOST} -uroothost -p${_MEL_DB_HOST_PWD} -e \"${cmd}\""
+
 strpass=
-for ct in ${cts_name}; do
+for ct in ${_MEL_CTS_ADMIN} ${S_SERVICE[proxy]}; do
 	_echot "------------------  grant ${_MEL_DB_PFA_USER} for ${ct}"
-	cmd="GRANT USAGE ON *.* TO '${_MEL_DB_PFA_USER}'@'${ct}.lxd' IDENTIFIED BY '${_MEL_DB_PFA_PWD}';"
-	_eval "mysql -h${_MEL_DB_HOST} -uroothost -p${_MEL_DB_HOST_PWD} -e \"${cmd}\""
-	cmd="GRANT ALL PRIVILEGES ON ${_MEL_DB_NAME}.* TO '${_MEL_DB_PFA_USER}'@'${ct}.lxd';"
+	cmd="CREATE OR REPLACE USER '${_MEL_DB_PFA_USER}'@'${ct}.lxd' IDENTIFIED BY '${_MEL_DB_PFA_PWD}';"
+	cmd+="GRANT ALL PRIVILEGES ON ${_MEL_DB_NAME}.* TO '${_MEL_DB_PFA_USER}'@'${ct}.lxd';"
 	_eval "mysql -h${_MEL_DB_HOST} -uroothost -p${_MEL_DB_HOST_PWD} -e \"${cmd}\""
 	strpass+="${_MEL_DB_PFA_USER} @ ${ct} - ${_MEL_DB_PFA_PWD}\n"
 done
@@ -88,57 +98,43 @@ _eval "mysql -h${_MEL_DB_HOST} -uroothost -p${_MEL_DB_HOST_PWD} -e \"FLUSH PRIVI
 ########################  MAIN
 
 _echot "------------------  create path ${path_admin}"
-_lxc_exec ${ct_name} "[ -d ${path_admin} ] || mkdir -p ${path_admin}"
+_lxc_exec ${_MEL_CT_ADMIN} "[ -d ${path_admin} ] || mkdir -p ${path_admin}"
 
 _echot "------------------  install"
-_eval lxc file push -q ${pfa_tmp} ${ct_name}/${path_admin}/
+_eval lxc file push -q ${file_app_tmp} ${_MEL_CT_ADMIN}/${path_admin}/
 
 cmds="cd ${path_admin}
 [ -e ${pfa_path} ] && mv ${pfa_path} ${pfa_path}.${_SDATE}
-tar -xzf ${pfa_file}
+tar -xzf ${file_app}
 [ -e postfixadmin-${pfa_path} ] && mv postfixadmin-${pfa_path} ${pfa_path}
 [ -e '${_APA_SUB}' ] && rm ${_APA_SUB}
-ln -s ${pfa_path} ${_APA_SUB}
-chown -R apache.apache *"
-_lxc_exec ${ct_name} "${cmds}"
-
-<<KEEP
-_echot "------------------  conf ${_PARTMAIL}"
-file=${path_admin}/${_APA_SUB}/config.inc.php
-_lxc_exec ${ct_name} "[ -e '${file}' ]"
-cmds="cp -a ${file} ${file}.${_SDATE}
-sed -i \"/^.CONF\['database_type'\]/ s|=.*|= 'mysqli';|\" ${file}
-sed -i \"/^.CONF\['database_host'\]/ s|=.*|= '${_MEL_DB_HOST}.lxd';|\" ${file}
-sed -i \"/^.CONF\['database_user'\]/ s|=.*|= '${_MEL_DB_PFA_USER}';|\" ${file}
-sed -i \"/^.CONF\['database_password'\]/ s|=.*|= '${_MEL_DB_PFA_PWD}';|\" ${file}
-sed -i \"/^.CONF\['database_name'\]/ s|=.*|= '${_MEL_DB_NAME}';|\" ${file}
-sed -i \"/^.CONF\['database_use_ssl'\]/ s|=.*|= false;|\" ${file}
-sed -i \"/^.CONF\['configured'\]/ s|=.*|= true;|\" ${file}"
-_lxc_exec ${ct_name} "${cmds}"
-KEEP
+ln -s ${pfa_path} ${_APA_SUB}"
+_lxc_exec ${_MEL_CT_ADMIN} "${cmds}"
 
 _echot "------------------  conf local"
 file=${path_admin}/${_APA_SUB}/${file_conf_pfa##*/}
-_lxc_exec ${ct_name} "[ -e '${file}' ] && mv ${file} ${file}.${_SDATE}"
-_eval lxc file push -q ${file_conf_pfa} ${ct_name}${file}
-_lxc_var_replace ${ct_name} ${file} mail
+_lxc_exec ${_MEL_CT_ADMIN} "[ -e '${file}' ] && mv ${file} ${file}.${_SDATE}"
+_eval lxc file push -q ${file_conf_pfa} ${_MEL_CT_ADMIN}${file}
+_lxc_var_replace ${_MEL_CT_ADMIN} ${file} mail
 
 _echot "------------------  path templates_c"
 path=${path_admin}/${pfa_path}/templates_c
-_lxc_exec ${ct_name} "[ -d '${path}' ] || mkdir ${path}"
-_lxc_exec ${ct_name} "chown apache.apache -R ${path}"
+_lxc_exec ${_MEL_CT_ADMIN} "[ -d '${path}' ] || mkdir ${path}"
+
+_echot "------------------  rights  ${path_admin}"
+_lxc_exec ${_MEL_CT_ADMIN} "chown apache.apache -R ${path_admin}"
 
 ########################  APACHE
 
 _echot "------------------  conf apache2"
 file=/etc/apache2/sites/${_APA_SUB}.conf
-_lxc_exec ${ct_name} "[ -e '${file}' ] && mv ${file} ${file}.${_SDATE}"
-_eval lxc file push -q ${file_conf_apache} ${ct_name}${file}
-_lxc_var_replace ${ct_name} ${file} apache
-_lxc_exec ${ct_name} "sed -i 's|/${_APA_DOM_ADMIN}.${S_DOM_FQDN}/${_APA_SUB}|/${_APA_DOM_ADMIN}.${S_DOM_FQDN}/${_APA_SUB}/public|' ${file}"
+_lxc_exec ${_MEL_CT_ADMIN} "[ -e '${file}' ] && mv ${file} ${file}.${_SDATE}"
+_eval lxc file push -q ${file_conf_apache} ${_MEL_CT_ADMIN}${file}
+_lxc_var_replace ${_MEL_CT_ADMIN} ${file} apache
+_lxc_exec ${_MEL_CT_ADMIN} "sed -i 's|/${_APA_DOM_ADMIN}.${S_DOM_FQDN}/${_APA_SUB}|/${_APA_DOM_ADMIN}.${S_DOM_FQDN}/${_APA_SUB}/public|' ${file}"
 
 _echot "------------------  apache2 restart"
-_lxc_exec ${ct_name} "rc-service apache2 restart"
+_lxc_exec ${_MEL_CT_ADMIN} "rc-service apache2 restart"
 
 ########################  MANUAL
 
@@ -149,7 +145,7 @@ _echoa "after this, paste to this terminal the text given by postfixadmin to con
 str=
 while [ -z "${str}" ]; do read -r str; done
 file=${path_admin}/${_APA_SUB}/config.local.php
-lxc exec ${ct_name} -- sed -i "/^.CONF..setup_password/ c${str}" ${file}
+lxc exec ${_MEL_CT_ADMIN} -- sed -i "/^.CONF..setup_password/ s|=.*|= '${str}';" ${file}
 
 _echot "------------------  manually admin password"
 _echoA "Refresh page: ${_APA_SUB}.${S_DOM_FQDN}/setup.php"
@@ -160,7 +156,7 @@ _askno "and valid after this"
 ########################  DB ADD
 
 _evalq "mysql -h'${_MEL_DB_HOST}' -uroothost -p'${_MEL_DB_HOST_PWD}' ${_MEL_DB_NAME} -e \"
-ALTER TABLE domain ADD COLUMN IF NOT EXISTS policy enum('none', 'may', 'encrypt', 'dane', 'dane-only', 'fingerprint', 'verify', 'secure') NOT NULL DEFAULT '${pfa_policy}' AFTER modified;
+ALTER TABLE domain ADD COLUMN IF NOT EXISTS policy enum('none', 'may', 'encrypt', 'dane', 'dane-only', 'fingerprint', 'verify', 'secure') NOT NULL DEFAULT '${_MEL_PFA_POLICY}' AFTER modified;
 ALTER TABLE domain ADD COLUMN IF NOT EXISTS params varchar(255) DEFAULT NULL AFTER policy;
 \""
 
