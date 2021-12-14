@@ -10,41 +10,59 @@ eval ${S_HOST_VM_ETH[default]} # get s_inet s_cidr s_base
 
 _echot "------------------ data container"
 
-anstmp=${S_SERVICE[mail]} && _askno "Base name of containers to build (${anstmp})"
-_CT_NAME="${_ANSWER:-${anstmp}}"
-_CT_IP=${s_base}.${S_SERVICE_BITS[mail]}
+[ -z ${_MEL_DOM_FQDN+x} ] && { anstmp=${S_DOM_FQDN}; _askno "Domain name to use (${anstmp})"; _MEL_DOM_FQDN="${_ANSWER:-$anstmp}"; }
 
-anstmp=1 && _askno "Number of containers to build (${anstmp})"
-_CT_NUM="${_ANSWER:-${anstmp}}"
-_CT_ALL_NAME="${_CT_NAME} $(for i in `seq 2 ${_CT_NUM}`; do echo ${_CT_NAME}-${i}; done)"
+[ -z ${_MEL_CT_NAME+x} ] && { anstmp=${S_SERVICE[mail]}; _askno "Base name of containers to build (${anstmp})"; _MEL_CT_NAME="${_ANSWER:-${anstmp}}"; }
+
+[ -z ${_MEL_CT_NUM+x} ] && { anstmp=1; _askno "Number of containers to build (${anstmp})"; _MEL_CT_NUM="${_ANSWER:-${anstmp}}"; }
 
 _echot "------------------ data"
 
-anstmp=${S_VM_PATH_SHARE}/mail && _askno "shared path for mail (${anstmp})"
-_MEL_PATH=${_ANSWER:-${anstmp}} && _confset _MEL_PATH "${_MEL_PATH}"
+[ -z ${_MEL_PATH_ROOT+x} ] && { anstmp=${S_VM_PATH_SHARE}/mail; _askno "shared path for mail (${anstmp})"; _MEL_PATH_ROOT=${_ANSWER:-${anstmp}}; }
+_confset _MEL_PATH_ROOT "${_MEL_PATH_ROOT}"
 
-anstmp=${_MEL_PATH}/local && _askno "path for shared local mail (${anstmp})"
-_MEL_PATH_LOCAL=${_ANSWER:-${anstmp}} && _confset _MEL_PATH_LOCAL "${_MEL_PATH_LOCAL}"
+[ -z ${_MEL_PATH_LOCAL+x} ] && { anstmp=${_MEL_PATH_ROOT}/local; _askno "path for shared local mail (${anstmp})"; _MEL_PATH_LOCAL=${_ANSWER:-${anstmp}}; }
+_confset _MEL_PATH_LOCAL "${_MEL_PATH_LOCAL}"
 
-anstmp=${_MEL_PATH}/vmail && _askno "path for shared virtual mail (${anstmp})"
-_MEL_PATH_VMAIL=${_ANSWER:-${anstmp}} && _confset _MEL_PATH_VMAIL "${_MEL_PATH_VMAIL}"
+[ -z ${_MEL_PATH_VMAIL+x} ] && { anstmp=${_MEL_PATH_ROOT}/vmail; _askno "path for shared virtual mail (${anstmp})"; _MEL_PATH_VMAIL=${_ANSWER:-${anstmp}}; }
+_confset _MEL_PATH_VMAIL "${_MEL_PATH_VMAIL}"
 
-anstmp=${_MEL_PATH_VMAIL}/sieve && _askno "path for sieve (${anstmp})"
-_MEL_PATH_SIEVE=${_ANSWER:-${anstmp}} && _confset _MEL_PATH_SIEVE "${_MEL_PATH_SIEVE}"
+[ -z ${_MEL_PATH_SIEVE+x} ] && { anstmp=${_MEL_PATH_ROOT_VMAIL}/sieve; _askno "path for sieve (${anstmp})"; _MEL_PATH_SIEVE=${_ANSWER:-${anstmp}}; }
+_confset _MEL_PATH_SIEVE "${_MEL_PATH_SIEVE}"
 
-anstmp=${_MEL_PATH}/rspamd && _askno "path for RSPAMD (${anstmp})"
-_MEL_PATH_SPAM=${_ANSWER:-${anstmp}} && _confset _MEL_PATH_SPAM "${_MEL_PATH_SPAM}"
+[ -z ${_MEL_PATH_RSPAMD+x} ] && { anstmp=${_MEL_PATH_ROOT}/rspamd; _askno "path for RSPAMD (${anstmp})"; _MEL_PATH_RSPAMD=${_ANSWER:-${anstmp}}; }
+_confset _MEL_PATH_RSPAMD "${_MEL_PATH_RSPAMD}"
 
-anstmp=y && _askno "Do you want an installation with halts for each parts (${anstmp})"
-_STEP=${_ANSWER:-${anstmp}} && _confset _STEP "${_STEP}"
+[ -z ${_MEL_VMAIL_USER+x} ] && { anstmp=y; _MEL_VMAIL_USER=vmail; }
+_confset _MEL_VMAIL_USER "${_MEL_VMAIL_USER}"
 
-_MEL_VMAIL_USER=vmail && _confset _MEL_VMAIL_USER "${_MEL_VMAIL_USER}"
-_MEL_VMAIL_APP=postfixadmin && _confset _MEL_VMAIL_APP "${_MEL_VMAIL_APP}"
-_MEL_SSL_SCHEME=SHA512 && _confset _MEL_SSL_SCHEME "${_MEL_SSL_SCHEME}"
+[ -z ${_MEL_VMAIL_APP+x} ] && { anstmp=y; _MEL_VMAIL_APP=postfixadmin; }
+_confset _MEL_VMAIL_APP "${_MEL_VMAIL_APP}"
 
-_MEL_PATH_SSL=${S_VM_PATH_SHARE}/ssl/mail && _confset _MEL_PATH_SSL "${_MEL_PATH_SSL}"
-_MEL_PATH_DKIM="${_MEL_PATH_SPAM}/dkim" && _confset _MEL_PATH_DKIM "${_MEL_PATH_DKIM}"
-_MEL_CIDR=${_CIDR_VM/1\//0\/} && _confset _MEL_CIDR "${_MEL_CIDR}"
+[ -z ${_MEL_SSL_SCHEME+x} ] && { anstmp=y; _MEL_SSL_SCHEME=SHA512; }
+_confset _MEL_SSL_SCHEME "${_MEL_SSL_SCHEME}"
+
+[ -z ${_MEL_PATH_SSL+x} ] && { anstmp=y; _MEL_PATH_SSL=${S_VM_PATH_SHARE}/ssl/mail; }
+_confset _MEL_PATH_SSL "${_MEL_PATH_SSL}"
+
+[ -z ${_MEL_PATH_DKIM+x} ] && { anstmp=y; _MEL_PATH_DKIM="${_MEL_PATH_RSPAMD}/dkim"; }
+_confset _MEL_PATH_DKIM "${_MEL_PATH_DKIM}"
+
+[ -z ${_MEL_CIDR+x} ] && { anstmp=y; _MEL_CIDR=${_CIDR_VM/1\//0\/}; }
+_confset _MEL_CIDR "${_MEL_CIDR}"
+
+[ -z ${_MEL_STEP+x} ] && { anstmp=y && _askno "Do you want an installation with halts for each parts (${anstmp})"; _MEL_STEP=${_ANSWER:-${anstmp}}; }
+_confset _MEL_STEP "${_MEL_STEP}"
+
+_CT_NAME="${_MEL_CT_NAME}"
+_CT_NUM="${_MEL_CT_NUM}"
+_CT_IP=${s_base}.${S_SERVICE_BITS[mail]}
+_CT_ALL_NAME="${_CT_NAME} $(for i in `seq 2 ${_CT_NUM}`; do echo ${_CT_NAME}-${i}; done)"
+
+####################  CONFIGURATION
+
+# load configuration file
+. ${S_FILE_INSTALL_CONF}
 
 ########################  END
 
