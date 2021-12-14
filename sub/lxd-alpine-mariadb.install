@@ -226,16 +226,14 @@ for i in $(seq 1 ${_PHP_CT_NUM}); do
 	strpass="root @ localhost - ${_MDB_PWD_LOCAL}\n"
 
 	_echot "------------------  right roothost"
-	for ip in ${_IPS_CLUSTER} ${_CIDR_VM%/*}; do
+	for ip in ${_IPS_CLUSTER} ${_CIDR_VM%/*} ${S_SERVICE[proxy]}.lxd; do
 		strpass+="roothost @ ${ip} - ${_MDB_PWD_HOST}\n"
 		cmd="GRANT ALL PRIVILEGES ON *.* TO roothost@'${ip}' IDENTIFIED BY '${_MDB_PWD_HOST}' WITH GRANT OPTION;"
-		_lxc_exec ${_CT_NAME} "mysql -uroot -p${_MDB_PWD_LOCAL} -e \"${cmd}\""
-		cmd="GRANT ALL PRIVILEGES ON *.* TO roothost@'${S_SERVICE[proxy]}.lxd' IDENTIFIED BY '${_MDB_PWD_HOST}' WITH GRANT OPTION;"
 		_lxc_exec ${_CT_NAME} "mysql -uroot -p${_MDB_PWD_LOCAL} -e \"${cmd}\""
 	done
 
 	_echot "------------------  right rootremote"
-	for ip in ${S_IPS_ADMIN}; do
+	for ip in ${S_IPS_ADMIN} ${S_SERVICE[proxy]}.lxd; do
 		strpass+="rootremote @ ${ip} - ${_MDB_PWD_REMOTE}\n"
 		cmd="GRANT ALL PRIVILEGES ON *.* TO rootremote@'${ip}' IDENTIFIED BY '${_MDB_PWD_REMOTE}' WITH GRANT OPTION"
 		_lxc_exec ${_CT_NAME} "mysql -uroot -p${_MDB_PWD_LOCAL} -e \"${cmd}\""
