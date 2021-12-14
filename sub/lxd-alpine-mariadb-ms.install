@@ -40,20 +40,19 @@ _echot "------------------  data ct"
 	[ "${cts_all_mdb}" ] && _menu "Select one available mariadb container for SLAVE" ${cts_all_mdb} || _exite "Unable to find container maria-* to use"
 	_MDB_MS_CT_SLAVES=${_ANSWER}; }
 
-if [ -z "${_MDB_PWD_HOST+x}" ]; then
-	# _MDB_PWD_HOST
+if [ -z "${_MDB_MS_PWD_HOST+x}" ]; then
 	ok=false; while ! ${ok}; do
 		_askno "Password for user: roothost"
 		ok=true
 		for ct_name in ${_MDB_MS_CT_MASTER} ${_MDB_MS_CT_SLAVES}; do
-			mysql -s -h${ct_name} -uroothost -p${_MDB_PWD_HOST} -e '' || { _echoe "Unable to connect to: ${ct_name} with pwd: ${_ANSWER}"; ok=false; }
+			mysql -s -h${ct_name} -uroothost -p${_MDB_MS_PWD_HOST} -e '' || { _echoe "Unable to connect to: ${ct_name} with pwd: ${_ANSWER}"; ok=false; }
 		done
 	done
-	_MDB_PWD_HOST=${_ANSWER}
+	_MDB_MS_PWD_HOST=${_ANSWER}
 else
 	# check password
 	for ct_name in ${_MDB_MS_CT_MASTER} ${_MDB_MS_CT_SLAVES}; do
-		mysql -s -h${ct_name} -uroothost -p${_MDB_PWD_HOST} -e '' || _exite "Unable to connect to: ${ct_name} with pwd: ${_ANSWER}"
+		mysql -s -h${ct_name} -uroothost -p${_MDB_MS_PWD_HOST} -e '' || _exite "Unable to connect to: ${ct_name} with pwd: ${_ANSWER}"
 	done
 fi
 
@@ -124,22 +123,22 @@ for ct_slave in ${_MDB_MS_CT_SLAVES}; do
 	GRANT REPLICATION SLAVE ON *.* TO 'replic'@'${ct_slave}.lxd';"
 	strpass+="replic @ ${ct_slave}.lxd - ${_MDB_MS_PWD_REPLIC}\n"
 done
-_eval "mysql -h${_CT_NAME} -uroothost -p${_MDB_PWD_HOST} -e \"${cmd}\""
-_eval "mysql -s -h${_CT_NAME} -uroothost -p${_MDB_PWD_HOST} -e \"SELECT user,host FROM mysql.user WHERE user like 'replic';\""
-_eval "mysql -h${_CT_NAME} -uroothost -p${_MDB_PWD_HOST} -e \"FLUSH PRIVILEGES;\""
+_eval "mysql -h${_CT_NAME} -uroothost -p${_MDB_MS_PWD_HOST} -e \"${cmd}\""
+_eval "mysql -s -h${_CT_NAME} -uroothost -p${_MDB_MS_PWD_HOST} -e \"SELECT user,host FROM mysql.user WHERE user like 'replic';\""
+_eval "mysql -h${_CT_NAME} -uroothost -p${_MDB_MS_PWD_HOST} -e \"FLUSH PRIVILEGES;\""
 
 _echot "------------------  ${_CT_NAME} lock"
-_eval "mysql -h${_CT_NAME} -uroothost -p${_MDB_PWD_HOST} -e \"FLUSH TABLES WITH READ LOCK;\""
-_eval "mysql -s -h${_CT_NAME} -uroothost -p${_MDB_PWD_HOST} -e \"SHOW MASTER STATUS;\""
+_eval "mysql -h${_CT_NAME} -uroothost -p${_MDB_MS_PWD_HOST} -e \"FLUSH TABLES WITH READ LOCK;\""
+_eval "mysql -s -h${_CT_NAME} -uroothost -p${_MDB_MS_PWD_HOST} -e \"SHOW MASTER STATUS;\""
 _echot "------------------  ${_CT_NAME} pos"
-master_file=$(mysql -s -h${_CT_NAME} -uroothost -p${_MDB_PWD_HOST} -e "SHOW MASTER STATUS;"|tail -n1|cut -f1)
-master_pos=$(mysql -s -h${_CT_NAME} -uroothost -p${_MDB_PWD_HOST} -e "SHOW MASTER STATUS;"|tail -n1|cut -f2)
+master_file=$(mysql -s -h${_CT_NAME} -uroothost -p${_MDB_MS_PWD_HOST} -e "SHOW MASTER STATUS;"|tail -n1|cut -f1)
+master_pos=$(mysql -s -h${_CT_NAME} -uroothost -p${_MDB_MS_PWD_HOST} -e "SHOW MASTER STATUS;"|tail -n1|cut -f2)
 
 _echot "------------------  ${_CT_NAME} backup"
 [ -z "${_INSTALL_AUTO}" ] && _askno "Backup data from master & valid to continue"
 
 _echot "------------------  ${_CT_NAME} unlock"
-_eval "mysql -h${_CT_NAME} -uroothost -p${_MDB_PWD_HOST} -e \"UNLOCK TABLES;\""
+_eval "mysql -h${_CT_NAME} -uroothost -p${_MDB_MS_PWD_HOST} -e \"UNLOCK TABLES;\""
 
 ########################  CONF SLAVE
 
@@ -180,8 +179,8 @@ for _CT_NAME in ${_MDB_MS_CT_SLAVES}; do
 	_lxc_exec ${_CT_NAME} "rc-service mariadb restart"
 
 	_echot "------------------  ${_CT_NAME} change master"
-	#_eval "mysql -h${_CT_NAME} -uroothost -p${_MDB_PWD_HOST} -e \"SET default_master_connection = '${_MDB_MS_CT_MASTER}';\""
-	_eval "mysql -h${_CT_NAME} -uroothost -p${_MDB_PWD_HOST} -e \"STOP SLAVE;\""
+	#_eval "mysql -h${_CT_NAME} -uroothost -p${_MDB_MS_PWD_HOST} -e \"SET default_master_connection = '${_MDB_MS_CT_MASTER}';\""
+	_eval "mysql -h${_CT_NAME} -uroothost -p${_MDB_MS_PWD_HOST} -e \"STOP SLAVE;\""
 
 	cmd="CHANGE MASTER TO
 	MASTER_HOST='${_MDB_MS_CT_MASTER}',
@@ -191,10 +190,10 @@ for _CT_NAME in ${_MDB_MS_CT_SLAVES}; do
 	MASTER_LOG_FILE='${master_file}',
 	MASTER_LOG_POS=${master_pos},
 	MASTER_CONNECT_RETRY=10;"
-	_eval "mysql -h${_CT_NAME} -uroothost -p${_MDB_PWD_HOST} -e \"${cmd}\""
+	_eval "mysql -h${_CT_NAME} -uroothost -p${_MDB_MS_PWD_HOST} -e \"${cmd}\""
 
 	_echot "------------------  ${_CT_NAME} start slave"
-	_eval "mysql -h${_CT_NAME} -uroothost -p${_MDB_PWD_HOST} -e \"START SLAVE;\""
+	_eval "mysql -h${_CT_NAME} -uroothost -p${_MDB_MS_PWD_HOST} -e \"START SLAVE;\""
 
 	_echot "------------------  increment id"
 	_MDB_MS_SLAVE_ID=$((${_MDB_MS_SLAVE_ID} + 1))
@@ -228,17 +227,17 @@ _lxc_exec_e ${ct_proxy} "rc-service haproxy reload"
 ########################  SHOW
 
 _echot "------------------  status master"
-_eval "mysql -h${_MDB_MS_CT_MASTER} -uroothost -p${_MDB_PWD_HOST} -e \"SHOW MASTER STATUS;\""
+_eval "mysql -h${_MDB_MS_CT_MASTER} -uroothost -p${_MDB_MS_PWD_HOST} -e \"SHOW MASTER STATUS;\""
 
 _echot "------------------  status slave"
 for ct_name in ${_MDB_MS_CT_SLAVES}; do
-	_eval "mysql -h${ct_name} -uroothost -p${_MDB_PWD_HOST} -e \"SHOW SLAVE STATUS \G;\" | head -n19"
+	_eval "mysql -h${ct_name} -uroothost -p${_MDB_MS_PWD_HOST} -e \"SHOW SLAVE STATUS \G;\" | head -n19"
 done
 
 _echot "------------------  proxy show replic"
 _echoa "Wait 4s for proxy updating"
 _eval sleep 4
-_eval "mysql -h${S_SERVICE[proxy]} -uroothost -p${_MDB_PWD_HOST} -e \"SELECT user,host FROM mysql.user WHERE user like 'replic';\""
+_eval "mysql -h${S_SERVICE[proxy]} -uroothost -p${_MDB_MS_PWD_HOST} -e \"SELECT user,host FROM mysql.user WHERE user like 'replic';\""
 
 _echot "------------------  show passwords"
 _echoA "Keep this passwords:"
