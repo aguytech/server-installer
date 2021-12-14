@@ -16,25 +16,27 @@ cts_maria=`lxc list -f csv -c n| grep '^mdb-'`
 
 _echot "------------------  data mariadb"
 
-[ -z ${_____+x} ] && { menu "Select a 'mariadb' container to use" ${cts_maria}; _MEL_DB_HOST=${_ANSWER}; }
+[ -z ${_MEL_DB_HOST+x} ] && { menu "Select a 'mariadb' container to use" ${cts_maria}; _MEL_DB_HOST=${_ANSWER}; }
 _confset _MEL_DB_HOST "${_MEL_DB_HOST}"
 
-ok=false; while ! ${ok}; do
-	_askno "Password for user: 'roothost' @ ${_MEL_DB_HOST}"
-	[ "${_ANSWER}" ] && mysql -s -h${_MEL_DB_HOST} -uroothost -p${_ANSWER} -e '' && ok=true || _echo "Unable to connect to: ${_MEL_DB_HOST}"
-done
-_MEL_DB_HOST_PWD=${_ANSWER}; }
-_confset _MEL_DB_HOST_PWD "${_MEL_DB_HOST_PWD}"
+if [ -z "${_MEL_DB_HOST_PWD+x}" ]; then
+	ok=false; while ! ${ok}; do
+		_askno "Password for user: roothost @ ${_MEL_DB_HOST}"
+		mysql -s -h${_MEL_DB_HOST} -uroothost -p${_MEL_DB_HOST_PWD} -e '' && ok=true || _echoe "Unable to connect to: ${ct_name} with pwd: ${_ANSWER}"
+	done
+	_MEL_DB_HOST_PWD=${_ANSWER}
+else
+	# check password
+	mysql -s -h${_MEL_DB_HOST} -uroothost -p${_MEL_DB_HOST_PWD} -e '' || _exite "Unable to connect to: ${ct_name} with pwd: ${_ANSWER}"
+fi
 
-_echot "------------------  data"
-
-[ -z ${_____+x} ] && { anstmp=${_MEL_VMAIL_APP} && _askno "Database name for mail management (${anstmp})"; _MEL_DB_NAME=${_ANSWER:-${anstmp}}; }
+[ -z ${_MEL_DB_NAME+x} ] && { anstmp=${_MEL_VMAIL_APP} && _askno "Database name for mail management (${anstmp})"; _MEL_DB_NAME=${_ANSWER:-${anstmp}}; }
 _confset _MEL_DB_NAME "${_MEL_DB_NAME}"
 
-[ -z ${_____+x} ] && { anstmp=vmail && _askno "User name to access to: ${_MEL_DB_NAME} (${anstmp})"; _MEL_DB_USER=${_ANSWER:-${anstmp}}; }
+[ -z ${_MEL_DB_USER+x} ] && { anstmp=vmail && _askno "User name to access to: ${_MEL_DB_NAME} (${anstmp})"; _MEL_DB_USER=${_ANSWER:-${anstmp}}; }
 _confset _MEL_DB_USER "${_MEL_DB_USER}"
 
-[ -z ${_____+x} ] && { anstmp="$(_pwd)" && _askno "User password for: ${_MEL_DB_USER} (${anstmp})"; _MEL_DB_PWD=${_ANSWER:-${anstmp}}; }
+[ -z ${_MEL_DB_PWD+x} ] && { anstmp="$(_pwd)" && _askno "User password for: ${_MEL_DB_USER} (${anstmp})"; _MEL_DB_PWD=${_ANSWER:-${anstmp}}; }
 
 ########################  MAIN
 
@@ -47,7 +49,7 @@ _eval "mysql -h${_MEL_DB_HOST} -uroothost -p${_MEL_DB_HOST_PWD} -e \"${cmd}\""
 
 _echot "------------------  Rights"
 strpass=
-for ct in ${_CT_ALL_NAME} ${S_SERVICE[proxy]}.lxd; do
+for ct in ${_CT_ALL_NAME} ${S_SERVICE[proxy]}; do
 	_echot "------------------  grant ${_MEL_DB_USER}"
 	cmd="GRANT USAGE ON *.* TO '${_MEL_DB_USER}'@'${ct}.lxd' IDENTIFIED BY '${_MEL_DB_PWD}';"
 	_eval "mysql -h${_MEL_DB_HOST} -uroothost -p${_MEL_DB_HOST_PWD} -e \"${cmd}\""
