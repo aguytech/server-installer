@@ -61,7 +61,7 @@ _echot "------------------  data"
 
 [ -z ${_MDB_MS_PWD_REPLIC+x} ] && { anstmp=`_pwd`; _askno "Password for replication access (${anstmp})"; _MDB_MS_PWD_REPLIC="${_ANSWER:-${anstmp}}"; }
 
-[ -z ${_MDB_MS_PROXY+x} ] && { anstmp=${S_DOM_FQDN%.lxd}; _askno "Prefix for proxy name (${anstmp})"; _MDB_MS_PROXY="${_ANSWER:-$anstmp}"; }
+[ -z ${_MDB_MS_PROXY+x} ] && { anstmp=${S_DOM_FQDN}; _askno "Prefix for proxy name (${anstmp})"; _MDB_MS_PROXY="${_ANSWER:-$anstmp}"; }
 _confset _MDB_MS_PROXY "${_MDB_MS_PROXY}"
 
 [ -z ${_MDB_MS_MAX_BIN_SIZE+x} ] && { anstmp=256M; _askno "max_binlog_size (${anstmp})"; _MDB_MS_MAX_BIN_SIZE="${_ANSWER:-$anstmp}"; }
