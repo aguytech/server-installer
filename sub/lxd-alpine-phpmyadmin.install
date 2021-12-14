@@ -222,7 +222,7 @@ _lxc_var_replace ${_CT_NAME} ${file} pma
 #[ "${_APA_DOM_FQDN##*.}" = lxd ] && _lxc_exec ${_CT_NAME} "sed -i '/.cfg..PmaAbsoluteUri/ s|https|http|' ${file}"
 
 file_part=${_APA_PATH_DOM}/${_PMA_DOM_SUB}/config-part.inc.php
-for ct_maria in $(echo ${_PMA_CT_DBS}|tr ' ' '\n'|sort -r) ${S_SERVICE[proxy]}; do
+for ct_maria in ${S_SERVICE[proxy]} $(echo ${_PMA_CT_DBS}|tr ' ' '\n'|sort -r); do
 	_echot "------------------  ${domain} conf ${_PMA_CT_DBS}"
 	_eval lxc file push -q ${file_conf_part} ${_CT_NAME}${file_part}
 	_PMA_APP_DB_HOST=${ct_maria}
