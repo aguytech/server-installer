@@ -7,5 +7,5 @@ cp _MEL_PATH_SSL/certs/*.pem S_PATH_CONF_SSL/certs/
 chown _MEL_VMAIL_USER:postfix S_PATH_CONF_SSL
 chmod -R g-w,o= S_PATH_CONF_SSL
 # services
-rc-service -s postfix reload
-rc-service -s dovecot reload
+rc-service -i postfix reload
+rc-service -i dovecot reload

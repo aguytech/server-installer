@@ -55,7 +55,7 @@ _lxc_exec ${_CT_NAME} rc-update add dovecot
 _lxc_exec ${_CT_NAME} rc-service -s dovecot start
 
 _echot "------------------  path create"
-for path in ${_MEL_PATH_VMAIL} ${_MEL_PATH_VMAIL}/mailboxes ${_MEL_PATH_SIEVE} ${_MEL_PATH_SIEVE}/global ${_MEL_PATH_SPAM} ${_MEL_PATH_DKIM}; do
+for path in ${_MEL_PATH_VMAIL} ${_MEL_PATH_VMAIL}/mailboxes ${_MEL_PATH_SIEVE} ${_MEL_PATH_SIEVE}/global ${_MEL_PATH_RSPAMD} ${_MEL_PATH_DKIM}; do
 	_lxc_exec ${_CT_NAME} "[ -d '${path}' ] || mkdir -p ${path}; chown ${_MEL_VMAIL_USER}:${_MEL_VMAIL_USER} -R ${path}"
 	_lxc_exec_e ${_CT_NAME} "find ${path} -type d -exec chmod o-rwx -R {} \;"
 done

@@ -76,7 +76,7 @@ _lxc_exec ${_CT_NAME} "sed -i '/^#\?password =/ c password = "${str}";' ${file}"
 ########################  DKIM
 
 _echot "------------------  dkim keys"
-file=${_MEL_PATH_SPAM}/dkim_selectors.map
+file=${_MEL_PATH_RSPAMD}/dkim_selectors.map
 for domain in `echo ${S_DOM_ALL_FQDN}|tr ' ' '\n'|sort`; do
 	file_key=${_MEL_PATH_DKIM}/${domain}.${dkim_sel}.key
 	file_pub=${_MEL_PATH_DKIM}/${domain}.${dkim_sel}.pub
@@ -86,11 +86,11 @@ for domain in `echo ${S_DOM_ALL_FQDN}|tr ' ' '\n'|sort`; do
 		_lxc_exec ${_CT_NAME} "rspamadm dkim_keygen -b 2048 -s ${dkim_sel} -d ${domain} -k ${file_key} > ${file_pub}"
 	fi
 done
-_lxc_exec ${_CT_NAME} chown -R rspamd:rspamd ${_MEL_PATH_SPAM}
-_lxc_exec ${_CT_NAME} chmod -R u=rw,g-w,o= ${_MEL_PATH_SPAM}
+_lxc_exec ${_CT_NAME} chown -R rspamd:rspamd ${_MEL_PATH_RSPAMD}
+_lxc_exec ${_CT_NAME} chmod -R u=rw,g-w,o= ${_MEL_PATH_RSPAMD}
 
 _echot "------------------  dkim all_keys"
-file_pubkeys=${_MEL_PATH_SPAM}/dkim_all_keys.pub
+file_pubkeys=${_MEL_PATH_RSPAMD}/dkim_all_keys.pub
 _lxc_exec ${_CT_NAME} "[ -f '${file_pubkeys}' ] && rm ${file_pubkeys}"
 domains=`_lxc_exec ${_CT_NAME} "ls ${_MEL_PATH_DKIM}/*.pub|sed -n 's|.*/\([^/]\+\).${dkim_sel}.pub|\1|p'"`
 for domain in ${domains}; do

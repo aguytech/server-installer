@@ -39,7 +39,7 @@ if ! lxc profile list -f csv|grep -q "^${profile},"; then
 	_eval lxc profile create ${profile}
 
 	path=${S_HOST_PATH_SHARE}/mail
-	path_ct=${_MEL_PATH}
+	path_ct=${_MEL_PATH_ROOT}
 	[ -d ${path} ] || _evalr mkdir -p ${path}
 	_evalr chown ${_LXD_UID}:${_LXD_UID} -R ${S_HOST_PATH_SHARE}/mail
 	_eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
@@ -79,27 +79,27 @@ _lxc_meta_set ${_CT_NAME} profiles default global ssl-mail ${profile}
 
 ########################  UPDATE
 
+_echot "------------------  apk update"
 _lxc_exec ${_CT_NAME} apk update
+
+if _lxc_exec ${_CT_NAME} "apk list -I|grep ^ssmtp-"; then
+	_echot "------------------  remove ssmtp"
+	_lxc_exec ${_CT_NAME} apk del --purge ssmtp
+fi
+_echot "------------------  install postfix"
+_lxc_exec ${_CT_NAME} apk add postfix
 
 ########################  PATH
 
 _echot "------------------  paths mail"
-for path in ${_MEL_PATH} ${_MEL_PATH_LOCAL}; do
+for path in ${_MEL_PATH_ROOT} ${_MEL_PATH_LOCAL}; do
 	_lxc_exec ${_CT_NAME} "[ -d '${path}' ] || mkdir -p ${path}"
 done
-cmds="chown ${_MEL_VMAIL_USER}:${_MEL_VMAIL_USER} -R ${_MEL_PATH}
-chown ${_MEL_VMAIL_USER}:postdrop -R ${_MEL_PATH_LOCAL}
-find ${_MEL_PATH_LOCAL} -type d -exec chmod g+rwx -R {} \;
-find ${_MEL_PATH_LOCAL} -type f -exec chmod g+rw -R {} \;"
-_lxc_exec_e ${_CT_NAME} "${cmds}"
 
 _echot "------------------  path ssl"
 for path in ${_MEL_PATH_SSL}/certs ${_MEL_PATH_SSL}/private; do
 	_lxc_exec ${_CT_NAME} "[ -d '${path}' ] || mkdir -p ${path}"
 done
-cmds="chown -R ${_MEL_VMAIL_USER}:${_MEL_VMAIL_USER} ${_MEL_PATH_SSL} ${S_PATH_CONF_SSL}
-chmod 640 -R ${_MEL_PATH_SSL} ${S_PATH_CONF_SSL}"
-_lxc_exec_e ${_CT_NAME} "${cmds}"
 
 ########################  _VMAIL_USER
 
@@ -114,10 +114,10 @@ cmd="adduser -S -G ${_MEL_VMAIL_USER} -D -h ${_MEL_PATH_VMAIL} -s/sbin/nologin -
 _lxc_exec ${_CT_NAME} "grep -q ^${_MEL_VMAIL_USER} ${file} || ${cmd}"
 _MEL_VMAIL_UID=`_lxc_exec ${_CT_NAME} grep ^${_MEL_VMAIL_USER} ${file}|cut -d: -f3`
 # path
-str=`_lxc_exec ${_CT_NAME} grep ^${_MEL_VMAIL_USER} ${file}|cut -d: -f6`
+str=$(_lxc_exec ${_CT_NAME} grep ^${_MEL_VMAIL_USER} ${file}|cut -d: -f6)
 _lxc_exec_e ${_CT_NAME} "sed -i '/^${_MEL_VMAIL_USER}/ s|${str}|${_MEL_PATH_VMAIL}|' ${file}"
 # gid
-str=`_lxc_exec ${_CT_NAME} grep ^${_MEL_VMAIL_USER} ${file}|cut -d: -f4`
+str=$(_lxc_exec ${_CT_NAME} grep ^${_MEL_VMAIL_USER} ${file}|cut -d: -f4)
 _lxc_exec_e ${_CT_NAME} "sed -i '/^${_MEL_VMAIL_USER}/ s|${str}|${_MEL_VMAIL_GID}|' ${file}"
 # group
 _lxc_exec_e ${_CT_NAME} "sed -i '/^${_MEL_VMAIL_USER}/ s|^\(.*:.*:.*:\).*$|\1${_MEL_VMAIL_UID}|' /etc/group"
@@ -125,13 +125,24 @@ _lxc_exec_e ${_CT_NAME} "sed -i '/^${_MEL_VMAIL_USER}/ s|^\(.*:.*:.*:\).*$|\1${_
 _confset _MEL_VMAIL_UID "${_MEL_VMAIL_UID}"
 _confset _MEL_VMAIL_GID "${_MEL_VMAIL_GID}"
 
+########################  PATH RIGHTS
+
+cmds="chown ${_MEL_VMAIL_USER}:${_MEL_VMAIL_USER} -R ${_MEL_PATH_ROOT}
+chown ${_MEL_VMAIL_USER}:postdrop -R ${_MEL_PATH_LOCAL}
+find ${_MEL_PATH_LOCAL} -type d -exec chmod g+rwx -R {} \;
+find ${_MEL_PATH_LOCAL} -type f -exec chmod g+rw -R {} \;"
+_lxc_exec_e ${_CT_NAME} "${cmds}"
+
+cmds="chown -R ${_MEL_VMAIL_USER}:${_MEL_VMAIL_USER} ${_MEL_PATH_SSL} ${S_PATH_CONF_SSL}
+chmod 640 -R ${_MEL_PATH_SSL} ${S_PATH_CONF_SSL}"
+_lxc_exec_e ${_CT_NAME} "${cmds}"
+
 ########################  IPTABLES
 
 _echot "------------------  iptables"
 sed -i '/^_NAT_MAIL=/ s|=.*$|=true|' ${_IPT_FILE_CONF}
 sed -i '/^_NAT_RSPAMD=/ s|=.*$|=true|' ${_IPT_FILE_CONF}
 _service restart ${_IPT_SERVICE}
-
 
 <<KEEP
 ########################  UNBOUND
@@ -156,7 +167,6 @@ use-syslog  yes
 control-enable  yes"
 _lxc_exec ${_CT_NAME} "${cmds}"
 
-
 _echot "------------------  Unbound test"
 _lxc_exec ${_CT_NAME} unbound-checkconf || _exite "Configuration error(s) in file: ${file}"
 _lxc_exec ${_CT_NAME}  dig @127.0.0.1 ${S_DOM_FQDN} +short +dnssec
@@ -171,17 +181,14 @@ _lxc_exec ${_CT_NAME} rc-service -S unbound start
 
 _echot "------------------  resolvconf update"
 _lxc_exec ${_CT_NAME} "echo 'nameserver 127.0.0.1' >> /etc/resolv.conf"
-
 _evalq apt install -y resolvconf
 #_evalq "echo "nameserver 127.0.0.1" >> /etc/resolvconf/resolv.conf.d/head"
 _eval "nslookup ${S_DOM_FQDN} | grep Server"
 _askno "${yellow}Please verify the above outgoing (127.0.0.1) & valid${cclear}"
 
-
 #_echot "------------------  resolvconf conf"
 #[ ! "$(grep 'mail\.' /etc/hosts)" ] && echo "127.0.1.1   mail.${S_DOM_FQDN}  mail" >> /etc/hosts
 KEEP
-
 
 ########################  RSYSLOG
 
@@ -212,7 +219,6 @@ _lxc_var_replace ${_CT_NAME} ${file} rsyslog
 _echot "------------------  rsyslog restart ${_CT_NAME}"
 _lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
 
-
 ########################  LOGROTATE
 
 _echot "------------------  ${S_SERVICE[log]} logrotate"
@@ -234,7 +240,6 @@ _lxc_exec ${_CT_NAME} "chmod g-w,o= /etc/logrotate.d/*"
 _echot "------------------  ${_CT_NAME} crond restart"
 _lxc_exec ${_CT_NAME} "rc-service crond restart"
 
-
 ########################  MANUAL CONF
 
 _echot "------------------  DNS conf"
@@ -245,17 +250,17 @@ mail				IN CNAME  ${S_DOM_FQDN}.
 smtp				IN CNAME  ${S_DOM_FQDN}.
 
 ${S_DOM_FQDN}  3600 IN TXT v=spf1 a:mx.${S_DOM_FQDN} ?all"
-_echoA "For each domain in: ${S_DOM_ALL_FQDN}"
-_echoa "${S_DOM_ALL_FQDN%% *}. 3600 IN TXT v=spf1 include:${S_DOM_FQDN} ?all"
+_echoa "For each domain in: ${S_DOM_ALL_FQDN}"
+_echo "${S_DOM_ALL_FQDN%% *}. 3600 IN TXT v=spf1 include:${S_DOM_FQDN} ?all"
 
-_echoA "For each domain in: ${S_DOM_ALL_FQDN}"
-_echoa "_dmarc.${S_DOM_ALL_FQDN}. 'v=DMARC1; p=none; sp=none; aspf=r;'"
-_echoA "Verify the configuration of your DNS server about MAIL"
+_echoa "For each domain in: ${S_DOM_ALL_FQDN}"
+_echo "_dmarc.${S_DOM_ALL_FQDN}. 'v=DMARC1; p=none; sp=none; aspf=r;'"
+_echoa "Verify the configuration of your DNS server about MAIL"
 
 _echot "------------------  reverse DNS conf"
-_echoA"Verify that the reverse DNS of your machine: ${_IPTHIS} is set to:"
-_echoa "mail.${S_DOM_FQDN}"
-_askno "Valid to continue"
+_echoa "Verify that the reverse DNS of your machine: ${_IPTHIS} is set to:"
+_echo "mail.${S_DOM_FQDN}"
+[ -z "${_INSTALL_AUTO}" ] && _askno "Valid to continue"
 
 
 _echot "------------------  firewall conf"
@@ -264,11 +269,10 @@ if [ -f "${file}" ]; then
 	_echoA "Verify that the following ports are corrects for mails:"
 	_echo "$(sed -n 's|^_PORTS_MAIL="\(.*\)"$|\1|p' ${file})"
 	_echoa "If not, open the file: '${file}' and adjust settings"
-	_askno "Valid to continue"
+	[ -z "${_INSTALL_AUTO}" ] && _askno "Valid to continue"
 else
-	_echoe "Unable to find file: ${file}\nPlease configure input mail ports in your firewall"
+	_echow "Unable to find file: ${file}\nPlease configure input mail ports in your firewall"
 fi
-
 
 ########################  END
 

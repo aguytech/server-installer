@@ -18,13 +18,12 @@ _require ${file_cron_certificate}  ${file_conf_ssl_dom}
 
 _echot "------------------ data ssl"
 
-_menu "generate new ssl certificates for mail server" none certbot openssl
-ssl_api=${_ANSWER/none/} && _confset ssl_api "${ssl_api}"
+[ -z ${_MEL_SSL_API+x} ] && { _menu "generate new ssl certificates for mail server" none certbot openssl; _MEL_SSL_API=${_ANSWER/none/}; }
+_confset _MEL_SSL_API "${_MEL_SSL_API}"
 
-if [ "${ssl_api}" ]; then
-	anstmp="mail mx imap smtp"
-	_askno "Subdomains to register to ssl: (${anstmp})"
-	subs_ssl="${_ANSWER:-${anstmp}}" && _confset subs_ssl "${subs_ssl}"
+if [ "${_MEL_SSL_API}" ]; then
+	[ -z ${_MEL_SSL_SUBS+x} ] && { anstmp="mail mx imap smtp"; _askno "Subdomains to register to ssl: (${anstmp})"; _MEL_SSL_SUBS="${_ANSWER:-${anstmp}}"; }
+	_confset _MEL_SSL_SUBS "${_MEL_SSL_SUBS}"
 fi
 
 ct_proxy=${S_SERVICE[proxy]}
@@ -33,7 +32,7 @@ path_ssl_private=${_MEL_PATH_SSL}/private
 path_ssl_certs=${_MEL_PATH_SSL}/certs
 path_ssl_haproxy=${_HPX_PATH_SSL}/haproxy
 
-if [ "${ssl_api}" =  certbot ]; then
+if [ "${_MEL_SSL_API}" =  certbot ]; then
 
 	########################  LETSENCRYPT
 
@@ -45,14 +44,14 @@ if [ "${ssl_api}" =  certbot ]; then
 
 	_echot "------------------  copy certbot"
 	_echoA "Copy backup of certbot certs"
-	_askno "Valid to continue"
+	[ -z "${_INSTALL_AUTO}" ] && _askno "Valid to continue"
 
 	if ! _lxc_exec ${ct_proxy} "[ -d /etc/letsencrypt/live/mail.${S_DOM_FQDN} ]"; then
 
 		_echot "------------------  certbot cert mail.${S_DOM_FQDN}"
 		subs=
 		for domain in ${S_DOM_FQDN} ${S_DOM_ALL_FQDN/${S_DOM_FQDN}/}; do
-			for sub in ${subs_ssl}; do subs+=" -d ${sub}.${domain}"; done
+			for sub in ${_MEL_SSL_SUBS}; do subs+=" -d ${sub}.${domain}"; done
 		done
 		cmd="certbot certonly --standalone --preferred-challenges http --http-01-port ${_HPX_CERTBOT_PORT} --non-interactive --agree-tos --email ${S_EMAIL_ADMIN} ${subs}"
 		_lxc_exec ${ct_proxy} "${cmd}"
@@ -63,7 +62,7 @@ if [ "${ssl_api}" =  certbot ]; then
 	_echot "------------------  certbot unify"
 	_lxc_exec ${ct_proxy} "${S_PATH_SCRIPT}/scripts/certbot-unify.sh"
 
-elif [ "${ssl_api}" =  openssl ]; then
+elif [ "${_MEL_SSL_API}" =  openssl ]; then
 
 	########################  OPENSSL
 
@@ -83,7 +82,7 @@ elif [ "${ssl_api}" =  openssl ]; then
 
 	dns=
 	for domain in ${S_DOM_FQDN} ${S_DOM_ALL_FQDN/${S_DOM_FQDN}/}; do
-		for sub in ${subs_ssl}; do dns+="DNS:${sub}.${domain},"; done
+		for sub in ${_MEL_SSL_SUBS}; do dns+="DNS:${sub}.${domain},"; done
 	done
 	dns=${dns%,}
 	_lxc_exec ${ct_proxy} "sed -i '/subjectAltName/ s|=.*|= ${dns}|' ${file_ssl_conf}"
@@ -113,11 +112,6 @@ _lxc_var_replace ${_CT_NAME} ${file} mail
 _lxc_exec ${_CT_NAME} "chmod +x ${file}" # shift the haproxy cron by one hour
 _lxc_exec ${_CT_NAME} "sed -i '/run-parts.*weekly/ s|3|4|' /etc/crontabs/root" # shift the haproxy cron by one hour
 _lxc_exec ${_CT_NAME} "sh ${file}"
-
-_echot "------------------  certificate copy"
-cmds="cp -a ${file_ssl_key} ${S_PATH_CONF_SSL}/private/
-cp -a ${file_ssl_full} ${S_PATH_CONF_SSL}/private/"
-_lxc_exec ${ct_proxy} "${cmds}"
 
 ########################  END
 
