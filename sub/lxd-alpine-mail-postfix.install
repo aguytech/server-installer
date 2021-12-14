@@ -89,11 +89,12 @@ _eval lxc file push -q ${file_conf_client} ${_CT_NAME}${file}
 
 _echot "------------------  sql files"
 _lxc_exec_e ${_CT_NAME} "[ -d '${_MEL_PF_PATH_SQL}' ] || mkdir -p ${_MEL_PF_PATH_SQL}"
-_lxc_exec_e ${_CT_NAME} chmod 755 ${_MEL_PF_PATH_SQL}
+_lxc_exec_e ${_CT_NAME} "chmod 755 ${_MEL_PF_PATH_SQL}"
 for file in `ls ${path_sql}/mysql_*.cf`; do
 	_echo ${file##*/}
 	_eval lxc file push -q ${file} ${_CT_NAME}/${_MEL_PF_PATH_SQL}/ || _exite "unable to push file"
 done
+_lxc_exec_e ${_CT_NAME} "chmod 644 ${_MEL_PF_PATH_SQL}/*"
 
 _echot "------------------  conf var replace"
 _lxc_var_replace ${_CT_NAME} /etc/postfix mail

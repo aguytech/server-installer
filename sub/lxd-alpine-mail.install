@@ -69,9 +69,6 @@ else
 	_echO "performed *** ${_PARTMAIL}"
 fi
 
-
-_exite debug
-
 ####################  DOVECOT
 
 _PARTMAIL=mail-dovecot
@@ -81,6 +78,9 @@ if ! _parthave ${_PARTMAIL} ${S_FILE_INSTALL_DONE}; then
 else
 	_echO "performed *** ${_PARTMAIL}"
 fi
+
+
+_exite debug
 
 ####################  RSPAMD
 
