@@ -40,6 +40,10 @@ _require `set|grep ^file_conf_sieve_|cut -d= -f2`
 
 ########################  DATA
 
+[ -z ${_MEL_TEST_USER+x} ] && { anstmp=${S_EMAIL_TECH}; _askno "Give a created email (${anstmp})"; _MEL_TEST_USER=${_ANSWER:-${anstmp}}; }
+
+[ -z ${_MEL_TEST_PWD+x} ] && { anstmp=$(_pwd); _askno "Give a password for this email (${anstmp})"; _MEL_TEST_PWD=${_ANSWER:-${anstmp}}; }
+
 ########################  METADATA
 
 _echot "------------------ metadata"
@@ -88,7 +92,7 @@ file=/etc/dovecot/${file_conf_dovecot_sql##*/}
 _eval lxc file push -q ${file_conf_dovecot_sql} ${_CT_NAME}${file}
 
 _echot "------------------  conf conf.d"
-for file_from in _require `set|grep ^file_conf_dovecot_confd_|cut -d= -f2`; do
+for file_from in $(set|grep ^file_conf_dovecot_confd_|cut -d= -f2); do
 	file=/etc/dovecot/conf.d/${file_from##*/}
 	_echo ${file_from##*/}
 	_eval lxc file push -q ${file_from} ${_CT_NAME}${file}
@@ -106,15 +110,17 @@ _lxc_exec ${_CT_NAME}  chmod +x ${file}
 
 ######################## SIEVE
 
-_echot "------------------  dovecot reload"
+_echot "------------------  dovecot restart"
 # load first_valid_uid  for sievec
-_lxc_exec_e ${_CT_NAME} chown -R 0.0 /etc/dovecot
-_lxc_exec_e ${_CT_NAME} rc-service dovecot reload
+_lxc_exec ${_CT_NAME} chown -R 0.0 /etc/dovecot
+_lxc_exec_t ${_CT_NAME} "rc-service -s dovecot restart"
+_lxc_exec_t ${_CT_NAME} "rc-service -S dovecot start"
 
 _echot "------------------  path sieve"
 path=/usr/lib/dovecot/sieve-pipe
 _lxc_exec ${_CT_NAME} "[ -d '${path}' ] || mkdir ${path}"
-_lxc_exec ${_CT_NAME} chown ${path}
+_lxc_exec ${_CT_NAME} chown ${_MEL_VMAIL_USER}:${_MEL_VMAIL_USER} ${path}
+
 
 _echot "------------------  conf sieve"
 for file_from in ${file_conf_sieve_global} ${file_conf_sieve_spam} ${file_conf_sieve_ham}; do
@@ -137,39 +143,56 @@ _lxc_exec ${_CT_NAME}  "find ${S_PATH_CONF_SSL} -type f -exec chmod 440 {} \;"
 _echot "------------------  conf var replace"
 _lxc_var_replace ${_CT_NAME} /etc/dovecot mail
 
-########################  TEST
-
 _echot "------------------  postfix restart"
-_lxc_exec_e ${_CT_NAME} chown -R 0.0 /etc/postfix
-_lxc_exec_e ${_CT_NAME} rc-service postfix restart
+_lxc_exec ${_CT_NAME} chown -R 0.0 /etc/postfix
+_lxc_exec ${_CT_NAME} rc-service postfix restart
 
 _echot "------------------  dovecot restart"
-_lxc_exec_e ${_CT_NAME} chown -R 0.0 /etc/dovecot
-_lxc_exec_e ${_CT_NAME} rc-service dovecot restart
+_lxc_exec_t ${_CT_NAME} chown -R 0.0 /etc/dovecot
+_lxc_exec_t ${_CT_NAME} rc-service dovecot restart
 
-_echot "------------------  test mail send to ${S_EMAIL_TECH}"
-_lxc_exec ${_CT_NAME} "echo first message | mail -s test ${S_EMAIL_TECH}"
+########################  TEST
+
+if [ -z "${_MEL_TEST_USER}" -o -z "${_MEL_TEST_PWD}" ]; then 
+	_echot "------------------  auth"
+	_ask "Give a created email"
+	_MEL_TEST_USER=${_ANSWER}
+	_ask "Give the password of email ${user}"
+	_MEL_TEST_PWD=${_ANSWER}
+fi
+_echot "------------------  test auth"
+_echoa "Result of test:"
+_lxc_exec ${_CT_NAME} "doveadm auth test ${_MEL_TEST_USER} ${_MEL_TEST_PWD}"
+
+_echot "------------------  test mail"
+#_lxc_exec ${_CT_NAME} "echo first message | mail -s test root" # with mailx
+_lxc_exec ${_CT_NAME} "echo -e 'From: postmaster\nTo: root\nHi, this is a first message\n.'|sendmail -t"
 str=2
-_echoA "Verify the following content of the email received (in ${str}s)"
-sleep ${str}
-_lxc_exec ${_CT_NAME} cat ${_MEL_PATH_LOCAL}/root
-_askno "valid to continue"
+_echoA "Verify the following content of the email received in ${str}s"
+_eval sleep ${str}
+_lxc_exec ${_CT_NAME} "ls -t1 ${_MEL_PATH_VMAIL}/mailboxes/${_MEL_DOM_FQDN}/tech/mail/new/*|tail -n1|xargs cat"
+[ -z "${_INSTALL_AUTO}" ] && _askno "valid to continue"
 
 _echot "------------------  test telnet 143"
-_echoA "Enter 'z logout' to quit after connection"
-_echoa "type:\na login $username $password"
-_askno "valid to continue"
-telnet mx.${S_DOM_FQDN} 143
+_echo telnet mx.${S_DOM_FQDN}:465 143
+_echo telnet ${S_SERVICE[mail]} 143
+_echoa "a login $user $pwd|b select INBOX | z logout"
+_echoa "ehlo root | mail from:root | rcpt to:${S_EMAIL_TECH} | data | message | . | quit"
+[ -z "${_INSTALL_AUTO}" ] && _askno "valid to continue"
 
-_echot "------------------  test ssl 993"
-_echoA "Enter 'z logout' to quit after connection"
-_askno "valid to continue"
-openssl s_client -connect mx.${S_DOM_FQDN}:993
+_echot "------------------  test starttls 993"
+_echoA "Use openssl to test STARTTLS certificate"
+_echoa "quit"
+_echo openssl s_client -connect mx.${S_DOM_FQDN}:993
+_echo openssl s_client -connect ${S_SERVICE[mail]}:993
+[ -z "${_INSTALL_AUTO}" ] && _askno "valid to continue"
 
-_echot "------------------  test starttls 143"
-_echoA "Enter 'z logout' to quit after connection"
-_askno "valid to continue"
-openssl s_client -connect mx.${S_DOM_FQDN}:143 -starttls imap
+_echot "------------------  test openssl 143"
+_echoA "Use openssl to test SSL certificate"
+_echo "quit"
+_echo openssl s_client -starttls imap -connect mx.${S_DOM_FQDN}:143
+_echo openssl s_client -starttls imap -connect ${S_SERVICE[mail]}:993
+[ -z "${_INSTALL_AUTO}" ] && _askno "valid to continue"
 
 ########################  END
 
