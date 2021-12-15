@@ -174,8 +174,7 @@ _askno "${yellow}Please verify the above outgoing & valid${cclear}"
 
 _echot "------------------  Unbound enable"
 _lxc_exec ${_CT_NAME}  "rc-update show default|grep -q unbound || rc-update add unbound"
-_lxc_exec ${_CT_NAME} rc-service -s unbound restart
-_lxc_exec ${_CT_NAME} rc-service -S unbound start
+_lxc_exec ${_CT_NAME} "rc-service -s unbound restart; rc-service -S unbound start"
 
 ########################  RESOLV
 

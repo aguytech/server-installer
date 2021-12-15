@@ -222,14 +222,14 @@ _lxc_exec ${_CT_NAME} "${cmd}"
 
 _echot "------------------  conf php.ini"
 file=${path_php_base}/${file_conf_php_ini##*/}
-_lxc_exec_t ${_CT_NAME} "cp -a ${file} ${file}.${_SDATE}"
+_lxc_exec_T ${_CT_NAME} "cp -a ${file} ${file}.${_SDATE}"
 _eval lxc file push -q ${file_conf_php_ini} ${_CT_NAME}${file}
 
 ########################  CONF PHP-FPM
 
 _echot "------------------  conf php.fpm"
 file=${path_php_base}/${file_conf_php_fpm##*/}
-_lxc_exec_t ${_CT_NAME} "cp -a ${file} ${file}.${_SDATE}"
+_lxc_exec_T ${_CT_NAME} "cp -a ${file} ${file}.${_SDATE}"
 _eval lxc file push -q ${file_conf_php_fpm} ${_CT_NAME}${file}
 
 ########################  POOL - WWW
@@ -241,7 +241,7 @@ _lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
 
 _echot "------------------  conf pool ${pool}"
 file=${path_fpm_confd}/${file_conf_php_fpmd_www##*/}
-_lxc_exec_t ${_CT_NAME} "[ -f '${file}' ] && cp -a ${file} ${file}.${_SDATE}"
+_lxc_exec_T ${_CT_NAME} "[ -f '${file}' ] && cp -a ${file} ${file}.${_SDATE}"
 _eval lxc file push -q ${file_conf_php_fpmd_www} ${_CT_NAME}${file}
 
 ########################  POOL - WWW-ADMIN
@@ -253,7 +253,7 @@ _lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
 
 _echot "------------------  conf pool ${pool}"
 file=${path_fpm_confd}/${file_conf_php_fpmd_admin##*/}
-_lxc_exec_t ${_CT_NAME} "[ -f '${file}' ] && cp -a ${file} ${file}.${_SDATE}"
+_lxc_exec_T ${_CT_NAME} "[ -f '${file}' ] && cp -a ${file} ${file}.${_SDATE}"
 _eval lxc file push -q ${file_conf_php_fpmd_admin} ${_CT_NAME}${file}
 
 ########################  APACHE

@@ -167,7 +167,7 @@ _lxc_exec ${_CT_NAME} "apk add redis"
 
 _echot "------------------  service set"
 _lxc_exec ${_CT_NAME} "rc-update add redis"
-_lxc_exec_t ${_CT_NAME} "rc-service -S redis start"
+_lxc_exec_T ${_CT_NAME} "rc-service -S redis start"
 
 ########################  CONF
 
@@ -175,11 +175,11 @@ _echot "------------------  redis conf"
 file=/etc/${file_conf_redis##*/}
 _eval lxc file push -q ${file_conf_redis} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} redis
-_lxc_exec_t ${_CT_NAME} "chmod 644 ${file}"
-_lxc_exec_t ${_CT_NAME} "cp -a ${file} ${file}.keep"
+_lxc_exec_T ${_CT_NAME} "chmod 644 ${file}"
+_lxc_exec_T ${_CT_NAME} "cp -a ${file} ${file}.keep"
 
 _echot "------------------  restart redis"
-_lxc_exec_t ${_CT_NAME} "rc-service redis restart"
+_lxc_exec_T ${_CT_NAME} "rc-service redis restart"
 
 ########################  SENTINEL
 
@@ -191,8 +191,8 @@ _echot "------------------  sentinel conf"
 file=/etc/sentinel.conf
 _eval lxc file push -q ${file_conf_sentinel} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} redis
-_lxc_exec_t ${_CT_NAME} "chmod 644 ${file}"
-_lxc_exec_t ${_CT_NAME} "cp -a ${file} ${file}.keep"
+_lxc_exec_T ${_CT_NAME} "chmod 644 ${file}"
+_lxc_exec_T ${_CT_NAME} "cp -a ${file} ${file}.keep"
 
 _echot "------------------  sentinel notify"
 file=${_RDS_PATH_LIB}/${file_conf_sentinel_notify##*/}
@@ -265,12 +265,12 @@ file=/etc/redis.conf
 _lxc_exec ${_CT_NAME_2} "sed -i '/^replica-priority / c\replica-priority 200' ${file}"
 _lxc_exec ${_CT_NAME_2} "echo -e '\n# replica settings\nreplicaof ${_CT_NAME} ${S_CACHE_PORT_RW}' >> ${file}"
 _echot "------------------  restart redis ${_CT_NAME_2}"
-_lxc_exec_t ${_CT_NAME_2} "rc-service redis restart"
+_lxc_exec_T ${_CT_NAME_2} "rc-service redis restart"
 
 _echot "------------------  service sentinel"
 file=/etc/init.d/redis-sentinel
 _lxc_exec ${_CT_NAME_2} "rc-update add redis-sentinel"
-_lxc_exec_t ${_CT_NAME_2} "rc-service redis-sentinel start"
+_lxc_exec_T ${_CT_NAME_2} "rc-service redis-sentinel start"
 
 ########################  HAPROXY
 

@@ -199,17 +199,17 @@ _lxc_exec ${_CT_NAME} "[ -d '${_APA_PATH_WWW}/html' ] || mv /var/www/localhost/h
 
 _echot "------------------  conf default.conf"
 file=${path_confd}/${file_conf_default##*/}
-_lxc_exec_t ${_CT_NAME} "cp -a ${file} ${file}.${_SDATE}"
+_lxc_exec_T ${_CT_NAME} "cp -a ${file} ${file}.${_SDATE}"
 _eval lxc file push -q ${file_conf_default} ${_CT_NAME}${file}
 
 _echot "------------------  conf httpd"
 file=${file_httpd_conf}
-_lxc_exec_t ${_CT_NAME} "cp -a ${file} ${file}.${_SDATE}"
+_lxc_exec_T ${_CT_NAME} "cp -a ${file} ${file}.${_SDATE}"
 _eval lxc file push -q ${file_conf_httpd} ${_CT_NAME}${file}
 
 _echot "------------------  conf mpm"
 file=${path_confd}/${file_conf_mpm##*/}
-_lxc_exec_t ${_CT_NAME} "cp -a ${file} ${file}.${_SDATE}"
+_lxc_exec_T ${_CT_NAME} "cp -a ${file} ${file}.${_SDATE}"
 _eval lxc file push -q ${file_conf_mpm} ${_CT_NAME}${file}
 
 _echot "------------------  conf log"
@@ -218,7 +218,7 @@ _eval lxc file push -q ${file_conf_log} ${_CT_NAME}${file}
 
 _echot "------------------  conf info"
 file=${path_confd}/${file_conf_info##*/}
-_lxc_exec_t ${_CT_NAME} "cp -a ${file} ${file}.${_SDATE}"
+_lxc_exec_T ${_CT_NAME} "cp -a ${file} ${file}.${_SDATE}"
 _eval lxc file push -q ${file_conf_info} ${_CT_NAME}${file}
 
 _echot "------------------  conf monitor"
@@ -232,7 +232,7 @@ _lxc_exec ${_CT_NAME} "echo pong > ${_APA_PATH_WWW}/html/ping-monitor.html"
 
 _echot "------------------  ${_APA_DOM_FQDN} index.html"
 file=${_APA_PATH_DOM}/html/index.html
-_lxc_exec_t ${_CT_NAME} "[ -f '${file}' ] && cp -a ${file} ${file}.${_SDATE}"
+_lxc_exec_T ${_CT_NAME} "[ -f '${file}' ] && cp -a ${file} ${file}.${_SDATE}"
 _eval lxc file push -q ${file_conf_index} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} apache
 

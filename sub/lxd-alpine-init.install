@@ -232,8 +232,7 @@ _lxc_var_replace ${_CT_NAME} ${file} logrotate
 _lxc_exec ${_CT_NAME} "chmod g-w,o= /etc/logrotate.d/*"
 
 _echot "------------------  logrotate start"
-_lxc_exec ${_CT_NAME} "rc-service -s rsyslog restart"
-_lxc_exec ${_CT_NAME} "rc-service -S rsyslog start"
+_lxc_exec ${_CT_NAME} "rc-service -s rsyslog restart; rc-service -S rsyslog start"
 
 ########################  PUBLISH
 
