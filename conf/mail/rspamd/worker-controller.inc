@@ -8,4 +8,4 @@ bind_socket = "*:S_RSPAMD_PORT[controller]";
 #enable_password = ;
 # list or map with IP addresses that are treated as secure
 # so all commands are allowed from these IPs without passwords
-#secure_ip = ;
+secure_ip = _MEL_CIDR;

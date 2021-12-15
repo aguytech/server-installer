@@ -1,0 +1,6 @@
+# included file for haproxy configuration
+
+backend rspamd
+	mode			http
+	default-server maxconn 128 check port S_RSPAMD_PORT[controller]  inter 10s  fall 1  rise 1  resolvers lxd  resolve-prefer ipv4 # resolve-net 10.0.0.1/24
+	server S_SERVICE[mail]	S_SERVICE[mail]:S_RSPAMD_PORT[controller]

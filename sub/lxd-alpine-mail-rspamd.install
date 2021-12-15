@@ -11,22 +11,22 @@ grep -q "^# ${_PARTMAIL#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PARTMAIL}" >
 imgs_all_rds=`lxc list -f csv -c n| grep '^rds-'`
 [ "${imgs_all_rds}" ] || _exite "Unable to find redis container (name starts with rds-)"
 
-fc_rspamd_main=${S_PATH_INSTALL_CONF}/mail/postfix/main_rspamd.cf
+fc_main_rspamd=${S_PATH_INSTALL_CONF}/mail/postfix/main_rspamd.cf
 
 fc_rspamd_actions=${S_PATH_INSTALL_CONF}/mail/rspamd/actions.conf
 fc_rspamd_bayes=${S_PATH_INSTALL_CONF}/mail/rspamd/classifier-bayes.conf
 fc_rspamd_dkim=${S_PATH_INSTALL_CONF}/mail/rspamd/dkim_signing.conf
 fc_rspamd_milter=${S_PATH_INSTALL_CONF}/mail/rspamd/milter_headers.conf
-fc_rspamd_redis=${S_PATH_INSTALL_CONF}/mail/rspamd/settings.conf
-
+fc_rspamd_settings=${S_PATH_INSTALL_CONF}/mail/rspamd/settings.conf
+fc_rspamd_redis=${S_PATH_INSTALL_CONF}/mail/rspamd/redis.conf
 fc_rspamd_logging=${S_PATH_INSTALL_CONF}/mail/rspamd/logging.inc
 fc_rspamd_options=${S_PATH_INSTALL_CONF}/mail/rspamd/options.inc
-fc_rspamd_redis=${S_PATH_INSTALL_CONF}/mail/rspamd/redis.inc
 fc_rspamd_controller=${S_PATH_INSTALL_CONF}/mail/rspamd/worker-controller.inc
 fc_rspamd_normal=${S_PATH_INSTALL_CONF}/mail/rspamd/worker-normal.inc
 fc_rspamd_proxy=${S_PATH_INSTALL_CONF}/mail/rspamd/worker-proxy.inc
 
 _echot "------------------ required files"
+_require ${fc_main_rspamd}
 _require `set|grep ^fc_rspamd_|cut -d= -f2`
 
 ########################  DATA
@@ -66,6 +66,7 @@ _lxc_exec ${_CT_NAME} "sed -i 's|_IPS_CLUSTER|${_IPS_CLUSTER// /, }|' /etc/rspam
 
 _echot "------------------  conf var replace"
 _lxc_var_replace ${_CT_NAME} /etc/rspamd rspamd
+_lxc_exec ${_CT_NAME} "find /etc/rspamd/local.d -type f -exec chmod 644 {} \;"
 
 _echot "------------------  conf password"
 file=/etc/rspamd/local.d/worker-controller.inc
@@ -108,17 +109,14 @@ _echot "------------------  rspamd restart"
 _lxc_exec ${_CT_NAME} chown -R 0.0 /etc/rspamd
 _lxc_exec_e ${_CT_NAME} rc-service rspamd restart
 
-_echot "------------------  test rspamd"
-[ -z "${_INSTALL_AUTO}" ] && _askno "Verify the rspamd starting and valid to continue"
-
 
 ######################## POSTFIX
 # http://www.postfix.org/MILTER_README.html
 
 _echot "------------------  postfix conf main_rspamd.cf"
 if ! _lxc_exec ${_CT_NAME} "grep -q '#* *ADD RSPAMD$' /etc/postfix/main.cf"; then
-	file=/etc/postfix/${fc_rspamd_main##*/}
-	_eval lxc file push -q ${fc_rspamd_main} ${_CT_NAME}${file}
+	file=/etc/postfix/${fc_main_rspamd##*/}
+	_eval lxc file push -q ${fc_main_rspamd} ${_CT_NAME}${file}
 	_lxc_exec ${_CT_NAME} "cat ${file} >> /etc/postfix/main.cf"
 	_lxc_exec ${_CT_NAME} rm ${file}
 fi

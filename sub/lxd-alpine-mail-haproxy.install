@@ -8,24 +8,43 @@ grep -q "^# ${_PARTMAIL#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PARTMAIL}" >
 
 ########################  REQUIRED
 
-fc_mail_ha_front=${S_PATH_INSTALL_CONF}/haproxy/conf-available/40-fronts-mail
-fc_mail_ha_back=${S_PATH_INSTALL_CONF}/haproxy/conf-available/60-backs-mail
+fc_ha_mail_front=${S_PATH_INSTALL_CONF}/haproxy/conf-available/42-fronts-mail
+fc_ha_mail_back=${S_PATH_INSTALL_CONF}/haproxy/conf-available/62-backs-mail
+fc_ha_rspamd_front=${S_PATH_INSTALL_CONF}/haproxy/conf-available/42-fronts-rspamd
+fc_ha_rspamd_back=${S_PATH_INSTALL_CONF}/haproxy/conf-available/62-backs-rspamd
 
 _echot "------------------ required files"
-_require ${fc_mail_ha_front} ${fc_mail_ha_back}
+_require ${fc_ha_mail_front} ${fc_ha_mail_back}
+_require ${fc_ha_rspamd_front} ${fc_ha_rspamd_back}
 
-########################  MAIN
+########################  MAIL
 
 ct_proxy=${S_SERVICE[proxy]}
 
 _echot "------------------  haproxy conf"
 path=/etc/haproxy
-for file in ${fc_mail_ha_front} ${fc_mail_ha_back}; do
+for file in ${fc_ha_mail_front} ${fc_ha_mail_back}; do
 	_eval lxc file push -q ${file} ${ct_proxy}${path}/conf-available/${file##*/}
 	file=${file##*/}
 	_lxc_exec ${ct_proxy} "[ -h ${path}/conf-enabled/${file} ] || ln -s ${path}/conf-available/${file}  ${path}/conf-enabled/${file}"
 done
-_lxc_var_replace ${ct_proxy} /etc/haproxy/conf-available redis
+_lxc_var_replace ${ct_proxy} /etc/haproxy/conf-available rspamd
+
+_echot "------------------  haproxy reload"
+_lxc_exec ${S_SERVICE[proxy]} "rc-service haproxy reload"
+
+########################  RSPAMD
+
+ct_proxy=${S_SERVICE[proxy]}
+
+_echot "------------------  haproxy conf"
+path=/etc/haproxy
+for file in ${fc_ha_rspamd_front} ${fc_ha_rspamd_back}; do
+	_eval lxc file push -q ${file} ${ct_proxy}${path}/conf-available/${file##*/}
+	file=${file##*/}
+	_lxc_exec ${ct_proxy} "[ -h ${path}/conf-enabled/${file} ] || ln -s ${path}/conf-available/${file}  ${path}/conf-enabled/${file}"
+done
+_lxc_var_replace ${ct_proxy} /etc/haproxy/conf-available rspamd
 
 _echot "------------------  haproxy reload"
 _lxc_exec ${S_SERVICE[proxy]} "rc-service haproxy reload"

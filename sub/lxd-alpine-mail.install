@@ -39,6 +39,16 @@ else
 	_echO "performed *** ${_PARTMAIL}"
 fi
 
+####################  HAPROXY
+
+_PARTMAIL=mail-haproxy
+if ! _parthave ${_PARTMAIL} ${S_FILE_INSTALL_DONE}; then
+	. "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PARTMAIL}.install" || _exite "Wrong part: ${_PARTMAIL}"
+	[ "${_MEL_STEP}" ] && _askno "Valid to continue" 
+else
+	_echO "performed *** ${_PARTMAIL}"
+fi
+
 ####################  MARIADB
 
 _PARTMAIL=mail-mariadb
@@ -108,11 +118,6 @@ _echot "------------------ network fixed ip"
 if ! lxc list -f json | jq -r '.[] | select(.name == "'${_CT_NAME}'").devices[].name' | grep -q eth0; then
 	_eval lxc config device override ${_CT_NAME} eth0 ipv4.address=${_CT_IP}
 fi
-
-########################  HAPROXY
-
-_echoA "Adjust backend in proxy for backend: ${S_SERVICE[mail]} with:"
-_echoa $(for i in `seq 1 ${_CT_NUM}`; do echo ${_CT_NAME}-${i};done)
 
 ########################  PUBLISH
 
