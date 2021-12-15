@@ -19,19 +19,19 @@ _require ${fc_ha_rspamd_front} ${fc_ha_rspamd_back}
 
 ########################  MAIL
 
-ct_proxy=${S_SERVICE[proxy]}
+# ct_proxy=${S_SERVICE[proxy]}
 
-_echot "------------------  haproxy conf"
-path=/etc/haproxy
-for file in ${fc_ha_mail_front} ${fc_ha_mail_back}; do
-	_eval lxc file push -q ${file} ${ct_proxy}${path}/conf-available/${file##*/}
-	file=${file##*/}
-	_lxc_exec ${ct_proxy} "[ -h ${path}/conf-enabled/${file} ] || ln -s ${path}/conf-available/${file}  ${path}/conf-enabled/${file}"
-done
-_lxc_var_replace ${ct_proxy} /etc/haproxy/conf-available rspamd
+# _echot "------------------  haproxy conf"
+# path=/etc/haproxy
+# for file in ${fc_ha_mail_front} ${fc_ha_mail_back}; do
+# 	_eval lxc file push -q ${file} ${ct_proxy}${path}/conf-available/${file##*/}
+# 	file=${file##*/}
+# 	_lxc_exec ${ct_proxy} "[ -h ${path}/conf-enabled/${file} ] || ln -s ${path}/conf-available/${file}  ${path}/conf-enabled/${file}"
+# done
+# _lxc_var_replace ${ct_proxy} /etc/haproxy/conf-available rspamd
 
-_echot "------------------  haproxy reload"
-_lxc_exec ${S_SERVICE[proxy]} "rc-service haproxy reload"
+# _echot "------------------  haproxy reload"
+# _lxc_exec ${S_SERVICE[proxy]} "rc-service haproxy reload"
 
 ########################  RSPAMD
 
