@@ -11,15 +11,15 @@ _echot "------------------ required vm"
 cts_all_mdb=$(lxc list -f csv -c n| grep '^mdb-'|xargs)
 [ "${cts_all_mdb}" ] || _exite "unable to find mariadb container"
 
-file_conf_master="${S_PATH_INSTALL_CONF}/mariadb/mariadb-master.cnf"
-file_conf_slave="${S_PATH_INSTALL_CONF}/mariadb/mariadb-slave.cnf"
+fc_mdb_ms_master="${S_PATH_INSTALL_CONF}/mariadb/mariadb-master.cnf"
+fc_mdb_ms_slave="${S_PATH_INSTALL_CONF}/mariadb/mariadb-slave.cnf"
 
-file_conf_ha_front=${S_PATH_INSTALL_CONF}/haproxy/conf-available/40-fronts-mariadb
-file_conf_ha_back=${S_PATH_INSTALL_CONF}/haproxy/conf-available/60-backs-mariadb
+fc_mdb_ms_ha_front=${S_PATH_INSTALL_CONF}/haproxy/conf-available/40-fronts-mariadb
+fc_mdb_ms_ha_back=${S_PATH_INSTALL_CONF}/haproxy/conf-available/60-backs-mariadb
 
 _echot "------------------ required files"
-_require ${file_conf_master} ${file_conf_slave}
-_require ${file_conf_ha_front} ${file_conf_ha_back}
+_require ${fc_mdb_ms_master} ${fc_mdb_ms_slave}
+_require ${fc_mdb_ms_ha_front} ${fc_mdb_ms_ha_back}
 
 #_askyn "To install a master/slave mariadb cluster, you need to have 2 available instances of mariadb?" && [ ${_ANSWER} = n ] && _exit 0
 
@@ -97,9 +97,9 @@ if lxc list -f csv -c n status=Stopped | grep -q ^${_CT_NAME}$; then
 fi
 
 _echot "------------------  ${_CT_NAME} conf"
-file=${_MDB_PATH_CONF}/${file_conf_master##*/}
+file=${_MDB_PATH_CONF}/${fc_mdb_ms_master##*/}
 _lxc_exec ${_CT_NAME} "[ -f ${file} ] && cp -a ${file} ${file}.${_SDATE}"
-_eval lxc file push -q ${file_conf_master} ${_CT_NAME}${file}
+_eval lxc file push -q ${fc_mdb_ms_master} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} mariadb
 
 if [ "${_MDB_MS_DB_DO}" ]; then
@@ -158,9 +158,9 @@ for _CT_NAME in ${_MDB_MS_CT_SLAVES}; do
 	[ -z "${_INSTALL_AUTO}" ] && _askno "Restore backuped data from master to slave & continue"
 
 	_echot "------------------  ${_CT_NAME} conf"
-	file=${_MDB_PATH_CONF}/${file_conf_slave##*/}
+	file=${_MDB_PATH_CONF}/${fc_mdb_ms_slave##*/}
 	_lxc_exec ${_CT_NAME} "[ -f ${file} ] && cp -a ${file} ${file}.${_SDATE}"
-	_eval lxc file push -q ${file_conf_slave} ${_CT_NAME}${file}
+	_eval lxc file push -q ${fc_mdb_ms_slave} ${_CT_NAME}${file}
 	_lxc_var_replace ${_CT_NAME} ${file} mariadb
 
 	if [ "${_MDB_MS_DB_DO}" ]; then
@@ -206,7 +206,7 @@ ct_proxy=${S_SERVICE[proxy]}
 
 _echot "------------------  haproxy conf"
 path=/etc/haproxy
-for file in ${file_conf_ha_front} ${file_conf_ha_back}; do
+for file in ${fc_mdb_ms_ha_front} ${fc_mdb_ms_ha_back}; do
 	_eval lxc file push -q ${file} ${ct_proxy}${path}/conf-available/${file##*/}
 	file=${file##*/}
 	_lxc_exec ${ct_proxy} "[ -h ${path}/conf-enabled/${file} ] || ln -s ${path}/conf-available/${file}  ${path}/conf-enabled/${file}"
@@ -214,7 +214,7 @@ done
 _lxc_var_replace ${ct_proxy} /etc/haproxy/conf-available mariadb
 
 _echot "------------------  haproxy slaves"
-file=${path}/conf-available/${file_conf_ha_back##*/}
+file=${path}/conf-available/${fc_mdb_ms_ha_back##*/}
 for ct_name in ${_MDB_MS_CT_SLAVES}; do
 	str="\\\\tserver ${ct_name} ${ct_name}:${S_DB_MARIA_PORT_RW}"
 	_lxc_exec ${ct_proxy} "sed -i '/^\s*server ${ct_name}/d' ${file}"

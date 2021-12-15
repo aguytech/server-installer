@@ -11,34 +11,33 @@ grep -q "^# ${_PARTMAIL#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PARTMAIL}" >
 imgs_all_rds=`lxc list -f csv -c n| grep '^rds-'`
 [ "${imgs_all_rds}" ] || _exite "Unable to find redis container (name starts with rds-)"
 
-file_conf_rspamd_main=${S_PATH_INSTALL_CONF}/mail/postfix/main_rspamd.cf
+fc_rspamd_main=${S_PATH_INSTALL_CONF}/mail/postfix/main_rspamd.cf
 
-file_conf_local_actions=${S_PATH_INSTALL_CONF}/mail/rspamd/actions.conf
-file_conf_local_bayes=${S_PATH_INSTALL_CONF}/mail/rspamd/classifier-bayes.conf
-file_conf_local_dkim=${S_PATH_INSTALL_CONF}/mail/rspamd/dkim_signing.conf
-file_conf_local_milter=${S_PATH_INSTALL_CONF}/mail/rspamd/milter_headers.conf
-file_conf_local_redis=${S_PATH_INSTALL_CONF}/mail/rspamd/settings.conf
+fc_rspamd_actions=${S_PATH_INSTALL_CONF}/mail/rspamd/actions.conf
+fc_rspamd_bayes=${S_PATH_INSTALL_CONF}/mail/rspamd/classifier-bayes.conf
+fc_rspamd_dkim=${S_PATH_INSTALL_CONF}/mail/rspamd/dkim_signing.conf
+fc_rspamd_milter=${S_PATH_INSTALL_CONF}/mail/rspamd/milter_headers.conf
+fc_rspamd_redis=${S_PATH_INSTALL_CONF}/mail/rspamd/settings.conf
 
-file_conf_local_logging=${S_PATH_INSTALL_CONF}/mail/rspamd/logging.inc
-file_conf_local_options=${S_PATH_INSTALL_CONF}/mail/rspamd/options.inc
-file_conf_local_redis=${S_PATH_INSTALL_CONF}/mail/rspamd/redis.inc
-file_conf_local_controller=${S_PATH_INSTALL_CONF}/mail/rspamd/worker-controller.inc
-file_conf_local_normal=${S_PATH_INSTALL_CONF}/mail/rspamd/worker-normal.inc
-file_conf_local_proxy=${S_PATH_INSTALL_CONF}/mail/rspamd/worker-proxy.inc
+fc_rspamd_logging=${S_PATH_INSTALL_CONF}/mail/rspamd/logging.inc
+fc_rspamd_options=${S_PATH_INSTALL_CONF}/mail/rspamd/options.inc
+fc_rspamd_redis=${S_PATH_INSTALL_CONF}/mail/rspamd/redis.inc
+fc_rspamd_controller=${S_PATH_INSTALL_CONF}/mail/rspamd/worker-controller.inc
+fc_rspamd_normal=${S_PATH_INSTALL_CONF}/mail/rspamd/worker-normal.inc
+fc_rspamd_proxy=${S_PATH_INSTALL_CONF}/mail/rspamd/worker-proxy.inc
 
 _echot "------------------ required files"
-_require `set|grep ^file_conf_|cut -d= -f2`
+_require `set|grep ^fc_rspamd_|cut -d= -f2`
 
 ########################  DATA
 
-_menua "Select one available container for cache" ${imgs_all_rds}
-_MEL_CTS_RDS=${_ANSWER} && _confset _MEL_CTS_RDS "${_MEL_CTS_RDS}" ${_MEL_CTS_RDS}
+[ -z ${_MEL_CTS_RDS+x} ] && { _menua "Select one available container for cache" ${imgs_all_rds}; _MEL_CTS_RDS=${_ANSWER}; }
+_confset _MEL_CTS_RDS "${_MEL_CTS_RDS}" ${_MEL_CTS_RDS}
 
-anstmp="$(_pwd)" && _askno "User password for webUI, controller (${anstmp})"
-ui_pwd=${_ANSWER:-${anstmp}} 
+[ -z ${_MEL_DKIM_SEL+x} ] && { anstmp=dkim && _askno "Default selector for DKIM (${anstmp})"; _MEL_DKIM_SEL=${_ANSWER:-${anstmp}}; }
+_confset _MEL_DKIM_SEL "${_MEL_DKIM_SEL}"
 
-anstmp=dkim && _askno "Default selector for DKIM (${anstmp})"
-dkim_sel=${_ANSWER:-${anstmp}} && _confset dkim_sel "${dkim_sel}"
+[ -z ${_MEL_RSP_PWD+x} ] && { anstmp="$(_pwd)" && _askno "User password for webUI, controller (${anstmp})"; _MEL_RSP_PWD=${_ANSWER:-${anstmp}}; }
 
 ########################  METADATA
 
@@ -57,7 +56,7 @@ _lxc_exec ${_CT_NAME} rc-service -s rspamd start
 ########################  RSPAMD
 
 _echot "------------------  conf local.d"
-for file_from in `set|grep ^file_conf_local_|cut -d= -f2`; do
+for file_from in `set|grep ^fc_rspamd_|cut -d= -f2`; do
 	file=/etc/rspamd/local.d/${file_from##*/}
 	_echo ${file_from##*/}
 	_eval lxc file push -q ${file_from} ${_CT_NAME}${file}
@@ -70,7 +69,7 @@ _lxc_var_replace ${_CT_NAME} /etc/rspamd rspamd
 
 _echot "------------------  conf password"
 file=/etc/rspamd/local.d/worker-controller.inc
-str=`_lxc_exec ${_CT_NAME} "rspamadm pw -p ${ui_pwd}"`
+str=`_lxc_exec ${_CT_NAME} "rspamadm pw -p ${_MEL_RSP_PWD}"`
 _lxc_exec ${_CT_NAME} "sed -i '/^#\?password =/ c password = "${str}";' ${file}"
 
 ########################  DKIM
@@ -78,39 +77,39 @@ _lxc_exec ${_CT_NAME} "sed -i '/^#\?password =/ c password = "${str}";' ${file}"
 _echot "------------------  dkim keys"
 file=${_MEL_PATH_RSPAMD}/dkim_selectors.map
 for domain in `echo ${S_DOM_ALL_FQDN}|tr ' ' '\n'|sort`; do
-	file_key=${_MEL_PATH_DKIM}/${domain}.${dkim_sel}.key
-	file_pub=${_MEL_PATH_DKIM}/${domain}.${dkim_sel}.pub
+	file_key=${_MEL_PATH_DKIM}/${domain}.${_MEL_DKIM_SEL}.key
+	file_pub=${_MEL_PATH_DKIM}/${domain}.${_MEL_DKIM_SEL}.pub
 	if ! _lxc_exec ${_CT_NAME} "test -f '${file_key}'"; then
 		_echo ${domain}
-		_lxc_exec ${_CT_NAME} "echo -e '${domain}\t\t${dkim_sel}' >> ${file}"
-		_lxc_exec ${_CT_NAME} "rspamadm dkim_keygen -b 2048 -s ${dkim_sel} -d ${domain} -k ${file_key} > ${file_pub}"
+		_lxc_exec ${_CT_NAME} "echo -e '${domain}\t\t${_MEL_DKIM_SEL}' >> ${file}"
+		_lxc_exec ${_CT_NAME} "rspamadm dkim_keygen -b 2048 -s ${_MEL_DKIM_SEL} -d ${domain} -k ${file_key} > ${file_pub}"
 	fi
 done
 _lxc_exec ${_CT_NAME} chown -R rspamd:rspamd ${_MEL_PATH_RSPAMD}
-_lxc_exec ${_CT_NAME} chmod -R u=rw,g-w,o= ${_MEL_PATH_RSPAMD}
+_lxc_exec ${_CT_NAME} chmod -R g-w,o= ${_MEL_PATH_RSPAMD}
 
 _echot "------------------  dkim all_keys"
 file_pubkeys=${_MEL_PATH_RSPAMD}/dkim_all_keys.pub
 _lxc_exec ${_CT_NAME} "[ -f '${file_pubkeys}' ] && rm ${file_pubkeys}"
-domains=`_lxc_exec ${_CT_NAME} "ls ${_MEL_PATH_DKIM}/*.pub|sed -n 's|.*/\([^/]\+\).${dkim_sel}.pub|\1|p'"`
+domains=`_lxc_exec ${_CT_NAME} "ls ${_MEL_PATH_DKIM}/*.pub|sed -n 's|.*/\([^/]\+\).${_MEL_DKIM_SEL}.pub|\1|p'"`
 for domain in ${domains}; do
-	file_pub=${_MEL_PATH_DKIM}/${domain}.${dkim_sel}.pub
+	file_pub=${_MEL_PATH_DKIM}/${domain}.${_MEL_DKIM_SEL}.pub
 	_lxc_exec ${_CT_NAME} "echo ${domain} >> ${file_pubkeys}"
 	_lxc_exec ${_CT_NAME} "sed -n '2,3 s|.*\"p\?=\?\(.\+\)\".*|\1|gp' ${file_pub} >> ${file_pubkeys}"
 done
 
 _echot "------------------  DNS dkim"
 _echoA "Use the content of ${file_pubkeys} to fill DNS domains"
-_askno "Valid to continue"
+[ -z "${_INSTALL_AUTO}" ] && _askno "Valid to continue"
 
 ########################  TEST
 
 _echot "------------------  rspamd restart"
-_lxc_exec_e ${_CT_NAME} chown -R 0.0 /etc/rspamd
+_lxc_exec ${_CT_NAME} chown -R 0.0 /etc/rspamd
 _lxc_exec_e ${_CT_NAME} rc-service rspamd restart
 
 _echot "------------------  test rspamd"
-_askno "Verify the rspamd starting and valid to continue"
+[ -z "${_INSTALL_AUTO}" ] && _askno "Verify the rspamd starting and valid to continue"
 
 
 ######################## POSTFIX
@@ -118,8 +117,8 @@ _askno "Verify the rspamd starting and valid to continue"
 
 _echot "------------------  postfix conf main_rspamd.cf"
 if ! _lxc_exec ${_CT_NAME} "grep -q '#* *ADD RSPAMD$' /etc/postfix/main.cf"; then
-	file=/etc/postfix/${file_conf_rspamd_main##*/}
-	_eval lxc file push -q ${file_conf_rspamd_main} ${_CT_NAME}${file}
+	file=/etc/postfix/${fc_rspamd_main##*/}
+	_eval lxc file push -q ${fc_rspamd_main} ${_CT_NAME}${file}
 	_lxc_exec ${_CT_NAME} "cat ${file} >> /etc/postfix/main.cf"
 	_lxc_exec ${_CT_NAME} rm ${file}
 fi
@@ -128,23 +127,23 @@ _echot "------------------  conf var replace"
 _lxc_var_replace ${_CT_NAME} /etc/postfix rspamd
 
 _echot "------------------  postfix restart"
-_lxc_exec_e ${_CT_NAME} chown -R 0.0 /etc/postfix
+_lxc_exec ${_CT_NAME} chown -R 0.0 /etc/postfix
 _lxc_exec_e ${_CT_NAME} rc-service postfix restart
 
 _echot "------------------  test postfix"
-_askno "Verify the postfix starting and valid to continue"
+[ -z "${_INSTALL_AUTO}" ] && _askno "Verify the postfix starting and valid to continue"
 
 ########################  SHOW
 
 _echot "------------------  passwords"
 _echoA "Keep this passwords:"
-_echoa "${ui_pwd}"
+_echoa "${_MEL_RSP_PWD}"
 
 _echot "------------------  rspamd controller"
 _echoA "To verify rspamd controller acces, goto:"
 _echo "http://${_IPTHIS}:${S_RSPAMD_PORT[controller]}/"
 _echo "http://${S_DOM_FQDN}:${S_RSPAMD_PORT[controller]}/"
-_echoa "Access with password: ${ui_pwd}"
+_echoa "Access with password: ${_MEL_RSP_PWD}"
 
 ########################  END
 

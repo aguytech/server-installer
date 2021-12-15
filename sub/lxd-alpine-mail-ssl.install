@@ -8,11 +8,11 @@ grep -q "^# ${_PARTMAIL#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PARTMAIL}" >
 
 ########################  REQUIRED
 
-file_cron_certificate=${S_PATH_INSTALL_CONF}/cron/certificate-copy
-file_conf_ssl_dom=${S_PATH_INSTALL_CONF}/ssl/openssl-domains.cnf
+fc_cron_certificate=${S_PATH_INSTALL_CONF}/cron/certificate-copy
+fc_ssl_dom=${S_PATH_INSTALL_CONF}/ssl/openssl-domains.cnf
 
 _echot "------------------ required files"
-_require ${file_cron_certificate}  ${file_conf_ssl_dom}
+_require ${fc_cron_certificate}  ${fc_ssl_dom}
 
 ########################  DATA
 
@@ -77,7 +77,7 @@ elif [ "${_MEL_SSL_API}" =  openssl ]; then
 	file_ssl_full="${path_ssl_certs}/mail.${S_DOM_FQDN}-fullchain.pem"
 
 	file_ssl_conf=${path_ssl_conf}/openssl-mail.${S_DOM_FQDN}.cnf
-	_eval lxc file push -q ${file_conf_ssl_dom} ${ct_proxy}${file_ssl_conf}
+	_eval lxc file push -q ${fc_ssl_dom} ${ct_proxy}${file_ssl_conf}
 	_lxc_var_replace ${ct_proxy} ${file_ssl_conf} haproxy
 
 	dns=
@@ -106,8 +106,8 @@ elif [ "${_MEL_SSL_API}" =  openssl ]; then
 fi
 
 _echot "------------------  certificate cron"
-file=/etc/periodic/weekly/${file_cron_certificate##*/}
-_eval lxc file push -q ${file_cron_certificate} ${_CT_NAME}${file}
+file=/etc/periodic/weekly/${fc_cron_certificate##*/}
+_eval lxc file push -q ${fc_cron_certificate} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} mail
 _lxc_exec ${_CT_NAME} "chmod +x ${file}" # shift the haproxy cron by one hour
 _lxc_exec ${_CT_NAME} "sed -i '/run-parts.*weekly/ s|3|4|' /etc/crontabs/root" # shift the haproxy cron by one hour

@@ -8,16 +8,17 @@ grep -q "^# ${_PARTMAIL#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PARTMAIL}" >
 
 ####################  REQUIRED
 
-file_conf_master=${S_PATH_INSTALL_CONF}/mail/postfix/master.cf
-file_conf_main=${S_PATH_INSTALL_CONF}/mail/postfix/main.cf
-file_conf_main_add=${S_PATH_INSTALL_CONF}/mail/postfix/main_add.cf
-file_conf_headout=${S_PATH_INSTALL_CONF}/mail/postfix/header_checks_out.pcre
-file_conf_headin=${S_PATH_INSTALL_CONF}/mail/postfix/header_checks_in.pcre
-file_conf_client=${S_PATH_INSTALL_CONF}/mail/postfix/client_access.cidr
+fc_postfix_master=${S_PATH_INSTALL_CONF}/mail/postfix/master.cf
+fc_postfix_main=${S_PATH_INSTALL_CONF}/mail/postfix/main.cf
+fc_postfix_main_add=${S_PATH_INSTALL_CONF}/mail/postfix/main_add.cf
+fc_postfix_headout=${S_PATH_INSTALL_CONF}/mail/postfix/header_checks_out.pcre
+fc_postfix_headin=${S_PATH_INSTALL_CONF}/mail/postfix/header_checks_in.pcre
+fc_postfix_client=${S_PATH_INSTALL_CONF}/mail/postfix/client_access.cidr
+
 path_sql=${S_PATH_INSTALL_CONF}/mail/${_MEL_VMAIL_APP}
 
 _echot "------------------ required files"
-_require `set|grep ^file_conf_|cut -d= -f2`
+_require `set|grep ^fc_postfix_|cut -d= -f2`
 _requirep ${path_sql}
 
 ########################  DATA
@@ -46,8 +47,8 @@ path=/etc/postfix
 _lxc_exec ${_CT_NAME} cp -a ${path} ${path}.${_SDATE}
 
 _echot "------------------  conf main.cf"
-file=/etc/postfix/${file_conf_main##*/}
-_eval lxc file push -q ${file_conf_main} ${_CT_NAME}${file}
+file=/etc/postfix/${fc_postfix_main##*/}
+_eval lxc file push -q ${fc_postfix_main} ${_CT_NAME}${file}
 
 _echot "------------------  conf alias"
 _lxc_exec ${_CT_NAME} "sed -i '/^#\?root:.*/ croot: ${S_EMAIL_TECH}' /etc/postfix/aliases"
@@ -68,24 +69,24 @@ _lxc_exec_e ${_CT_NAME} postconf mynetworks
 ########################  CONF ADD
 
 _echot "------------------  conf master.cf"
-file=/etc/postfix/${file_conf_master##*/}
-_eval lxc file push -q ${file_conf_master} ${_CT_NAME}${file}
+file=/etc/postfix/${fc_postfix_master##*/}
+_eval lxc file push -q ${fc_postfix_master} ${_CT_NAME}${file}
 
 _echot "------------------  conf main_add.cf"
-file=/etc/postfix/${file_conf_main_add##*/}
-_eval lxc file push -q ${file_conf_main_add} ${_CT_NAME}${file}
+file=/etc/postfix/${fc_postfix_main_add##*/}
+_eval lxc file push -q ${fc_postfix_main_add} ${_CT_NAME}${file}
 _lxc_exec ${_CT_NAME} "cat ${file} >> /etc/postfix/main.cf"
 _lxc_exec ${_CT_NAME} "rm ${file}"
 
 _echot "------------------  conf cleanup"
-file=/etc/postfix/${file_conf_headout##*/}
-_eval lxc file push -q ${file_conf_headout} ${_CT_NAME}${file}
-file=/etc/postfix/${file_conf_headin##*/}
-_eval lxc file push -q ${file_conf_headin} ${_CT_NAME}${file}
+file=/etc/postfix/${fc_postfix_headout##*/}
+_eval lxc file push -q ${fc_postfix_headout} ${_CT_NAME}${file}
+file=/etc/postfix/${fc_postfix_headin##*/}
+_eval lxc file push -q ${fc_postfix_headin} ${_CT_NAME}${file}
 
 _echot "------------------  conf client access"
-file=/etc/postfix/${file_conf_client##*/}
-_eval lxc file push -q ${file_conf_client} ${_CT_NAME}${file}
+file=/etc/postfix/${fc_postfix_client##*/}
+_eval lxc file push -q ${fc_postfix_client} ${_CT_NAME}${file}
 
 _echot "------------------  sql files"
 _lxc_exec_e ${_CT_NAME} "[ -d '${_MEL_PF_PATH_SQL}' ] || mkdir -p ${_MEL_PF_PATH_SQL}"

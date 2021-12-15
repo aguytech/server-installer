@@ -13,15 +13,15 @@ imgs_init=$(lxc image list -f csv -c l | grep ^alpine.*init$)
 _echot "------------------ required vm"
 lxc list -f csv -c n| grep -q ^${S_SERVICE[log]}$ || _exite "Unable to find container: '${S_SERVICE[log]}'"
 
-file_conf_server="${S_PATH_INSTALL_CONF}/mariadb/mariadb-server.cnf"
+fc_mdb_server="${S_PATH_INSTALL_CONF}/mariadb/mariadb-server.cnf"
 
-file_conf_rsyslog_client=${S_PATH_INSTALL_CONF}/rsyslog/client-mariadb.conf
-file_conf_rsyslog_host=${S_PATH_INSTALL_CONF}/rsyslog/host-mariadb.conf
-file_conf_logrotate_client=${S_PATH_INSTALL_CONF}/logrotate/host-mariadb
-file_conf_logrotate_host=${S_PATH_INSTALL_CONF}/logrotate/host-mariadb
+fc_mdb_rsyslog_client=${S_PATH_INSTALL_CONF}/rsyslog/client-mariadb.conf
+fc_mdb_rsyslog_host=${S_PATH_INSTALL_CONF}/rsyslog/host-mariadb.conf
+fc_mdb_logrotate_client=${S_PATH_INSTALL_CONF}/logrotate/host-mariadb
+fc_mdb_logrotate_host=${S_PATH_INSTALL_CONF}/logrotate/host-mariadb
 
 _echot "------------------ required files"
-_require ${file_conf_server} ${file_conf_rsyslog_client} ${file_conf_rsyslog_host} ${file_conf_logrotate_client} ${file_conf_logrotate_host}
+_require ${fc_mdb_server} ${fc_mdb_rsyslog_client} ${fc_mdb_rsyslog_host} ${fc_mdb_logrotate_client} ${fc_mdb_logrotate_host}
 
 ########################  DATA
 
@@ -216,9 +216,9 @@ for i in $(seq 1 ${_PHP_CT_NUM}); do
 	########################  CONF
 
 	_echot "------------------  conf server"
-	file=${_MDB_PATH_CONF}/${file_conf_server##*/}
+	file=${_MDB_PATH_CONF}/${fc_mdb_server##*/}
 	_lxc_exec ${_CT_NAME} "[ -f ${file} ] && cp -a ${file} ${file}.${_SDATE}"
-	_eval lxc file push -q ${file_conf_server} ${_CT_NAME}${file}
+	_eval lxc file push -q ${fc_mdb_server} ${_CT_NAME}${file}
 	_lxc_var_replace ${_CT_NAME} ${file} mariadb
 
 	########################  PASSWORD
@@ -260,8 +260,8 @@ for i in $(seq 1 ${_PHP_CT_NUM}); do
 	_lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
 
 	_echot "------------------  ${_CT_NAME} client"
-	file=/etc/rsyslog.d/${file_conf_rsyslog_client##*/}
-	_eval lxc file push -q ${file_conf_rsyslog_client} ${_CT_NAME}${file}
+	file=/etc/rsyslog.d/${fc_mdb_rsyslog_client##*/}
+	_eval lxc file push -q ${fc_mdb_rsyslog_client} ${_CT_NAME}${file}
 	_lxc_var_replace ${_CT_NAME} ${file} rsyslog
 
 	_echot "------------------  ${_CT_NAME} rsyslog restart"
@@ -270,8 +270,8 @@ for i in $(seq 1 ${_PHP_CT_NUM}); do
 	########################  LOGROTATE
 
 	_echot "------------------  ${_CT_NAME} logrotate"
-	file=/etc/logrotate.d/${file_conf_logrotate_client##*/}
-	_eval lxc file push -q ${file_conf_logrotate_client} ${_CT_NAME}${file}
+	file=/etc/logrotate.d/${fc_mdb_logrotate_client##*/}
+	_eval lxc file push -q ${fc_mdb_logrotate_client} ${_CT_NAME}${file}
 	_lxc_var_replace ${_CT_NAME} ${file} logrotate
 	_lxc_exec ${_CT_NAME} "chmod g-w,o= /etc/logrotate.d/*"
 
@@ -305,8 +305,8 @@ _lxc_exec ${S_SERVICE[log]} "[ -d ${path} ] || mkdir -p ${path}"
 
 
 _echot "------------------  ${S_SERVICE[log]} host"
-file=/etc/rsyslog.d/${file_conf_rsyslog_host##*/}
-_eval lxc file push -q ${file_conf_rsyslog_host} ${S_SERVICE[log]}${file}
+file=/etc/rsyslog.d/${fc_mdb_rsyslog_host##*/}
+_eval lxc file push -q ${fc_mdb_rsyslog_host} ${S_SERVICE[log]}${file}
 _lxc_var_replace ${S_SERVICE[log]} ${file} rsyslog
 
 _echot "------------------  ${S_SERVICE[log]} rsyslog restart"
@@ -315,8 +315,8 @@ _lxc_exec ${S_SERVICE[log]} "rc-service rsyslog restart"
 ########################  LOGROTATE
 
 _echot "------------------  ${S_SERVICE[log]} logrotate"
-file=/etc/logrotate.d/${file_conf_logrotate_host##*/}
-_eval lxc file push -q ${file_conf_logrotate_host} ${S_SERVICE[log]}${file}
+file=/etc/logrotate.d/${fc_mdb_logrotate_host##*/}
+_eval lxc file push -q ${fc_mdb_logrotate_host} ${S_SERVICE[log]}${file}
 _lxc_var_replace ${S_SERVICE[log]} ${file} logrotate
 _lxc_exec ${S_SERVICE[log]} "chmod g-w,o= /etc/logrotate.d/*"
 

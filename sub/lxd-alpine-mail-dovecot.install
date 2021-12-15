@@ -8,35 +8,35 @@ grep -q "^# ${_PARTMAIL#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PARTMAIL}" >
 
 ########################  REQUIRED
 
-file_conf_dovecot_main=${S_PATH_INSTALL_CONF}/mail/postfix/main_dovecot.cf
-file_conf_dovecot=${S_PATH_INSTALL_CONF}/mail/dovecot/dovecot.conf
-file_conf_dovecot_sql=${S_PATH_INSTALL_CONF}/mail/dovecot/dovecot-sql.conf.ext
+fc_dovecot_main=${S_PATH_INSTALL_CONF}/mail/postfix/main_dovecot.cf
+fc_dovecot=${S_PATH_INSTALL_CONF}/mail/dovecot/dovecot.conf
+fc_dovecot_sql=${S_PATH_INSTALL_CONF}/mail/dovecot/dovecot-sql.conf.ext
 
-file_conf_dovecot_confd_auth=${S_PATH_INSTALL_CONF}/mail/dovecot/10-auth.conf
-file_conf_dovecot_confd_auth_sql=${S_PATH_INSTALL_CONF}/mail/dovecot/auth-sql.conf.ext
-file_conf_dovecot_confd_log=${S_PATH_INSTALL_CONF}/mail/dovecot/10-logging.conf
-file_conf_dovecot_confd_mail=${S_PATH_INSTALL_CONF}/mail/dovecot/10-mail.conf
-file_conf_dovecot_confd_master=${S_PATH_INSTALL_CONF}/mail/dovecot/10-master.conf
-file_conf_dovecot_confd_ssl=${S_PATH_INSTALL_CONF}/mail/dovecot/10-ssl.conf
-file_conf_dovecot_confd_lda=${S_PATH_INSTALL_CONF}/mail/dovecot/15-lda.conf
-file_conf_dovecot_confd_mailbox=${S_PATH_INSTALL_CONF}/mail/dovecot/15-mailboxes.conf
-file_conf_dovecot_confd_imap=${S_PATH_INSTALL_CONF}/mail/dovecot/20-imap.conf
-file_conf_dovecot_confd_lmtp=${S_PATH_INSTALL_CONF}/mail/dovecot/20-lmtp.conf
-file_conf_dovecot_confd_sieve_man=${S_PATH_INSTALL_CONF}/mail/dovecot/20-managesieve.conf
-file_conf_dovecot_confd_quota=${S_PATH_INSTALL_CONF}/mail/dovecot/90-quota.conf
-file_conf_dovecot_confd_plugin=${S_PATH_INSTALL_CONF}/mail/dovecot/90-plugin.conf
-file_conf_dovecot_confd_sieve=${S_PATH_INSTALL_CONF}/mail/dovecot/90-sieve.conf
-file_conf_dovecot_confd_sieve_ext=${S_PATH_INSTALL_CONF}/mail/dovecot/90-sieve-extprograms.conf
+fc_dovecot_confd_auth=${S_PATH_INSTALL_CONF}/mail/dovecot/10-auth.conf
+fc_dovecot_confd_auth_sql=${S_PATH_INSTALL_CONF}/mail/dovecot/auth-sql.conf.ext
+fc_dovecot_confd_log=${S_PATH_INSTALL_CONF}/mail/dovecot/10-logging.conf
+fc_dovecot_confd_mail=${S_PATH_INSTALL_CONF}/mail/dovecot/10-mail.conf
+fc_dovecot_confd_master=${S_PATH_INSTALL_CONF}/mail/dovecot/10-master.conf
+fc_dovecot_confd_ssl=${S_PATH_INSTALL_CONF}/mail/dovecot/10-ssl.conf
+fc_dovecot_confd_lda=${S_PATH_INSTALL_CONF}/mail/dovecot/15-lda.conf
+fc_dovecot_confd_mailbox=${S_PATH_INSTALL_CONF}/mail/dovecot/15-mailboxes.conf
+fc_dovecot_confd_imap=${S_PATH_INSTALL_CONF}/mail/dovecot/20-imap.conf
+fc_dovecot_confd_lmtp=${S_PATH_INSTALL_CONF}/mail/dovecot/20-lmtp.conf
+fc_dovecot_confd_sieve_man=${S_PATH_INSTALL_CONF}/mail/dovecot/20-managesieve.conf
+fc_dovecot_confd_quota=${S_PATH_INSTALL_CONF}/mail/dovecot/90-quota.conf
+fc_dovecot_confd_plugin=${S_PATH_INSTALL_CONF}/mail/dovecot/90-plugin.conf
+fc_dovecot_confd_sieve=${S_PATH_INSTALL_CONF}/mail/dovecot/90-sieve.conf
+fc_dovecot_confd_sieve_ext=${S_PATH_INSTALL_CONF}/mail/dovecot/90-sieve-extprograms.conf
 
-file_conf_dovecot_bin_quota=${S_PATH_INSTALL_CONF}/mail/dovecot/quota-warning.sh
+fc_dovecot_bin_quota=${S_PATH_INSTALL_CONF}/mail/dovecot/quota-warning.sh
 
-file_conf_sieve_global=${S_PATH_INSTALL_CONF}/mail/sieve/spam-global.sieve
-file_conf_sieve_spam=${S_PATH_INSTALL_CONF}/mail/sieve/learn-spam.sieve
-file_conf_sieve_ham=${S_PATH_INSTALL_CONF}/mail/sieve/learn-ham.sieve
+fc_sieve_global=${S_PATH_INSTALL_CONF}/mail/sieve/spam-global.sieve
+fc_sieve_spam=${S_PATH_INSTALL_CONF}/mail/sieve/learn-spam.sieve
+fc_sieve_ham=${S_PATH_INSTALL_CONF}/mail/sieve/learn-ham.sieve
 
 _echot "------------------ required files"
-_require `set|grep ^file_conf_dovecot_|cut -d= -f2`
-_require `set|grep ^file_conf_sieve_|cut -d= -f2`
+_require `set|grep ^fc_dovecot_|cut -d= -f2`
+_require `set|grep ^fc_sieve_|cut -d= -f2`
 
 ########################  DATA
 
@@ -68,8 +68,8 @@ done
 
 _echot "------------------  postfix conf main_dovecot.cf"
 if ! _lxc_exec ${_CT_NAME} "grep -q '#* *ADD DOVECOT$' /etc/postfix/main.cf"; then
-	file=/etc/postfix/${file_conf_dovecot_main##*/}
-	_eval lxc file push -q ${file_conf_dovecot_main} ${_CT_NAME}${file}
+	file=/etc/postfix/${fc_dovecot_main##*/}
+	_eval lxc file push -q ${fc_dovecot_main} ${_CT_NAME}${file}
 	_lxc_exec ${_CT_NAME} "cat ${file} >> /etc/postfix/main.cf"
 	_lxc_exec ${_CT_NAME} rm ${file}
 fi
@@ -84,15 +84,15 @@ path=/etc/dovecot
 _lxc_exec ${_CT_NAME} "[ -d '${path}' ] && cp -a ${path} ${path}.${_SDATE}"
 
 _echot "------------------  conf dovecot"
-file=/etc/dovecot/${file_conf_dovecot##*/}
-_eval lxc file push -q ${file_conf_dovecot} ${_CT_NAME}${file}
+file=/etc/dovecot/${fc_dovecot##*/}
+_eval lxc file push -q ${fc_dovecot} ${_CT_NAME}${file}
 
 _echot "------------------  conf sql"
-file=/etc/dovecot/${file_conf_dovecot_sql##*/}
-_eval lxc file push -q ${file_conf_dovecot_sql} ${_CT_NAME}${file}
+file=/etc/dovecot/${fc_dovecot_sql##*/}
+_eval lxc file push -q ${fc_dovecot_sql} ${_CT_NAME}${file}
 
 _echot "------------------  conf conf.d"
-for file_from in $(set|grep ^file_conf_dovecot_confd_|cut -d= -f2); do
+for file_from in $(set|grep ^fc_dovecot_confd_|cut -d= -f2); do
 	file=/etc/dovecot/conf.d/${file_from##*/}
 	_echo ${file_from##*/}
 	_eval lxc file push -q ${file_from} ${_CT_NAME}${file}
@@ -104,8 +104,8 @@ _lxc_var_replace ${_CT_NAME} /etc/dovecot mail
 ######################## QUOTA
 
 _echot "------------------  conf quota"
-file=${_MEL_PATH_VMAIL}/${file_conf_dovecot_bin_quota##*/}
-_eval lxc file push -q ${file_conf_dovecot_bin_quota} ${_CT_NAME}${file}
+file=${_MEL_PATH_VMAIL}/${fc_dovecot_bin_quota##*/}
+_eval lxc file push -q ${fc_dovecot_bin_quota} ${_CT_NAME}${file}
 _lxc_exec ${_CT_NAME}  chmod +x ${file}
 
 ######################## SIEVE
@@ -123,7 +123,7 @@ _lxc_exec ${_CT_NAME} chown ${_MEL_VMAIL_USER}:${_MEL_VMAIL_USER} ${path}
 
 
 _echot "------------------  conf sieve"
-for file_from in ${file_conf_sieve_global} ${file_conf_sieve_spam} ${file_conf_sieve_ham}; do
+for file_from in ${fc_sieve_global} ${fc_sieve_spam} ${fc_sieve_ham}; do
 	file=${_MEL_PATH_SIEVE}/global/${file_from##*/}
 	_echo ${file_from}
 	_eval lxc file push -q ${file_from} ${_CT_NAME}${file}

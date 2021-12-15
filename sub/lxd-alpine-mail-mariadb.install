@@ -67,6 +67,14 @@ _echot "------------------  show passwords"
 _echoA "Keep this passwords:"
 _echoa "${strpass}"
 
+########################  PUBLISH
+
+for ct_name in ${_MEL_CTS_ADMIN}; do
+	_echot "------------------  publish ${ct_name}"
+	lxc image list -f csv -c l | grep -q ^${ct_name}$ && _eval lxc image alias rename ${ct_name} ${ct_name}-${_SDATE}
+	_eval lxc publish --force ${ct_name} --alias ${ct_name}
+done
+
 ########################  END
 
 _echoT "====================== ${_INSTALL}-${_PARTMAIL} end"
