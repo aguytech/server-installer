@@ -1,0 +1,11 @@
+# included file for haproxy configuration
+
+backend mail
+	mode			tcp
+	timeout server	60s
+	timeout connect	7s
+
+	option smtpchk
+	default-server maxconn 128 check port 80  inter 2s  fall 2  rise 1  resolvers lxd  resolve-prefer ipv4 # resolve-net 10.0.0.1/24
+	server S_SERVICE[mail]	S_SERVICE[mail] check port 25
+

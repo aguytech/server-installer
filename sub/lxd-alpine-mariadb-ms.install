@@ -14,8 +14,8 @@ cts_all_mdb=$(lxc list -f csv -c n| grep '^mdb-'|xargs)
 fc_mdb_ms_master="${S_PATH_INSTALL_CONF}/mariadb/mariadb-master.cnf"
 fc_mdb_ms_slave="${S_PATH_INSTALL_CONF}/mariadb/mariadb-slave.cnf"
 
-fc_mdb_ms_ha_front=${S_PATH_INSTALL_CONF}/haproxy/conf-available/40-fronts-mariadb
-fc_mdb_ms_ha_back=${S_PATH_INSTALL_CONF}/haproxy/conf-available/60-backs-mariadb
+fc_mdb_ms_ha_front=${S_PATH_INSTALL_CONF}/haproxy/conf-available/41-fronts-mariadb
+fc_mdb_ms_ha_back=${S_PATH_INSTALL_CONF}/haproxy/conf-available/61-backs-mariadb
 
 _echot "------------------ required files"
 _require ${fc_mdb_ms_master} ${fc_mdb_ms_slave}

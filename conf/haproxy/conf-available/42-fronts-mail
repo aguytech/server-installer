@@ -1,0 +1,16 @@
+# included file for haproxy configuration
+
+frontend mail
+# smtp
+	bind :25
+	bind :465
+	bind :587
+# imap
+	bind :143
+	bind :993
+#sieve
+	bind :4190
+	mode				tcp
+	option				tcplog
+	timeout client		60s
+	default_backend mail
