@@ -1,10 +1,17 @@
 resolvers lxd
 	nameserver dns1 _HPX_DNS_DEFAULT
 
+	# Whether to add nameservers found in /etc/resolv.conf
 	#parse-resolv-conf
-	resolve_retries	3
-	timeout resolve	500
-	timeout retry		2s
+	# Maximum size of a DNS answer allowed, in bytes
+	accepted_payload_size 512
+
+	# How many times to retry a query
+	resolve_retries		150
+	# How long to wait between retries when no valid response has been received
+	timeout retry	4s
+	# How long to wait for a successful resolution
+	timeout resolve	1s
 
 	hold valid		10s
 	hold other		30s
