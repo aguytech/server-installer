@@ -218,7 +218,7 @@ _echot "------------------  logrotate install"
 _lxc_exec ${_CT_NAME} "apk list -I | grep -q ^logrotate || apk add logrotate"
 
 _echot "------------------  logrotate global"
-file=/etc/logrotate.con
+file=/etc/logrotate.conf
 _lxc_exec ${_CT_NAME} "sed -i '/^#dateext/ s|^#||' ${file}"
 
 _echot "------------------  logrotate rsyslog"

@@ -79,9 +79,8 @@ _CT_ADMIN=${_MEL_CT_ADMIN}
 
 ########################  MARIADB
 
-_echot "------------------  create db ${ct}"
-cmd="CREATE DATABASE IF NOT EXISTS postfix;"
-cmd+="GRANT ALL PRIVILEGES ON ${_MEL_DB_NAME}.* TO '${_MEL_DB_PFA_USER}'@'${ct}.lxd';"
+_echot "------------------  create db ${_MEL_DB_NAME}"
+cmd="CREATE DATABASE IF NOT EXISTS ${_MEL_DB_NAME};"
 _eval "mysql -h${_MEL_DB_HOST} -uroothost -p${_MEL_DB_HOST_PWD} -e \"${cmd}\""
 
 strpass=

@@ -62,6 +62,7 @@ done
 
 while [ "${_PART}" != "quit" ]; do
 
+	_SDATE=$(date +%s) # renew _SDATE
 	partsall="$(sed -n "s|^\t*\(\w\+\)) # .*${S_SERVER_TYPE}.*$|\1|p" "$0" | xargs)"
 	partsrelease=" $(ls -1 "${_PATH_BASE_SUB}"/*${S_RELEASE}* | sed -n "s|.*${S_RELEASE}-\(.*\)\.install|\1|p" | xargs) "
 	partsmade=" $(cat ${S_FILE_INSTALL_DONE} | xargs) "
