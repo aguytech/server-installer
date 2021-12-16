@@ -9,8 +9,8 @@ S_PATH_LOG/apache2/*.notice {
 	compress
 	delaycompress
 	notifempty
-    create 640 root adm
-    postrotate
-    	/etc/init.d/apache2 --quiet --ifstarted reload > /dev/null 2>/dev/null || true
-    endscript
+	sharedscripts
+	postrotate
+		/etc/init.d/rsyslog --quiet --ifstarted reload > /dev/null 2>/dev/null || true
+	endscript
 }

@@ -3,11 +3,14 @@ S_VM_PATH_LOG/php7/*.err
 S_VM_PATH_LOG/php7/*.warning
 S_VM_PATH_LOG/php7/*.notice
 S_VM_PATH_LOG/php7/*.info {
- 	daily
+	daily
 	rotate 14
 	missingok
 	compress
 	delaycompress
 	notifempty
-    create 640 root adm
+	sharedscripts
+	postrotate
+		/etc/init.d/rsyslog --quiet --ifstarted reload > /dev/null 2>/dev/null || true
+	endscript
 }

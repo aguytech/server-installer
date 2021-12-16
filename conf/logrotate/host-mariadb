@@ -9,5 +9,8 @@ S_VM_PATH_LOG/mysql/*.info {
 	compress
 	delaycompress
 	notifempty
-    create 640 root adm
+	sharedscripts
+	postrotate
+		/etc/init.d/rsyslog --quiet --ifstarted reload > /dev/null 2>/dev/null || true
+	endscript
 }
