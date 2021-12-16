@@ -13,7 +13,7 @@ _confset _MEL_STEP "${_MEL_STEP}"
 
 _echot "------------------ data container"
 
-[ -z ${_MEL_DOM_FQDN+x} ] && { anstmp=${S_DOM_FQDN}; _askno "Domain name to use (${anstmp})"; _MEL_DOM_FQDN="${_ANSWER:-$anstmp}"; }
+[ -z ${_MEL_DOM_FQDN+x} ] && { anstmp=${S_DOM_FQDN}; _askno "Base domain name to use (${anstmp})"; _MEL_DOM_FQDN="${_ANSWER:-$anstmp}"; }
 
 [ -z ${_MEL_CT_NAME+x} ] && { anstmp=${S_SERVICE[mail]}; _askno "Base name of containers to build (${anstmp})"; _MEL_CT_NAME="${_ANSWER:-${anstmp}}"; }
 

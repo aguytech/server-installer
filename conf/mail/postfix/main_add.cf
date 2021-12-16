@@ -77,7 +77,7 @@ smtpd_recipient_restrictions =
 
 # Access restrictions for mail relay control in the context of the RCPT TO command
 smtpd_relay_restrictions =
-    permit_mynetworks
+	permit_mynetworks
 	permit_sasl_authenticated
 	defer_unauth_destination
 
@@ -108,7 +108,7 @@ smtpd_tls_security_level = may
 smtpd_tls_protocols = !SSLv2, !SSLv3
 smtpd_tls_ciphers = high
 smtpd_tls_session_cache_database = lmdb:${data_directory}/smtpd_scache
-smtpd_tls_key_file = S_PATH_CONF_SSL/private/mail.S_DOM_FQDN-privkey.pem
-smtpd_tls_cert_file = S_PATH_CONF_SSL/certs/mail.S_DOM_FQDN-fullchain.pem
+smtpd_tls_key_file = S_PATH_CONF_SSL/private/mail._MEL_DOM_FQDN-privkey.pem
+smtpd_tls_cert_file = S_PATH_CONF_SSL/certs/mail._MEL_DOM_FQDN-fullchain.pem
 smtpd_tls_auth_only = yes
 smtpd_tls_loglevel = 1

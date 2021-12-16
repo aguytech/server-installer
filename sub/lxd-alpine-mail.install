@@ -99,33 +99,15 @@ else
 	_echO "performed *** ${_PARTMAIL}"
 fi
 
+####################  END
 
-_exite debug
-
-####################  FAIL2BAN
-
-#_PARTMAIL=mail-fail2ban
-#if ! _parthave ${_PARTMAIL} ${S_FILE_INSTALL_DONE}; then
-#	. "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PARTMAIL}.install" || _exite "Wrong part: ${_PARTMAIL}"
-#	[ "${_MEL_STEP}" ] && _askno "Valid to continue" 
-#else
-#	_echO "performed *** ${_PARTMAIL}"
-#fi
-
-########################  FIX IP
-
-_echot "------------------ network fixed ip"
-if ! lxc list -f json | jq -r '.[] | select(.name == "'${_CT_NAME}'").devices[].name' | grep -q eth0; then
-	_eval lxc config device override ${_CT_NAME} eth0 ipv4.address=${_CT_IP}
+_PARTMAIL=mail-end
+if ! _parthave ${_PARTMAIL} ${S_FILE_INSTALL_DONE}; then
+	. "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PARTMAIL}.install" || _exite "Wrong part: ${_PARTMAIL}"
+	[ "${_MEL_STEP}" ] && _askno "Valid to continue" 
+else
+	_echO "performed *** ${_PARTMAIL}"
 fi
-
-########################  PUBLISH
-
-for ct_name in ${_CT_ALL_NAME}
-	_echot "------------------ publish ${ct_name}"
-	lxc image list -f csv -c l | grep -q ^${ct_name}$ && _eval lxc image alias rename ${ct_name} ${ct_name}-${_SDATE}
-	_eval lxc publish --force ${ct_name} --alias ${ct_name}
-done
 
 ########################  END
 

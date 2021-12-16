@@ -1,3 +1,5 @@
 ### Removes headers of MUAs for privacy reasons
-/^Subject:.*viagra.*/		REJECT Pas besoin, merci
-/^From: .*toto.*/				REJECT On connait la blague
+/^Subject:.*viagra.*/x
+	REJECT Pas besoin, merci
+/^From: .*toto.*/	x
+	REJECT On connait la blague

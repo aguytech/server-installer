@@ -11,8 +11,8 @@
 # ==========================================================================
 smtp      inet  n       -       n       -       -       smtpd
 #smtp      inet  n       -       n       -       1       postscreen
-#smtpd     pass  -       -       n       -       -       smtpd
-#  -o cleanup_service_name=subcleanin
+smtpd     pass  -       -       n       -       -       smtpd
+  -o cleanup_service_name=subcleanin
 #dnsblog   unix  -       -       n       -       0       dnsblog
 #tlsproxy  unix  -       -       n       -       0       tlsproxy
 # Choose one: enable submission for loopback clients only, or for any client.
@@ -72,14 +72,14 @@ lmtp      unix  -       -       n       -       -       lmtp
 anvil     unix  -       -       n       -       1       anvil
 scache    unix  -       -       n       -       1       scache
 postlog   unix-dgram n  -       n       -       1       postlogd
-subcleanin unix n       -       -       -       0       cleanup
+subcleanin unix n       -       n       -       0       cleanup
   -o syslog_name=postfix/subcleanup
-  header_checks=pcre:/etc/postfix/header_checks_in.pcre
-  mime_header_checks=pcre:/etc/postfix/header_checks_in.pcre
-subcleanout unix n      -       -       -       0       cleanup
+  -o header_checks=pcre:/etc/postfix/header_checks_in.pcre
+  -o mime_header_checks=pcre:/etc/postfix/header_checks_in.pcre
+subcleanout unix n      -       n       -       0       cleanup
   -o syslog_name=postfix/subcleanup
-  header_checks=pcre:/etc/postfix/header_checks_out.pcre
-  mime_header_checks=pcre:/etc/postfix/header_checks_out.pcre
+  -o header_checks=pcre:/etc/postfix/header_checks_out.pcre
+  -o mime_header_checks=pcre:/etc/postfix/header_checks_out.pcre
 #
 # ====================================================================
 # Interfaces to non-Postfix software. Be sure to examine the manual

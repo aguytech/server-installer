@@ -32,7 +32,7 @@ $CONF['password_validation'] = array(
 
 // Define the Site Admin's email address below.
 // This will be used to send emails from to create mailboxes...
-$CONF['admin_email'] = 'postmaster@S_DOM_FQDN';
+$CONF['admin_email'] = 'postmaster@_MEL_DOM_FQDN';
 // This will be used as signature in notification messages
 $CONF['admin_name'] = 'Postmaster';
 // Define the smtp password for admin_email.
@@ -87,8 +87,8 @@ $CONF['show_header_text'] = 'NO';
 $CONF['header_text'] = ':: Postfix Admin ::';
 // Footer
 $CONF['show_footer_text'] = 'YES';
-$CONF['footer_text'] = 'Return to S_DOM_FQDN';
-$CONF['footer_link'] = 'http://S_DOM_FQDN';
+$CONF['footer_text'] = 'Return to _MEL_DOM_FQDN';
+$CONF['footer_link'] = 'http://_MEL_DOM_FQDN';
 
 // Domain
 // Specify your default values below. Quota in MB.
@@ -100,7 +100,7 @@ $CONF['domain_quota_default'] = '2048';
 // Vacation
 $CONF['vacation'] = 'NO';
 // This domain must exclusively be used for vacation. Do NOT use it for 'normal' mail addresses.
-$CONF['vacation_domain'] = 'autoreply.S_DOM_FQDN';
+$CONF['vacation_domain'] = 'autoreply._MEL_DOM_FQDN';
 // If you want users to take control of vacation set this to 'YES'.
 $CONF['vacation_control'] ='YES';
 // Set to 'YES' if your domain admins should be able to edit user vacation.

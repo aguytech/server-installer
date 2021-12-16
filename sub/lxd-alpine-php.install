@@ -416,7 +416,7 @@ _echo "curl ${_CT_NAME}/status-admin?full"
 
 ########################  PUBLISH
 
-for i in `seq 1 ${_PHP_CT_NUM}`; do
+for i in $(seq 1 ${_PHP_CT_NUM}); do
  	ct_name=${_PHP_CT_NAME}-${i}
 	_echot "------------------  publish ${ct_name}"
 	lxc image list -f csv -c l | grep -q ^${ct_name}$ && _eval lxc image alias rename ${ct_name} ${ct_name}-${_SDATE}
