@@ -2,17 +2,20 @@
 
 backend mariadb-_MDB_MS_PROXY
 	mode tcp
+	balance source
 	default-server maxconn 128 check inter 2s  fall 1  rise 2  resolvers lxd  resolve-prefer ipv4 # resolve-net 10.0.0.1/24
 
+	option tcpka
 	option mysql-check user check
 
 	server _MDB_MS_CT_MASTER _MDB_MS_CT_MASTER:S_DB_MARIA_PORT_RW
 
 backend mariadb_read-_MDB_MS_PROXY
 	mode tcp
-	balance roundrobin
+	balance source
 	default-server maxconn 128 check inter 2s  fall 1  rise 2  resolvers lxd  resolve-prefer ipv4 # resolve-net 10.0.0.1/24
 
+	option tcpka
 	option mysql-check user check
 
 	server _MDB_MS_CT_MASTER _MDB_MS_CT_MASTER:S_DB_MARIA_PORT_RW
