@@ -55,12 +55,16 @@ _evalr fail2ban-client get loglevel
 _echot "------------------  conf jail local"
 file=/etc/fail2ban/jail.d/${file_conf_jail_local##*/}
 _evalr cp ${file_conf_jail_local} ${file}
-_var_replace ${file} fail2ban
 
 _echot "------------------  conf jail ssh"
 file=/etc/fail2ban/jail.d/${file_conf_jail_ssh##*/}
 _evalr cp ${file_conf_jail_ssh} ${file}
-_var_replace ${file} fail2ban
+
+_echot "------------------  var replace"
+_var_replace /etc/fail2ban/jail.d fail2ban
+
+_echot "------------------  rights"
+_evalr chmod 644 /etc/fail2ban/jail.d/*
 
 ########################  RSYSLOG
 
