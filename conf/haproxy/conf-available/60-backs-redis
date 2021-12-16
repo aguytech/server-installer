@@ -2,8 +2,7 @@
 
 backend redis-_RDS_PROXY
 	mode tcp
-	#balance first
-	balance source
+	balance first
 	default-server maxconn 256 check inter 1s  fall 1  rise 1  resolvers lxd  resolve-prefer ipv4 # resolve-net 10.0.0.1/24
 
 	option tcpka
