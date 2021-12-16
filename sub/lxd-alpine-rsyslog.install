@@ -106,8 +106,6 @@ else
 	_echot "------------------  conf tcp"
 	_lxc_exec ${_CT_NAME} "grep -q '^ *type=.imtcp' ${file} || echo -e '\n# tcp\ninput(\n\ttype=\"imtcp\"\n\tport=\"${S_RSYSLOG_PORT}\"\n)' >> ${file}"
 fi
-_echot "------------------  restart rsyslog ${_CT_NAME}"
-_lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
 
 _echot "------------------  conf host-auth"
 file=/etc/rsyslog.d/${file_rsyslog_host_auth##*/}
@@ -150,10 +148,11 @@ _eval lxc file push -q ${file_rsyslog_host_lxd} ${_CT_NAME}${file}
 
 _echot "------------------  ${_CT_NAME} conf"
 _lxc_var_replace ${_CT_NAME} /etc/rsyslog.d rsyslog
-_echot "------------------  ${_CT_NAME} restart"
-_lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
 
-_echot "------------------  ${HOSTNAME} restart"
+_echot "------------------  ${_CT_NAME} reload"
+_lxc_exec ${_CT_NAME} "rc-service rsyslog reload"
+
+_echot "------------------  ${HOSTNAME} reload"
 _service restart rsyslog
 
 ########################  LOGROTATE HOST
