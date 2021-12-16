@@ -160,20 +160,6 @@ ALTER TABLE domain ADD COLUMN IF NOT EXISTS policy enum('none', 'may', 'encrypt'
 ALTER TABLE domain ADD COLUMN IF NOT EXISTS params varchar(255) DEFAULT NULL AFTER policy;
 \""
 
-########################  COPY
-
-cts_replace=" ${_MEL_CTS_ADMIN} "; cts_replace=${cts_replace/ ${_CT_ADMIN} /}
-
-for ct_name in ${cts_replace}; do
-	_echot "---------- replace ${ct_name}"
-	if lxc list -f csv -c n | grep -q ^${ct_name}$; then
-		lxc list -f csv -c n status=Running| grep -q ^${ct_name}$ && _eval lxc stop ${ct_name}
-		_eval lxc rename ${ct_name} ${ct_name}-${_SDATE}
-	fi
-	_eval lxc copy ${_CT_ADMIN} ${ct_name}
-	_eval lxc start ${ct_name}
-done
-
 ########################  SHOW
 
 _echot "------------------  show passwords"
@@ -187,11 +173,24 @@ _echoA "Now use Logging you in this address:"
 _echo " ${_APA_SUB}.${S_DOM_FQDN}/"
 _echoa "And create at least the domain: ${S_DOM_FQDN} & the email: ${S_EMAIL_TECH}"
 
+########################  COPY
+
+cts_replace=" ${_MEL_CTS_ADMIN} "; cts_replace=${cts_replace/ ${_CT_ADMIN} /}
+
+for ct_name in ${cts_replace}; do
+	_echot "---------- replace ${ct_name}"
+	lxc list -f csv -c n | grep -q ^${ct_name}$ && _eval lxc delete --force ${ct_name}
+	_eval lxc copy ${_CT_ADMIN} ${ct_name}
+	_eval lxc start ${ct_name}
+done
+
 ########################  PUBLISH
 
 for ct_name in ${_MEL_CTS_ADMIN}; do
 	_echot "------------------  publish ${ct_name}"
-	lxc image list -f csv -c l | grep -q ^${ct_name}$ && _eval lxc image alias rename ${ct_name} ${ct_name}-${_SDATE}
+	lxc image list -f csv -c l | grep -q ^${ct_name}$ && ct_new=${ct_name}-${_SDATE}
+	lxc image list -f csv -c l | grep -q ^${ct_new}$ && ct_new=${ct_name}-$(date +%s)
+	_eval lxc image alias rename ${ct_name} ${ct_new}
 	_eval lxc publish --force ${ct_name} --alias ${ct_name}
 done
 

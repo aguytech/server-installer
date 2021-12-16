@@ -38,7 +38,6 @@ S_FILE_INSTALL_DONE="${S_PATH_CONF}/lxd.done" && _confset S_PATH_INSTALL "${S_FI
 while [ "${_PART}" != "quit" ]; do
 
 	_SDATE=$(date +%s) # renew _SDATE
-	_echow _SDATE=$_SDATE
 	partsall="$(sed -n "s|^\t*\([^)]\+\)) # .*${S_SERVER_TYPE}.*|\1|p" "$0"|xargs)"
 	partsadd="$(sed -n "s|^\t*\([^)]\+\)) # .*${S_SERVER_TYPE}.*|\1|p" "$0"|grep ^++|xargs)"
 	partsrelease=" $(ls -1 "${_PATH_BASE_SUB}"/*${_RELEASE_PART}*|sed -n "s|.*${_RELEASE_PART}-\(.*\)\.install|\1|p"|xargs) "

@@ -77,13 +77,15 @@ _lxc_exec ${_CT_NAME} "sed -i '/^#\?password =/ c password = "${str}";' ${file}"
 
 _echot "------------------  dkim keys"
 file=${_MEL_PATH_RSPAMD}/dkim_selectors.map
-for domain in `echo ${S_DOM_ALL_FQDN}|tr ' ' '\n'|sort`; do
+for domain in $(echo ${S_DOM_ALL_FQDN}|tr ' ' '\n'|sort); do
 	file_key=${_MEL_PATH_DKIM}/${domain}.${_MEL_DKIM_SEL}.key
 	file_pub=${_MEL_PATH_DKIM}/${domain}.${_MEL_DKIM_SEL}.pub
 	if ! _lxc_exec ${_CT_NAME} "test -f '${file_key}'"; then
-		_echo ${domain}
+		_echo "${domain} - generate"
 		_lxc_exec ${_CT_NAME} "echo -e '${domain}\t\t${_MEL_DKIM_SEL}' >> ${file}"
 		_lxc_exec ${_CT_NAME} "rspamadm dkim_keygen -b 2048 -s ${_MEL_DKIM_SEL} -d ${domain} -k ${file_key} > ${file_pub}"
+	else
+			_echo "${domain} - skip"
 	fi
 done
 _lxc_exec ${_CT_NAME} chown -R rspamd:rspamd ${_MEL_PATH_RSPAMD}
@@ -92,7 +94,7 @@ _lxc_exec ${_CT_NAME} chmod -R g-w,o= ${_MEL_PATH_RSPAMD}
 _echot "------------------  dkim all_keys"
 file_pubkeys=${_MEL_PATH_RSPAMD}/dkim_all_keys.pub
 _lxc_exec ${_CT_NAME} "[ -f '${file_pubkeys}' ] && rm ${file_pubkeys}"
-domains=`_lxc_exec ${_CT_NAME} "ls ${_MEL_PATH_DKIM}/*.pub|sed -n 's|.*/\([^/]\+\).${_MEL_DKIM_SEL}.pub|\1|p'"`
+domains=$(_lxc_exec ${_CT_NAME} "ls ${_MEL_PATH_DKIM}/*.pub|sed -n 's|.*/\([^/]\+\).${_MEL_DKIM_SEL}.pub|\1|p'")
 for domain in ${domains}; do
 	file_pub=${_MEL_PATH_DKIM}/${domain}.${_MEL_DKIM_SEL}.pub
 	_lxc_exec ${_CT_NAME} "echo ${domain} >> ${file_pubkeys}"
@@ -126,7 +128,7 @@ _lxc_var_replace ${_CT_NAME} /etc/postfix rspamd
 
 _echot "------------------  postfix restart"
 _lxc_exec ${_CT_NAME} chown -R 0.0 /etc/postfix
-_lxc_exec_e ${_CT_NAME} rc-service postfix restart
+_lxc_exec_e ${_CT_NA ME} rc-service postfix restart
 
 _echot "------------------  test postfix"
 [ -z "${_INSTALL_AUTO}" ] && _askno "Verify the postfix starting and valid to continue"

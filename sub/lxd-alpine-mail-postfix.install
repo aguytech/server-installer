@@ -101,8 +101,8 @@ _echot "------------------  conf var replace"
 _lxc_var_replace ${_CT_NAME} /etc/postfix mail
 
 _echot "------------------  postfix restart"
-_lxc_exec_e ${_CT_NAME} chown -R 0:0 /etc/postfix/*
-_lxc_exec_e ${_CT_NAME} chmod g-w /etc/postfix/*
+_lxc_exec_e ${_CT_NAME} chown -R 0:0 /etc/postfix
+_lxc_exec_e ${_CT_NAME} 'find /etc/postfix -type f -maxdepth 1 chmod g-wx,o-rwx {} \;'
 _lxc_exec_e ${_CT_NAME} rc-service postfix restart
 
 _echot "------------------  postconf mynetworks"
@@ -138,7 +138,7 @@ _lxc_exec ${_CT_NAME} "echo -e 'From: postmaster\nTo: root\nHi, this is a first 
 str=2
 _echoA "Verify the following content of the email received in ${str}s"
 _eval sleep ${str}
-_lxc_exec ${_CT_NAME} "ls -t1 ${_MEL_PATH_LOCAL}/${_MEL_DOM_FQDN}/tech/new/*|tail -n1|xargs cat"
+_lxc_exec ${_CT_NAME} "ls -t1 ${_MEL_PATH_LOCAL}/${_MEL_DOM_FQDN}/tech/new/*|head -1|xargs cat"
 [ -z "${_INSTALL_AUTO}" ] && _askno "valid to continue"
 
 _echot "------------------  test telnet 25"

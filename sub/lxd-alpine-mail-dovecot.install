@@ -170,7 +170,7 @@ _lxc_exec ${_CT_NAME} "echo -e 'From: postmaster\nTo: root\nHi, this is a first 
 str=2
 _echoA "Verify the following content of the email received in ${str}s"
 _eval sleep ${str}
-_lxc_exec ${_CT_NAME} "ls -t1 ${_MEL_PATH_VMAIL}/mailboxes/${_MEL_DOM_FQDN}/tech/mail/new/*|tail -n1|xargs cat"
+_lxc_exec ${_CT_NAME} "ls -t1 ${_MEL_PATH_VMAIL}/mailboxes/${_MEL_DOM_FQDN}/tech/mail/new/*|head -1|xargs cat"
 [ -z "${_INSTALL_AUTO}" ] && _askno "valid to continue"
 
 _echot "------------------  test telnet 143"
