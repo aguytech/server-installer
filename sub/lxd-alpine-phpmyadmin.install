@@ -148,7 +148,7 @@ _eval lxc init ${_PMA_CT_WWW} ${_CT_NAME} -p default -p global -p ${_PMA_WWW_PRO
 ########################  METADATA
 
 _echot "------------------  metadata"
-_lxc_meta_add ${_CT_NAME} profiles ${_PMA_WWW_PROFILE} ${_PMA_PHP_PROFILE} ${profile}
+_lxc_meta_set ${_CT_NAME} profiles ${_PMA_WWW_PROFILE} ${_PMA_PHP_PROFILE} ${profile}
 _lxc_meta_add ${_CT_NAME} apps phpmyadmin
 
 #############  START
