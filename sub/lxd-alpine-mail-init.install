@@ -201,8 +201,8 @@ file=/etc/rsyslog.d/${fc_mail_rsyslog_host##*/}
 _eval lxc file push -q ${fc_mail_rsyslog_host} ${S_SERVICE[log]}${file}
 _lxc_var_replace ${S_SERVICE[log]} ${file} rsyslog
 
-_echot "------------------  rsyslog reload ${S_SERVICE[log]}"
-_lxc_exec ${S_SERVICE[log]} "rc-service rsyslog reload"
+_echot "------------------  rsyslog restart ${S_SERVICE[log]}"
+_lxc_exec ${S_SERVICE[log]} "rc-service rsyslog restart"
 
 
 # client
@@ -215,8 +215,8 @@ file=/etc/rsyslog.d/${fc_mail_rsyslog_client##*/}
 _eval lxc file push -q ${fc_mail_rsyslog_client} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} rsyslog
 
-_echot "------------------  rsyslog reload ${_CT_NAME}"
-_lxc_exec ${_CT_NAME} "rc-service rsyslog reload"
+_echot "------------------  rsyslog restart ${_CT_NAME}"
+_lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
 
 ########################  LOGROTATE
 

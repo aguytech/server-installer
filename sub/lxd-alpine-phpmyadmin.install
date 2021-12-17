@@ -17,13 +17,12 @@ profiles_all_php=$(lxc profile list -f csv|grep "^php.*,"|cut -d, -f1)
 cts_all_maria=$(lxc list -f json | jq -r '.[] | select(.profiles | any(contains("mdb-"))).name')
 [ -z "${cts_all_maria}" ] && _exite "Unable to find a container with maria profile"
 
-file_conf=${S_PATH_INSTALL_CONF}/pma/pma-config.inc.php
-file_conf_part=${S_PATH_INSTALL_CONF}/pma/pma-part-config.inc.php
-file_conf_site=${S_PATH_INSTALL_CONF}/apache2/sites/sub-admin.conf
-file_conf_apache_info=${S_PATH_INSTALL_CONF}/apache2/info.conf
+fc_pma_config=${S_PATH_INSTALL_CONF}/pma/pma-config.inc.php
+fc_pma_part=${S_PATH_INSTALL_CONF}/pma/pma-part-config.inc.php
+fc_pma_site=${S_PATH_INSTALL_CONF}/apache2/sites/sub-admin.conf
 
 _echot "------------------ required files"
-_require ${file_conf} ${file_conf_part} ${file_conf_site} ${file_conf_apache_info}
+_require ${fc_pma_config} ${fc_pma_part} ${fc_pma_site}
 
 ########################  DATA
 
@@ -95,14 +94,13 @@ else
 	file_app=phpMyAdmin-${_PMA_APP_VERSION}-all-languages.tar.gz
 	file_app_tmp=/tmp/${file_app}
 	uri=https://files.phpmyadmin.net/phpMyAdmin/${_PMA_APP_VERSION}/${file_app}
-	wget -q ${uri} -O ${file_app_tmp} && ok=true || _exite "Unable to get file: ${uri}"
+	wget -q ${uri} -O ${file_app_tmp} || _exite "Unable to get file: ${uri}"
 fi
-
-_CT_NAME=${_PMA_CT_NAME}-1
 
 [ -z ${_PMA_APP_DB_PWD+x} ] && _PMA_APP_DB_PWD=$(_pwd)
 [ -z ${_PMA_APP_BLOWFISH+x} ] && _PMA_APP_BLOWFISH=$(_pwd32)
 
+_CT_NAME=${_PMA_CT_NAME}-1
 _APA_PATH_DOM=${S_VM_PATH_SHARE}/www/${_APA_DOM_ADMIN}.${_APA_DOM_FQDN}
 _PMA_APP_URI=https://${_PMA_DOM_SUB}.${_APA_DOM_FQDN}
 _PMA_APP_DB_PORT=${S_DB_MARIA_PORT_RW}
@@ -187,7 +185,7 @@ _lxc_exec ${_CT_NAME} "echo '<html><body><h1><?php echo \"php ${_APA_DOM_ADMIN} 
 
 _echot "------------------  ${domain} conf apache"
 file=${_APA_PATH_SITES}/${_APA_DOM_ADMIN}.conf
-_eval lxc file push -q ${file_conf_site} ${_CT_NAME}${file}
+_eval lxc file push -q ${fc_pma_site} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} apache
 
 #############  SITE APP
@@ -197,7 +195,7 @@ domain=${_APA_SUB}.${_APA_DOM_FQDN}
 
 _echot "------------------  ${domain} conf apache"
 file=${_APA_PATH_SITES}/${_PMA_DOM_SUB}.conf
-_eval lxc file push -q ${file_conf_site} ${_CT_NAME}${file}
+_eval lxc file push -q ${fc_pma_site} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} apache
 _lxc_exec ${_CT_NAME} "sed -i 's|^\(\s*\)#\?\(SetEnv PHP_ADMIN_VALUE .session.gc_maxlifetime =\).*$|\1\2 14400\"|' ${file}"
 
@@ -217,14 +215,14 @@ _lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
 
 _echot "------------------  ${domain} ${_PMA_DOM_SUB} conf"
 file=${_APA_PATH_DOM}/${_PMA_DOM_SUB}/config.inc.php
-_eval lxc file push -q ${file_conf} ${_CT_NAME}${file}
+_eval lxc file push -q ${fc_pma_config} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} pma
 #[ "${_APA_DOM_FQDN##*.}" = lxd ] && _lxc_exec ${_CT_NAME} "sed -i '/.cfg..PmaAbsoluteUri/ s|https|http|' ${file}"
 
 file_part=${_APA_PATH_DOM}/${_PMA_DOM_SUB}/config-part.inc.php
 for ct_maria in ${S_SERVICE[proxy]} $(echo ${_PMA_CT_DBS}|tr ' ' '\n'|sort -r); do
 	_echot "------------------  ${domain} conf ${_PMA_CT_DBS}"
-	_eval lxc file push -q ${file_conf_part} ${_CT_NAME}${file_part}
+	_eval lxc file push -q ${fc_pma_part} ${_CT_NAME}${file_part}
 	_PMA_APP_DB_HOST=${ct_maria}
 	_lxc_var_replace ${_CT_NAME} ${file_part} pma
 	_lxc_exec ${_CT_NAME} "sed -i -e '/#partadd/r ${file_part}' ${file}" >/dev/null

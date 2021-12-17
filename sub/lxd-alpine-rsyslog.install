@@ -150,7 +150,7 @@ _echot "------------------  ${_CT_NAME} conf"
 _lxc_var_replace ${_CT_NAME} /etc/rsyslog.d rsyslog
 
 _echot "------------------  ${_CT_NAME} reload"
-_lxc_exec ${_CT_NAME} "rc-service rsyslog reload"
+_lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
 
 _echot "------------------  ${HOSTNAME} reload"
 _service restart rsyslog

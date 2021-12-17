@@ -64,13 +64,15 @@ _MDB_PATH_CONF=/etc/my.cnf.d && _confset _MDB_PATH_CONF "${_MDB_PATH_CONF}"
 
 ########################  STORAGE MARIADB
 
+name=mariadb
+path_base=${S_HOST_PATH}/mariadb
+
 if [ "${_DEV_DRIVER}" = zfs ]; then
 
 	if ! zfs list ${_ZFS_ROOT}${S_HOST_PATH}|grep -q ^mariadb; then
-		name=mariadb
 		_echot "------------------  zfs ${name}"
-		path_zfs=${_ZFS_ROOT}${S_HOST_PATH}/mariadb
-		path=${S_HOST_PATH}/mariadb
+		path_zfs=${_ZFS_ROOT}${path_base}
+		path=${path_base}
 		opts="-o mountpoint=${path} -o compression=lz4 -o  acltype=posixacl -o recordsize=8K -o primarycache=metadata"
 		_evalr zfs list ${path_zfs} >/dev/null 2>&1 || _evalr zfs create ${opts} ${path_zfs}
 	fi
@@ -78,9 +80,8 @@ if [ "${_DEV_DRIVER}" = zfs ]; then
 elif [ "${_DEV_DRIVER}" = btrfs ]; then
 
 	if ! ls -1 ${S_HOST_PATH}|grep -q ^mariadb; then
-		name=mariadb
 		_echot "------------------  btrfs ${name}"
-		path=${S_HOST_PATH}/mariadb
+		path=${path_base}
 		_evalr ls -1 ${path} >/dev/null 2>&1 || _evalr btrfs subvolume create ${path}
 	fi
 
@@ -100,7 +101,7 @@ for i in $(seq 1 ${_PHP_CT_NUM}); do
 
 	_echot "\n++++++++++++++++++  ${_CT_NAME}"
 	_CT_NAME=${_MDB_CT_NAME}-${i}
-	path_host=${S_HOST_PATH}/mariadb/${_CT_NAME}
+	path_host=${path_base}/${_CT_NAME}
 
 	if [ "${_DEV_DRIVER}" = zfs ]; then
 
@@ -264,8 +265,8 @@ for i in $(seq 1 ${_PHP_CT_NUM}); do
 	_eval lxc file push -q ${fc_mdb_rsyslog_client} ${_CT_NAME}${file}
 	_lxc_var_replace ${_CT_NAME} ${file} rsyslog
 
-	_echot "------------------  ${_CT_NAME} rsyslog reload"
-	_lxc_exec ${_CT_NAME} "rc-service rsyslog reload"
+	_echot "------------------  ${_CT_NAME} rsyslog restart"
+	_lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
 
 	########################  LOGROTATE
 
@@ -309,8 +310,8 @@ file=/etc/rsyslog.d/${fc_mdb_rsyslog_host##*/}
 _eval lxc file push -q ${fc_mdb_rsyslog_host} ${S_SERVICE[log]}${file}
 _lxc_var_replace ${S_SERVICE[log]} ${file} rsyslog
 
-_echot "------------------  ${S_SERVICE[log]} rsyslog reload"
-_lxc_exec ${S_SERVICE[log]} "rc-service rsyslog reload"
+_echot "------------------  ${S_SERVICE[log]} rsyslog restart"
+_lxc_exec ${S_SERVICE[log]} "rc-service rsyslog restart"
 
 ########################  LOGROTATE
 

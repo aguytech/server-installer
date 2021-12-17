@@ -432,7 +432,7 @@ elif [ "${S_RSYSLOG_PTC}" = tcp ]; then
 	_evalr "sed -i 's|^#\?\(input(type=\"imtcp\"\).*$|\1 port=\"${S_RSYSLOG_PORT}\")|' ${file}"
 fi
 
-_echot "------------------  rsyslog reload"
+_echot "------------------  rsyslog restart"
 _service restart rsyslog
 
 _echot "------------------  rsyslog conf"
