@@ -504,7 +504,7 @@ __lxd() {
 	local action cmd
 
 	if [ "$1" = reload ]; then
-		! ${DRYRUN} && cmd="_service reload snap.lxd.daemon" || cmd="_echoi _service reload snap.lxd.daemon"
+		${DRYRUN} && cmd="_echoi _service reload snap.lxd.daemon" || cmd="_service reload snap.lxd.daemon"
 		action=RELOAD
 	fi
 
