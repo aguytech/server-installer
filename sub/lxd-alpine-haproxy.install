@@ -137,12 +137,6 @@ _echot "------------------  metadata"
 _lxc_meta_set ${_CT_NAME} profiles default global ssl-haproxy
 _lxc_meta_add ${_CT_NAME} apps haproxy
 
-########################  IPTABLES
-
-_echot "------------------  iptables"
-sed -i '/^_NAT_HAPROXY=/ s|=.*$|=true|' ${_IPT_FILE_CONF}
-_service restart ${_IPT_SERVICE}
-
 ########################  SYSCTL
 
 _echot "------------------  conf sysctl.conf"
@@ -419,6 +413,13 @@ _echot "------------------  test ${_CT_NAME}"
 _echoA "To test connection type:"
 _echoa "curl ${_IPTHIS}:80"
 _echoa "curl ${_APA_DOM_FQDN}:80"
+
+########################  IPTABLES
+
+_echot "------------------  iptables"
+sed -i '/^_NAT_HAPROXY=/ s|=.*$|=true|' ${_IPT_FILE_CONF}
+_service restart ${_IPT_SERVICE}
+_eval sleep 4
 
 ########################  END
 

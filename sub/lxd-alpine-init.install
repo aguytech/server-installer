@@ -10,13 +10,16 @@ grep -q "^# ${_PART#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART#++}" >> ${S
 file_rsyslog_cron=${S_PATH_INSTALL_CONF}/rsyslog/cron.conf
 file_rsyslog_client_auth=${S_PATH_INSTALL_CONF}/rsyslog/client-auth.conf
 file_rsyslog_client_mail=${S_PATH_INSTALL_CONF}/rsyslog/client-mail.conf
+
 file_logrotate_server=${S_PATH_INSTALL_CONF}/logrotate/server
+#file_logrotate_client_auth=${S_PATH_INSTALL_CONF}/logrotate/client-auth
 
 file_ssmtp_conf=${S_PATH_INSTALL_CONF}/mail/ssmtp/ssmtp.conf
 file_ssmtp_alias=${S_PATH_INSTALL_CONF}/mail/ssmtp/revaliases
 
 _echot "------------------  required files"
-_require ${file_rsyslog_cron} ${file_rsyslog_client_auth} ${file_rsyslog_client_mail} ${file_logrotate_server}
+_require ${file_rsyslog_cron} ${file_rsyslog_client_auth} ${file_rsyslog_client_mail}
+_require ${file_logrotate_server} # ${file_logrotate_client_auth}
 _require ${file_ssmtp_conf} ${file_ssmtp_alias}
 
 ########################  DATA
@@ -225,13 +228,17 @@ _echot "------------------  logrotate rsyslog"
 file=/etc/logrotate.d/rsyslog
 _lxc_exec ${_CT_NAME} "grep -q missingok ${file} || sed -i '/{/ a \\\\tmissingok' ${file}"
 
-_echot "------------------  logrotate conf server"
+#_echot "------------------  logrotate client-auth"
+#file=/etc/logrotate.d/${file_logrotate_client_auth##*/}
+#_eval lxc file push -q ${file_logrotate_client_auth} ${_CT_NAME}${file}
+
+_echot "------------------  logrotate server"
 file=/etc/logrotate.d/${file_logrotate_server##*/}
 _eval lxc file push -q ${file_logrotate_server} ${_CT_NAME}${file}
-_lxc_var_replace ${_CT_NAME} ${file} logrotate
-_lxc_exec ${_CT_NAME} "chmod g-w,o= /etc/logrotate.d/*"
 
 _echot "------------------  logrotate start"
+_lxc_exec ${_CT_NAME} "chmod g-w,o= /etc/logrotate.d/*"
+_lxc_var_replace ${_CT_NAME} /etc/logrotate.d logrotate
 _lxc_exec ${_CT_NAME} "rc-service -s rsyslog restart; rc-service -S rsyslog start"
 
 ########################  PUBLISH

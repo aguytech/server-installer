@@ -74,12 +74,6 @@ _echot "------------------  metadata"
 _lxc_meta_set ${_CT_NAME} profiles default global ${profile}
 _lxc_meta_add ${_CT_NAME} apps rsyslog
 
-########################  IPTABLES
-
-_echot "------------------  iptables"
-sed -i '/^_NAT_RSYSLOG=/ s|=.*$|=true|' ${_IPT_FILE_CONF}
-_service restart ${_IPT_SERVICE}
-
 ########################  CONF
 
 _echot "------------------  conf client-auth"
@@ -184,6 +178,13 @@ _lxc_exec ${_CT_NAME} "rc-service crond restart"
 _echot "------------------  publish ${_CT_NAME}"
 lxc image list -f csv -c l | grep -q ^${_CT_NAME}$ && _eval lxc image alias rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
 _eval lxc publish --force ${_CT_NAME} --alias ${_CT_NAME}
+
+########################  IPTABLES
+
+_echot "------------------  iptables"
+sed -i '/^_NAT_RSYSLOG=/ s|=.*$|=true|' ${_IPT_FILE_CONF}
+_service restart ${_IPT_SERVICE}
+_eval sleep 4
 
 ########################  END
 

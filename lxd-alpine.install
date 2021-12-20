@@ -27,8 +27,9 @@ S_FILE_INSTALL_DONE="${S_PATH_CONF}/lxd.done" && _confset S_PATH_INSTALL "${S_FI
 # load configuration file from host installation
 . ${S_PATH_CONF}/install.conf
 # load initial configuration to automate settings
-. ${S_FILE_INSTALL_INI}
+[ -f "${S_FILE_INSTALL_INI}" ] && . ${S_FILE_INSTALL_INI}
 
+[ -f "${S_FILE_INSTALL_DONE}" ] || touch ${S_FILE_INSTALL_DONE}
 #don't mix with S_* variables from host
 [ -z ${_RELEASE_ID+x} ] && _RELEASE_ID=alpine && _confset _RELEASE_ID "${_RELEASE_ID}"
 [ -z ${_RELEASE_PART+x} ] && _RELEASE_PART=lxd-${_RELEASE_ID} && _confset _RELEASE_PART "${_RELEASE_PART}"

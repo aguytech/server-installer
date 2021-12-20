@@ -1,0 +1,14 @@
+S_VM_PATH_LOG/auth.err
+S_VM_PATH_LOG/auth.notice
+S_VM_PATH_LOG/auth.info {
+	daily
+	rotate 2
+	missingok
+	compress
+	delaycompress
+	notifempty
+	sharedscripts
+	postrotate
+		/etc/init.d/rsyslog --quiet --ifstarted reload > /dev/null 2>/dev/null || true
+	endscript
+}

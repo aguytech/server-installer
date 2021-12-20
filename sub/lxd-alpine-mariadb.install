@@ -87,14 +87,6 @@ elif [ "${_DEV_DRIVER}" = btrfs ]; then
 
 fi
 
-########################  IPTABLES
-
-_echot "------------------  iptables"
-sed -i '/^_NAT_SGBD=/ s|=.*$|=true|' ${_IPT_FILE_CONF}
-_service restart ${_IPT_SERVICE}
-
-
-
 ########################  LOOP
 
 for i in $(seq 1 ${_PHP_CT_NUM}); do
@@ -347,6 +339,13 @@ for i in $(seq 1 ${_PHP_CT_NUM}); do
 	lxc image list -f csv -c l | grep -q ^${ct_name}$ && _eval lxc image alias rename ${ct_name} ${ct_name}-${_SDATE}
 	_eval lxc publish --force ${ct_name} --alias ${ct_name}
 done
+
+########################  IPTABLES
+
+_echot "------------------  iptables"
+sed -i '/^_NAT_SGBD=/ s|=.*$|=true|' ${_IPT_FILE_CONF}
+_service restart ${_IPT_SERVICE}
+_eval sleep 4
 
 ########################  END
 
