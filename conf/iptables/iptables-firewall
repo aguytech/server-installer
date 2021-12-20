@@ -368,26 +368,29 @@ __nat() {
 __vm_init() {
 	_echo "\n-------------------------- VM INIT"
 
-	# _ETH_VM
-	_echo "- Allow INPUT/OUTPUT VM ${_ETH_VM} connections INPUT/OUTPUT"
-	__ipt -A INPUT -i ${_ETH_VM} -j ACCEPT
-	__ipt -A OUTPUT -o ${_ETH_VM} -j ACCEPT
-
-	# Output access
-	_echo "- Allow OUTPUT acces for all VM"
-	#__ipt -t nat -A POSTROUTING -s ${_IP_VM_BASE}.1/24 -o ${_ETH} -j SNAT --to ${_IPTHIS}
-	__ipt -t nat -A POSTROUTING -o ${_ETH} -j MASQUERADE
-
 	message="- Allow FORWARD to ${_IPS_VM_CIDR}, port all"
 	chain="iptables -A FORWARD -p tcp -d XX -j ACCEPT"
 	__add_chain -c "${chain}" -v "${_IPS_VM_CIDR}" -m "${message}"
+
+	message="- Allow INPUT for ${_ETH_VMS}, port all"
+	chain="iptables -A INPUT -i XX -j ACCEPT"
+	__add_chain -c "${chain}" -v "${_ETH_VMS}" -m "${message}"
+
+	message="- Allow OUTPUT for ${_ETH_VMS}, port all"
+	chain="iptables -A OUTPUT -o XX -j ACCEPT"
+	__add_chain -c "${chain}" -v "${_ETH_VMS}" -m "${message}"
+
+	# Output access
+	#_echo "- Allow OUTPUT acces for all VM"
+	##__ipt -t nat -A POSTROUTING -s ${_IP_VM_BASE}.1/24 -o ${_ETH} -j SNAT --to ${_IPTHIS}
+	#__ipt -t nat -A POSTROUTING -o ${_ETH} -j MASQUERADE
 }
 
 __vm_nat_ips() {
 	local ctid ctip ports ip_admin
 	_echo "\n-------------------------- VM NAT IPS"
 
-	_echo "- Allow PREROUTING ${_ETH} to VM for IP: ${_IPS_ADMIN}"
+	_echo "- Allow PREROUTING ${_ETH} to VM for IP: ${_IPS_ADMIN}, client: ${!_VM_NAT_IPS[*]}"
 	for ip_admin in ${_IPS_ADMIN}; do
 		for ctid in ${!_VM_NAT_IPS[*]}; do
 			ctip=${_IP_VM_BASE}.${ctid}
@@ -402,7 +405,7 @@ __vm_nat() {
 	local ctid ctip ports
 	_echo "\n-------------------------- VM NAT"
 
-	_echo "- Allow PREROUTING to VM for IP: ALL"
+	_echo "- Allow PREROUTING to VM for IP: ALL, client: ${!_VM_NAT_IPS[*]}"
 	for ctid in ${!_VM_NAT[*]}; do
 		ctip=${_IP_VM_BASE}.${ctid}
 		for ports in ${_VM_NAT[$ctid]}; do
@@ -506,7 +509,7 @@ __lxd() {
 	fi
 
 	_echo "\n-------------------------- lxd ${action}"
-	systemctl -q is-active snap.lxd.daemon.service && ${cmd} 
+	${cmd}
 }
 
 __start() {
@@ -517,11 +520,11 @@ __start() {
 	__fail2ban start
 	__input
 	__nat
-	${IS_LXD} && __vm_init && __vm_rules
+	${IS_LXD} && { __vm_init; __vm_rules; }
 	#__scan
 	#__scan2
 	__init_end
-	__lxd reload
+	${IS_LXD} && __lxd reload
 
 	_echo "\n========================== firewall STARTED"
 }
