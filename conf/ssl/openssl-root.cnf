@@ -11,15 +11,15 @@ x509_extensions		= v3_ca
 [ req_distinguished_name ]
 countryName		= FR
 localityName		= Nantes
-organizationName	= _HPX_DOM__NAME
+organizationName	= _HPX_DOM_NAME
 organizationalUnitName	= Research and development
-commonName		= _HPX_DOM__NAME
+commonName		= _HPX_DOM_NAME
 emailAddress		= S_EMAIL_ADMIN
 
 [ v3_req ]
 basicConstraints	= CA:FALSE
 keyUsage		= nonRepudiation, digitalSignature, keyEncipherment
-#subjectAltName		= DNS:smtp._HPX_DOM__FQDN,DNS:mail._HPX_DOM__FQDN,DNS:imap._HPX_DOM__FQDN
+#subjectAltName		= DNS:smtp._HPX_DOM_FQDN,DNS:mail._HPX_DOM_FQDN,DNS:imap._HPX_DOM_FQDN
 
 [ v3_ca ]
 subjectKeyIdentifier	= hash
