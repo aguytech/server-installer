@@ -379,7 +379,8 @@ __vm_init() {
 	__ipt -t nat -A POSTROUTING -o ${_ETH} -j MASQUERADE
 
 	_echo "- Allow FORWARD to ${_IP_VM_BASE}.1/24 port all"
-	__ipt -A FORWARD -i ${_ETH} -p tcp -d ${_IP_VM_CIDR} -j ACCEPT
+	#__ipt -A FORWARD -i ${_ETH} -p tcp -d ${_IP_VM_CIDR} -j ACCEPT
+	__ipt -A FORWARD -p tcp -d ${_IP_VM_CIDR} -j ACCEPT
 }
 
 __vm_nat_ips() {
@@ -505,7 +506,7 @@ __lxd() {
 	fi
 
 	_echo "\n-------------------------- lxd ${action}"
-	${IS_FAIL2BAN} && ${_FAIL2BAN} && ${cmd}
+	systemctl -q is-active snap.lxd.daemon.service && ${cmd} 
 }
 
 __start() {
@@ -520,6 +521,7 @@ __start() {
 	#__scan
 	#__scan2
 	__init_end
+	__lxd reload
 
 	_echo "\n========================== firewall STARTED"
 }
@@ -530,7 +532,6 @@ __stop() {
 	__fail2ban stop
 	__allow
 	__clear
-	__lxd reload
 
 	_echo "\n========================== firewall STOPED"
 }
