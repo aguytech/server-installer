@@ -378,9 +378,9 @@ __vm_init() {
 	#__ipt -t nat -A POSTROUTING -s ${_IP_VM_BASE}.1/24 -o ${_ETH} -j SNAT --to ${_IPTHIS}
 	__ipt -t nat -A POSTROUTING -o ${_ETH} -j MASQUERADE
 
-	_echo "- Allow FORWARD to ${_IP_VM_BASE}.1/24 port all"
-	#__ipt -A FORWARD -i ${_ETH} -p tcp -d ${_IP_VM_CIDR} -j ACCEPT
-	__ipt -A FORWARD -p tcp -d ${_IP_VM_CIDR} -j ACCEPT
+	message="- Allow FORWARD to ${_IPS_VM_CIDR}, port all"
+	chain="iptables -A FORWARD -p tcp -d XX -j ACCEPT"
+	__add_chain -c "${chain}" -v "${_IPS_VM_CIDR}" -m "${message}"
 }
 
 __vm_nat_ips() {

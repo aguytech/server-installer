@@ -13,7 +13,9 @@ _confset _MEL_STEP "${_MEL_STEP}"
 
 _echot "------------------ data container"
 
-[ -z ${_MEL_DOM_FQDN+x} ] && { anstmp=${S_DOM_FQDN}; _askno "Base domain name to use (${anstmp})"; _MEL_DOM_FQDN="${_ANSWER:-$anstmp}"; }
+[ -z ${_MEL_DOM_FQDN+x} ] && { anstmp=${S_DOM_FQDN}; _askno "FQDN to use (${anstmp})"; _MEL_DOM_FQDN="${_ANSWER:-$anstmp}"; }
+
+[ -z ${_MEL_DOM_NAME+x} ] && { anstmp=${S_DOM_FQDN}; _askno "Short name to use (${anstmp})"; _MEL_DOM_NAME="${_ANSWER:-$anstmp}"; }
 
 [ -z ${_MEL_CT_NAME+x} ] && { anstmp=${S_SERVICE[mail]}; _askno "Base name of containers to build (${anstmp})"; _MEL_CT_NAME="${_ANSWER:-${anstmp}}"; }
 
@@ -58,6 +60,9 @@ _CT_NAME="${_MEL_CT_NAME}"
 _CT_NUM="${_MEL_CT_NUM}"
 _CT_IP=${s_base}.${S_SERVICE_BITS[mail]}
 _CT_ALL_NAME="${_CT_NAME} $(for i in `seq 2 ${_CT_NUM}`; do echo ${_CT_NAME}-${i}; done)"
+
+_HPX_DOM_FQDN=${_MEL_DOM_FQDN}
+_HPX_DOM_NAME=${_MEL_DOM_NAME}
 
 ####################  CONFIGURATION
 
