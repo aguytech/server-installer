@@ -59,7 +59,7 @@ _confset _MEL_CIDR "${_MEL_CIDR}"
 _CT_NAME="${_MEL_CT_NAME}"
 _CT_NUM="${_MEL_CT_NUM}"
 _CT_IP=${s_base}.${S_SERVICE_BITS[mail]}
-_CT_ALL_NAME="${_CT_NAME} $(for i in `seq 2 ${_CT_NUM}`; do echo ${_CT_NAME}-${i}; done)"
+_CT_ALL_NAME="${_CT_NAME} $(for i in $(seq 2 ${_CT_NUM}); do echo ${_CT_NAME}-${i}; done)"
 
 _HPX_DOM_FQDN=${_MEL_DOM_FQDN}
 _HPX_DOM_NAME=${_MEL_DOM_NAME}

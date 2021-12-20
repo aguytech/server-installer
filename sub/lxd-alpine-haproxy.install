@@ -334,17 +334,6 @@ _lxc_exec ${_CT_NAME} "rc-service haproxy restart"
 
 ########################  RSYSLOG
 
-if [ "${S_RSYSLOG_PTC}" = udp ]; then
-	_echot "------------------  conf udp"
-
-	file=/etc/rsyslog.conf
-	_lxc_exec ${_CT_NAME} "sed -i '/#module(load=.imudp/,/#)/ s|^#||' ${file}"
-	_lxc_exec ${_CT_NAME} "sed -i '/^\s*port=/ s|=.*|=\"${S_RSYSLOG_PORT}\"|' ${file}"
-
-	_echot "------------------  ${_CT_NAME} restart rsyslog"
-	_lxc_exec ${_CT_NAME} rc-service rsyslog restart
-fi
-
 _echot "------------------  ${S_SERVICE[log]} host path"
 path=${S_VM_PATH_LOG}/haproxy
 _lxc_exec ${S_SERVICE[log]} "[ -d '${path}' ] || mkdir -p ${path}"

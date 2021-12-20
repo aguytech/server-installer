@@ -411,7 +411,6 @@ fi
 ########################  CRON
 
 _echot "------------------  cron conf"
-
 file=/etc/crontab
 _keepcpts ${file}
 str="MAILTO=${S_EMAIL_TECH}"
@@ -420,19 +419,10 @@ grep -q '^MAILTO' "${file}" || _evalr "sed -i '/^PATH=.*/ a ${str}' ${file}"
 ########################  RSYSLOG
 
 _echot "------------------  rsyslog conf"
-
 file="/etc/rsyslog.conf"
 _keepcpts "${file}"
-
-# udp
-if [ "${S_RSYSLOG_PTC}" = udp ]; then
-	_evalr "sed -i 's|^#\?\(module(load=\"imudp.*\)$|\1|' ${file}"
-	_evalr "sed -i 's|^#\?\(input(type=\"imudp\"\).*$|\1 port=\"${S_RSYSLOG_PORT}\")|' ${file}"
-# tcp
-elif [ "${S_RSYSLOG_PTC}" = tcp ]; then
-	_evalr "sed -i 's|^#\?\(module(load=\"imtcp.*\)$|\1|' ${file}"
-	_evalr "sed -i 's|^#\?\(input(type=\"imtcp\"\).*$|\1 port=\"${S_RSYSLOG_PORT}\")|' ${file}"
-fi
+_evalr "sed -i 's|^#\?\(module(load=\"im${S_RSYSLOG_PTC}.*\)$|\1|' ${file}"
+_evalr "sed -i 's|^#\?\(input(type=\"im${S_RSYSLOG_PTC}\"\).*$|\1 port=\"${S_RSYSLOG_PORT}\")|' ${file}"
 
 _echot "------------------  rsyslog restart"
 _service restart rsyslog
