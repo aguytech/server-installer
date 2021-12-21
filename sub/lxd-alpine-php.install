@@ -262,6 +262,10 @@ _echot "------------------  apache php-fpm"
 file=${path_apache_confd}/${file_conf_apache_phpfpm##*/}
 _eval lxc file push -q ${file_conf_apache_phpfpm} ${_CT_NAME}${file}
 
+_echot "------------------  apache httpd"
+file=/etc/apache2/httpd.conf
+_lxc_exec_T ${_CT_NAME} "sed -i 's|^\(\s*DirectoryIndex \).*$|\1index.html index.php|' ${file}"
+
 _echot "------------------  localhost files"
 file=${path_apache_confd}/${file_conf_apache_index##*/}
 _eval lxc file push -q ${file_conf_apache_index} ${_CT_NAME}${file}
