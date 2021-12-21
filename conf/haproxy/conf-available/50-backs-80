@@ -10,9 +10,9 @@ backend certbot
 	mode			http
 	server 		certbot 127.0.0.1:_HPX_CERTBOT_PORT
 
-backend _APA_DOM_FQDN
+backend _HPX_DOM_FQDN
 	mode			http
-	#option			httpchk GET /ping-monitor "HTTP/1.1\r\nHost: _APA_DOM_FQDN"
+	#option			httpchk GET /ping-monitor "HTTP/1.1\r\nHost: _HPX_DOM_FQDN"
 	option			httpchk GET /ping-monitor
 	http-check		expect string pong
 	default-server weight 20  maxconn 128  check  inter 2s  fall 1  rise 1  resolvers lxd  resolve-prefer ipv4 # resolve-net 10.0.0.1/24
@@ -33,9 +33,9 @@ backend _APA_DOM_FQDN
 	#server wap-_HPX_CT_NAME-3	wap-_HPX_CT_NAME-3:80  cookie _HPX_CT_NAME-3
 	#server wap-_HPX_CT_NAME-4	wap-_HPX_CT_NAME-4:80  cookie _HPX_CT_NAME-4
 
-backend cloud-_APA_DOM_FQDN
+backend cloud-_HPX_DOM_FQDN
 	mode			http
-	#option			httpchk GET /ping-monitor "HTTP/1.1\r\nHost: _APA_DOM_FQDN"
+	#option			httpchk GET /ping-monitor "HTTP/1.1\r\nHost: _HPX_DOM_FQDN"
 	option			httpchk GET /ping-monitor
 	http-check		expect string pong
 	default-server weight 20  maxconn 128  check  inter 2s  fall 1  rise 1  resolvers lxd  resolve-prefer ipv4 # resolve-net 10.0.0.1/24
@@ -45,9 +45,9 @@ backend cloud-_APA_DOM_FQDN
 	#server wap-cloud-_HPX_CT_NAME-1	wap-cloud-_HPX_CT_NAME-1:80
 	#server wap-cloud-_HPX_CT_NAME-2	wap-cloud-_HPX_CT_NAME-2:80  backup
 
-backend	admin-_APA_DOM_FQDN
+backend	admin-_HPX_DOM_FQDN
 	mode			http
-	#option			httpchk GET /ping-wap HTTP/1.1\r\nHost:\ admin._APA_DOM_FQDN
+	#option			httpchk GET /ping-wap HTTP/1.1\r\nHost:\ admin._HPX_DOM_FQDN
 	option			httpchk GET /ping-monitor
 	http-check		expect string admin
 	default-server weight 30 maxconn 16  check inter 2s fall 1 rise 1  resolvers lxd  resolve-prefer ipv4 # resolve-net 10.0.0.1/24
