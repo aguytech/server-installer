@@ -59,8 +59,7 @@ _confset _HPX_ACCESS_URI "${_HPX_ACCESS_URI}"
 
 _echot "------------------  data certbot"
 
-[ -z ${_HPX_CERTBOT_ON+x} ] && { _askyn "Use certbot"
-	_HPX_CERTBOT_ON="${_ANSWER/n/}"; }
+[ -z ${_HPX_CERTBOT_ON+x} ] && { _askyn "Use certbot"; 	_HPX_CERTBOT_ON="${_ANSWER/n/}"; }
 
 if [ "${_HPX_CERTBOT_ON}" ] ; then
 	[ -z ${_HPX_CERTBOT_SUBS+x} ] && { anstmp="admin blog carte chat chiffres cloud cms code compta dev diaspora discord discourse down elastik \

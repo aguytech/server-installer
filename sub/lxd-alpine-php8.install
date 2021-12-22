@@ -18,32 +18,34 @@ lxc list -f csv -c n| grep -q "^${S_SERVICE[proxy]}" && imgs_all_rds="${S_SERVIC
 profiles_www=$(lxc profile list -f csv|grep "^www.*,"|cut -d, -f1)
 [ "${profiles_www}" ] || _exite "Unable to find a www profile (profile name starts with www-)"
 
-file_conf_php_ini="${S_PATH_INSTALL_CONF}/php/php.ini"
-file_conf_php_fpm="${S_PATH_INSTALL_CONF}/php/php-fpm.conf"
-file_conf_php_fpmd_www="${S_PATH_INSTALL_CONF}/php/php-fpm.d/www.conf"
-file_conf_php_fpmd_admin="${S_PATH_INSTALL_CONF}/php/php-fpm.d/admin.conf"
-file_conf_php_xdebug="${S_PATH_INSTALL_CONF}/php/xdebug.ini"
+_PHP_VER=8
 
-file_conf_apache_phpfpm="${S_PATH_INSTALL_CONF}/apache2/php7-fpm.conf"
-file_conf_apache_monitor="${S_PATH_INSTALL_CONF}/apache2/monitor-php.conf"
-file_conf_apache_opcache="${S_PATH_INSTALL_CONF}/apache2/opcache.conf"
-file_conf_apache_index=${S_PATH_INSTALL_CONF}/apache2/sites/index.php
-file_conf_apache_index_dom=${S_PATH_INSTALL_CONF}/apache2/sites/index-dom.php
+fc_php_ini=${S_PATH_INSTALL_CONF}/php/php${_PHP_VER}.ini
+fc_php_fpm_conf=${S_PATH_INSTALL_CONF}/php/php-fpm${_PHP_VER}.conf
+fc_php_fpmd_www=${S_PATH_INSTALL_CONF}/php/php-fpm.d/www${_PHP_VER}.conf
+fc_php_fpmd_admin=${S_PATH_INSTALL_CONF}/php/php-fpm.d/admin${_PHP_VER}.conf
+fc_php_xdebug=${S_PATH_INSTALL_CONF}/php/xdebug${_PHP_VER}.ini
 
-file_conf_rsyslog_client=${S_PATH_INSTALL_CONF}/rsyslog/client-phpfpm7.conf
-file_conf_rsyslog_host=${S_PATH_INSTALL_CONF}/rsyslog/host-phpfpm7.conf
-file_conf_logrotate_client=${S_PATH_INSTALL_CONF}/logrotate/client-phpfpm7
-file_conf_logrotate_host=${S_PATH_INSTALL_CONF}/logrotate/host-phpfpm7
+fc_apache_phpfpm=${S_PATH_INSTALL_CONF}/apache2/php${_PHP_VER}-fpm.conf
+fc_apache_monitor=${S_PATH_INSTALL_CONF}/apache2/monitor-php.conf
+fc_apache_opcache=${S_PATH_INSTALL_CONF}/apache2/opcache.conf
+fc_apache_index=${S_PATH_INSTALL_CONF}/apache2/sites/index.php
+fc_apache_index_dom=${S_PATH_INSTALL_CONF}/apache2/sites/index-dom.php
+
+fc_rsyslog_client=${S_PATH_INSTALL_CONF}/rsyslog/client-phpfpm${_PHP_VER}.conf
+fc_rsyslog_host=${S_PATH_INSTALL_CONF}/rsyslog/host-phpfpm${_PHP_VER}.conf
+fc_logrotate_client=${S_PATH_INSTALL_CONF}/logrotate/client-phpfpm${_PHP_VER}
+fc_logrotate_host=${S_PATH_INSTALL_CONF}/logrotate/host-phpfpm${_PHP_VER}
 
 _echot "------------------ required files"
-_require ${file_conf_php_ini} ${file_conf_php_fpm} ${file_conf_php_fpmd_www} ${file_conf_php_fpmd_admin} ${file_conf_php_xdebug}
-_require ${file_conf_apache_phpfpm} ${file_conf_apache_monitor} ${file_conf_apache_opcache} ${file_conf_apache_index}
-_require ${file_conf_rsyslog_host} ${file_conf_rsyslog_client} ${file_conf_logrotate_host}
+_require ${fc_php_ini} ${fc_php_fpm_conf} ${fc_php_fpmd_www} ${fc_php_fpmd_admin} ${fc_php_xdebug}
+_require ${fc_apache_phpfpm} ${fc_apache_monitor} ${fc_apache_opcache} ${fc_apache_index}
+_require ${fc_rsyslog_host} ${fc_rsyslog_client} ${fc_logrotate_host}
 
 ########################  DATA
 
-#php_version=`_lxc_exec ${S_SERVICE[http]} "apk list php7-fpm | sed -n 's|php7-fpm-\([0-9\.]\+\)-.*|\1|p'"`
-php_modules="php7-bcmath php7-bz2 php7-ctype php7-curl php7-exif php7-fileinfo php7-dom php7-gd php7-gmp php7-iconv php7-imap php7-json php7-mbstring php7-mysqli php7-openssl php7-pdo_mysql php7-opcache php7-pgsql php7-posix php7-session php7-simplexml php7-sqlite3 php7-xmlreader php7-xmlwriter php7-zip php7-xdebug php7-pecl-mcrypt php7-pecl-redis php7-xml" #  php7-pecl-imagick php7-pear
+#php_version=`_lxc_exec ${S_SERVICE[http]} "apk list php8-fpm | sed -n 's|php8-fpm-\([0-9\.]\+\)-.*|\1|p'"`
+php_modules="php8-bcmath php8-bz2 php8-ctype php8-curl php8-exif php8-fileinfo php8-dom php8-gd php8-gmp php8-iconv php8-imap php8-json php8-mbstring php8-mysqli php8-openssl php8-pdo_mysql php8-opcache php8-pgsql php8-posix php8-session php8-simplexml php8-sqlite3 php8-xmlreader php8-xmlwriter php8-zip php8-xdebug php8-pecl-mcrypt php8-pecl-redis php8-xml" #  php8-pecl-imagick php8-pear
 
 _echot "------------------  data name"
 
@@ -53,7 +55,7 @@ _echot "------------------  data name"
 	profiles=$(lxc profile list -f csv|grep "^php.*,"|cut -d, -f1)
 	[ "${profiles}" ] && _menu "Select an available PHP profile to apply or none to create a new one" ${profiles} none || _ANSWER=
 	_PHP_CT_PROFILE="${_ANSWER/none/}"
-	[ -z "${_PHP_CT_PROFILE}" ] && { anstmp=php7-${_APA_DOM_FQDN}; _askno "Name of the new  PHP profile (${anstmp})"; _PHP_CT_PROFILE="${_ANSWER:-$anstmp}"; }
+	[ -z "${_PHP_CT_PROFILE}" ] && { anstmp=php${_PHP_VER}-${_APA_DOM_FQDN}; _askno "Name of the new  PHP profile (${anstmp})"; _PHP_CT_PROFILE="${_ANSWER:-$anstmp}"; }
 }
 [ -z ${_PHP_CT_NAME+x} ] && { anstmp=wap-${_APA_DOM_FQDN//./-}; _askno "Base name of containers to build (${anstmp})"; _PHP_CT_NAME="${_ANSWER:-$anstmp}"; }
 
@@ -133,7 +135,7 @@ _APA_PATH_DOM=${S_VM_PATH_SHARE}/www/${_APA_DOM_FQDN}
 _PHP_MAX_SYN_BACKLOG=$(( ${_APA_MAX_SYN_BACKLOG} / 2 - 1 )) 
 _confset _PHP_MAX_SYN_BACKLOG "${_PHP_MAX_SYN_BACKLOG}"
 
-_PHP_SERVICE=php-fpm7
+_PHP_SERVICE=php-fpm${_PHP_VER}
 _confset _PHP_SERVICE "${_PHP_SERVICE}"
 
 _PHP_FPM_SOCK=/run/${_PHP_SERVICE}/php-fpm.sock
@@ -142,7 +144,7 @@ _confset _PHP_FPM_SOCK "${_PHP_FPM_SOCK}"
 _PHP_FPM_ADMIN_SOCK=/run/${_PHP_SERVICE}/php-fpm-admin.sock
 _confset _PHP_FPM_ADMIN_SOCK "${_PHP_FPM_ADMIN_SOCK}"
 
-path_php_base=/etc/php7
+path_php_base=/etc/php${_PHP_VER}
 path_fpm_confd=${path_php_base}/php-fpm.d
 path_apache_confd=/etc/apache2/conf.d
 
@@ -165,11 +167,10 @@ profile=${_PHP_CT_PROFILE}
 if ! lxc profile list -f csv|grep -q "^${profile},"; then
 	_echot "------------------  profile create ${profile}"
 	_eval lxc profile create ${profile}
-
-	path=${S_HOST_PATH_SHARE}/php/${_APA_DOM_FQDN}
+	path=${S_HOST_PATH_SHARE}/php${_PHP_VER}/${_APA_DOM_FQDN}
 	path_ct=${_PHP_PATH_SHARE}
 	[ -d ${path} ] || _evalr mkdir -p ${path}
-	_evalr chown -R ${_LXD_UID}:${_LXD_UID} ${S_HOST_PATH_SHARE}/php
+	_evalr chown -R ${_LXD_UID}:${_LXD_UID} ${S_HOST_PATH_SHARE}/php${_PHP_VER}
 	_eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
 else
 	_echot "------------------  existing profile ${profile}"
@@ -199,13 +200,13 @@ _eval lxc start ${_CT_NAME}
 
 _echot "------------------  metadata"
 _lxc_meta_set ${_CT_NAME} profiles default global ${_PHP_WWW_PROFILE} ${_PHP_CT_PROFILE}
-_lxc_meta_add ${_CT_NAME} apps php7
+_lxc_meta_add ${_CT_NAME} apps php${_PHP_VER}
 
 ########################  INSTALL
 
-_echot "------------------  install php7-fpm"
+_echot "------------------  install php-fpm"
 _lxc_exec ${_CT_NAME} "apk update"
-_lxc_exec ${_CT_NAME} "apk add php7-fpm ${php_modules}"
+_lxc_exec ${_CT_NAME} "apk add php${_PHP_VER}-fpm ${php_modules}"
 
 _echot "------------------  service set & start"
 _lxc_exec ${_CT_NAME} "rc-update add ${_PHP_SERVICE}"
@@ -221,54 +222,54 @@ _lxc_exec ${_CT_NAME} "${cmd}"
 ########################  CONF PHP.INI
 
 _echot "------------------  conf php.ini"
-file=${path_php_base}/${file_conf_php_ini##*/}
+file=${path_php_base}/php.ini
 _lxc_exec_T ${_CT_NAME} "cp -a ${file} ${file}.${_SDATE}"
-_eval lxc file push -q ${file_conf_php_ini} ${_CT_NAME}${file}
+_eval lxc file push -q ${fc_php_ini} ${_CT_NAME}${file}
 
 ########################  CONF PHP-FPM
 
 _echot "------------------  conf php.fpm"
-file=${path_php_base}/${file_conf_php_fpm##*/}
+file=${path_php_base}/php-fpm.conf
 _lxc_exec_T ${_CT_NAME} "cp -a ${file} ${file}.${_SDATE}"
-_eval lxc file push -q ${file_conf_php_fpm} ${_CT_NAME}${file}
+_eval lxc file push -q ${fc_php_fpm_conf} ${_CT_NAME}${file}
 
 ########################  POOL - WWW
 
 pool=www
 _echot "------------------  path pool ${pool}"
-path="${_PHP_PATH_POOL}/${pool}"
+path=${_PHP_PATH_POOL}/${pool}
 _lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
 
 _echot "------------------  conf pool ${pool}"
-file=${path_fpm_confd}/${file_conf_php_fpmd_www##*/}
+file=${path_fpm_confd}/www.conf
 _lxc_exec_T ${_CT_NAME} "[ -f '${file}' ] && cp -a ${file} ${file}.${_SDATE}"
-_eval lxc file push -q ${file_conf_php_fpmd_www} ${_CT_NAME}${file}
+_eval lxc file push -q ${fc_php_fpmd_www} ${_CT_NAME}${file}
 
 ########################  POOL - WWW-ADMIN
 
 pool=admin
 _echot "------------------  path pool ${pool}"
-path="${_PHP_PATH_POOL}/${pool}"
+path=${_PHP_PATH_POOL}/${pool}
 _lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
 
 _echot "------------------  conf pool ${pool}"
-file=${path_fpm_confd}/${file_conf_php_fpmd_admin##*/}
+file=${path_fpm_confd}/admin.conf
 _lxc_exec_T ${_CT_NAME} "[ -f '${file}' ] && cp -a ${file} ${file}.${_SDATE}"
-_eval lxc file push -q ${file_conf_php_fpmd_admin} ${_CT_NAME}${file}
+_eval lxc file push -q ${fc_php_fpmd_admin} ${_CT_NAME}${file}
 
 ########################  APACHE
 
 _echot "------------------  apache php-fpm"
-file=${path_apache_confd}/${file_conf_apache_phpfpm##*/}
-_eval lxc file push -q ${file_conf_apache_phpfpm} ${_CT_NAME}${file}
+file=${path_apache_confd}/${fc_apache_phpfpm##*/}
+_eval lxc file push -q ${fc_apache_phpfpm} ${_CT_NAME}${file}
 
 _echot "------------------  apache httpd"
 file=/etc/apache2/httpd.conf
 _lxc_exec_T ${_CT_NAME} "sed -i 's|^\(\s*DirectoryIndex \).*$|\1index.html index.php|' ${file}"
 
 _echot "------------------  localhost files"
-file=${path_apache_confd}/${file_conf_apache_index##*/}
-_eval lxc file push -q ${file_conf_apache_index} ${_CT_NAME}${file}
+file=${path_apache_confd}/${fc_apache_index##*/}
+_eval lxc file push -q ${fc_apache_index} ${_CT_NAME}${file}
 file=${_APA_PATH_WWW}/html/index.html
 _lxc_exec ${_CT_NAME} "[ -f '${file}' ] && mv ${file} ${file}.keep"
 _lxc_exec ${_CT_NAME} "echo '<?php phpinfo() ?>' > ${_APA_PATH_WWW}/html/phpinf.php"
@@ -276,7 +277,7 @@ _lxc_exec ${_CT_NAME} "echo '<?php phpinfo() ?>' > ${_APA_PATH_WWW}/html/phpinf.
 _echot "------------------  ${_APA_DOM_FQDN} files"
 _lxc_exec ${_CT_NAME} "echo '<?php phpinfo() ?>' > ${_APA_PATH_DOM}/html/phpinf.php"
 file=${_APA_PATH_DOM}/html/index.php
-_eval lxc file push -q ${file_conf_apache_index_dom} ${_CT_NAME}${file}
+_eval lxc file push -q ${fc_apache_index_dom} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} apache
 # phpinfo
 _lxc_exec ${_CT_NAME} "echo '<?php phpinfo() ?>' > ${_APA_PATH_DOM}/html/phpinf.php"
@@ -292,7 +293,7 @@ _lxc_exec ${_CT_NAME} "echo '<?php echo \"pong\"; ?>' > ${_APA_PATH_WWW}/html/pi
 _echot "------------------  ping-monitor conf"
 file=${path_apache_confd}/monitor.conf
 _keepcpts ${file}
-_eval lxc file push -q ${file_conf_apache_monitor} ${_CT_NAME}${file}
+_eval lxc file push -q ${fc_apache_monitor} ${_CT_NAME}${file}
 
 ########################  OPCACHE
 
@@ -302,9 +303,9 @@ file=${_APA_PATH_WWW}/html/opcache.php
 _lxc_exec ${_CT_NAME} "wget -q ${url} -O ${file}"
 
 _echot "------------------  opcache conf"
-file=${path_apache_confd}/${file_conf_apache_opcache##*/}
+file=${path_apache_confd}/${fc_apache_opcache##*/}
 _keepcpts ${file}
-_eval lxc file push -q ${file_conf_apache_opcache} ${_CT_NAME}${file}
+_eval lxc file push -q ${fc_apache_opcache} ${_CT_NAME}${file}
 
 ########################  RESTART
 
@@ -326,24 +327,24 @@ _lxc_exec ${_CT_NAME} "chown apache:apache -R ${_APA_PATH_WWW} ${_APA_PATH_DOM} 
 ########################  RSYSLOG
 
 _echot "------------------  ${S_SERVICE[log]} host path"
-path=${S_VM_PATH_LOG}/php7
+path=${S_VM_PATH_LOG}/php${_PHP_VER}
 _lxc_exec ${S_SERVICE[log]} "[ -d ${path} ] || mkdir -p ${path}"
 
 _echot "------------------  ${S_SERVICE[log]} host"
-file=/etc/rsyslog.d/${file_conf_rsyslog_host##*/}
-_eval lxc file push -q ${file_conf_rsyslog_host} ${S_SERVICE[log]}${file}
+file=/etc/rsyslog.d/${fc_rsyslog_host##*/}
+_eval lxc file push -q ${fc_rsyslog_host} ${S_SERVICE[log]}${file}
 _lxc_var_replace ${S_SERVICE[log]} ${file} rsyslog php2
 
 _echot "------------------  rsyslog restart ${S_SERVICE[log]}"
 _lxc_exec ${S_SERVICE[log]} "rc-service rsyslog restart"
 
 _echot "------------------  ${_CT_NAME} client path"
-path=${S_PATH_LOG}/php7
+path=${S_PATH_LOG}/php${_PHP_VER}
 _lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
 
 _echot "------------------  ${_CT_NAME} client"
-file=/etc/rsyslog.d/${file_conf_rsyslog_client##*/}
-_eval lxc file push -q ${file_conf_rsyslog_client} ${_CT_NAME}${file}
+file=/etc/rsyslog.d/${fc_rsyslog_client##*/}
+_eval lxc file push -q ${fc_rsyslog_client} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} rsyslog php2
 
 _echot "------------------  rsyslog restart ${_CT_NAME}"
@@ -352,8 +353,8 @@ _lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
 ########################  LOGROTATE
 
 _echot "------------------  ${S_SERVICE[log]} logrotate"
-file=/etc/logrotate.d/${file_conf_logrotate_host##*/}
-_eval lxc file push -q ${file_conf_logrotate_host} ${S_SERVICE[log]}${file}
+file=/etc/logrotate.d/${fc_logrotate_host##*/}
+_eval lxc file push -q ${fc_logrotate_host} ${S_SERVICE[log]}${file}
 _lxc_var_replace ${S_SERVICE[log]} ${file} logrotate
 _lxc_exec ${S_SERVICE[log]} "chmod g-w,o= /etc/logrotate.d/*"
 
@@ -361,8 +362,8 @@ _echot "------------------  ${S_SERVICE[log]} crond restart"
 _lxc_exec ${S_SERVICE[log]} "rc-service crond restart"
 
 _echot "------------------  ${_CT_NAME} logrotate"
-file=/etc/logrotate.d/${file_conf_logrotate_client##*/}
-_eval lxc file push -q ${file_conf_logrotate_client} ${_CT_NAME}${file}
+file=/etc/logrotate.d/${fc_logrotate_client##*/}
+_eval lxc file push -q ${fc_logrotate_client} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} logrotate
 _lxc_exec ${_CT_NAME} "chmod g-w,o= /etc/logrotate.d/*"
 
@@ -372,7 +373,7 @@ _lxc_exec ${_CT_NAME} "rc-service crond restart"
 ########################  CLEAN LOG
 
 _echot "------------------  ${_CT_NAME} log clean"
-_lxc_exec ${_CT_NAME} "find ${S_PATH_LOG}/php7 -name *.log -exec rm {} \;"
+_lxc_exec ${_CT_NAME} "find ${S_PATH_LOG}/php${_PHP_VER} -name *.log -exec rm {} \;"
 
 ########################  COPY
 

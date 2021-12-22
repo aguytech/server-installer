@@ -76,7 +76,10 @@ while [ "${_PART}" != "quit" ]; do
 			redis) # ovh home
 				_source "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PART#++}.install"
 				;;
-			php) # ovh home
+			php8) # ovh home
+				_source "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PART#++}.install"
+				;;
+			php7) # ovh home
 				_source "${_PATH_BASE_SUB}/${_RELEASE_PART}-${_PART#++}.install"
 				;;
 			mariadb) # ovh home

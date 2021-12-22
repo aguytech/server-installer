@@ -19,7 +19,7 @@ cts_all_maria=$(lxc list -f json | jq -r '.[] | select(.profiles | any(contains(
 
 fc_pma_config=${S_PATH_INSTALL_CONF}/pma/pma-config.inc.php
 fc_pma_part=${S_PATH_INSTALL_CONF}/pma/pma-part-config.inc.php
-fc_pma_site=${S_PATH_INSTALL_CONF}/apache2/sites/sub-admin.conf
+fc_pma_site=${S_PATH_INSTALL_CONF}/apache2/sites/sub.conf
 
 _echot "------------------ required files"
 _require ${fc_pma_config} ${fc_pma_part} ${fc_pma_site}
@@ -101,7 +101,7 @@ fi
 [ -z ${_PMA_APP_BLOWFISH+x} ] && _PMA_APP_BLOWFISH=$(_pwd32)
 
 _CT_NAME=${_PMA_CT_NAME}-1
-_APA_PATH_DOM=${S_VM_PATH_SHARE}/www/${_APA_DOM_ADMIN}.${_APA_DOM_FQDN}
+_APA_PATH_DOM=${S_VM_PATH_SHARE}/www/${_APA_DOM_FQDN}
 _PMA_APP_URI=https://${_PMA_DOM_SUB}.${_APA_DOM_FQDN}
 _PMA_APP_DB_PORT=${S_DB_MARIA_PORT_RW}
 _PMA_APP_DB_NAME=phpmyadmin
@@ -266,15 +266,11 @@ for ct_maria in ${_PMA_CT_DBS}; do
 		_eval "mysql -h${ct_maria} -uroothost -p${_MDB_PWD_HOST} -e \"${cmd}\""
 		cmd="GRANT ALL PRIVILEGES ON ${_PMA_APP_DB_NAME}.* TO '${_PMA_APP_DB_USER}'@'${ct_php}.lxd';"
 		_eval "mysql -h${ct_maria} -uroothost -p${_MDB_PWD_HOST} -e \"${cmd}\""
-
-		_echot "------------------  ${ct_maria} ${_PMA_APP_DB_USER} strpass"
 		strpass+="${_PMA_APP_DB_USER} @ ${ct_php}.lxd - ${_PMA_APP_DB_PWD}\n"
 
 		_echot "------------------  ${ct_maria} rootadmin grant"
 		cmd="GRANT ALL PRIVILEGES ON *.* TO rootadmin@'${ct_php}.lxd' IDENTIFIED BY '${_MDB_PWD_ADMIN}' WITH GRANT OPTION;"
 		_eval "mysql -h${ct_maria} -uroothost -p${_MDB_PWD_HOST} -e \"${cmd}\""
-
-		_echot "------------------  ${ct_maria} rootadmin strpass"
 		strpass+="rootadmin @ ${ct_php}.lxd - ${_MDB_PWD_ADMIN}\n"
 	done
 

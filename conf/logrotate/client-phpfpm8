@@ -1,0 +1,16 @@
+S_PATH_LOG/php8/*.emerg
+S_PATH_LOG/php8/*.err
+S_PATH_LOG/php8/*.warning
+S_PATH_LOG/php8/*.info
+S_PATH_LOG/php8/*.notice {
+	daily
+	rotate 2
+	missingok
+	compress
+	delaycompress
+	notifempty
+	sharedscripts
+	postrotate
+		/etc/init.d/rsyslog --quiet --ifstarted reload > /dev/null 2>/dev/null || true
+	endscript
+}
