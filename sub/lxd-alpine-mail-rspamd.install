@@ -128,7 +128,7 @@ _lxc_var_replace ${_CT_NAME} /etc/postfix rspamd
 
 _echot "------------------  postfix restart"
 _lxc_exec ${_CT_NAME} chown -R 0.0 /etc/postfix
-_lxc_exec_e ${_CT_NA ME} rc-service postfix restart
+_lxc_exec_e ${_CT_NAME} rc-service postfix restart
 
 _echot "------------------  test postfix"
 [ -z "${_INSTALL_AUTO}" ] && _askno "Verify the postfix starting and valid to continue"

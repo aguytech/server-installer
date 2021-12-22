@@ -91,7 +91,7 @@ _eval lxc file push -q ${fc_postfix_client} ${_CT_NAME}${file}
 _echot "------------------  sql files"
 _lxc_exec_e ${_CT_NAME} "[ -d '${_MEL_PF_PATH_SQL}' ] || mkdir -p ${_MEL_PF_PATH_SQL}"
 _lxc_exec_e ${_CT_NAME} "chmod 755 ${_MEL_PF_PATH_SQL}"
-for file in `ls ${path_sql}/mysql_*.cf`; do
+for file in $(ls ${path_sql}/mysql_*.cf); do
 	_echo ${file##*/}
 	_eval lxc file push -q ${file} ${_CT_NAME}/${_MEL_PF_PATH_SQL}/ || _exite "unable to push file"
 done
@@ -102,7 +102,7 @@ _lxc_var_replace ${_CT_NAME} /etc/postfix mail
 
 _echot "------------------  postfix restart"
 _lxc_exec_e ${_CT_NAME} chown -R 0:0 /etc/postfix
-_lxc_exec_e ${_CT_NAME} 'find /etc/postfix -type f -maxdepth 1 chmod g-wx,o-rwx {} \;'
+_lxc_exec_e ${_CT_NAME} 'find /etc/postfix -type f -maxdepth 1 -exec chmod g-wx,o-rwx {} \;'
 _lxc_exec_e ${_CT_NAME} rc-service postfix restart
 
 _echot "------------------  postconf mynetworks"
@@ -115,7 +115,7 @@ _echoA "Verify enabled smtp services"
 _lxc_exec ${_CT_NAME} "grep 'submission\|smtp' /etc/services"
 [ -z "${_INSTALL_AUTO}" ] && _askno "valid to continue"
 
-queries=`_lxc_exec ${_CT_NAME} "sed -n 's|^[^#].* \(mysql:.*\)$|\1|p' /etc/postfix/main.cf"`
+queries=$(_lxc_exec ${_CT_NAME} "sed -n 's|^[^#].* \(mysql:.*\)$|\1|p' /etc/postfix/main.cf")
 queries+=" $(_lxc_exec ${_CT_NAME} "sed -n 's|^[^#].*proxy:\(mysql:.*\)$|\1|p' /etc/postfix/main.cf")"
 queries+=" $(_lxc_exec ${_CT_NAME} "sed -n 's|^[^#].* \(mysql:.*\)$|\n\1|p' /etc/postfix/master.cf")"
 queries+=" $(_lxc_exec ${_CT_NAME} "sed -n 's|^[^#].*proxy:\(mysql:.*\)$|\n\1|p' /etc/postfix/master.cf")"

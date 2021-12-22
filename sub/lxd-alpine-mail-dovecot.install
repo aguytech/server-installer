@@ -162,6 +162,7 @@ if [ -z "${_MEL_TEST_USER}" -o -z "${_MEL_TEST_PWD}" ]; then
 fi
 _echot "------------------  test auth"
 _echoa "Result of test:"
+_echo "If the test fail, redefine the password user with ${_MEL_VMAIL_APP}"
 _lxc_exec ${_CT_NAME} "doveadm auth test ${_MEL_TEST_USER} ${_MEL_TEST_PWD}"
 
 _echot "------------------  test mail"

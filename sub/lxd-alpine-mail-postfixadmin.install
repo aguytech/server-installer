@@ -13,7 +13,7 @@ cts_admin=$(lxc list -f csv -c n | grep '\-admin-')
 [ -z "${cts_admin}" ] && _exite "Unable to find an 'admin' container"
 
 fc_pfa_local=${S_PATH_INSTALL_CONF}/mail/postfixadmin/config.local.php
-fc_pfa_apache=${S_PATH_INSTALL_CONF}/apache2/sites/sub-admin.conf
+fc_pfa_apache=${S_PATH_INSTALL_CONF}/apache2/sites/sub.conf
 
 _echot "------------------ required files"
 _require ${fc_pfa_local} ${fc_pfa_apache}
@@ -73,7 +73,7 @@ _echo "none: Don’t use encryption
 _confset _MEL_PFA_POLICY "${_MEL_PFA_POLICY}"
 
 pfa_path=${file_app%.tar.gz}
-path_admin=${S_VM_PATH_SHARE}/www/admin.${S_DOM_FQDN}
+path_www=${S_VM_PATH_SHARE}/www/${S_DOM_FQDN}
 _APA_SUB=pfa
 _CT_ADMIN=${_MEL_CT_ADMIN}
 
@@ -97,13 +97,13 @@ _eval "mysql -h${_MEL_DB_HOST} -uroothost -p${_MEL_DB_HOST_PWD} -e \"FLUSH PRIVI
 
 ########################  MAIN
 
-_echot "------------------  create path ${path_admin}"
-_lxc_exec ${_CT_ADMIN} "[ -d ${path_admin} ] || mkdir -p ${path_admin}"
+_echot "------------------  create path ${path_www}"
+_lxc_exec ${_CT_ADMIN} "[ -d ${path_www} ] || mkdir -p ${path_www}"
 
 _echot "------------------  install"
-_eval lxc file push -q ${file_app_tmp} ${_CT_ADMIN}/${path_admin}/
+_eval lxc file push -q ${file_app_tmp} ${_CT_ADMIN}/${path_www}/
 
-cmds="cd ${path_admin}
+cmds="cd ${path_www}
 [ -e ${pfa_path} ] && mv ${pfa_path} ${pfa_path}.${_SDATE}
 tar -xzf ${file_app}
 [ -e postfixadmin-${pfa_path} ] && mv postfixadmin-${pfa_path} ${pfa_path}
@@ -112,17 +112,17 @@ ln -s ${pfa_path} ${_APA_SUB}"
 _lxc_exec ${_CT_ADMIN} "${cmds}"
 
 _echot "------------------  conf local"
-file=${path_admin}/${_APA_SUB}/${fc_pfa_local##*/}
+file=${path_www}/${_APA_SUB}/${fc_pfa_local##*/}
 _lxc_exec ${_CT_ADMIN} "[ -e '${file}' ] && mv ${file} ${file}.${_SDATE}"
 _eval lxc file push -q ${fc_pfa_local} ${_CT_ADMIN}${file}
 _lxc_var_replace ${_CT_ADMIN} ${file} mail
 
 _echot "------------------  path templates_c"
-path=${path_admin}/${pfa_path}/templates_c
+path=${path_www}/${pfa_path}/templates_c
 _lxc_exec ${_CT_ADMIN} "[ -d '${path}' ] || mkdir ${path}"
 
-_echot "------------------  rights  ${path_admin}"
-_lxc_exec ${_CT_ADMIN} "chown apache.apache -R ${path_admin}"
+_echot "------------------  rights  ${path_www}"
+_lxc_exec ${_CT_ADMIN} "chown apache.apache -R ${path_www}"
 
 ########################  APACHE
 
@@ -144,7 +144,7 @@ _echo "Use this password to configure postfixadmin: ${_MEL_DB_PFA_PWD}"
 _echo "after this, paste to this terminal the text given by postfixadmin to configure it:"
 str=
 while [ -z "${str}" ]; do read -r str; done
-file=${path_admin}/${_APA_SUB}/config.local.php
+file=${path_www}/${_APA_SUB}/config.local.php
 lxc exec ${_CT_ADMIN} -- sed -i "/^.CONF..setup_password/ c ${str}" ${file}
 
 _echot "------------------  manually admin password"

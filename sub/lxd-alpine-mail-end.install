@@ -21,25 +21,27 @@ _require ${fc_f2b_jail_mail} ${fc_f2b_filter_pf}
 #######################  MAIN
 
 _echot "------------------ iptables ports"
-sed -i "/^#_PORTS_MAIL/ c\_PORTS_MAIL=\"${_MEL_PORTS}\"" ${_IPT_FILE_CONF}
+_evalr "sed -i '/^#_PORTS_MAIL/ c\_PORTS_MAIL=\"${_MEL_PORTS}\"' ${_IPT_FILE_CONF}"
 
-_echot "------------------  fail2ban jail"
-file=/etc/fail2ban/jail.d/${fc_f2b_jail_mail##*/}
-_evalr cp ${fc_f2b_jail_mail} ${file}
-_var_replace ${file} fail2ban
-_evalr chmod 644 /etc/fail2ban/jail.d/*
+if type fail2ban-client >/dev/null 2>&1; then
+	_echot "------------------  fail2ban jail"
+	file=/etc/fail2ban/jail.d/${fc_f2b_jail_mail##*/}
+	_evalr cp ${fc_f2b_jail_mail} ${file}
+	_var_replace ${file} fail2ban
+	_evalr chmod 644 /etc/fail2ban/jail.d/*
 
-_echot "------------------  fail2ban filter"
-file=/etc/fail2ban/filter.d/${fc_f2b_filter_pf##*/}
-_evalr cp ${fc_f2b_filter_pf} ${file}
-_var_replace ${file} fail2ban
-_evalr chmod 644 ${file}
+	_echot "------------------  fail2ban filter"
+	file=/etc/fail2ban/filter.d/${fc_f2b_filter_pf##*/}
+	_evalr cp ${fc_f2b_filter_pf} ${file}
+	_var_replace ${file} fail2ban
+	_evalr chmod 644 ${file}
 
-_echot "------------------  fail2ban rights"
-_evalr "chmod 644 /etc/fail2ban/jail.d/*"
+	_echot "------------------  fail2ban rights"
+	_evalr "chmod 644 /etc/fail2ban/jail.d/*"
 
-_echot "------------------  fail2ban reload"
-_service reload fail2ban.service
+	_echot "------------------  fail2ban reload"
+	_service reload fail2ban.service
+fi
 
 ########################  PUBLISH
 

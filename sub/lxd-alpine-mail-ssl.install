@@ -18,13 +18,9 @@ _require ${fc_cron_certificate}  ${fc_ssl_dom}
 
 _echot "------------------ data ssl"
 
-[ -z ${_MEL_SSL_API+x} ] && { _menu "generate new ssl certificates for mail server" none certbot openssl; _MEL_SSL_API=${_ANSWER/none/}; }
-_confset _MEL_SSL_API "${_MEL_SSL_API}"
+[ -z ${_MEL_CERTBOT_ON+x} ] && { _askyn "Use certbot"; 	_MEL_CERTBOT_ON="${_ANSWER/n/}"; }
 
-if [ "${_MEL_SSL_API}" ]; then
-	[ -z ${_MEL_SSL_SUBS+x} ] && { anstmp="mail mx imap smtp"; _askno "Subdomains to register to ssl: (${anstmp})"; _MEL_SSL_SUBS="${_ANSWER:-${anstmp}}"; }
-	_confset _MEL_SSL_SUBS "${_MEL_SSL_SUBS}"
-fi
+[ -z ${_MEL_SSL_SUBS+x} ] && { anstmp="mail mx imap smtp"; _askno "Subdomains to register to ssl: (${anstmp})"; _MEL_SSL_SUBS="${_ANSWER:-${anstmp}}"; }
 
 ct_proxy=${S_SERVICE[proxy]}
 path_ssl_conf=${_MEL_PATH_SSL}/conf
@@ -32,8 +28,7 @@ path_ssl_private=${_MEL_PATH_SSL}/private
 path_ssl_certs=${_MEL_PATH_SSL}/certs
 path_ssl_haproxy=${_HPX_PATH_SSL}/haproxy
 
-if [ "${_MEL_SSL_API}" =  certbot ]; then
-
+if [ "${_MEL_CERTBOT_ON}" ]; then
 	########################  LETSENCRYPT
 
 	#### certbot
@@ -47,7 +42,6 @@ if [ "${_MEL_SSL_API}" =  certbot ]; then
 	[ -z "${_INSTALL_AUTO}" ] && _askno "Valid to continue"
 
 	if ! _lxc_exec ${ct_proxy} "[ -d /etc/letsencrypt/live/mail.${S_DOM_FQDN} ]"; then
-
 		_echot "------------------  certbot cert mail.${S_DOM_FQDN}"
 		subs=
 		for domain in ${S_DOM_FQDN} ${S_DOM_ALL_FQDN/${S_DOM_FQDN}/}; do
@@ -62,46 +56,47 @@ if [ "${_MEL_SSL_API}" =  certbot ]; then
 	_echot "------------------  certbot unify"
 	_lxc_exec ${ct_proxy} "${S_PATH_SCRIPT}/scripts/certbot-unify.sh"
 
-elif [ "${_MEL_SSL_API}" =  openssl ]; then
-
+else
 	########################  OPENSSL
 
-	_echot "------------------  openssl paths"
-	for path in ${path_ssl_conf} ${path_ssl_private} ${path_ssl_certs}; do
-		_lxc_exec ${ct_proxy} "[ -d '${path}' ] || mkdir -p ${path}"
-	done
-
-	_echot "------------------  openssl conf multi-domains"
 	file_ssl_csr=${path_ssl_certs}/mail.${S_DOM_FQDN}.csr
 	file_ssl_key="${path_ssl_private}/mail.${S_DOM_FQDN}-privkey.pem"
 	file_ssl_full="${path_ssl_certs}/mail.${S_DOM_FQDN}-fullchain.pem"
 
-	file_ssl_conf=${path_ssl_conf}/openssl-mail.${S_DOM_FQDN}.cnf
-	_eval lxc file push -q ${fc_ssl_dom} ${ct_proxy}${file_ssl_conf}
-	_lxc_var_replace ${ct_proxy} ${file_ssl_conf} haproxy
+	if ! _lxc_exec ${ct_proxy} "[ -d /etc/letsencrypt/live/mail.${S_DOM_FQDN} ]"; then
+		_echot "------------------  openssl paths"
+		for path in ${path_ssl_conf} ${path_ssl_private} ${path_ssl_certs}; do
+			_lxc_exec ${ct_proxy} "[ -d '${path}' ] || mkdir -p ${path}"
+		done
 
-	dns=
-	for domain in ${S_DOM_FQDN} ${S_DOM_ALL_FQDN/${S_DOM_FQDN}/}; do
-		for sub in ${_MEL_SSL_SUBS}; do dns+="DNS:${sub}.${domain},"; done
-	done
-	dns=${dns%,}
-	_lxc_exec ${ct_proxy} "sed -i '/subjectAltName/ s|=.*|= ${dns}|' ${file_ssl_conf}"
+		_echot "------------------  openssl conf multi-domains"
+		file_ssl_conf=${path_ssl_conf}/openssl-mail.${S_DOM_FQDN}.cnf
+		_eval lxc file push -q ${fc_ssl_dom} ${ct_proxy}${file_ssl_conf}
+		_lxc_var_replace ${ct_proxy} ${file_ssl_conf} haproxy
 
-	# Create the key
-	_lxc_exec ${ct_proxy} openssl genrsa -out ${file_ssl_key} 4096
-	# Create the Certificate Signing Request CSR - for CN use the correct FQDN !! ex: mail.ambau.ovh
-	_lxc_exec ${ct_proxy} openssl req -new  -key ${file_ssl_key} -out ${file_ssl_csr} -config ${file_ssl_conf}
+		dns=
+		for domain in ${S_DOM_FQDN} ${S_DOM_ALL_FQDN/${S_DOM_FQDN}/}; do
+			for sub in ${_MEL_SSL_SUBS}; do dns+="DNS:${sub}.${domain},"; done
+		done
+		dns=${dns%,}
+		_lxc_exec ${ct_proxy} "sed -i '/subjectAltName/ s|=.*|= ${dns}|' ${file_ssl_conf}"
 
-	_echot "------------------  conf verify"
-	# verify configuration of CSR
-	_lxc_exec ${ct_proxy} openssl req -text -noout -in ${file_ssl_csr}|grep -e '\(Subject:\|DNS:\)'
-	# Self-sign the certificate CSR to a CRT
-	_lxc_exec ${ct_proxy} openssl x509 -req -days 3650 -sha512 -in ${file_ssl_csr} -CA ${_HPX_SSL_CA_PEM} -CAkey ${_HPX_SSL_CA_KEY} -CAcreateserial -out ${file_ssl_full} -extensions v3_req -extfile ${file_ssl_conf}
-	# Compose
-	_lxc_exec ${ct_proxy} "cat ${file_ssl_crt} ${file_ssl_key} > ${file_ssl_full}"
+		# Create the key
+		_lxc_exec ${ct_proxy} openssl genrsa -out ${file_ssl_key} 4096
+		# Create the Certificate Signing Request CSR - for CN use the correct FQDN !! ex: mail.ambau.ovh
+		_lxc_exec ${ct_proxy} openssl req -new  -key ${file_ssl_key} -out ${file_ssl_csr} -config ${file_ssl_conf}
 
-	# create haproxy pem list
-	_lxc_exec ${ct_proxy} "ls -1 ${path_ssl_haproxy}/*.pem > ${_HPX_PATH_SSL}/certbot.pem.lst"
+		_echot "------------------  conf verify"
+		# verify configuration of CSR
+		_lxc_exec ${ct_proxy} openssl req -text -noout -in ${file_ssl_csr}|grep -e '\(Subject:\|DNS:\)'
+		# Self-sign the certificate CSR to a CRT
+		_lxc_exec ${ct_proxy} openssl x509 -req -days 3650 -sha512 -in ${file_ssl_csr} -CA ${_HPX_SSL_CA_PEM} -CAkey ${_HPX_SSL_CA_KEY} -CAcreateserial -out ${file_ssl_full} -extensions v3_req -extfile ${file_ssl_conf}
+		# Compose
+		_lxc_exec ${ct_proxy} "cat ${file_ssl_crt} ${file_ssl_key} > ${file_ssl_full}"
+
+		# create haproxy pem list
+		_lxc_exec ${ct_proxy} "ls -1 ${path_ssl_haproxy}/*.pem > ${_HPX_PATH_SSL}/certbot.pem.lst"
+	fi
 
 fi
 
