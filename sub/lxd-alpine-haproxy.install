@@ -175,12 +175,12 @@ _lxc_exec ${_CT_NAME} rc-service -S haproxy start
 
 _echot "------------------  conf bash"
 _lxc_exec ${_CT_NAME} "sed -i 's|^\(root.*\):[^:]*$|\1:/bin/bash|' /etc/passwd"
-_eval lxc file push -q ${S_PATH_INSTALL_CONF}/bash-completion/haconf ${_CT_NAME}/usr/share/bash-completion/completions/
+_eval lxc file push --uid 0 --gid 0 -q ${S_PATH_INSTALL_CONF}/bash-completion/haconf ${_CT_NAME}/usr/share/bash-completion/completions/
 
 if _lxc_exec ${_CT_NAME} "type vim >/dev/null 2>&1"; then
 	_echot "------------------  conf vim"
 	path=$(lxc exec ${_CT_NAME} -- sh -c  "ls -d /usr/share/vim/vim*/colors")
-	_eval "lxc file push -q ${S_PATH_INSTALL_CONF}/vim/* ${_CT_NAME}${path}/"
+	_eval "lxc file push --uid 0 --gid 0 -q ${S_PATH_INSTALL_CONF}/vim/* ${_CT_NAME}${path}/"
 
 	file=/root/.vimrc
 	_lxc_exec ${_CT_NAME} "[ -e ${file} ] || ln -s ${file_conf_vim} ${file}"
@@ -223,7 +223,7 @@ done
 if ! _lxc_exec ${_CT_NAME}  "[ -f '${_HPX_SSL_CA_KEY}' -a -f '${_HPX_SSL_CA_PEM}' ]"; then
 	_echot "------------------  openssl conf"
 	file_ssl_conf=${path_ssl_conf}/openssl-rootCA.cnf
-	_eval lxc file push -q ${file_conf_ssl_root} ${_CT_NAME}${file_ssl_conf}
+	_eval lxc file push --uid 0 --gid 0 -q ${file_conf_ssl_root} ${_CT_NAME}${file_ssl_conf}
 	_lxc_var_replace ${_CT_NAME} ${file_ssl_conf} haproxy
 
 	_echot "------------------  openssl conf CA"
@@ -280,7 +280,7 @@ if [ "${_HPX_CERTBOT_ON}" ]; then
 
 	_echot "------------------  certbot cron"
 	file=/etc/periodic/weekly/${file_conf_certbot##*/}
-	_eval lxc file push -q ${file_conf_certbot} ${_CT_NAME}${file}
+	_eval lxc file push --uid 0 --gid 0 -q ${file_conf_certbot} ${_CT_NAME}${file}
 	_lxc_var_replace ${_CT_NAME} ${file} haproxy script
 	_lxc_exec ${_CT_NAME} chmod +x ${file}
 
@@ -297,7 +297,7 @@ else
 
 			_echot "------------------  openssl certs ${domain}"
 			file_ssl_conf=${path_ssl_conf}/openssl-${domain}.cnf
-			_eval lxc file push -q ${file_conf_ssl} ${_CT_NAME}${file_ssl_conf}
+			_eval lxc file push --uid 0 --gid 0 -q ${file_conf_ssl} ${_CT_NAME}${file_ssl_conf}
 			_lxc_var_replace ${_CT_NAME} ${file_ssl_conf} haproxy
 
 			# Create the key
@@ -339,7 +339,7 @@ _lxc_exec ${S_SERVICE[log]} "[ -d '${path}' ] || mkdir -p ${path}"
 
 _echot "------------------  ${S_SERVICE[log]} host-haproxy"
 file=/etc/rsyslog.d/${file_rsyslog_host##*/}
-_eval lxc file push -q ${file_rsyslog_host} ${S_SERVICE[log]}${file}
+_eval lxc file push --uid 0 --gid 0 -q ${file_rsyslog_host} ${S_SERVICE[log]}${file}
 _lxc_var_replace ${S_SERVICE[log]} ${file} rsyslog
 
 _echot "------------------  ${S_SERVICE[log]} restart rsyslog"
@@ -351,7 +351,7 @@ _lxc_exec ${_CT_NAME} "[ -d '${path}' ] || mkdir -p ${path}"
 
 _echot "------------------  ${_CT_NAME} client-haproxy"
 file=/etc/rsyslog.d/${file_rsyslog_client##*/}
-_eval lxc file push -q ${file_rsyslog_client} ${_CT_NAME}${file}
+_eval lxc file push --uid 0 --gid 0 -q ${file_rsyslog_client} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} rsyslog
 
 _echot "------------------  ${_CT_NAME} rsyslog restart"
@@ -362,7 +362,7 @@ _lxc_exec ${_CT_NAME} rc-service rsyslog restart
 _echot "------------------  ${S_SERVICE[log]} logrotate"
 
 file=/etc/logrotate.d/${file_logrotate_host##*/}
-_eval lxc file push -q ${file_logrotate_host} ${S_SERVICE[log]}${file}
+_eval lxc file push --uid 0 --gid 0 -q ${file_logrotate_host} ${S_SERVICE[log]}${file}
 _lxc_var_replace ${S_SERVICE[log]} ${file} logrotate
 _lxc_exec ${S_SERVICE[log]} "chmod g-w,o= /etc/logrotate.d/*"
 
@@ -371,7 +371,7 @@ _lxc_exec ${S_SERVICE[log]} rc-service crond restart
 
 _echot "------------------  client logrotate"
 file=/etc/logrotate.d/${file_logrotate_client##*/}
-_eval lxc file push -q ${file_logrotate_client} ${_CT_NAME}${file}
+_eval lxc file push --uid 0 --gid 0 -q ${file_logrotate_client} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} logrotate
 _lxc_exec ${_CT_NAME} "chmod g-w,o= /etc/logrotate.d/*"
 

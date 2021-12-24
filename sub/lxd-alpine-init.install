@@ -82,23 +82,36 @@ _lxc_meta_set ${_CT_NAME} profiles stock global
 
 ########################  PATHS
 
-_echot "------------------  path bs"
+_echot "------------------  push bs"
 path=/usr/local/bs
 _lxc_exec ${_CT_NAME} "[ -d ${path} ] && mv ${path} ${path}.${_SDATE}"
 _eval lxc file push -rq ${path} ${_CT_NAME}/usr/local/
+_lxc_exec ${_CT_NAME} "chown -R 0:0 ${path}"
 
 _echot "------------------  path server"
 paths="${S_PATH_CONF} ${S_PATH_CONF_SSL}/private ${S_PATH_CONF_SSL}/certs"
 for path in ${paths}; do
 	_lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
-	_lxc_exec ${_CT_NAME} "chown 0:0 -R ${path}"
+	_lxc_exec ${_CT_NAME} "chown -R 0:0 ${path}"
 done
 _lxc_exec ${_CT_NAME} "chown -R 0:0 ${S_PATH_CONF_SSL} && chmod -R 750 ${S_PATH_CONF_SSL}"
-_lxc_exec ${_CT_NAME} "chmod 700 -R ${S_PATH_CONF_SSL}/private"
+_lxc_exec ${_CT_NAME} "chmod -R 700 ${S_PATH_CONF_SSL}/private"
 
 _lxc_exec ${_CT_NAME} "[ -h /server ] || ln -s /etc/server /server"
 
 ########################  CONF
+
+file="/tmp/server.conf"
+_evalr cp ${S_GLOBAL_CONF} ${file}
+_evalr "sed -i 's|^\(S_RELEASE\)=.*$|\1=\"${_RELEASE}\"|' ${file}"
+_evalr "sed -i 's|^\(S_RELEASE_ID\)=.*$|\1=\"${_RELEASE_ID}\"|' ${file}"
+_evalr "sed -i 's|^\(S_RELEASE_NAME\)=.*$|\1=\"${_RELEASE_NAME}\"|' ${file}"
+_evalr "sed -i 's|^\(S_ETH\)=.*$|\1=\"eth0\"|' ${file}"
+_evalr "sed -i 's|^\(S_SERVER_TYPE\)=.*$|\1=\"lxd\"|' ${file}"
+_evalr "sed -i 's|^\(S_PATH_INSTALL\)=.*$|\1=\"/usr/local/install\"|' ${file}"
+
+_eval lxc file push -q ${file} ${_CT_NAME}${S_PATH_CONF}/server.conf
+_lxc_exec ${_CT_NAME} "chown -R 0:0 ${S_PATH_CONF}; chmod 700 -R ${S_PATH_CONF}"
 
 _echot "------------------  apk update"
 _lxc_exec ${_CT_NAME} "apk update && apk upgrade"
@@ -116,18 +129,6 @@ _lxc_exec ${_CT_NAME} "[ -e /etc/profile.d/env.sh ] || ln -s ${S_PATH_SCRIPT_CON
 
 # not for busybox
 #_lxc_exec ${_CT_NAME} "echo -e 'set showmatch\nset tabstop=4\nset shiftwidth=4' | tee -a /etc/vimrc /etc/exrc"
-
-file="/tmp/server.conf"
-_evalr cp ${S_GLOBAL_CONF} ${file}
-_evalr "sed -i 's|^\(S_RELEASE\)=.*$|\1=\"${_RELEASE}\"|' ${file}"
-_evalr "sed -i 's|^\(S_RELEASE_ID\)=.*$|\1=\"${_RELEASE_ID}\"|' ${file}"
-_evalr "sed -i 's|^\(S_RELEASE_NAME\)=.*$|\1=\"${_RELEASE_NAME}\"|' ${file}"
-_evalr "sed -i 's|^\(S_ETH\)=.*$|\1=\"eth0\"|' ${file}"
-_evalr "sed -i 's|^\(S_SERVER_TYPE\)=.*$|\1=\"lxd\"|' ${file}"
-_evalr "sed -i 's|^\(S_PATH_INSTALL\)=.*$|\1=\"/usr/local/install\"|' ${file}"
-
-_eval lxc file push -q ${file} ${_CT_NAME}${S_PATH_CONF}/server.conf
-_lxc_exec ${_CT_NAME} "chmod 700 -R ${S_PATH_CONF}"
 
 ########################  HOSTS
 
@@ -147,13 +148,15 @@ _lxc_exec ${_CT_NAME} "chmod 700 -R ${S_PATH_CONF}"
 _echot "------------------  ssmtp install"
 _lxc_exec ${_CT_NAME} apk add ssmtp
 
+path=/etc/ssmtp
 _echot "------------------  ssmtp conf"
-file=/etc/ssmtp/${file_ssmtp_conf##*/}
+file=${path}/${file_ssmtp_conf##*/}
 _eval lxc file push -q ${file_ssmtp_conf} ${_CT_NAME}${file}
-file=/etc/ssmtp/${file_ssmtp_alias##*/}
+file=${path}/${file_ssmtp_alias##*/}
 _eval lxc file push -q ${file_ssmtp_alias} ${_CT_NAME}${file}
 
-_lxc_var_replace ${_CT_NAME} /etc/ssmtp mail
+_lxc_var_replace ${_CT_NAME} ${path} mail
+_lxc_exec ${_CT_NAME} "chown -R 0:0 ${path}"
 
 ########################  CRON
 
@@ -203,17 +206,17 @@ _lxc_exec ${_CT_NAME} "sed -i '/^mail/ s|^|#|' ${file}"
 
 file=/etc/rsyslog.d/${file_rsyslog_cron##*/}
 _eval lxc file push -q ${file_rsyslog_cron} ${_CT_NAME}${file}
-_lxc_var_replace ${_CT_NAME} ${file} rsyslog
 
 _echot "------------------  rsyslog client-auth"
 file=/etc/rsyslog.d/${file_rsyslog_client_auth##*/}
 _eval lxc file push -q ${file_rsyslog_client_auth} ${_CT_NAME}${file}
-_lxc_var_replace ${_CT_NAME} ${file} rsyslog
 
 _echot "------------------  rsyslog client-mail"
 file=/etc/rsyslog.d/${file_rsyslog_client_mail##*/}
 _eval lxc file push -q ${file_rsyslog_client_mail} ${_CT_NAME}${file}
-_lxc_var_replace ${_CT_NAME} ${file} rsyslog
+
+_lxc_var_replace ${_CT_NAME} /etc/rsyslog.d rsyslog
+_lxc_exec ${_CT_NAME} "chown -R 0:0 /etc/rsyslog.d"
 
 ########################  LOGROTATE
 
@@ -235,10 +238,10 @@ _lxc_exec ${_CT_NAME} "grep -q missingok ${file} || sed -i '/{/ a \\\\tmissingok
 _echot "------------------  logrotate server"
 file=/etc/logrotate.d/${file_logrotate_server##*/}
 _eval lxc file push -q ${file_logrotate_server} ${_CT_NAME}${file}
+_lxc_var_replace ${_CT_NAME} /etc/logrotate.d logrotate
 
 _echot "------------------  logrotate start"
-_lxc_exec ${_CT_NAME} "chmod g-w,o= /etc/logrotate.d/*"
-_lxc_var_replace ${_CT_NAME} /etc/logrotate.d logrotate
+_lxc_exec ${_CT_NAME} "chown -R 0:0 /etc/logrotate.d; chmod g-w,o= /etc/logrotate.d/*"
 _lxc_exec ${_CT_NAME} "rc-service -s rsyslog restart; rc-service -S rsyslog start"
 
 ########################  PUBLISH

@@ -144,6 +144,7 @@ _echot "------------------  ${_CT_NAME} conf"
 _lxc_var_replace ${_CT_NAME} /etc/rsyslog.d rsyslog
 
 _echot "------------------  ${_CT_NAME} reload"
+_lxc_exec ${_CT_NAME} "chown -R 0:0 /etc/rsyslog.d"
 _lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
 
 _echot "------------------  ${HOSTNAME} reload"
@@ -171,6 +172,7 @@ _lxc_var_replace ${_CT_NAME} /etc/logrotate.d logrotate
 _lxc_exec ${_CT_NAME} "chmod g-w,o= /etc/logrotate.d/*"
 
 _echot "------------------  ${_CT_NAME} crond restart"
+_lxc_exec ${_CT_NAME} "chown -R 0:0 /etc/logrotate.d"
 _lxc_exec ${_CT_NAME} "rc-service crond restart"
 
 ########################  PUBLISH

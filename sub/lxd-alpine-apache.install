@@ -109,7 +109,7 @@ _confset _APA_MAX_CONNECTIONS_PER_CHILD "${_APA_MAX_CONNECTIONS_PER_CHILD}"
 _confset _APA_PATH_WWW "${_APA_PATH_WWW}"
 
 _CT_NAME=${_APA_CT_NAME}
-_APA_PATH_DOM=${S_VM_PATH_SHARE}/www/${_APA_DOM_FQDN}
+_APA_PATH_DOM=${S_VM_PATH_SHARE}/www
 _APA_PATH_SITES=/etc/apache2/sites;  _confset _APA_PATH_SITES "${_APA_PATH_SITES}"
 
 path_confd=/etc/apache2/conf.d
@@ -189,7 +189,6 @@ _lxc_exec ${_CT_NAME} "${cmds}"
 
 _echot "------------------  path html"
 _lxc_exec ${_CT_NAME} "[ -d '${_APA_PATH_WWW}/html' ] || mv /var/www/localhost/htdocs ${_APA_PATH_WWW}/html"
-#_lxc_exec ${_CT_NAME} "chown -R apache/apache ${_APA_PATH_SITES}"
 
 ########################  CONF
 
@@ -253,17 +252,14 @@ _echot "------------------  ${_APA_PATH_WWW} htpasswd"
 file=${_APA_PATH_WWW}/pwd
 _lxc_exec ${_CT_NAME} "[ -f '${file}' ] && opt=b || opt=cb; htpasswd -\${opt} ${file} admin ${_APA_PWD_ADMIN}"
 
-########################  RIGHTS
-
-_echot "------------------  rights file"
-_lxc_exec ${_CT_NAME} "chown apache:apache -R ${_APA_PATH_WWW} ${_APA_PATH_DOM}/*"
-
 ########################  RESTART
 
 _echot "------------------  var replace"
 _lxc_var_replace ${_CT_NAME} /etc/apache2 apache apache2
 
 _echot "------------------  service start"
+_lxc_exec ${_CT_NAME} "chown -R 0:0 /etc/apache2"
+_lxc_exec ${_CT_NAME} "chown apache:apache -R ${_APA_PATH_WWW} ${_APA_PATH_DOM}/*"
 _lxc_exec ${_CT_NAME} "rc-service apache2 restart"
 
 if lxc image list -f csv -c l | grep -q ^${S_SERVICE[proxy]}$; then
@@ -280,7 +276,7 @@ _lxc_exec ${S_SERVICE[log]} "[ -d ${path} ] || mkdir -p ${path}"
 
 _echot "------------------  ${S_SERVICE[log]} host"
 file=/etc/rsyslog.d/${file_rsyslog_host##*/}
-_eval lxc file push -q ${file_rsyslog_host} ${S_SERVICE[log]}${file}
+_eval lxc file push --uid 0 --gid 0 -q ${file_rsyslog_host} ${S_SERVICE[log]}${file}
 _lxc_var_replace ${S_SERVICE[log]} ${file} rsyslog
 
 _echot "------------------  ${S_SERVICE[log]} restart rsyslog"
@@ -293,7 +289,7 @@ _lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
 
 _echot "------------------  ${_CT_NAME} client"
 file=/etc/rsyslog.d/${file_rsyslog_client##*/}
-_eval lxc file push -q ${file_rsyslog_client} ${_CT_NAME}${file}
+_eval lxc file push --uid 0 --gid 0 -q ${file_rsyslog_client} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} rsyslog
 
 _echot "------------------  ${_CT_NAME} rsyslog restart"
@@ -303,7 +299,7 @@ _lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
 
 _echot "------------------  ${S_SERVICE[log]} logrotate"
 file=/etc/logrotate.d/${file_logrotate_host##*/}
-_eval lxc file push -q ${file_logrotate_host} ${S_SERVICE[log]}${file}
+_eval lxc file push --uid 0 --gid 0 -q ${file_logrotate_host} ${S_SERVICE[log]}${file}
 _lxc_var_replace ${S_SERVICE[log]} ${file} logrotate
 _lxc_exec ${S_SERVICE[log]} "chmod g-w,o= /etc/logrotate.d/*"
 
@@ -313,7 +309,7 @@ _lxc_exec ${S_SERVICE[log]} "rc-service crond restart"
 
 _echot "------------------  ${_CT_NAME} logrotate"
 file=/etc/logrotate.d/${file_logrotate_client##*/}
-_eval lxc file push -q ${file_logrotate_client} ${_CT_NAME}${file}
+_eval lxc file push --uid 0 --gid 0 -q ${file_logrotate_client} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} logrotate
 _lxc_exec ${_CT_NAME} "chmod g-w,o= /etc/logrotate.d/*"
 

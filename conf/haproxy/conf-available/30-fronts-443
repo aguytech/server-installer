@@ -14,8 +14,6 @@ frontend https
 	acl admin-_HPX_DOM_FQDN	hdr(host) admin._HPX_DOM_FQDN matomo._HPX_DOM_FQDN monitor._HPX_DOM_FQDN pfa._HPX_DOM_FQDN pma._HPX_DOM_FQDN
 	#acl cloud-_HPX_DOM_FQDN	hdr(host) cloud._HPX_DOM_FQDN nextcloud._HPX_DOM_FQDN
 
-	#acl admin-dev		src 92.154.29.60 129.20.228.3 129.20.228.19 129.20.228.20 129.20.228.21
-
 	#redirect  prefix  https://info.otokoz.ovh code 301 if { hdr(host) -i info._HPX_DOM_FQDN }
 
 	use_backend		admin-_HPX_DOM_FQDN if admin-_HPX_DOM_FQDN
