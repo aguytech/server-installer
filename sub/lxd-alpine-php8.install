@@ -44,8 +44,8 @@ _require ${fc_rsyslog_host} ${fc_rsyslog_client} ${fc_logrotate_host}
 
 ########################  DATA
 
-#php_version=`_lxc_exec ${S_SERVICE[http]} "apk list php8-fpm | sed -n 's|php8-fpm-\([0-9\.]\+\)-.*|\1|p'"`
-php_modules="php8-bcmath php8-bz2 php8-ctype php8-curl php8-exif php8-fileinfo php8-dom php8-gd php8-gmp php8-iconv php8-imap php8-json php8-mbstring php8-mysqli php8-openssl php8-pdo_mysql php8-opcache php8-pgsql php8-posix php8-session php8-simplexml php8-sqlite3 php8-xmlreader php8-xmlwriter php8-zip php8-xdebug php8-pecl-mcrypt php8-pecl-redis php8-xml" #  php8-pecl-imagick php8-pear
+php_cli=php${_PHP_VER}
+php_modules="${php_cli}-bcmath ${php_cli}-bz2 ${php_cli}-ctype ${php_cli}-curl ${php_cli}-exif ${php_cli}-fileinfo ${php_cli}-dom ${php_cli}-gd ${php_cli}-gmp ${php_cli}-iconv ${php_cli}-imap ${php_cli}-json ${php_cli}-mbstring ${php_cli}-mysqli ${php_cli}-openssl ${php_cli}-pdo_mysql ${php_cli}-opcache ${php_cli}-pcntl ${php_cli}-pgsql ${php_cli}-posix ${php_cli}-session ${php_cli}-simplexml ${php_cli}-sqlite3 ${php_cli}-xmlreader ${php_cli}-xmlwriter ${php_cli}-zip ${php_cli}-xdebug ${php_cli}-pecl-mcrypt ${php_cli}-pecl-redis ${php_cli}-xml" #  ${php_cli}-pecl-imagick ${php_cli}-pear
 
 _echot "------------------  data name"
 
@@ -93,10 +93,10 @@ _confset _PHP_UPLOAD_MAX_FILESIZE "${_PHP_UPLOAD_MAX_FILESIZE}"
 [ -z ${_PHP_SESSION_STRICT_MODE+x} ] && { anstmp=1; _askno "session.use_strict_mode (${anstmp})"; _PHP_SESSION_STRICT_MODE="${_ANSWER:-$anstmp}"; }
 _confset _PHP_SESSION_STRICT_MODE "${_PHP_SESSION_STRICT_MODE}"
 
-[ -z ${_PHP_OPCACHE_SIZE+x} ] && { anstmp=256M; _askno "opcache, memory consumption ${anstmp}"; _PHP_OPCACHE_SIZE="${_ANSWER:-$anstmp}"; }
+[ -z ${_PHP_OPCACHE_SIZE+x} ] && { anstmp=128; _askno "opcache, memory consumption ${anstmp}"; _PHP_OPCACHE_SIZE="${_ANSWER:-$anstmp}"; }
 _confset _PHP_OPCACHE_SIZE "${_PHP_OPCACHE_SIZE}"
 
-[ -z ${_PHP_OPCACHE_REV+x} ] && { anstmp=4; _askno "opcache, revalidate frequency ${anstmp}"; _PHP_OPCACHE_REV="${_ANSWER:-$anstmp}"; }
+[ -z ${_PHP_OPCACHE_REV+x} ] && { anstmp=1; _askno "opcache, revalidate frequency ${anstmp}"; _PHP_OPCACHE_REV="${_ANSWER:-$anstmp}"; }
 _confset _PHP_OPCACHE_REV "${_PHP_OPCACHE_REV}"
 
 _echot "------------------  data php-fpm"
@@ -130,26 +130,19 @@ _confset _PHP_W_MAX_REQUESTS "${_PHP_W_MAX_REQUESTS}"
 [ -z ${_PHP_SLOWLOG_TIMEOUT+x} ] && { anstmp=2; _askno "Give value for 'request_SLOWLOG_TIMEOUT' (${anstmp})"; _PHP_SLOWLOG_TIMEOUT="${_ANSWER:-$anstmp}"; }
 _confset _PHP_SLOWLOG_TIMEOUT "${_PHP_SLOWLOG_TIMEOUT}"
 
-_APA_PATH_DOM=${S_VM_PATH_SHARE}/www/${_APA_DOM_FQDN}
+_APA_PATH_DOM=${S_VM_PATH_SHARE}/www
 
 _PHP_MAX_SYN_BACKLOG=$(( ${_APA_MAX_SYN_BACKLOG} / 2 - 1 )) 
 _confset _PHP_MAX_SYN_BACKLOG "${_PHP_MAX_SYN_BACKLOG}"
 
 _PHP_SERVICE=php-fpm${_PHP_VER}
-_confset _PHP_SERVICE "${_PHP_SERVICE}"
-
 _PHP_FPM_SOCK=/run/${_PHP_SERVICE}/php-fpm.sock
-_confset _PHP_FPM_SOCK "${_PHP_FPM_SOCK}"
-
 _PHP_FPM_ADMIN_SOCK=/run/${_PHP_SERVICE}/php-fpm-admin.sock
-_confset _PHP_FPM_ADMIN_SOCK "${_PHP_FPM_ADMIN_SOCK}"
-
 path_php_base=/etc/php${_PHP_VER}
 path_fpm_confd=${path_php_base}/php-fpm.d
 path_apache_confd=/etc/apache2/conf.d
-
 # shared
-_PHP_PATH_SHARE=${S_VM_PATH_SHARE}/php/${_APA_DOM_FQDN}
+_PHP_PATH_SHARE=${S_VM_PATH_SHARE}/php
 _PHP_PATH_POOL=${_PHP_PATH_SHARE}/pools
 path_xdebug_profile=${_PHP_PATH_SHARE}/xdebug/profile
 path_xdebug_trace=${_PHP_PATH_SHARE}/xdebug/trace
@@ -390,6 +383,7 @@ done
 
 ########################  HAPROXY
 
+_echot "------------------  ${S_SERVICE[proxy]} conf"
 file=/etc/haproxy/conf-available/50-backs-80
 _lxc_exec ${S_SERVICE[proxy]} "sed -i '/^backend\s*${_APA_DOM_FQDN}$/,/balance/ s|^\(\s*\)server|\1#server|' ${file}"
 _lxc_exec ${S_SERVICE[proxy]} "sed -i '/^backend\s*${_APA_DOM_FQDN}$/,/balance/ s|#server *wap-${_HPX_CT_NAME}|server wap-${_HPX_CT_NAME}|' ${file}"
