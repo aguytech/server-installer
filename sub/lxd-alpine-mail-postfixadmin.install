@@ -131,7 +131,7 @@ file=/etc/apache2/sites/${_APA_SUB}.conf
 _lxc_exec ${_CT_ADMIN} "[ -e '${file}' ] && mv ${file} ${file}.${_SDATE}"
 _eval lxc file push -q ${fc_pfa_apache} ${_CT_ADMIN}${file}
 _lxc_var_replace ${_CT_ADMIN} ${file} apache
-_lxc_exec ${_CT_ADMIN} "sed -i 's|/${_APA_DOM_ADMIN}/${_APA_SUB}|/${_APA_DOM_ADMIN}/${_APA_SUB}/public|' ${file}"
+_lxc_exec ${_CT_ADMIN} "sed -i 's|${S_VM_PATH_SHARE}/www/${_APA_SUB}|${S_VM_PATH_SHARE}/www/${_APA_SUB}/public|' ${file}"
 
 _echot "------------------  apache2 restart"
 _lxc_exec ${_CT_ADMIN} "chown 0:0 -R /etc/apache2; chown apache.apache -R ${_APA_PATH_DOM}"
