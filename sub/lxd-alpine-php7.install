@@ -40,7 +40,7 @@ fc_logrotate_host=${S_PATH_INSTALL_CONF}/logrotate/host-phpfpm${_PHP_VER}
 _echot "------------------ required files"
 _require ${fc_php_ini} ${fc_php_fpm_conf} ${fc_php_fpmd_www} ${fc_php_fpmd_admin} ${fc_php_xdebug}
 _require ${fc_apache_phpfpm} ${fc_apache_monitor} ${fc_apache_opcache} ${fc_apache_index}
-_require ${fc_rsyslog_host} ${fc_rsyslog_client} ${fc_logrotate_host}
+_require ${fc_rsyslog_client} ${fc_rsyslog_host} ${fc_logrotate_client} ${fc_logrotate_host}
 
 ########################  DATA
 
@@ -203,7 +203,7 @@ _lxc_exec ${_CT_NAME} "apk add php${_PHP_VER}-fpm ${php_modules}"
 
 _echot "------------------  service set & start"
 _lxc_exec ${_CT_NAME} "rc-update add ${_PHP_SERVICE}"
-_lxc_exec ${_CT_NAME} "rc-service ${_PHP_SERVICE} start"
+_lxc_exec_T ${_CT_NAME} "rc-service ${_PHP_SERVICE} start"
 
 ########################  PATHS
 
@@ -216,14 +216,14 @@ _lxc_exec ${_CT_NAME} "${cmd}"
 
 _echot "------------------  conf php.ini"
 file=${path_php_base}/php.ini
-_lxc_exec_T ${_CT_NAME} "cp -a ${file} ${file}.${_SDATE}"
+_lxc_exec ${_CT_NAME} "cp -a ${file} ${file}.${_SDATE}"
 _eval lxc file push -q ${fc_php_ini} ${_CT_NAME}${file}
 
 ########################  CONF PHP-FPM
 
 _echot "------------------  conf php.fpm"
 file=${path_php_base}/php-fpm.conf
-_lxc_exec_T ${_CT_NAME} "cp -a ${file} ${file}.${_SDATE}"
+_lxc_exec ${_CT_NAME} "cp -a ${file} ${file}.${_SDATE}"
 _eval lxc file push -q ${fc_php_fpm_conf} ${_CT_NAME}${file}
 
 ########################  POOL - WWW
@@ -235,7 +235,7 @@ _lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
 
 _echot "------------------  conf pool ${pool}"
 file=${path_fpm_confd}/www.conf
-_lxc_exec_T ${_CT_NAME} "[ -f '${file}' ] && cp -a ${file} ${file}.${_SDATE}"
+_lxc_exec ${_CT_NAME} "[ -f '${file}' ] && cp -a ${file} ${file}.${_SDATE}"
 _eval lxc file push -q ${fc_php_fpmd_www} ${_CT_NAME}${file}
 
 ########################  POOL - WWW-ADMIN
@@ -247,7 +247,7 @@ _lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
 
 _echot "------------------  conf pool ${pool}"
 file=${path_fpm_confd}/admin.conf
-_lxc_exec_T ${_CT_NAME} "[ -f '${file}' ] && cp -a ${file} ${file}.${_SDATE}"
+_lxc_exec ${_CT_NAME} "[ -f '${file}' ] && cp -a ${file} ${file}.${_SDATE}"
 _eval lxc file push -q ${fc_php_fpmd_admin} ${_CT_NAME}${file}
 
 ########################  APACHE
@@ -258,7 +258,7 @@ _eval lxc file push -q ${fc_apache_phpfpm} ${_CT_NAME}${file}
 
 _echot "------------------  apache httpd"
 file=/etc/apache2/httpd.conf
-_lxc_exec_T ${_CT_NAME} "sed -i 's|^\(\s*DirectoryIndex \).*$|\1index.html index.php|' ${file}"
+_lxc_exec ${_CT_NAME} "sed -i 's|^\(\s*DirectoryIndex \).*$|\1index.html index.php|' ${file}"
 
 _echot "------------------  localhost files"
 file=${path_apache_confd}/${fc_apache_index##*/}
@@ -308,7 +308,7 @@ _lxc_var_replace ${_CT_NAME} ${path_apache_confd} apache php2
 
 _echot "------------------  ${_PHP_SERVICE} restart"
 _lxc_exec ${_CT_NAME} "chown -R 0:0 ${path_php_base}"
-_lxc_exec ${_CT_NAME} "rc-service ${_PHP_SERVICE} restart"
+_lxc_exec_T ${_CT_NAME} "rc-service ${_PHP_SERVICE} restart"
 
 _echot "------------------  apache2 restart"
 _lxc_exec ${_CT_NAME} "chown -R 0:0 /etc/apache2"
