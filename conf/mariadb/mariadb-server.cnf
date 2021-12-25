@@ -36,7 +36,8 @@
 port=S_DB_MARIA_PORT_RW
 skip-networking = 0
 bind-address = 0.0.0.0
-#innodb_strict_mode=1 # certain InnoDB warnings become errors instead
+innodb_strict_mode = 1 # certain InnoDB warnings become errors instead
+innodb_read_only_compressed = 0
 
 max_connections = 100
 max_allowed_packet = 128M
