@@ -158,7 +158,7 @@ lxc list -f csv -c n status=Stopped | grep -q ^${_CT_NAME}$ && _eval lxc start $
 
 file=$(_lxc_exec ${_CT_NAME} find /etc/php* -name www.conf)
 _lxc_exec ${_CT_NAME} "sed -i '/php_admin_value.session.gc_maxlifetime/d' ${file}"
-_lxc_exec ${_CT_NAME} "echo 'php_admin_value[session.gc_maxlifetime] = 14400' > ${file}"
+_lxc_exec ${_CT_NAME} "echo 'php_admin_value[session.gc_maxlifetime] = 14400' >> ${file}"
 
 #############  WWW
 
@@ -193,6 +193,7 @@ _lxc_exec ${_CT_NAME} "echo '<html><body><h1><?php echo \"php ${_APA_DOM_ADMIN} 
 _echot "------------------  ${domain} conf apache"
 file=${_APA_PATH_SITES}/${_APA_DOM_ADMIN}.conf
 _eval lxc file push -q ${fc_pma_site} ${_CT_NAME}${file}
+_lxc_var_replace ${_CT_NAME} ${file} apache
 
 #############  SITE APP
 
@@ -202,6 +203,7 @@ domain=${_APA_SUB}.${_APA_DOM_FQDN}
 _echot "------------------  ${domain} conf apache"
 file=${_APA_PATH_SITES}/${_PMA_DOM_SUB}.conf
 _eval lxc file push -q ${fc_pma_site} ${_CT_NAME}${file}
+_lxc_var_replace ${_CT_NAME} ${file} apache
 
 _echot "------------------  ${domain} file"
 path=${_APA_PATH_DOM}/${file_app%.tar.gz}
@@ -238,7 +240,6 @@ _evalr lxc file pull ${_CT_NAME}/${_APA_PATH_DOM}/${_PMA_DOM_SUB}/sql/create_tab
 #############  RESTART
 
 _echot "------------------  apache2 restart"
-_lxc_var_replace ${_CT_NAME} ${_APA_PATH_SITES} apache
 _lxc_exec ${_CT_NAME} chown 0:0 -R ${_APA_PATH_SITES}
 _lxc_exec ${_CT_NAME} chown apache:apache -R ${_APA_PATH_WWW} ${_APA_PATH_DOM} ${_PMA_APP_PATH_UP} ${_PMA_APP_PATH_DW}
 _lxc_exec_e ${_CT_NAME} "rc-service apache2 restart"
