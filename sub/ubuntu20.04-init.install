@@ -17,7 +17,7 @@ file_rsyslog_cron=${S_PATH_INSTALL_CONF}/rsyslog/cron.conf
 file_rsyslog_client_auth=${S_PATH_INSTALL_CONF}/rsyslog/client-auth.conf
 
 file_logrotate_server=${S_PATH_INSTALL_CONF}/logrotate/server
-file_logrotate_client_auth=${S_PATH_INSTALL_CONF}/logrotate/client-auth.conf
+file_logrotate_client_auth=${S_PATH_INSTALL_CONF}/logrotate/client-auth
 
 file_conf_vim=${S_PATH_SCRIPT_CONF}/.vimrc
 file_conf_tmux=${S_PATH_SCRIPT_CONF}/.tmux-server.conf
