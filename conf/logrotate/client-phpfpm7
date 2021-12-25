@@ -1,4 +1,3 @@
-S_PATH_LOG/php7/*.emerg
 S_PATH_LOG/php7/*.err
 S_PATH_LOG/php7/*.warning
 S_PATH_LOG/php7/*.info

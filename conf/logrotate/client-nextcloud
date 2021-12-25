@@ -1,9 +1,9 @@
-S_PATH_LOG/fail2ban/*.err
-S_PATH_LOG/fail2ban/*.warning
-S_PATH_LOG/fail2ban/*.notice
-S_PATH_LOG/fail2ban/*.info {
+S_PATH_LOG/nextcloud/*.err
+S_PATH_LOG/nextcloud/*.warning
+S_PATH_LOG/nextcloud/*.info
+S_PATH_LOG/nextcloud/*.notice {
 	daily
-	rotate 14
+	rotate 2
 	missingok
 	compress
 	delaycompress

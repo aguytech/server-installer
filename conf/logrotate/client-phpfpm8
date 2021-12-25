@@ -1,4 +1,3 @@
-S_PATH_LOG/php8/*.emerg
 S_PATH_LOG/php8/*.err
 S_PATH_LOG/php8/*.warning
 S_PATH_LOG/php8/*.info

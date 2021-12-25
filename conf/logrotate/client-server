@@ -1,5 +1,4 @@
 #S_PATH_LOG_INSTALL/*.log
-S_PATH_LOG/server/*.emerg
 S_PATH_LOG/server/*.err
 S_PATH_LOG/server/*.warning
 S_PATH_LOG/server/*.notice

@@ -1,4 +1,3 @@
-S_VM_PATH_LOG/fail2ban/*.emerg
 S_VM_PATH_LOG/fail2ban/*.err
 S_VM_PATH_LOG/fail2ban/*.warning
 S_VM_PATH_LOG/fail2ban/*.notice

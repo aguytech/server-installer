@@ -1,4 +1,3 @@
-S_VM_PATH_LOG/*.emerg
 S_VM_PATH_LOG/*.err
 S_VM_PATH_LOG/*.warning
 S_VM_PATH_LOG/*.notice

@@ -1,4 +1,3 @@
-S_VM_PATH_LOG/mysql/*.emerg
 S_VM_PATH_LOG/mysql/*.err
 S_VM_PATH_LOG/mysql/*.warn
 S_VM_PATH_LOG/mysql/*.notice

@@ -1,4 +1,3 @@
-S_PATH_LOG/iptables/*.emerg
 S_PATH_LOG/iptables/*.err
 S_PATH_LOG/iptables/*.warning
 S_PATH_LOG/iptables/*.notice

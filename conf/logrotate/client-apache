@@ -1,4 +1,3 @@
-S_PATH_LOG/apache2/*.emerg
 S_PATH_LOG/apache2/*.err
 S_PATH_LOG/apache2/*.warning
 S_PATH_LOG/apache2/*.info

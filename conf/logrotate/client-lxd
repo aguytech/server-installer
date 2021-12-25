@@ -1,4 +1,3 @@
-S_PATH_LOG/lxd/*.emerg
 S_PATH_LOG/lxd/*.err
 S_PATH_LOG/lxd/*.warning
 S_PATH_LOG/lxd/*.notice
