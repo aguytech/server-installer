@@ -72,10 +72,8 @@ if ! _lxc_exec ${_CT_NAME} "grep -q '#* *ADD DOVECOT$' /etc/postfix/main.cf"; th
 	_eval lxc file push -q ${fc_dovecot_main} ${_CT_NAME}${file}
 	_lxc_exec ${_CT_NAME} "cat ${file} >> /etc/postfix/main.cf"
 	_lxc_exec ${_CT_NAME} rm ${file}
+	_lxc_var_replace ${_CT_NAME} /etc/postfix mail
 fi
-
-_echot "------------------  conf var replace"
-_lxc_var_replace ${_CT_NAME} /etc/postfix mail
 
 ######################## DOVECOT
 
@@ -131,7 +129,7 @@ for file_from in ${fc_sieve_global} ${fc_sieve_spam} ${fc_sieve_ham}; do
 	_lxc_exec ${_CT_NAME} sievec ${file}
 done
 
-_echot "------------------  rights user vmail"
+_echot "------------------  rights user ${_MEL_VMAIL_USER}"
 _lxc_exec ${_CT_NAME}  chown ${_MEL_VMAIL_USER}:${_MEL_VMAIL_USER} -R ${_MEL_PATH_VMAIL} ${_MEL_PATH_SIEVE}
 _lxc_exec ${_CT_NAME}  chmod o-rwx -R ${_MEL_PATH_VMAIL} ${_MEL_PATH_SIEVE}
 
@@ -172,28 +170,28 @@ str=2
 _echoA "Verify the following content of the email received in ${str}s"
 _eval sleep ${str}
 _lxc_exec ${_CT_NAME} "ls -t1 ${_MEL_PATH_VMAIL}/mailboxes/${_MEL_DOM_FQDN}/tech/mail/new/*|head -1|xargs cat"
-[ -z "${_INSTALL_AUTO}" ] && _askno "valid to continue"
+[ -z "${_MEL_INSTALL_AUTO}" ] && _askno "valid to continue"
 
 _echot "------------------  test telnet 143"
 _echo telnet mx.${S_DOM_FQDN}:465 143
 _echo telnet ${S_SERVICE[mail]} 143
 _echoa "a login $user $pwd|b select INBOX | z logout"
 _echoa "ehlo root | mail from:root | rcpt to:${S_EMAIL_TECH} | data | message | . | quit"
-[ -z "${_INSTALL_AUTO}" ] && _askno "valid to continue"
+[ -z "${_MEL_INSTALL_AUTO}" ] && _askno "valid to continue"
 
 _echot "------------------  test starttls 993"
 _echoA "Use openssl to test STARTTLS certificate"
 _echoa "quit"
 _echo openssl s_client -connect mx.${S_DOM_FQDN}:993
 _echo openssl s_client -connect ${S_SERVICE[mail]}:993
-[ -z "${_INSTALL_AUTO}" ] && _askno "valid to continue"
+[ -z "${_MEL_INSTALL_AUTO}" ] && _askno "valid to continue"
 
 _echot "------------------  test openssl 143"
 _echoA "Use openssl to test SSL certificate"
 _echo "quit"
 _echo openssl s_client -starttls imap -connect mx.${S_DOM_FQDN}:143
 _echo openssl s_client -starttls imap -connect ${S_SERVICE[mail]}:993
-[ -z "${_INSTALL_AUTO}" ] && _askno "valid to continue"
+[ -z "${_MEL_INSTALL_AUTO}" ] && _askno "valid to continue"
 
 ########################  END
 

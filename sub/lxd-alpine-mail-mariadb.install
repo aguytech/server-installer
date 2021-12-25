@@ -9,7 +9,7 @@ grep -q "^# ${_PARTMAIL#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PARTMAIL}" >
 ########################  REQUIRED
 
 _echot "------------------ required vm"
-cts_maria=`lxc list -f csv -c n| grep '^mdb-'`
+cts_maria=$(lxc list -f csv -c n| grep '^mdb-')
 [ -z "${cts_maria}" ] && _exite "Unable to find mariadb container"
 
 ########################  DATA

@@ -173,7 +173,7 @@ _lxc_exec_T ${_CT_NAME} "rc-service -S redis start"
 
 _echot "------------------  redis conf"
 file=/etc/${file_conf_redis##*/}
-_eval lxc file push -q ${file_conf_redis} ${_CT_NAME}${file}
+_eval lxc file push --uid 0 --gid 0 -q ${file_conf_redis} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} redis
 _lxc_exec_T ${_CT_NAME} "chmod 644 ${file}"
 _lxc_exec_T ${_CT_NAME} "cp -a ${file} ${file}.keep"
@@ -189,14 +189,14 @@ _lxc_exec ${_CT_NAME} "sed -i '/command_user:/ s|redis|root|g'  ${file}"
 
 _echot "------------------  sentinel conf"
 file=/etc/sentinel.conf
-_eval lxc file push -q ${file_conf_sentinel} ${_CT_NAME}${file}
+_eval lxc file push --uid 0 --gid 0 -q ${file_conf_sentinel} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} redis
 _lxc_exec_T ${_CT_NAME} "chmod 644 ${file}"
 _lxc_exec_T ${_CT_NAME} "cp -a ${file} ${file}.keep"
 
 _echot "------------------  sentinel notify"
 file=${_RDS_PATH_LIB}/${file_conf_sentinel_notify##*/}
-_eval lxc file push -q ${file_conf_sentinel_notify} ${_CT_NAME}${file}
+_eval lxc file push --uid 0 --gid 0 -q ${file_conf_sentinel_notify} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} redis
 _lxc_exec ${_CT_NAME} "chown redis:redis ${file} && chmod 550 ${file}"
 
@@ -209,7 +209,7 @@ _lxc_exec ${S_SERVICE[log]} "[ -d ${path} ] || mkdir -p ${path}"
 
 _echot "------------------  ${S_SERVICE[log]} host-redis"
 file=/etc/rsyslog.d/${file_rsyslog_host##*/}
-_eval lxc file push -q ${file_rsyslog_host} ${S_SERVICE[log]}${file}
+_eval lxc file push --uid 0 --gid 0 -q ${file_rsyslog_host} ${S_SERVICE[log]}${file}
 _lxc_var_replace ${S_SERVICE[log]} ${file} rsyslog
 
 _echot "------------------  restart rsyslog ${S_SERVICE[log]}"
@@ -222,7 +222,7 @@ _lxc_exec ${_CT_NAME} "[ -f ${path}/redis.log ]  && rm ${path}/redis.log"
 
 _echot "------------------  ${_CT_NAME} client-redis"
 file=/etc/rsyslog.d/${file_rsyslog_client##*/}
-_eval lxc file push -q ${file_rsyslog_client} ${_CT_NAME}${file}
+_eval lxc file push --uid 0 --gid 0 -q ${file_rsyslog_client} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} rsyslog
 
 _echot "------------------  ${_CT_NAME} rsyslog restart"
@@ -232,7 +232,7 @@ _lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
 
 _echot "------------------  ${S_SERVICE[log]} logrotate"
 file=/etc/logrotate.d/${file_logrotate_host##*/}
-_eval lxc file push -q ${file_logrotate_host} ${S_SERVICE[log]}${file}
+_eval lxc file push --uid 0 --gid 0 -q ${file_logrotate_host} ${S_SERVICE[log]}${file}
 _lxc_var_replace ${S_SERVICE[log]} ${file} logrotate
 _lxc_exec ${S_SERVICE[log]} "chmod g-w,o= /etc/logrotate.d/*"
 
@@ -241,7 +241,7 @@ _lxc_exec ${S_SERVICE[log]} "rc-service crond restart"
 
 _echot "------------------  ${_CT_NAME} logrotate"
 file=/etc/logrotate.d/${file_logrotate_client##*/}
-_eval lxc file push -q ${file_logrotate_client} ${_CT_NAME}${file}
+_eval lxc file push --uid 0 --gid 0 -q ${file_logrotate_client} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} logrotate
 _lxc_exec ${_CT_NAME} "chmod g-w,o= /etc/logrotate.d/*"
 
@@ -279,7 +279,7 @@ ct_proxy=${S_SERVICE[proxy]}
 _echot "------------------  haproxy conf"
 path=/etc/haproxy
 for file in ${file_conf_ha_front} ${file_conf_ha_back}; do
-	_eval lxc file push -q ${file} ${ct_proxy}${path}/conf-available/${file##*/}
+	_eval lxc file push --uid 0 --gid 0 -q ${file} ${ct_proxy}${path}/conf-available/${file##*/}
 	file=${file##*/}
 	_lxc_exec ${ct_proxy} "[ -h ${path}/conf-enabled/${file} ] || ln -s ${path}/conf-available/${file}  ${path}/conf-enabled/${file}"
 done

@@ -26,7 +26,7 @@ fc_php_fpmd_www=${S_PATH_INSTALL_CONF}/php/php-fpm.d/www${_PHP_VER}.conf
 fc_php_fpmd_admin=${S_PATH_INSTALL_CONF}/php/php-fpm.d/admin${_PHP_VER}.conf
 fc_php_xdebug=${S_PATH_INSTALL_CONF}/php/xdebug${_PHP_VER}.ini
 
-fc_apache_phpfpm=${S_PATH_INSTALL_CONF}/apache2/php${_PHP_VER}-fpm.conf
+fc_apache_phpfpm=${S_PATH_INSTALL_CONF}/apache2/php-fpm${_PHP_VER}.conf
 fc_apache_monitor=${S_PATH_INSTALL_CONF}/apache2/monitor-php.conf
 fc_apache_opcache=${S_PATH_INSTALL_CONF}/apache2/opcache.conf
 fc_apache_index=${S_PATH_INSTALL_CONF}/apache2/sites/index.php
@@ -307,15 +307,13 @@ _lxc_var_replace ${_CT_NAME} ${path_php_base} php php2
 _lxc_var_replace ${_CT_NAME} ${path_apache_confd} apache php2
 
 _echot "------------------  ${_PHP_SERVICE} restart"
+_lxc_exec ${_CT_NAME} "chown -R 0:0 ${path_php_base}"
 _lxc_exec ${_CT_NAME} "rc-service ${_PHP_SERVICE} restart"
 
 _echot "------------------  apache2 restart"
-_lxc_exec ${_CT_NAME} "rc-service apache2 restart"
-
-########################  RIGHTS
-
-_echot "------------------  rights"
+_lxc_exec ${_CT_NAME} "chown -R 0:0 /etc/apache2"
 _lxc_exec ${_CT_NAME} "chown apache:apache -R ${_APA_PATH_WWW} ${_APA_PATH_DOM} ${_PHP_PATH_SHARE}"
+_lxc_exec ${_CT_NAME} "rc-service apache2 restart"
 
 ########################  RSYSLOG
 
@@ -325,7 +323,7 @@ _lxc_exec ${S_SERVICE[log]} "[ -d ${path} ] || mkdir -p ${path}"
 
 _echot "------------------  ${S_SERVICE[log]} host"
 file=/etc/rsyslog.d/${fc_rsyslog_host##*/}
-_eval lxc file push -q ${fc_rsyslog_host} ${S_SERVICE[log]}${file}
+_eval lxc file push --uid 0 --gid 0 -q ${fc_rsyslog_host} ${S_SERVICE[log]}${file}
 _lxc_var_replace ${S_SERVICE[log]} ${file} rsyslog php2
 
 _echot "------------------  rsyslog restart ${S_SERVICE[log]}"
@@ -337,7 +335,7 @@ _lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
 
 _echot "------------------  ${_CT_NAME} client"
 file=/etc/rsyslog.d/${fc_rsyslog_client##*/}
-_eval lxc file push -q ${fc_rsyslog_client} ${_CT_NAME}${file}
+_eval lxc file push --uid 0 --gid 0 -q ${fc_rsyslog_client} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} rsyslog php2
 
 _echot "------------------  rsyslog restart ${_CT_NAME}"
@@ -347,7 +345,7 @@ _lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
 
 _echot "------------------  ${S_SERVICE[log]} logrotate"
 file=/etc/logrotate.d/${fc_logrotate_host##*/}
-_eval lxc file push -q ${fc_logrotate_host} ${S_SERVICE[log]}${file}
+_eval lxc file push --uid 0 --gid 0 -q ${fc_logrotate_host} ${S_SERVICE[log]}${file}
 _lxc_var_replace ${S_SERVICE[log]} ${file} logrotate
 _lxc_exec ${S_SERVICE[log]} "chmod g-w,o= /etc/logrotate.d/*"
 
@@ -356,7 +354,7 @@ _lxc_exec ${S_SERVICE[log]} "rc-service crond restart"
 
 _echot "------------------  ${_CT_NAME} logrotate"
 file=/etc/logrotate.d/${fc_logrotate_client##*/}
-_eval lxc file push -q ${fc_logrotate_client} ${_CT_NAME}${file}
+_eval lxc file push --uid 0 --gid 0 -q ${fc_logrotate_client} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} logrotate
 _lxc_exec ${_CT_NAME} "chmod g-w,o= /etc/logrotate.d/*"
 

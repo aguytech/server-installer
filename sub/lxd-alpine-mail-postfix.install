@@ -113,7 +113,7 @@ _lxc_exec_e ${_CT_NAME} postconf mynetworks
 _echot "------------------  services enabled"
 _echoA "Verify enabled smtp services"
 _lxc_exec ${_CT_NAME} "grep 'submission\|smtp' /etc/services"
-[ -z "${_INSTALL_AUTO}" ] && _askno "valid to continue"
+[ -z "${_MEL_INSTALL_AUTO}" ] && _askno "valid to continue"
 
 queries=$(_lxc_exec ${_CT_NAME} "sed -n 's|^[^#].* \(mysql:.*\)$|\1|p' /etc/postfix/main.cf")
 queries+=" $(_lxc_exec ${_CT_NAME} "sed -n 's|^[^#].*proxy:\(mysql:.*\)$|\1|p' /etc/postfix/main.cf")"
@@ -130,7 +130,7 @@ for query in ${queries}; do
 	_echo "- ${query}"
 	_lxc_exec ${_CT_NAME} postmap -q ${S_EMAIL_TECH} ${query}
 done
-[ -z "${_INSTALL_AUTO}" ] && _askno "valid to continue"
+[ -z "${_MEL_INSTALL_AUTO}" ] && _askno "valid to continue"
 
 _echot "------------------  test mail"
 #_lxc_exec ${_CT_NAME} "echo first message | mail -s test root" # with mailx
@@ -139,26 +139,26 @@ str=2
 _echoA "Verify the following content of the email received in ${str}s"
 _eval sleep ${str}
 _lxc_exec ${_CT_NAME} "ls -t1 ${_MEL_PATH_LOCAL}/${_MEL_DOM_FQDN}/tech/new/*|head -1|xargs cat"
-[ -z "${_INSTALL_AUTO}" ] && _askno "valid to continue"
+[ -z "${_MEL_INSTALL_AUTO}" ] && _askno "valid to continue"
 
 _echot "------------------  test telnet 25"
 _echoa Use telnet to send a mail
 _echo telnet mx.${S_DOM_FQDN}:465 25
 _echo telnet ${S_SERVICE[mail]} 25
 _echoa "ehlo root|mail from:root|rcpt to:${S_EMAIL_TECH}|data|message|.|quit"
-[ -z "${_INSTALL_AUTO}" ] && _askno "valid to continue"
+[ -z "${_MEL_INSTALL_AUTO}" ] && _askno "valid to continue"
 
 _echot "------------------  test ssl 587"
 _echoa "Use openssl to test SSL certificate | quit"
 _echo openssl s_client -starttls smtp -connect mx.${S_DOM_FQDN}:587
 _echo openssl s_client -starttls smtp -connect ${S_SERVICE[mail]}:587
-[ -z "${_INSTALL_AUTO}" ] && _askno "valid to continue"
+[ -z "${_MEL_INSTALL_AUTO}" ] && _askno "valid to continue"
 
 _echot "------------------  test openssl 465"
 _echoa "Use openssl to test STARTTLS certificate | quit"
 _echo openssl s_client -connect mx.${S_DOM_FQDN}:465
 _echo openssl s_client -connect ${S_SERVICE[mail]}:465
-[ -z "${_INSTALL_AUTO}" ] && _askno "valid to continue"
+[ -z "${_MEL_INSTALL_AUTO}" ] && _askno "valid to continue"
 
 ########################  END
 

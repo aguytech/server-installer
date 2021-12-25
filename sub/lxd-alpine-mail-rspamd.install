@@ -103,14 +103,13 @@ done
 
 _echot "------------------  DNS dkim"
 _echoA "Use the content of ${file_pubkeys} to fill DNS domains"
-[ -z "${_INSTALL_AUTO}" ] && _askno "Valid to continue"
+[ -z "${_MEL_INSTALL_AUTO}" ] && _askno "Valid to continue"
 
 ########################  TEST
 
 _echot "------------------  rspamd restart"
 _lxc_exec ${_CT_NAME} chown -R 0.0 /etc/rspamd
 _lxc_exec_e ${_CT_NAME} rc-service rspamd restart
-
 
 ######################## POSTFIX
 # http://www.postfix.org/MILTER_README.html
@@ -121,17 +120,17 @@ if ! _lxc_exec ${_CT_NAME} "grep -q '#* *ADD RSPAMD$' /etc/postfix/main.cf"; the
 	_eval lxc file push -q ${fc_main_rspamd} ${_CT_NAME}${file}
 	_lxc_exec ${_CT_NAME} "cat ${file} >> /etc/postfix/main.cf"
 	_lxc_exec ${_CT_NAME} rm ${file}
+
+	_echot "------------------  conf var replace"
+	_lxc_var_replace ${_CT_NAME} /etc/postfix rspamd
+
+	_echot "------------------  postfix restart"
+	_lxc_exec ${_CT_NAME} chown -R 0.0 /etc/postfix
+	_lxc_exec_e ${_CT_NAME} rc-service postfix restart
+
+	_echot "------------------  test postfix"
+	[ -z "${_MEL_INSTALL_AUTO}" ] && _askno "Verify the postfix starting and valid to continue"
 fi
-
-_echot "------------------  conf var replace"
-_lxc_var_replace ${_CT_NAME} /etc/postfix rspamd
-
-_echot "------------------  postfix restart"
-_lxc_exec ${_CT_NAME} chown -R 0.0 /etc/postfix
-_lxc_exec_e ${_CT_NAME} rc-service postfix restart
-
-_echot "------------------  test postfix"
-[ -z "${_INSTALL_AUTO}" ] && _askno "Verify the postfix starting and valid to continue"
 
 ########################  SHOW
 

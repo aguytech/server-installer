@@ -99,7 +99,7 @@ fi
 _echot "------------------  ${_CT_NAME} conf"
 file=${_MDB_PATH_CONF}/${fc_mdb_ms_master##*/}
 _lxc_exec ${_CT_NAME} "[ -f ${file} ] && cp -a ${file} ${file}.${_SDATE}"
-_eval lxc file push -q ${fc_mdb_ms_master} ${_CT_NAME}${file}
+_eval lxc file push --uid 0 --gid 0 -q ${fc_mdb_ms_master} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} mariadb
 
 if [ "${_MDB_MS_DB_DO}" ]; then
@@ -135,7 +135,7 @@ master_file=$(mysql -s -h${_CT_NAME} -uroothost -p${_MDB_MS_PWD_HOST} -e "SHOW M
 master_pos=$(mysql -s -h${_CT_NAME} -uroothost -p${_MDB_MS_PWD_HOST} -e "SHOW MASTER STATUS;"|tail -n1|cut -f2)
 
 _echot "------------------  ${_CT_NAME} backup"
-[ -z "${_INSTALL_AUTO}" ] && _askno "Backup data from master & valid to continue"
+[ -z "${_MDB_MS_INSTALL_AUTO}" ] && _askno "Backup data from master & valid to continue"
 
 _echot "------------------  ${_CT_NAME} unlock"
 _eval "mysql -h${_CT_NAME} -uroothost -p${_MDB_MS_PWD_HOST} -e \"UNLOCK TABLES;\""
@@ -155,12 +155,12 @@ for _CT_NAME in ${_MDB_MS_CT_SLAVES}; do
 	fi
 
 	_echot "------------------  ${_CT_NAME} restore"
-	[ -z "${_INSTALL_AUTO}" ] && _askno "Restore backuped data from master to slave & continue"
+	[ -z "${_MDB_MS_INSTALL_AUTO}" ] && _askno "Restore backuped data from master to slave & continue"
 
 	_echot "------------------  ${_CT_NAME} conf"
 	file=${_MDB_PATH_CONF}/${fc_mdb_ms_slave##*/}
 	_lxc_exec ${_CT_NAME} "[ -f ${file} ] && cp -a ${file} ${file}.${_SDATE}"
-	_eval lxc file push -q ${fc_mdb_ms_slave} ${_CT_NAME}${file}
+	_eval lxc file push --uid 0 --gid 0 -q ${fc_mdb_ms_slave} ${_CT_NAME}${file}
 	_lxc_var_replace ${_CT_NAME} ${file} mariadb
 
 	if [ "${_MDB_MS_DB_DO}" ]; then
@@ -207,7 +207,7 @@ ct_proxy=${S_SERVICE[proxy]}
 _echot "------------------  haproxy conf"
 path=/etc/haproxy
 for file in ${fc_mdb_ms_ha_front} ${fc_mdb_ms_ha_back}; do
-	_eval lxc file push -q ${file} ${ct_proxy}${path}/conf-available/${file##*/}
+	_eval lxc file push --uid 0 --gid 0 -q ${file} ${ct_proxy}${path}/conf-available/${file##*/}
 	file=${file##*/}
 	_lxc_exec ${ct_proxy} "[ -h ${path}/conf-enabled/${file} ] || ln -s ${path}/conf-available/${file}  ${path}/conf-enabled/${file}"
 done

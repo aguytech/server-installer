@@ -39,8 +39,8 @@ _echot "------------------  data domain"
 cts_www=`lxc list -f json | jq -r '.[] | select(.profiles | any(contains("www-"))).name'`
 [ "${cts_www}" ] || _exite "Unable to find a container with a www* profile"
 
-[ -z ${_SERVER_DEFAULT+x} ] && { _menu "Select one available container for www default server" ${cts_www}
-	_SERVER_DEFAULT=${_ANSWER}; }
+[ -z ${_HPX_CT_WWW+x} ] && { _menu "Select one available container for www default server" ${cts_www}
+	_HPX_CT_WWW=${_ANSWER}; }
 
 _echot "------------------  data"
 
@@ -231,8 +231,8 @@ if ! _lxc_exec ${_CT_NAME}  "[ -f '${_HPX_SSL_CA_KEY}' -a -f '${_HPX_SSL_CA_PEM}
 	_lxc_exec ${_CT_NAME} openssl req -x509 -new -nodes -key ${_HPX_SSL_CA_KEY} -sha256 -days 3650 -out ${_HPX_SSL_CA_PEM} -config ${file_ssl_conf}
 
 	_echot "------------------  openssl rights"
-	_lxc_exec ${_CT_NAME} chown 0:0 -R ${_HPX_PATH_SSL}
-	_lxc_exec ${_CT_NAME} chmod g=,o= -R ${path_ssl_private}
+	_lxc_exec ${_CT_NAME} chown -R 0:0 ${_HPX_PATH_SSL}
+	_lxc_exec ${_CT_NAME} chmod -R g=,o= ${path_ssl_private}
 fi
 
 if [ "${_HPX_CERTBOT_ON}" ]; then
@@ -255,7 +255,7 @@ if [ "${_HPX_CERTBOT_ON}" ]; then
 
 	_echot "------------------  copy certbot"
 	_echoA "To renew existing certificates, delete them"
-	[ -z "${_INSTALL_AUTO}" ] && _askno "Valid to continue"
+	[ -z "${_HPX_INSTALL_AUTO}" ] && _askno "Valid to continue"
 
 	for domain in ${S_DOM_ALL_FQDN}; do
 		if ! _lxc_exec ${_CT_NAME} "[ -d /etc/letsencrypt/live/${domain} ]"; then
@@ -318,8 +318,8 @@ else
 fi
 
 _echot "------------------  haproxy rights"
-_lxc_exec ${_CT_NAME} "chown 0:0 -R ${_HPX_PATH_SSL}
-chmod g=,o= -R ${path_ssl_private} ${path_ssl_haproxy}"
+_lxc_exec ${_CT_NAME} "chown -R 0:0 ${_HPX_PATH_SSL}
+chmod -R g=,o= ${path_ssl_private} ${path_ssl_haproxy}"
 
 ########################  SSL
 

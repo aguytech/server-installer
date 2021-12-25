@@ -146,7 +146,7 @@ _lxc_exec ${S_SERVICE[log]} "[ -d ${path} ] || mkdir -p ${path}"
 
 _echot "------------------  ${S_SERVICE[log]} host"
 file=/etc/rsyslog.d/${fc_mail_rsyslog_host##*/}
-_eval lxc file push -q ${fc_mail_rsyslog_host} ${S_SERVICE[log]}${file}
+_eval lxc file push --uid 0 --gid 0 -q ${fc_mail_rsyslog_host} ${S_SERVICE[log]}${file}
 _lxc_var_replace ${S_SERVICE[log]} ${file} rsyslog
 
 _echot "------------------  rsyslog restart ${S_SERVICE[log]}"
@@ -160,7 +160,7 @@ _lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
 
 _echot "------------------  ${_CT_NAME} client"
 file=/etc/rsyslog.d/${fc_mail_rsyslog_client##*/}
-_eval lxc file push -q ${fc_mail_rsyslog_client} ${_CT_NAME}${file}
+_eval lxc file push --uid 0 --gid 0 -q ${fc_mail_rsyslog_client} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} rsyslog
 
 _echot "------------------  rsyslog restart ${_CT_NAME}"
@@ -170,7 +170,7 @@ _lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
 
 _echot "------------------  ${S_SERVICE[log]} logrotate"
 file=/etc/logrotate.d/${fc_mail_logrotate_host##*/}
-_eval lxc file push -q ${fc_mail_logrotate_host} ${S_SERVICE[log]}${file}
+_eval lxc file push --uid 0 --gid 0 -q ${fc_mail_logrotate_host} ${S_SERVICE[log]}${file}
 _lxc_var_replace ${S_SERVICE[log]} ${file} logrotate
 _lxc_exec ${S_SERVICE[log]} "chmod g-w,o= /etc/logrotate.d/*"
 
@@ -180,7 +180,7 @@ _lxc_exec ${S_SERVICE[log]} "rc-service crond restart"
 
 _echot "------------------  ${_CT_NAME} logrotate"
 file=/etc/logrotate.d/${fc_mail_logrotate_client##*/}
-_eval lxc file push -q ${fc_mail_logrotate_client} ${_CT_NAME}${file}
+_eval lxc file push --uid 0 --gid 0 -q ${fc_mail_logrotate_client} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} logrotate
 _lxc_exec ${_CT_NAME} "chmod g-w,o= /etc/logrotate.d/*"
 
@@ -207,7 +207,7 @@ _echoa "Verify the configuration of your DNS server about MAIL"
 _echot "------------------  reverse DNS conf"
 _echoa "Verify that the reverse DNS of your machine: ${_IPTHIS} is set to:"
 _echo "mail.${S_DOM_FQDN}"
-[ -z "${_INSTALL_AUTO}" ] && _askno "Valid to continue"
+[ -z "${_MEL_INSTALL_AUTO}" ] && _askno "Valid to continue"
 
 
 _echot "------------------  firewall conf"
@@ -216,7 +216,7 @@ if [ -f "${file}" ]; then
 	_echoA "Verify that the following ports are corrects for mails:"
 	_echo "$(sed -n 's|^_PORTS_MAIL="\(.*\)"$|\1|p' ${file})"
 	_echoa "If not, open the file: '${file}' and adjust settings"
-	[ -z "${_INSTALL_AUTO}" ] && _askno "Valid to continue"
+	[ -z "${_MEL_INSTALL_AUTO}" ] && _askno "Valid to continue"
 else
 	_echow "Unable to find file: ${file}\nPlease configure input mail ports in your firewall"
 fi

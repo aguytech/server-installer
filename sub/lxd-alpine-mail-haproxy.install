@@ -24,7 +24,7 @@ _require ${fc_ha_rspamd_front} ${fc_ha_rspamd_back}
 # _echot "------------------  haproxy conf"
 # path=/etc/haproxy
 # for file in ${fc_ha_mail_front} ${fc_ha_mail_back}; do
-# 	_eval lxc file push -q ${file} ${ct_proxy}${path}/conf-available/${file##*/}
+# 	_eval lxc file push --uid 0 --gid 0 -q ${file} ${ct_proxy}${path}/conf-available/${file##*/}
 # 	file=${file##*/}
 # 	_lxc_exec ${ct_proxy} "[ -h ${path}/conf-enabled/${file} ] || ln -s ${path}/conf-available/${file}  ${path}/conf-enabled/${file}"
 # done
@@ -40,7 +40,7 @@ ct_proxy=${S_SERVICE[proxy]}
 _echot "------------------  haproxy conf"
 path=/etc/haproxy
 for file in ${fc_ha_rspamd_front} ${fc_ha_rspamd_back}; do
-	_eval lxc file push -q ${file} ${ct_proxy}${path}/conf-available/${file##*/}
+	_eval lxc file push --uid 0 --gid 0 -q ${file} ${ct_proxy}${path}/conf-available/${file##*/}
 	file=${file##*/}
 	_lxc_exec ${ct_proxy} "[ -h ${path}/conf-enabled/${file} ] || ln -s ${path}/conf-available/${file}  ${path}/conf-enabled/${file}"
 done

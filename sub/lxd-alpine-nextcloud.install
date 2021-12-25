@@ -8,299 +8,420 @@ grep -q "^# ${_PART#++}$" ${S_FILE_INSTALL_CONF} || echo  "# ${_PART#++}" >> ${S
 ########################  REQUIRED
 
 _echot "------------------ required vm"
-img_all_www=`lxc image list -f csv -c l| grep '^wap-'`
+img_all_www=$(lxc image list -f csv -c l| grep '^wap-')
 [ "${img_all_www}" ] || _exite "Unable to find a 'www' image container"
 
-profiles_all_php=`lxc profile list -f csv|grep "^php.*,"|cut -d, -f1`
+profiles_all_php=$(lxc profile list -f csv|grep "^php.*,"|cut -d, -f1)
 [ -z "${profiles_all_php}" ] && _exite "Unable to find a conatiner with 'php' profile"
 
-cts_all_maria=`lxc list -f json | jq -r '.[] | select(.profiles | any(contains("mdb-"))).name'`
+profiles_all_www=$(lxc profile list -f csv|grep "^www-.*,"|cut -d, -f1)
+[ -z "${profiles_all_php}" ] && _exite "Unable to find a conatiner with 'php' profile"
+
+cts_all_maria=$(lxc list -f json | jq -r '.[] | select(.profiles | any(contains("mdb-"))).name')
 [ -z "${cts_all_maria}" ] && _exite "Unable to find a container with 'mariadb' profile"
 
+fc_nc_conf=${S_PATH_INSTALL_CONF}/php/nextcloud-config.php
+fc_nc_site=${S_PATH_INSTALL_CONF}/apache2/sites/sub.conf
 
-file_conf_nc=${S_PATH_INSTALL_CONF}/php/nextcloud-config.php
-file_conf_site=${S_PATH_INSTALL_CONF}/apache2/sites/sub-admin.conf
+fc_rsyslog_client=${S_PATH_INSTALL_CONF}/rsyslog/client-nextcloud.conf
+fc_rsyslog_host=${S_PATH_INSTALL_CONF}/rsyslog/host-nextcloud.conf
+fc_logrotate_client=${S_PATH_INSTALL_CONF}/logrotate/client-nextcloud
+fc_logrotate_host=${S_PATH_INSTALL_CONF}/logrotate/host-nextcloud
 
 _echot "------------------ required files"
-_require ${file_conf_nc} ${file_conf_site}
+_require ${fc_nc_conf} ${fc_nc_site}
 
 ########################  DATA
 
 _echot "------------------  data domain"
 
-anstmp=${S_DOM_FQDN} && _askno "Domain name to use (${anstmp})"
-_DOM_FQDN="${_ANSWER:-${anstmp}}"
+[ -z ${_NXC_DOM_FQDN+x} ] && { anstmp=${S_DOM_FQDN}; _askno "Domain name to use (${anstmp})"; _NXC_DOM_FQDN="${_ANSWER:-${anstmp}}"; }
 
-anstmp=cloud && _askno "Give the new subdomain for admin (${anstmp})"
-_APA_SUB="${_ANSWER:-${anstmp}}"
+[ -z ${_NXC_APA_SUB+x} ] && { anstmp=cloud; _askno "Give the subdomain (${anstmp})"; _NXC_APA_SUB="${_ANSWER:-${anstmp}}"; }
 
-anstmp=wap-${_APA_SUB}-${S_DOM_NAME//./-} && _askno "Base name of containers to build (${anstmp})"
-ct_base="${_ANSWER:-${anstmp}}"
+[ -z ${_NXC_CT_PROFILE+x} ] && { anstmp=nxc-${_NXC_DOM_FQDN}; _askno "Profile name (${anstmp})"; _NXC_CT_PROFILE="${_ANSWER:-${anstmp}}"; }
 
-anstmp=1 && _askno "Number of containers to build (${anstmp})"
-ct_num="${_ANSWER:-${anstmp}}"
+[ -z ${_NXC_CT_NAME+x} ] && { anstmp=wap-${_NXC_APA_SUB}-${_NXC_DOM_FQDN//./-}; _askno "Base name of containers to build (${anstmp})"; _NXC_CT_NAME="${_ANSWER:-${anstmp}}"; }
 
-profiles=`lxc profile list -f csv|grep "^cloud.*,"|cut -d, -f1`
-[ "${profiles}" ] && _menu "Select an available cloud profile to apply or none" none ${profiles} || _ANSWER=
-profile_cloud="${_ANSWER/none/}" && profile_cloud_exist=${profile_cloud}
-[ -z "${profile_cloud_exist}" ] && anstmp=cloud.${_DOM_FQDN} && _askno "Name of the new  cloud profile (${anstmp})" && profile_cloud="${_ANSWER:-${anstmp}}"
+[ -z ${_NXC_CT_NUM+x} ] && { anstmp=1; _askno "Number of containers to build (${anstmp})"; _NXC_CT_NUM="${_ANSWER:-${anstmp}}"; }
 
 _echot "------------------  data www"
 
-_menu "Select one available image container for www service" ${img_all_www}
-ct_www=${_ANSWER}
+[ -z ${_NXC_CT_WWW+x} ] && { _menu "Select one available image container to init for www service" ${img_all_www}; _NXC_CT_WWW=${_ANSWER}; }
 
-profiles=`lxc profile list -f csv|grep "^www.*,"|cut -d, -f1`
-[ "${profiles}" ] && _menu "Select an available www profile to apply or none" none ${profiles} || _ANSWER=
-profile_www="${_ANSWER/none/}" && profile_www_exist=${profile_www}
-[ -z "${profile_www_exist}" ] && anstmp=www-${_APA_SUB}.${_DOM_FQDN} && _askno "Name of the new  www profile (${anstmp})" && profile_www="${_ANSWER:-${anstmp}}"
+if [ -z ${_NXC_WWW_PROFILE+x} ]; then
+	profiles=$(lxc profile list -f csv|grep "^www.*,"|cut -d, -f1)
+	[ "${profiles}" ] && _menu "Select an available www profile to apply or none" none ${profiles} || _ANSWER=
+	_NXC_WWW_PROFILE="${_ANSWER/none/}"
+	[ -z "${_NXC_WWW_PROFILE}" ] && { anstmp=www-${_NXC_APA_SUB}.${_NXC_DOM_FQDN}; _askno "Name of the new  www profile (${anstmp})"; _NXC_WWW_PROFILE="${_ANSWER:-${anstmp}}"; }
+fi
 
-_echot "------------------  data php"
-
-_menu "Select an available PHP profile to apply or none" ${profiles_all_php} || _ANSWER=
-profile_php="${_ANSWER/none/}"
+[ -z ${_NXC_PHP_PROFILE+x} ] && { _menu "Select an available PHP profile to apply" ${profiles_all_php}; _NXC_PHP_PROFILE="${_ANSWER}"; }
 
 _echot "------------------  data mariadb"
 
-_menu "Select mariadb container to use" ${cts_all_maria}
-ct_maria=${_ANSWER}
+[ -z ${_NXC_CT_DBS+x} ] && { _menu "Select a mariadb container to use" ${cts_all_maria}; _NXC_CT_DBS=$(echo "${_ANSWER}"|sort -r|xargs); }
 
-ok=false; while ! ${ok}; do
-	_askno "Password for user: 'roothost' for '${ct_maria}'"
-	[ "${_ANSWER}" ] && mysql -s -h${ct_maria} -uroothost -p${_ANSWER} -e '' && ok=true || _echo "Unable to connect to: ${ct_maria}"
-done
-pwd_maria=${_ANSWER}
+if [ -z "${_MDB_PWD_HOST+x}" ]; then
+	# _MDB_PWD_HOST
+	ok=false; while ! ${ok}; do
+		_askno "Password for user: roothost"
+		ok=true
+		for ct_name in ${_NXC_CT_DBS}; do
+			mysql -s -h${ct_name} -uroothost -p${_MDB_PWD_HOST} -e '' || { _echoe "Unable to connect to: ${ct_name} with pwd: ${_ANSWER}"; ok=false; }
+		done
+	done
+	_MDB_PWD_HOST=${_ANSWER}
+else
+	# check password
+	for ct_name in ${_NXC_CT_DBS}; do
+		mysql -s -h${ct_name} -uroothost -p${_MDB_PWD_HOST} -e '' || _exite "Unable to connect to: ${ct_name} with pwd: ${_ANSWER}"
+	done
+fi
 
-# app_version & file_app
-ok=false; while ! ${ok}; do
-	anstmp=22.1.1 && _askno "version of Nextcloud to download (${anstmp})"
-	app_version="${_ANSWER:-${anstmp}}"
-	file_app=nextcloud-${app_version}.tar.bz2
+_echot "------------------  data file"
+
+if [ -z "${_NXC_APP_VERSION+x}" ]; then
+	ok=false; while ! ${ok}; do
+		anstmp="23.0.0" && _askno "version to download (${anstmp})"
+		_NXC_APP_VERSION="${_ANSWER:-${anstmp}}"
+		file_app=nextcloud-${_NXC_APP_VERSION}.tar.bz2
+		file_app_tmp=/tmp/${file_app}
+		uri=https://download.nextcloud.com/server/releases/${file_app}
+		if ! [ -f "${file_app_tmp}" ] || [ "$(ls -s ${file_app_tmp}|cut -d' ' -f1)" = 0 ]; then
+			_echot "------------------  wget ${file_app}"
+			wget -q ${uri} -O ${file_app_tmp} && ok=true || _echoe "Unable to get file: ${uri}"
+		else
+			ok=true
+		fi
+	done
+else
+	file_app=nextcloud-${_NXC_APP_VERSION}.tar.bz2
 	file_app_tmp=/tmp/${file_app}
 	uri=https://download.nextcloud.com/server/releases/${file_app}
-	if ! [ -f ${file_app_tmp} ] || [ `ls -s ${file_app_tmp}|cut -d' ' -f1` = 0 ]; then
+	if ! [ -f "${file_app_tmp}" ] || [ "$(ls -s ${file_app_tmp}|cut -d' ' -f1)" = 0 ]; then
 		_echot "------------------  wget ${file_app}"
-		wget -q ${uri} -O ${file_app_tmp} && ok=true || _echoe "Unable to get version: ${uri}"
-	else
-		ok=true
+		wget -q ${uri} -O ${file_app_tmp} || _exite "Unable to get file: ${uri}"
 	fi
-done
+fi
 
-_CT_NAME=${ct_base}-1
+_echot "------------------  data"
 
-_APP_URI=https://${_APA_SUB}.${_DOM_FQDN}
-_APP_DB_PORT=${S_DB_MARIA_PORT_RW}
-_APP_DB_NAME=nextcloud
-_APP_DB_USER=nextcloud
-_APP_DB_PWD=`_pwd`
-_APP_BLOWFISH=`_pwd32`
-_APP_PATH_UP=${S_VM_PATH_SHARE}/php/up
-_APP_PATH_DW=${S_VM_PATH_SHARE}/php/down
+[ -z ${_NXC_APP_USER+x} ] && _NXC_APP_USER=admin
+[ -z ${_NXC_APP_PWD+x} ] && _NXC_APP_PWD=$(_pwd)
+[ -z ${_NXC_APP_DB_NAME+x} ] && _NXC_APP_DB_NAME=nextcloud
+[ -z ${_NXC_APP_DB_USER+x} ] && _NXC_APP_DB_USER=nxc
+[ -z ${_NXC_APP_DB_PWD+x} ] && _NXC_APP_DB_PWD=$(_pwd)
+[ -z ${_NXC_PHP_SESSION_TIME+x} ] && { anstmp=14400; _askno "max session time for php (${anstmp})"; _NXC_PHP_SESSION_TIME="${_ANSWER:-${anstmp}}"; }
 
-_APP_DATA_DIR=${S_VM_PATH_SHARE}/cloud
+_CT_NAME=${_NXC_CT_NAME}-1
+_APA_DOM_FQDN="${_NXC_DOM_FQDN}"
+_APA_SUB="${_NXC_APA_SUB}"
+_APA_PATH_DOM=${S_VM_PATH_SHARE}/www
+_NXC_APP_DB_PORT=${S_DB_MARIA_PORT_RW}
+_NXC_APP_DATA_DIR=${S_VM_PATH_SHARE}/cloud
+php_service=$(rc-service -l|grep ^php-fpm)
+php_cli=$(ls /usr/bin|grep ^php)
+file_php_ini=$(find /etc -name php.ini)
+path_nxc=${file_app%.tar.bz2}
+occ=${_APA_PATH_DOM}/${path_nxc}/occ
 
-cts_php=`for i in $(seq 1 ${ct_num}); do echo ${ct_base}-${i}; done`
-path_sites=/etc/apache2/sites
-path_dom=${S_VM_PATH_SHARE}/www/${_APA_SUB}.${_DOM_FQDN}
+cts_php=$(for i in $(seq 1 ${_NXC_CT_NUM}); do echo ${_NXC_CT_NAME}-${i}; done)
+strpass=
 
+########################  CONFIGURATION
 
-########################  STORAGE
+# load configuration file
+. ${S_FILE_INSTALL_CONF}
 
-if [ -z "${profile_cloud_exist}" ]; then
+########################  STORAGE CLOUD
 
-	if [ "${_DEV_DRIVER}" = zfs ]; then
+name=cloud
+path_base=${S_HOST_PATH}/cloud
+path=${path_base}
 
-		name=cloud
+if [ "${_DEV_DRIVER}" = zfs ]; then
+	if ! zfs list ${_ZFS_ROOT}${S_HOST_PATH}|grep -q ^cloud; then
 		_echot "------------------  zfs ${name}"
-		path=${S_HOST_PATH}/${name}
-		path_zfs=${_ZFS_ROOT}${path}
+		path_zfs=${_ZFS_ROOT}${path_base}
 		opts="-o mountpoint=${path} -o compression=lz4 -o  acltype=posixacl"
 		_evalr zfs list ${path_zfs} >/dev/null 2>&1 || _evalr zfs create ${opts} ${path_zfs}
-
-		name=${_DOM_FQDN}
-		_echot "------------------  zfs ${name}"
-		path=${S_HOST_PATH}/cloud/${name}
-		path_zfs=${_ZFS_ROOT}${path}
-
-		# rename
-		if zfs list ${path_zfs} >/dev/null 2>&1; then
-		 	_echot "------------------  unmount  ${path_zfs}"
-		 	_evalr zfs unmount ${path_zfs} || _exite "Unable to unmount ${path_zfs}\nUnbind container using it"
-			_echot "------------------  zfs backup ${path_zfs} to ${path_zfs}.${_SDATE}"
-		 	_evalr zfs rename ${path_zfs} ${path_zfs}.${_SDATE}
-		 fi
-
-		_echot "------------------  zfs create ${path_zfs}"
-		_evalr zfs create -o mountpoint=${path} ${path_zfs}
-
-
-	elif [ "${_DEV_DRIVER}" = btrfs ]; then
-
-		name=cloud
+	fi
+elif [ "${_DEV_DRIVER}" = btrfs ]; then
+	if ! ls -1 ${S_HOST_PATH}|grep -q ^cloud; then
 		_echot "------------------  btrfs ${name}"
-		path=${S_HOST_PATH}/${name}
 		_evalr ls -1 ${path} >/dev/null 2>&1 || _evalr btrfs subvolume create ${path}
+	fi
+fi
 
-		name=${_DOM_FQDN}
-		_echot "------------------  btrfs ${name}"
-		# rename
-		path=${S_HOST_PATH}/cloud/${name}
-		if _evalr ls -1 ${path} >/dev/null 2>&1; then
-			_echot "------------------  mv ${path} to ${path}.${_SDATE}"
-		 	_evalr mv ${path} ${path}.${_SDATE}
-		 fi
+########################  STORAGE _NXC_DOM_FQDN
 
+path_host=${path_base}/${_NXC_DOM_FQDN}
+path=${path_host}
+
+if [ "${_DEV_DRIVER}" = zfs ]; then
+	path_zfs=${_ZFS_ROOT}${path_host}
+	# rename
+	if ! zfs list ${path_zfs} >/dev/null 2>&1; then
+		_echot "------------------  zfs create ${path_zfs}"
+	_evalr zfs create -o mountpoint=${path} ${path_zfs}
+	fi
+elif [ "${_DEV_DRIVER}" = btrfs ]; then
+	# rename
+	if ! _evalr ls -1 ${path} >/dev/null 2>&1; then
 		_echot "------------------  btrfs create ${path}"
 		_evalr btrfs subvolume create ${path}
-
-	else
-		_exite "This part have to be implemented"
 	fi
-
-	_echot "------------------  rights ${name}"
-	_evalr chown ${_LXD_UID}:${_LXD_UID} ${S_HOST_PATH}/cloud/${_DOM_FQDN}
-	_evalr setfacl -Rm u:${_LXD_UID}:rwx ${S_HOST_PATH}/cloud/${_DOM_FQDN}
-	_evalr setfacl -Rm d:u:${_LXD_UID}:rwx ${S_HOST_PATH}/cloud/${_DOM_FQDN}
+else
+	_exite "This part have to be implemented"
 fi
+
+_echot "------------------  rights zfs"
+_evalr chown ${_LXD_UID}:${_LXD_UID} ${path_host}
+_evalr setfacl -Rm u:${_LXD_ACL}:rwx ${path_host}
+_evalr setfacl -Rm d:u:${_LXD_ACL}:rwx ${path_host}
 
 ########################  PROFILE
 
-# www
-if [ -z "${profile_www_exist}" ]; then
-
-	profile=${profile_www}
+profile=${_NXC_CT_PROFILE}
+if ! lxc profile list -f csv|grep -q "^${profile},"; then
 	_echot "------------------  profile ${profile}"
-
 	lxc profile list -f csv|grep -q "^${profile}," && _eval lxc profile rename ${profile} ${profile}.${_SDATE}
 	_eval lxc profile create ${profile}
-
-	path=${S_HOST_PATH_SHARE}/www/${_APA_SUB}.${_DOM_FQDN}
-	path_ct=${path_dom}
+	path=${path_host}
+	path_ct=${_NXC_APP_DATA_DIR}
 	[ -d ${path} ] || _evalr mkdir -p ${path}
 	_eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
 fi
 
-if [ -z "${profile_cloud_exist}" ]; then
-
-	profile=${profile_cloud}
-	_echot "------------------  profile ${profile}"
-
-	lxc profile list -f csv|grep -q "^${profile}," && _eval lxc profile rename ${profile} ${profile}.${_SDATE}
+profile=${_NXC_WWW_PROFILE}
+if ! lxc profile list -f csv|grep -q "^${profile},"; then
+	_echot "------------------  profile create ${profile}"
 	_eval lxc profile create ${profile}
 
-	path=${S_HOST_PATH}/cloud/${_DOM_FQDN}
-	path_ct=${_APP_DATA_DIR}
+	path=${S_HOST_PATH_SHARE}/www/${_NXC_APA_SUB}.${_NXC_DOM_FQDN}
+	path_ct=${_APA_PATH_DOM}
 	[ -d ${path} ] || _evalr mkdir -p ${path}
+	_evalr chown -R ${_LXD_UID}:${_LXD_UID} ${path}
 	_eval lxc profile device add ${profile} ${profile} disk source=${path} path=${path_ct}
+else
+	_echot "------------------  existing profile ${profile}"
 fi
 
 ########################  INIT
 
 _echot "------------------  init"
-
 if lxc list -f csv -c n | grep -q ^${_CT_NAME}$; then
 	lxc list -f csv -c n status=Running| grep -q ^${_CT_NAME}$ && _eval lxc stop ${_CT_NAME}
 	_echot "------------------ rename ${_CT_NAME} -> ${_CT_NAME}-${_SDATE}"
 	_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
 fi
-_eval lxc init ${ct_www} ${_CT_NAME} -p default -p global -p ${profile_www}  -p ${profile_php} -p ${profile_cloud}
-
-#############  START
+_eval lxc init ${_NXC_CT_WWW} ${_CT_NAME} -p default -p global -p ${_NXC_WWW_PROFILE} -p ${_NXC_PHP_PROFILE} -p ${_NXC_CT_PROFILE}
 
 _echot "------------------  ${_CT_NAME} start"
 lxc list -f csv -c n status=Stopped | grep -q ^${_CT_NAME}$ && _eval lxc start ${_CT_NAME}
 
-#############  WWW
+########################  METADATA
 
-files=`_lxc_exec ${_CT_NAME} "ls ${path_sites}/*.conf"`
-_menua  "Select apache configuration to desactivate" ${files}
-for file in ${_ANSWER}; do
-	_lxc_exec ${_CT_NAME} "mv ${file} ${file}.keep"
-done
+_echot "------------------  metadata"
+_lxc_meta_set ${_CT_NAME} profiles default global ${_NXC_WWW_PROFILE} ${_NXC_PHP_PROFILE} ${_NXC_CT_PROFILE}
+_lxc_meta_add ${_CT_NAME} apps nextcloud
 
-#############  SITE APP
+#############  INSTALL
 
-_echoT "\n==========  php ${_CT_NAME}"
+_echot "------------------  php modules"
+#_lxc_exec ${_CT_NAME} "apk add sudo ${php_cli}-intl ${php_cli}-pecl-imagick"
+_lxc_exec ${_CT_NAME} "apk add sudo ${php_cli} ${php_cli}-intl ${php_cli}-pecl-imagick ${php_cli}-pcntl"
 
-domain=${_APA_SUB}.${_DOM_FQDN}
+#############  PHP
+
+_echot "------------------  php memory_limit"
+_lxc_exec ${_CT_NAME} "sed -i '/^memory_limit / s|=.*$|= 512M|' ${file_php_ini}"
+
+#############  APACHE
+
+_echot "------------------  apache move default"
+file=${_APA_PATH_SITES}/default.conf
+_lxc_exec ${_CT_NAME} "[ -f '${file}' ] && mv ${file} ${file}.keep"
+
+domain=${_APA_SUB}.${_APA_DOM_FQDN}
 _echot "------------------  ${domain} path"
-
-file=${path_sites}/${_APA_SUB}.conf
-_eval lxc file push -q ${file_conf_site} ${_CT_NAME}${file}
+file=${_APA_PATH_SITES}/${_APA_SUB}.conf
+_eval lxc file push -q ${fc_nc_site} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} apache
-_lxc_exec ${_CT_NAME} "sed -i 's|^\(\s*\)#\?\(SetEnv PHP_ADMIN_VALUE .session.gc_maxlifetime =\).*$|\1\2 3600\"|' ${file}"
+_lxc_exec ${_CT_NAME} "sed -i '/session.gc_maxlifetime/ c \\\\tSetEnv PHP_ADMIN_VALUE \"session.gc_maxlifetime = ${_NXC_PHP_SESSION_TIME}\"' ${file}"
+_lxc_exec ${_CT_NAME} "sed -i '/ServerName/ a \\\\tServerAlias nextcloud.${_APA_DOM_FQDN}' ${file}"
 
 _echot "------------------  ${domain} file"
-path=${path_dom}/${file_app%.tar.bz2}
+path=${_APA_PATH_DOM}/${path_nxc}
 _lxc_exec ${_CT_NAME} "[ -d ${path} ] && mv ${path} ${path}.${_SDATE}"
 
-path=${path_dom}
+_echot "------------------  ${domain} install"
+path=${_APA_PATH_DOM}
 _eval lxc file push -q ${file_app_tmp} ${_CT_NAME}/${path}/
 _lxc_exec ${_CT_NAME} "tar xjf ${path}/${file_app} -C ${path}" || _exite "Unable to decompress file: ${file}"
-_lxc_exec ${_CT_NAME} "[ -d ${path}/nextcloud ] && mv ${path}/nextcloud ${path}/${file_app%.tar.bz2}"
-
-_lxc_exec ${_CT_NAME} "[ -h ${path}/${_APA_SUB} ] && rm ${path}/${_APA_SUB}"
-_lxc_exec ${_CT_NAME} "cd ${path} && ln -sv ${file_app%.tar.bz2} ${_APA_SUB}"
-_lxc_exec ${_CT_NAME} "[ -h ${path}/nextcloud ] && rm ${path}/nextcloud"
-_lxc_exec ${_CT_NAME} "cd ${path} && ln -sv ${file_app%.tar.bz2} nextcloud"
-
+cmds="[ -d ${path}/nextcloud ] && mv ${path}/nextcloud ${path}/${path_nxc}
+[ -h ${path}/${_APA_SUB} ] && rm ${path}/${_APA_SUB}
+[ -h ${path}/nextcloud ] && rm ${path}/nextcloud
+cd ${path} && ln -sv ${path_nxc} ${_APA_SUB}"
+_lxc_exec ${_CT_NAME} "${cmds}"
 
 ########################  RIGHTS
 
 _echot "------------------  rights"
-_lxc_exec ${_CT_NAME} "chown apache:apache -R ${_APA_PATH_WWW}"
-_lxc_exec ${_CT_NAME} "chown apache:apache -R ${path_dom}/*"
+_lxc_exec ${_CT_NAME} "chown apache:apache -R ${_APA_PATH_DOM} ${_NXC_APP_DATA_DIR}"
+
+########################  INSTALL
+
+_echot "------------------  install"
+cmds="sudo -u apache ${php_cli} ${occ} maintenance:install --database mysql --database-host ${S_SERVICE[proxy]} --database-name ${_NXC_APP_DB_NAME} --database-user ${_NXC_APP_DB_USER} --database-pass ${_NXC_APP_DB_PWD} --admin-user ${_NXC_APP_USER} --admin-pass ${_NXC_APP_PWD} --admin-email ${S_EMAIL_TECH} --data-dir ${_NXC_APP_DATA_DIR}"
+_lxc_exec ${_CT_NAME} "${cmds}"
+
+_echot "------------------  conf"
+file=${_APA_PATH_DOM}/${path_nxc}/config/config.php
+_lxc_exec ${_CT_NAME} "[ -f ${file} ] && mv ${file} ${file}.${_SDATE}"
+cmds="sed -i '/trusted_domains/,/),/d' ${file}
+sed -i '/overwrite\.cli.url/d' ${file}
+sed -i '/^);' ${file}"
+_lxc_exec ${_CT_NAME} "${cmds}"
+
+str="'trusted_domains' =>\  array (\n    0 => 'cloud.${_APA_DOM_FQDN}',\n    1 => 'nextcloud.${_APA_DOM_FQDN}',\n  ),"
+str+="\n  'htaccess.RewriteBase' => '/',"
+str+="\n  'overwrite.cli.url' => 'https://cloud.${_APA_DOM_FQDN}',"
+_lxc_exec ${_CT_NAME} "sed -i \"/^);/ i\  ${str}\" ${file}"
+
+
+_echot "------------------  ${domain} conf"
+file=${_APA_PATH_DOM}/${path_nxc}/config/config.php
+_eval lxc file push -q ${fc_nc_conf} ${_CT_NAME}${file}
+_lxc_var_replace ${_CT_NAME} ${file} apache nextcloud
+
+
+app:disable weather_status cloud_federation_api password_policy
+sudo -u apache ${php_cli} ${occ} app:install calendar
+sudo -u apache ${php_cli} ${occ} app:install deck
+sudo -u apache ${php_cli} ${occ} app:install contacts
+
+
+
+_echot "------------------  conf htaccess"
+_lxc_exec ${_CT_NAME} "sudo -u apache ${php_cli} ${occ} maintenance:update:htaccess"
+
+
+########################  CONF
 
 
 #############  RESTART
 
-_echot "------------------  ${_PHP_SERVICE} restart"
-_lxc_exec ${_CT_NAME} "rc-service ${_PHP_SERVICE} restart"
+_echot "------------------  ${php_service} restart"
+_lxc_exec ${_CT_NAME} "rc-service ${php_service} restart"
 
 _echot "------------------  apache2 restart"
 _lxc_exec ${_CT_NAME} "rc-service apache2 restart"
 
-
 ########################  MARIADB
 
-_echoT "\n==========  mariadb ${ct_maria}"
+for ct_maria in ${_NXC_CT_DBS}; do
 
-_echot "------------------  ${ct_maria} db create"
-cmd="CREATE DATABASE IF NOT EXISTS ${_APP_DB_NAME};"
-_eval "mysql -h${ct_maria} -uroothost -p${pwd_maria} -e \"${cmd}\""
+	_echoT "\n==========  for ${ct_maria}"
 
-_echot "------------------  ${ct_maria} ${_APP_DB_USER} strpass"
-file=${S_PATH_CONF}/mariadb
-str="${_APP_DB_USER} @ ${_CT_NAME}.lxd - ${_APP_DB_PWD}"
-strpass+="${str}\n"
-cmd="grep -q ^${_APP_DB_USER} ${file} && sed -i '/^${_APP_DB_USER}/c ${str}'  ${file} || sed -i '\$a ${str}' ${file}"
-_lxc_exec ${ct_maria} "${cmd}"
+	_echot "------------------  ${ct_maria} db create"
+	cmd="CREATE DATABASE IF NOT EXISTS ${_NXC_APP_DB_NAME};"
+	_eval "mysql -h${ct_maria} -uroothost -p${_MDB_PWD_HOST} -e \"${cmd}\""
 
-for ct_php in ${cts_php}; do
+	for ct_php in ${cts_php}  ${S_SERVICE[proxy]}; do
 
-	_echot "------------------  ${ct_maria} ${_APP_DB_USER} grant"
-	cmd="GRANT USAGE ON *.* TO '${_APP_DB_USER}'@'${ct_php}.lxd' IDENTIFIED BY '${_APP_DB_PWD}';"
-	_eval "mysql -h${ct_maria} -uroothost -p${pwd_maria} -e \"${cmd}\""
-	cmd="GRANT ALL PRIVILEGES ON ${_APP_DB_NAME}.* TO '${_APP_DB_USER}'@'${ct_php}.lxd';"
-	_eval "mysql -h${ct_maria} -uroothost -p${pwd_maria} -e \"${cmd}\""
+		_echot "------------------  ${ct_php} ${_NXC_APP_DB_USER} grant"
+		cmd="GRANT USAGE ON *.* TO '${_NXC_APP_DB_USER}'@'${ct_php}.lxd' IDENTIFIED BY '${_NXC_APP_DB_PWD}';"
+		_eval "mysql -h${ct_maria} -uroothost -p${_MDB_PWD_HOST} -e \"${cmd}\""
+		cmd="GRANT ALL PRIVILEGES ON ${_NXC_APP_DB_NAME}.* TO '${_NXC_APP_DB_USER}'@'${ct_php}.lxd';"
+		_eval "mysql -h${ct_maria} -uroothost -p${_MDB_PWD_HOST} -e \"${cmd}\""
+		strpass+="${_NXC_APP_DB_USER} @ ${ct_php}.lxd - ${_NXC_APP_DB_PWD}\n"
 
-	_echot "------------------  ${ct_maria} ${_APP_DB_USER} strpass"
-	file=${S_PATH_CONF}/mariadb
-	str="${_APP_DB_USER} @ ${ct_php}.lxd - ${_APP_DB_PWD}"
-	strpass+="${str}\n"
-	cmd="grep -q ^${_APP_DB_USER} ${file} && sed -i '/^${_APP_DB_USER}/c ${str}'  ${file} || sed -i '\$a ${str}' ${file}"
-	_lxc_exec ${ct_maria} "${cmd}"
+		_echot "------------------  ${ct_php} rootadmin grant"
+		cmd="GRANT ALL PRIVILEGES ON *.* TO rootadmin@'${ct_php}.lxd' IDENTIFIED BY '${_MDB_PWD_ADMIN}' WITH GRANT OPTION;"
+		_eval "mysql -h${ct_maria} -uroothost -p${_MDB_PWD_HOST} -e \"${cmd}\""
+		strpass+="rootadmin @ ${ct_php}.lxd - ${_MDB_PWD_ADMIN}\n"
+	done
 
 done
 
 
 
+_exite debug
 
+
+;env[HOSTNAME] = $HOSTNAME
+;env[PATH] = /usr/local/bin:/usr/bin:/bin
+;env[TMP] = /tmp
+;env[TMPDIR] = /tmp
+;env[TEMP] = /tmp
+
+
+<Directory /var/share/www/ambau-fr.loc/cloud>
+Options -Indexes +MultiViews +FollowSymLinks
+AllowOverride All
+Require all granted
+ </Directory>
+
+<LocationMatch .+\.php.*$>
+SetHandler proxy:unix:/run/php-fpm8/php-fpm.sock|fcgi://localhost
+</LocationMatch>
+
+
+
+
+
+########################  RSYSLOG
+
+_echot "------------------  ${S_SERVICE[log]} host path"
+path=${S_VM_PATH_LOG}/nextcloud
+_lxc_exec ${S_SERVICE[log]} "[ -d ${path} ] || mkdir -p ${path}"
+
+_echot "------------------  ${S_SERVICE[log]} host"
+file=/etc/rsyslog.d/${fc_rsyslog_host##*/}
+_eval lxc file push -q ${fc_rsyslog_host} ${S_SERVICE[log]}${file}
+_lxc_var_replace ${S_SERVICE[log]} ${file} rsyslog
+
+_echot "------------------  rsyslog restart ${S_SERVICE[log]}"
+_lxc_exec ${S_SERVICE[log]} "rc-service rsyslog restart"
+
+_echot "------------------  ${_CT_NAME} client path"
+path=${S_PATH_LOG}/nextcloud
+_lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
+
+_echot "------------------  ${_CT_NAME} client"
+file=/etc/rsyslog.d/${fc_rsyslog_client##*/}
+_eval lxc file push -q ${fc_rsyslog_client} ${_CT_NAME}${file}
+_lxc_var_replace ${_CT_NAME} ${file} rsyslog
+
+_echot "------------------  rsyslog restart ${_CT_NAME}"
+_lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
+
+########################  LOGROTATE
+
+_echot "------------------  ${S_SERVICE[log]} logrotate"
+file=/etc/logrotate.d/${fc_logrotate_host##*/}
+_eval lxc file push -q ${fc_logrotate_host} ${S_SERVICE[log]}${file}
+_lxc_var_replace ${S_SERVICE[log]} ${file} logrotate
+_lxc_exec ${S_SERVICE[log]} "chmod g-w,o= /etc/logrotate.d/*"
+
+_echot "------------------  ${S_SERVICE[log]} crond restart"
+_lxc_exec ${S_SERVICE[log]} "rc-service crond restart"
+
+_echot "------------------  ${_CT_NAME} logrotate"
+file=/etc/logrotate.d/${fc_logrotate_client##*/}
+_eval lxc file push -q ${fc_logrotate_client} ${_CT_NAME}${file}
+_lxc_var_replace ${_CT_NAME} ${file} logrotate
+_lxc_exec ${_CT_NAME} "chmod g-w,o= /etc/logrotate.d/*"
+
+_echot "------------------  ${_CT_NAME} crond restart"
+_lxc_exec ${_CT_NAME} "rc-service crond restart"
 
 ########################  COPY
 
-for i in `seq 2 ${ct_num}`; do
-	ct_name=${ct_base}-${i}
+for i in `seq 2 ${_NXC_CT_NUM}`; do
+	ct_name=${_NXC_CT_NAME}-${i}
 	_echot "---------- build ${ct_name}"
 
 	if lxc list -f csv -c n | grep -q ^${ct_name}$; then
@@ -312,23 +433,33 @@ for i in `seq 2 ${ct_num}`; do
 	_eval lxc start ${ct_name}
 done
 
+########################  HAPROXY
+
+_echot "------------------  ${S_SERVICE[proxy]} conf"
+file=/etc/haproxy/conf-available/30-fronts-443
+_lxc_exec ${S_SERVICE[proxy]} "sed -i '/acl cloud/ s|#acl|acl|' ${file}"
+_lxc_exec ${S_SERVICE[proxy]} "sed -i '/use_backend\s*cloud/ s|#use_backend|use_backend|' ${file}"
+file=/etc/haproxy/conf-available/50-backs-80
+_lxc_exec ${S_SERVICE[proxy]} "sed -i '/^backend\s*cloud-${_NXC_DOM_FQDN}$/,/^backend/ s|#server|server|' ${file}"
+
+_echot "------------------  ${S_SERVICE[proxy]} reload"
+_lxc_exec ${S_SERVICE[proxy]} "rc-service haproxy reload"
+
 ########################  SHOW
 
-_echot "------------------  show privileges ${ct_maria}"
-_eval "mysql -h${ct_maria} -uroothost -p${pwd_maria} -e \"SELECT user,host FROM mysql.user WHERE user like '${_APP_DB_USER}';\""
+_echot "------------------  show privileges ${_NXC_CT_DB}"
+_eval "mysql -h${_NXC_CT_DB} -uroothost -p${_MDB_PWD_HOST} -e \"SELECT user,host FROM mysql.user WHERE user like '${_NXC_APP_DB_USER}';\""
 
 _echot "------------------  show passwords"
 _echoA "Keep this passwords:"
 _echoa "${strpass%\\n}"
 
-########################  HAPROXY
-
-_echoA "Adjust backend for domain: ${_APA_SUB}.${_DOM_FQDN} with:"
-_echoa "${cts_php}"
+_echot "------------------  email"
+_echoA "Add alias or account for nextcloud@${_HPX_DOM_FQDN}"
 
 ########################  PUBLISH
 
-for ct_name in ${ct_php} ${ct_maria}; do
+for ct_name in ${ct_php} ${_NXC_CT_DB}; do
 	_echot "------------------  publish ${ct_name}"
 
 	lxc image list -f csv -c l | grep -q ^${ct_name}$ && _eval lxc image alias rename ${ct_name} ${ct_name}-${_SDATE}

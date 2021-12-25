@@ -41,8 +41,10 @@ _LXD_PATH_SNAPSHOT=snapshots; _confset _LXD_PATH_SNAPSHOT "${_LXD_PATH_SNAPSHOT}
 _LXD_PATH_EXPORT=export; _confset _LXD_PATH_EXPORT "${_LXD_PATH_EXPORT}"
 # port for remote connection
 _LXD_PORT=8443; _confset _LXD_PORT "${_LXD_PORT}"
-# uid for shared path
+# container uid for shared path
 _LXD_UID=1000000; _confset _LXD_UID "${_LXD_UID}"
+# acl uid for shared path
+_LXD_ACL=1000; _confset _LXD_ACL "${_LXD_ACL}"
 
 ########################  CONFIGURATION
 
@@ -103,9 +105,9 @@ _echot "------------------  link ${path} to /lxd"
 
 path=${S_HOST_PATH_SHARE}
 _echot "------------------  rights ${path}"
-_evalr setfacl -Rm u:${_LXD_UID}:rwx ${path}
-_evalr setfacl -Rm d:u:${_LXD_UID}:rwx ${path}
 _evalr chown -R ${_LXD_UID}:${_LXD_UID} ${path}
+_evalr setfacl -Rm u:${_LXD_ACL}:rwx ${path}
+_evalr setfacl -Rm d:u:${_LXD_ACL}:rwx ${path}
 
 ########################  CLEAN STORAGE
 

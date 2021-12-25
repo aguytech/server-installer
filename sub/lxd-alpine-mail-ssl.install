@@ -39,7 +39,7 @@ if [ "${_MEL_CERTBOT_ON}" ]; then
 
 	_echot "------------------  copy certbot"
 	_echoA "Copy backup of certbot certs"
-	[ -z "${_INSTALL_AUTO}" ] && _askno "Valid to continue"
+	[ -z "${_MEL_INSTALL_AUTO}" ] && _askno "Valid to continue"
 
 	if ! _lxc_exec ${ct_proxy} "[ -d /etc/letsencrypt/live/mail.${S_DOM_FQDN} ]"; then
 		_echot "------------------  certbot cert mail.${S_DOM_FQDN}"
@@ -71,7 +71,7 @@ else
 
 		_echot "------------------  openssl conf multi-domains"
 		file_ssl_conf=${path_ssl_conf}/openssl-mail.${S_DOM_FQDN}.cnf
-		_eval lxc file push -q ${fc_ssl_dom} ${ct_proxy}${file_ssl_conf}
+		_eval lxc file push --uid 0 --gid 0 -q ${fc_ssl_dom} ${ct_proxy}${file_ssl_conf}
 		_lxc_var_replace ${ct_proxy} ${file_ssl_conf} haproxy
 
 		dns=
@@ -101,12 +101,21 @@ else
 fi
 
 _echot "------------------  certificate cron"
-file=/etc/periodic/weekly/${fc_cron_certificate##*/}
-_eval lxc file push -q ${fc_cron_certificate} ${_CT_NAME}${file}
+path=/etc/periodic/weekly-1
+file_cron=/etc/crontabs/root
+cmds="[ -d '${path}' ] || mkdir ${path}
+sed -i '\|${path}|d' ${file_cron}
+sed -i '/periodic.weekly/ a 0       4       *       *       6       run-parts ${path}' ${file_cron}"
+_lxc_exec ${_CT_NAME} "${cmds}"
+
+file=${path}/${fc_cron_certificate##*/}
+_eval lxc file push --uid 0 --gid 0 -q ${fc_cron_certificate} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} mail
 _lxc_exec ${_CT_NAME} "chmod +x ${file}" # shift the haproxy cron by one hour
-_lxc_exec ${_CT_NAME} "sed -i '/run-parts.*weekly/ s|3|4|' /etc/crontabs/root" # shift the haproxy cron by one hour
 _lxc_exec ${_CT_NAME} "sh ${file}"
+
+_echot "------------------  cron restart"
+_lxc_exec ${_CT_NAME} "rc-service crond restart"
 
 ########################  END
 

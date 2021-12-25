@@ -49,8 +49,11 @@ if [ -z "${_PFA_APP_VERSION+x}" ]; then
 else
 	file_app=postfixadmin-${_PFA_APP_VERSION}.tar.gz
 	file_app_tmp=/tmp/${file_app}
-	uri=https://github.com/postfixadmin/postfixadmin/archive/refs/tags/${file_app}
-	wget -q ${uri} -O ${file_app_tmp} && ok=true || _exite "Unable to get file: ${uri}"
+	if ! [ -f "${file_app_tmp}" ] || [ "$(ls -s ${file_app_tmp}|cut -d' ' -f1)" = 0 ]; then
+		_echot "------------------  wget ${file_app}"
+		uri=https://github.com/postfixadmin/postfixadmin/archive/refs/tags/${file_app}
+		wget -q ${uri} -O ${file_app_tmp} && ok=true || _exite "Unable to get file: ${uri}"
+	fi
 fi
 
 _echoA "Default policy to use for postfix"
@@ -73,7 +76,7 @@ _echo "none: Don’t use encryption
 _confset _MEL_PFA_POLICY "${_MEL_PFA_POLICY}"
 
 pfa_path=${file_app%.tar.gz}
-path_www=${S_VM_PATH_SHARE}/www/${S_DOM_FQDN}
+_APA_PATH_DOM=${S_VM_PATH_SHARE}/www
 _APA_SUB=pfa
 _CT_ADMIN=${_MEL_CT_ADMIN}
 
@@ -97,13 +100,13 @@ _eval "mysql -h${_MEL_DB_HOST} -uroothost -p${_MEL_DB_HOST_PWD} -e \"FLUSH PRIVI
 
 ########################  MAIN
 
-_echot "------------------  create path ${path_www}"
-_lxc_exec ${_CT_ADMIN} "[ -d ${path_www} ] || mkdir -p ${path_www}"
+_echot "------------------  create path ${_APA_PATH_DOM}"
+_lxc_exec ${_CT_ADMIN} "[ -d ${_APA_PATH_DOM} ] || mkdir -p ${_APA_PATH_DOM}"
 
 _echot "------------------  install"
-_eval lxc file push -q ${file_app_tmp} ${_CT_ADMIN}/${path_www}/
+_eval lxc file push -q ${file_app_tmp} ${_CT_ADMIN}/${_APA_PATH_DOM}/
 
-cmds="cd ${path_www}
+cmds="cd ${_APA_PATH_DOM}
 [ -e ${pfa_path} ] && mv ${pfa_path} ${pfa_path}.${_SDATE}
 tar -xzf ${file_app}
 [ -e postfixadmin-${pfa_path} ] && mv postfixadmin-${pfa_path} ${pfa_path}
@@ -112,17 +115,14 @@ ln -s ${pfa_path} ${_APA_SUB}"
 _lxc_exec ${_CT_ADMIN} "${cmds}"
 
 _echot "------------------  conf local"
-file=${path_www}/${_APA_SUB}/${fc_pfa_local##*/}
+file=${_APA_PATH_DOM}/${_APA_SUB}/${fc_pfa_local##*/}
 _lxc_exec ${_CT_ADMIN} "[ -e '${file}' ] && mv ${file} ${file}.${_SDATE}"
 _eval lxc file push -q ${fc_pfa_local} ${_CT_ADMIN}${file}
 _lxc_var_replace ${_CT_ADMIN} ${file} mail
 
 _echot "------------------  path templates_c"
-path=${path_www}/${pfa_path}/templates_c
+path=${_APA_PATH_DOM}/${pfa_path}/templates_c
 _lxc_exec ${_CT_ADMIN} "[ -d '${path}' ] || mkdir ${path}"
-
-_echot "------------------  rights  ${path_www}"
-_lxc_exec ${_CT_ADMIN} "chown apache.apache -R ${path_www}"
 
 ########################  APACHE
 
@@ -131,20 +131,21 @@ file=/etc/apache2/sites/${_APA_SUB}.conf
 _lxc_exec ${_CT_ADMIN} "[ -e '${file}' ] && mv ${file} ${file}.${_SDATE}"
 _eval lxc file push -q ${fc_pfa_apache} ${_CT_ADMIN}${file}
 _lxc_var_replace ${_CT_ADMIN} ${file} apache
-_lxc_exec ${_CT_ADMIN} "sed -i 's|/${_APA_DOM_ADMIN}.${S_DOM_FQDN}/${_APA_SUB}|/${_APA_DOM_ADMIN}.${S_DOM_FQDN}/${_APA_SUB}/public|' ${file}"
+_lxc_exec ${_CT_ADMIN} "sed -i 's|/${_APA_DOM_ADMIN}/${_APA_SUB}|/${_APA_DOM_ADMIN}/${_APA_SUB}/public|' ${file}"
 
 _echot "------------------  apache2 restart"
+_lxc_exec ${_CT_ADMIN} "chown 0:0 -R /etc/apache2; chown apache.apache -R ${_APA_PATH_DOM}"
 _lxc_exec ${_CT_ADMIN} "rc-service apache2 restart"
 
 ########################  MANUAL
 
 _echot "------------------  manually app password"
-_echoA "Go to address: ${_APA_SUB}.${S_DOM_FQDN}/setup.php"
+_echoA "Go to address: https://${_APA_SUB}.${S_DOM_FQDN}/setup.php"
 _echo "Use this password to configure postfixadmin: ${_MEL_DB_PFA_PWD}"
 _echo "after this, paste to this terminal the text given by postfixadmin to configure it:"
 str=
 while [ -z "${str}" ]; do read -r str; done
-file=${path_www}/${_APA_SUB}/config.local.php
+file=${_APA_PATH_DOM}/${_APA_SUB}/config.local.php
 lxc exec ${_CT_ADMIN} -- sed -i "/^.CONF..setup_password/ c ${str}" ${file}
 
 _echot "------------------  manually admin password"

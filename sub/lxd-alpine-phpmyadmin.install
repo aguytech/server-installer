@@ -17,12 +17,12 @@ profiles_all_php=$(lxc profile list -f csv|grep "^php.*,"|cut -d, -f1)
 cts_all_maria=$(lxc list -f json | jq -r '.[] | select(.profiles | any(contains("mdb-"))).name')
 [ -z "${cts_all_maria}" ] && _exite "Unable to find a container with maria profile"
 
-fc_pma_config=${S_PATH_INSTALL_CONF}/pma/pma-config.inc.php
+fc_pma_conf=${S_PATH_INSTALL_CONF}/pma/pma-config.inc.php
 fc_pma_part=${S_PATH_INSTALL_CONF}/pma/pma-part-config.inc.php
 fc_pma_site=${S_PATH_INSTALL_CONF}/apache2/sites/sub.conf
 
 _echot "------------------ required files"
-_require ${fc_pma_config} ${fc_pma_part} ${fc_pma_site}
+_require ${fc_pma_conf} ${fc_pma_part} ${fc_pma_site}
 
 ########################  DATA
 
@@ -101,7 +101,7 @@ fi
 [ -z ${_PMA_APP_BLOWFISH+x} ] && _PMA_APP_BLOWFISH=$(_pwd32)
 
 _CT_NAME=${_PMA_CT_NAME}-1
-_APA_PATH_DOM=${S_VM_PATH_SHARE}/www/${_APA_DOM_FQDN}
+_APA_PATH_DOM=${S_VM_PATH_SHARE}/www
 _PMA_APP_URI=https://${_PMA_DOM_SUB}.${_APA_DOM_FQDN}
 _PMA_APP_DB_PORT=${S_DB_MARIA_PORT_RW}
 _PMA_APP_DB_NAME=phpmyadmin
@@ -154,6 +154,12 @@ _lxc_meta_add ${_CT_NAME} apps phpmyadmin
 _echot "------------------  ${_CT_NAME} start"
 lxc list -f csv -c n status=Stopped | grep -q ^${_CT_NAME}$ && _eval lxc start ${_CT_NAME}
 
+#############  PHP
+
+file=$(_lxc_exec ${_CT_NAME} find /etc/php* -name www.conf)
+_lxc_exec ${_CT_NAME} "sed -i '/php_admin_value.session.gc_maxlifetime/d' ${file}"
+_lxc_exec ${_CT_NAME} "echo 'php_admin_value[session.gc_maxlifetime] = 14400' > ${file}"
+
 #############  WWW
 
 _echot "------------------  site default keep"
@@ -176,8 +182,9 @@ file=${_APA_PATH_WWW}/pwd
 _lxc_exec ${_CT_NAME} "[ -f '${file}' ] && opt=b || opt=cb; htpasswd -\${opt} ${file} admin ${_APA_PWD_ADMIN}"
 
 _echot "------------------  ${domain} path"
-path=${_APA_PATH_DOM}/${_APA_DOM_ADMIN}
-_lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
+for path in ${_APA_PATH_DOM}/${_APA_DOM_ADMIN} ${_PMA_APP_PATH_UP} ${_PMA_APP_PATH_DW}; do
+	_lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
+done
 
 _echot "------------------  ${domain} index.php"
 file=${_APA_PATH_DOM}/${_APA_DOM_ADMIN}/index.php
@@ -186,7 +193,6 @@ _lxc_exec ${_CT_NAME} "echo '<html><body><h1><?php echo \"php ${_APA_DOM_ADMIN} 
 _echot "------------------  ${domain} conf apache"
 file=${_APA_PATH_SITES}/${_APA_DOM_ADMIN}.conf
 _eval lxc file push -q ${fc_pma_site} ${_CT_NAME}${file}
-_lxc_var_replace ${_CT_NAME} ${file} apache
 
 #############  SITE APP
 
@@ -196,8 +202,6 @@ domain=${_APA_SUB}.${_APA_DOM_FQDN}
 _echot "------------------  ${domain} conf apache"
 file=${_APA_PATH_SITES}/${_PMA_DOM_SUB}.conf
 _eval lxc file push -q ${fc_pma_site} ${_CT_NAME}${file}
-_lxc_var_replace ${_CT_NAME} ${file} apache
-_lxc_exec ${_CT_NAME} "sed -i 's|^\(\s*\)#\?\(SetEnv PHP_ADMIN_VALUE .session.gc_maxlifetime =\).*$|\1\2 14400\"|' ${file}"
 
 _echot "------------------  ${domain} file"
 path=${_APA_PATH_DOM}/${file_app%.tar.gz}
@@ -215,8 +219,7 @@ _lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
 
 _echot "------------------  ${domain} ${_PMA_DOM_SUB} conf"
 file=${_APA_PATH_DOM}/${_PMA_DOM_SUB}/config.inc.php
-_eval lxc file push -q ${fc_pma_config} ${_CT_NAME}${file}
-_lxc_var_replace ${_CT_NAME} ${file} pma
+_eval lxc file push -q ${fc_pma_conf} ${_CT_NAME}${file}
 #[ "${_APA_DOM_FQDN##*.}" = lxd ] && _lxc_exec ${_CT_NAME} "sed -i '/.cfg..PmaAbsoluteUri/ s|https|http|' ${file}"
 
 file_part=${_APA_PATH_DOM}/${_PMA_DOM_SUB}/config-part.inc.php
@@ -224,26 +227,20 @@ for ct_maria in ${S_SERVICE[proxy]} $(echo ${_PMA_CT_DBS}|tr ' ' '\n'|sort -r); 
 	_echot "------------------  ${domain} conf ${_PMA_CT_DBS}"
 	_eval lxc file push -q ${fc_pma_part} ${_CT_NAME}${file_part}
 	_PMA_APP_DB_HOST=${ct_maria}
-	_lxc_var_replace ${_CT_NAME} ${file_part} pma
 	_lxc_exec ${_CT_NAME} "sed -i -e '/#partadd/r ${file_part}' ${file}" >/dev/null
 done
+_lxc_var_replace ${_CT_NAME} ${file} pma
 
 _echot "------------------  ${_CT_NAME} pull sql file"
 file_tables=/tmp/create_tables.sql
 _evalr lxc file pull ${_CT_NAME}/${_APA_PATH_DOM}/${_PMA_DOM_SUB}/sql/create_tables.sql ${file_tables}
 
-########################  RIGHTS
-
-_echot "------------------  rights"
-_lxc_exec ${_CT_NAME} "chown apache:apache -R ${_APA_PATH_WWW}"
-_lxc_exec ${_CT_NAME} "chown apache:apache -R ${_APA_PATH_DOM}/*"
-
 #############  RESTART
 
-_echot "------------------  ${_PHP_SERVICE} restart"
-_lxc_exec ${_CT_NAME} "rc-service ${_PHP_SERVICE} restart"
-
 _echot "------------------  apache2 restart"
+_lxc_var_replace ${_CT_NAME} ${_APA_PATH_SITES} apache
+_lxc_exec ${_CT_NAME} chown 0:0 -R ${_APA_PATH_SITES}
+_lxc_exec ${_CT_NAME} chown apache:apache -R ${_APA_PATH_WWW} ${_APA_PATH_DOM} ${_PMA_APP_PATH_UP} ${_PMA_APP_PATH_DW}
 _lxc_exec_e ${_CT_NAME} "rc-service apache2 restart"
 
 ########################  MARIADB
