@@ -17,8 +17,8 @@ profiles_all_php=$(lxc profile list -f csv|grep "^php.*,"|cut -d, -f1)
 cts_all_maria=$(lxc list -f json | jq -r '.[] | select(.profiles | any(contains("mdb-"))).name')
 [ -z "${cts_all_maria}" ] && _exite "Unable to find a container with maria profile"
 
-fc_pma_conf=${S_PATH_INSTALL_CONF}/pma/pma-config.inc.php
-fc_pma_part=${S_PATH_INSTALL_CONF}/pma/pma-part-config.inc.php
+fc_pma_conf=${S_PATH_INSTALL_CONF}/pma/config.inc.php
+fc_pma_part=${S_PATH_INSTALL_CONF}/pma/config-part.inc.php
 fc_pma_site=${S_PATH_INSTALL_CONF}/apache2/sites/sub.conf
 
 _echot "------------------ required files"

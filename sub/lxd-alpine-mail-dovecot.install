@@ -42,7 +42,7 @@ _require `set|grep ^fc_sieve_|cut -d= -f2`
 
 [ -z ${_MEL_TEST_USER+x} ] && { anstmp=${S_EMAIL_TECH}; _askno "Give a created email (${anstmp})"; _MEL_TEST_USER=${_ANSWER:-${anstmp}}; }
 
-[ -z ${_MEL_TEST_PWD+x} ] && { anstmp=$(_pwd); _askno "Give a password for this email (${anstmp})"; _MEL_TEST_PWD=${_ANSWER:-${anstmp}}; }
+[ -z ${_MEL_TEST_PWD+x} ] && { anstmp=$(_pwd); _askno "Give a password for this email account (${anstmp})"; _MEL_TEST_PWD=${_ANSWER:-${anstmp}}; }
 
 ########################  METADATA
 

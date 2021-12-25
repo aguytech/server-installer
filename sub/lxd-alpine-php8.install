@@ -40,7 +40,7 @@ fc_logrotate_host=${S_PATH_INSTALL_CONF}/logrotate/host-phpfpm${_PHP_VER}
 _echot "------------------ required files"
 _require ${fc_php_ini} ${fc_php_fpm_conf} ${fc_php_fpmd_www} ${fc_php_fpmd_admin} ${fc_php_xdebug}
 _require ${fc_apache_phpfpm} ${fc_apache_monitor} ${fc_apache_opcache} ${fc_apache_index}
-_require ${fc_rsyslog_host} ${fc_rsyslog_client} ${fc_logrotate_host}
+_require ${fc_rsyslog_client} ${fc_rsyslog_host} ${fc_logrotate_client} ${fc_logrotate_host}
 
 ########################  DATA
 
