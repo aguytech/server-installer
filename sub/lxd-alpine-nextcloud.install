@@ -234,7 +234,6 @@ cts_cli=$(for i in $(seq 1 ${_NXC_CT_NUM}); do echo ${_NXC_CT_NAME}-${i}; done)
 
 strpass=
 for ct_maria in ${_NXC_CT_DBS}; do
-
 	_echoT "\n==========  mariadb"
 
 	_echot "------------------  mariadb ${ct_maria} create"
@@ -255,7 +254,6 @@ for ct_maria in ${_NXC_CT_DBS}; do
 		_eval "mysql -h${ct_maria} -uroothost -p${_MDB_PWD_HOST} -e \"${cmd}\""
 		strpass+="rootadmin @ ${ct_php}.lxd - ${_MDB_PWD_ADMIN}\n"
 	done
-
 done
 
 #############  PHP
@@ -273,7 +271,7 @@ _lxc_exec ${_CT_NAME} "sed -i '/^#env\[/ s|^#||' ${file}"
 
 _echot "------------------  apache php-fpm"
 file=$(_lxc_exec ${_CT_NAME} "find /etc/apache2/conf.d -name php*.conf")
-_lxc_exec ${_CT_NAME} "sed '/^<LocationMatch ...\.php...>/ c <LocationMatch .+\\\\.php.*\$>' ${file}"
+_lxc_exec ${_CT_NAME} "sed -i '/^<LocationMatch ...\.php...>/ c <LocationMatch .+\\\\.php.*\$>' ${file}"
 
 _echot "------------------  apache default"
 file=${_APA_PATH_SITES}/default.conf
@@ -316,9 +314,6 @@ _echot "------------------  install"
 cmds="sudo -u apache ${php_cli} ${occ} maintenance:install --database mysql --database-host ${S_SERVICE[proxy]} --database-name ${_NXC_APP_DB_NAME} --database-user ${_NXC_APP_DB_USER} --database-pass ${_NXC_APP_DB_PWD} --admin-user ${_NXC_APP_USER} --admin-pass ${_NXC_APP_PWD} --admin-email ${S_EMAIL_TECH} --data-dir ${_NXC_APP_DATA_DIR}"
 _lxc_exec ${_CT_NAME} "${cmds}"
 
-_echot "------------------  reset admin pwd"
-_lxc_exec ${_CT_NAME} "OC_PASS='3667.Gaza' su -s /bin/sh apache -c 'php8 ${occ} user:resetpassword --password-from-env admin'"
-
 #####################  CONF
 
 _echot "------------------  conf"
@@ -333,13 +328,19 @@ _echot "------------------  conf htaccess"
 _lxc_exec ${_CT_NAME} "sudo -u apache ${php_cli} ${occ} maintenance:update:htaccess"
 
 _echot "------------------  app disable"
-_lxc_exec ${_CT_NAME} "sudo -u apache ${php_cli} ${occ} app:disable weather_status"
-_lxc_exec ${_CT_NAME} "sudo -u apache ${php_cli} ${occ} app:disable password_policy"
+for app in weather_status password_policy; do
+	_echo ${app}
+	_lxc_exec ${_CT_NAME} "sudo -u apache ${php_cli} ${occ} app:disable ${app}"
+done
 
-_echot "------------------  app disable"
-for app in calendar deck contacts notes; do
+_echot "------------------  app install"
+for app in calendar contacts deck groupfolders notes tasks; do
+	_echo ${app}
 	_lxc_exec ${_CT_NAME} "sudo -u apache ${php_cli} ${occ} app:install ${app}"
 done
+
+_echot "------------------  reset admin pwd"
+_lxc_exec ${_CT_NAME} "OC_PASS='3667.Gaza' su -s /bin/sh apache -c 'php8 ${occ} user:resetpassword --password-from-env admin'"
 
 ########################  RSYSLOG
 
@@ -411,7 +412,7 @@ file=/etc/haproxy/conf-available/50-backs-80
 _lxc_exec ${S_SERVICE[proxy]} "sed -i '/^backend\s*cloud-${_NXC_DOM_FQDN}$/,/^backend/ s|#server|server|' ${file}"
 
 _echot "------------------  ${S_SERVICE[proxy]} reload"
-_lxc_exec ${S_SERVICE[proxy]} "rc-service haproxy reload"
+_lxc_exec_T ${S_SERVICE[proxy]} "rc-service haproxy reload"
 
 ########################  SHOW
 
@@ -439,4 +440,4 @@ done
 ########################  END
 
 _echoT "===================== ${_PART} end"
-#_partadd ${_PART#++} ${S_FILE_INSTALL_DONE}
+_partadd ${_PART#++} ${S_FILE_INSTALL_DONE}

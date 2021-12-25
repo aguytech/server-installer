@@ -13,6 +13,8 @@ frontend https
 	acl _HPX_DOM_FQDN		hdr_end(host) -i _HPX_DOM_FQDN
 	acl admin-_HPX_DOM_FQDN	hdr(host) admin._HPX_DOM_FQDN matomo._HPX_DOM_FQDN monitor._HPX_DOM_FQDN pfa._HPX_DOM_FQDN pma._HPX_DOM_FQDN
 	#acl cloud-_HPX_DOM_FQDN	hdr(host) cloud._HPX_DOM_FQDN nextcloud._HPX_DOM_FQDN
+	acl dav_discovery path /.well-known/caldav /.well-known/carddav
+	http-request redirect location /remote.php/dav/ code 301 if dav_discovery
 
 	#redirect  prefix  https://info.otokoz.ovh code 301 if { hdr(host) -i info._HPX_DOM_FQDN }
 
