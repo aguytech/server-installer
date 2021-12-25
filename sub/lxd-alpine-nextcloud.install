@@ -12,16 +12,16 @@ img_all_www=$(lxc image list -f csv -c l| grep '^wap-')
 [ "${img_all_www}" ] || _exite "Unable to find a 'www' image container"
 
 profiles_all_php=$(lxc profile list -f csv|grep "^php.*,"|cut -d, -f1)
-[ -z "${profiles_all_php}" ] && _exite "Unable to find a conatiner with 'php' profile"
+[ -z "${profiles_all_php}" ] && _exite "Unable to find a container with 'php' profile"
 
 profiles_all_www=$(lxc profile list -f csv|grep "^www-.*,"|cut -d, -f1)
-[ -z "${profiles_all_php}" ] && _exite "Unable to find a conatiner with 'php' profile"
+[ -z "${profiles_all_php}" ] && _exite "Unable to find a container with 'php' profile"
 
 cts_all_maria=$(lxc list -f json | jq -r '.[] | select(.profiles | any(contains("mdb-"))).name')
 [ -z "${cts_all_maria}" ] && _exite "Unable to find a container with 'mariadb' profile"
 
-fc_nc_conf=${S_PATH_INSTALL_CONF}/php/nextcloud-config.php
-fc_nc_site=${S_PATH_INSTALL_CONF}/apache2/sites/sub.conf
+fc_nxc_conf=${S_PATH_INSTALL_CONF}/nextcloud/config-add.php
+fc_nc_site=${S_PATH_INSTALL_CONF}/apache2/sites/cloud.conf
 
 fc_rsyslog_client=${S_PATH_INSTALL_CONF}/rsyslog/client-nextcloud.conf
 fc_rsyslog_host=${S_PATH_INSTALL_CONF}/rsyslog/host-nextcloud.conf
@@ -29,7 +29,8 @@ fc_logrotate_client=${S_PATH_INSTALL_CONF}/logrotate/client-nextcloud
 fc_logrotate_host=${S_PATH_INSTALL_CONF}/logrotate/host-nextcloud
 
 _echot "------------------ required files"
-_require ${fc_nc_conf} ${fc_nc_site}
+_require ${fc_nxc_conf} ${fc_nc_site}
+_require ${fc_rsyslog_client} ${fc_rsyslog_host} ${fc_logrotate_client} ${fc_logrotate_host}
 
 ########################  DATA
 
@@ -44,6 +45,8 @@ _echot "------------------  data domain"
 [ -z ${_NXC_CT_NAME+x} ] && { anstmp=wap-${_NXC_APA_SUB}-${_NXC_DOM_FQDN//./-}; _askno "Base name of containers to build (${anstmp})"; _NXC_CT_NAME="${_ANSWER:-${anstmp}}"; }
 
 [ -z ${_NXC_CT_NUM+x} ] && { anstmp=1; _askno "Number of containers to build (${anstmp})"; _NXC_CT_NUM="${_ANSWER:-${anstmp}}"; }
+
+[ -z ${_NXC_APP_DB_PWD+x} ] && { anstmp=$(_pwd); _askno "Give a password for admin user (${anstmp})"; _NXC_APP_DB_PWD=${_ANSWER:-${anstmp}}; }
 
 _echot "------------------  data www"
 
@@ -111,7 +114,6 @@ _echot "------------------  data"
 [ -z ${_NXC_APP_PWD+x} ] && _NXC_APP_PWD=$(_pwd)
 [ -z ${_NXC_APP_DB_NAME+x} ] && _NXC_APP_DB_NAME=nextcloud
 [ -z ${_NXC_APP_DB_USER+x} ] && _NXC_APP_DB_USER=nxc
-[ -z ${_NXC_APP_DB_PWD+x} ] && _NXC_APP_DB_PWD=$(_pwd)
 [ -z ${_NXC_PHP_SESSION_TIME+x} ] && { anstmp=14400; _askno "max session time for php (${anstmp})"; _NXC_PHP_SESSION_TIME="${_ANSWER:-${anstmp}}"; }
 
 _CT_NAME=${_NXC_CT_NAME}-1
@@ -120,14 +122,8 @@ _APA_SUB="${_NXC_APA_SUB}"
 _APA_PATH_DOM=${S_VM_PATH_SHARE}/www
 _NXC_APP_DB_PORT=${S_DB_MARIA_PORT_RW}
 _NXC_APP_DATA_DIR=${S_VM_PATH_SHARE}/cloud
-php_service=$(rc-service -l|grep ^php-fpm)
-php_cli=$(ls /usr/bin|grep ^php)
-file_php_ini=$(find /etc -name php.ini)
 path_nxc=${file_app%.tar.bz2}
 occ=${_APA_PATH_DOM}/${path_nxc}/occ
-
-cts_php=$(for i in $(seq 1 ${_NXC_CT_NUM}); do echo ${_NXC_CT_NAME}-${i}; done)
-strpass=
 
 ########################  CONFIGURATION
 
@@ -227,36 +223,73 @@ _echot "------------------  metadata"
 _lxc_meta_set ${_CT_NAME} profiles default global ${_NXC_WWW_PROFILE} ${_NXC_PHP_PROFILE} ${_NXC_CT_PROFILE}
 _lxc_meta_add ${_CT_NAME} apps nextcloud
 
-#############  INSTALL
+########################  POSTDATA
+
+file_php_ini=$(_lxc_exec ${_CT_NAME} "find /etc -name php.ini")
+php_service=$(_lxc_exec ${_CT_NAME} "rc-service -l|grep ^php-fpm")
+php_cli=php${php_service:(-1)}
+cts_cli=$(for i in $(seq 1 ${_NXC_CT_NUM}); do echo ${_NXC_CT_NAME}-${i}; done)
+
+########################  MARIADB
+
+strpass=
+for ct_maria in ${_NXC_CT_DBS}; do
+
+	_echoT "\n==========  mariadb"
+
+	_echot "------------------  mariadb ${ct_maria} create"
+	cmd="CREATE DATABASE IF NOT EXISTS ${_NXC_APP_DB_NAME};"
+	_eval "mysql -h${ct_maria} -uroothost -p${_MDB_PWD_HOST} -e \"${cmd}\""
+
+	for ct_php in ${cts_cli} ${S_SERVICE[proxy]}; do
+
+		_echot "------------------  mariadb ${ct_php} ${_NXC_APP_DB_USER}"
+		cmd="GRANT USAGE ON *.* TO '${_NXC_APP_DB_USER}'@'${ct_php}.lxd' IDENTIFIED BY '${_NXC_APP_DB_PWD}';"
+		_eval "mysql -h${ct_maria} -uroothost -p${_MDB_PWD_HOST} -e \"${cmd}\""
+		cmd="GRANT ALL PRIVILEGES ON ${_NXC_APP_DB_NAME}.* TO '${_NXC_APP_DB_USER}'@'${ct_php}.lxd';"
+		_eval "mysql -h${ct_maria} -uroothost -p${_MDB_PWD_HOST} -e \"${cmd}\""
+		strpass+="${_NXC_APP_DB_USER} @ ${ct_php}.lxd - ${_NXC_APP_DB_PWD}\n"
+
+		_echot "------------------  mariadb ${ct_php} rootadmin"
+		cmd="GRANT ALL PRIVILEGES ON *.* TO rootadmin@'${ct_php}.lxd' IDENTIFIED BY '${_MDB_PWD_ADMIN}' WITH GRANT OPTION;"
+		_eval "mysql -h${ct_maria} -uroothost -p${_MDB_PWD_HOST} -e \"${cmd}\""
+		strpass+="rootadmin @ ${ct_php}.lxd - ${_MDB_PWD_ADMIN}\n"
+	done
+
+done
+
+#############  PHP
 
 _echot "------------------  php modules"
 #_lxc_exec ${_CT_NAME} "apk add sudo ${php_cli}-intl ${php_cli}-pecl-imagick"
 _lxc_exec ${_CT_NAME} "apk add sudo ${php_cli} ${php_cli}-intl ${php_cli}-pecl-imagick ${php_cli}-pcntl"
 
-#############  PHP
-
-_echot "------------------  php memory_limit"
+_echot "------------------  php conf"
 _lxc_exec ${_CT_NAME} "sed -i '/^memory_limit / s|=.*$|= 512M|' ${file_php_ini}"
+file=$(_lxc_exec ${_CT_NAME} "find /etc/php* -name www.conf")
+_lxc_exec ${_CT_NAME} "sed -i '/^#env\[/ s|^#||' ${file}"
 
 #############  APACHE
 
-_echot "------------------  apache move default"
+_echot "------------------  apache php-fpm"
+file=$(_lxc_exec ${_CT_NAME} "find /etc/apache2/conf.d -name php*.conf")
+_lxc_exec ${_CT_NAME} "sed '/^<LocationMatch ...\.php...>/ c <LocationMatch .+\\\\.php.*\$>' ${file}"
+
+_echot "------------------  apache default"
 file=${_APA_PATH_SITES}/default.conf
-_lxc_exec ${_CT_NAME} "[ -f '${file}' ] && mv ${file} ${file}.keep"
+_lxc_exec ${_CT_NAME} "[ -f '${file}' ] && rm ${file}"
 
 domain=${_APA_SUB}.${_APA_DOM_FQDN}
-_echot "------------------  ${domain} path"
+_echot "------------------  apache conf"
 file=${_APA_PATH_SITES}/${_APA_SUB}.conf
 _eval lxc file push -q ${fc_nc_site} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} apache
-_lxc_exec ${_CT_NAME} "sed -i '/session.gc_maxlifetime/ c \\\\tSetEnv PHP_ADMIN_VALUE \"session.gc_maxlifetime = ${_NXC_PHP_SESSION_TIME}\"' ${file}"
-_lxc_exec ${_CT_NAME} "sed -i '/ServerName/ a \\\\tServerAlias nextcloud.${_APA_DOM_FQDN}' ${file}"
 
-_echot "------------------  ${domain} file"
+_echot "------------------  ${path_nxc} move"
 path=${_APA_PATH_DOM}/${path_nxc}
 _lxc_exec ${_CT_NAME} "[ -d ${path} ] && mv ${path} ${path}.${_SDATE}"
 
-_echot "------------------  ${domain} install"
+_echot "------------------  ${path_nxc} install"
 path=${_APA_PATH_DOM}
 _eval lxc file push -q ${file_app_tmp} ${_CT_NAME}/${path}/
 _lxc_exec ${_CT_NAME} "tar xjf ${path}/${file_app} -C ${path}" || _exite "Unable to decompress file: ${file}"
@@ -266,10 +299,16 @@ cmds="[ -d ${path}/nextcloud ] && mv ${path}/nextcloud ${path}/${path_nxc}
 cd ${path} && ln -sv ${path_nxc} ${_APA_SUB}"
 _lxc_exec ${_CT_NAME} "${cmds}"
 
-########################  RIGHTS
+#############  RESTART
 
-_echot "------------------  rights"
+_echot "------------------  ${php_service} restart"
+_lxc_exec ${_CT_NAME} "chown -R 0:0 ${file_php_ini%/*}"
+_lxc_exec ${_CT_NAME} "rc-service ${php_service} restart"
+
+_echot "------------------  apache2 restart"
+_lxc_exec ${_CT_NAME} "chown -R 0:0 /etc/apache2"
 _lxc_exec ${_CT_NAME} "chown apache:apache -R ${_APA_PATH_DOM} ${_NXC_APP_DATA_DIR}"
+_lxc_exec ${_CT_NAME} "rc-service apache2 restart"
 
 ########################  INSTALL
 
@@ -277,100 +316,30 @@ _echot "------------------  install"
 cmds="sudo -u apache ${php_cli} ${occ} maintenance:install --database mysql --database-host ${S_SERVICE[proxy]} --database-name ${_NXC_APP_DB_NAME} --database-user ${_NXC_APP_DB_USER} --database-pass ${_NXC_APP_DB_PWD} --admin-user ${_NXC_APP_USER} --admin-pass ${_NXC_APP_PWD} --admin-email ${S_EMAIL_TECH} --data-dir ${_NXC_APP_DATA_DIR}"
 _lxc_exec ${_CT_NAME} "${cmds}"
 
+_echot "------------------  reset admin pwd"
+_lxc_exec ${_CT_NAME} "OC_PASS='3667.Gaza' su -s /bin/sh apache -c 'php8 ${occ} user:resetpassword --password-from-env admin'"
+
+#####################  CONF
+
 _echot "------------------  conf"
 file=${_APA_PATH_DOM}/${path_nxc}/config/config.php
-_lxc_exec ${_CT_NAME} "[ -f ${file} ] && mv ${file} ${file}.${_SDATE}"
-cmds="sed -i '/trusted_domains/,/),/d' ${file}
-sed -i '/overwrite\.cli.url/d' ${file}
-sed -i '/^);' ${file}"
-_lxc_exec ${_CT_NAME} "${cmds}"
-
-str="'trusted_domains' =>\  array (\n    0 => 'cloud.${_APA_DOM_FQDN}',\n    1 => 'nextcloud.${_APA_DOM_FQDN}',\n  ),"
-str+="\n  'htaccess.RewriteBase' => '/',"
-str+="\n  'overwrite.cli.url' => 'https://cloud.${_APA_DOM_FQDN}',"
-_lxc_exec ${_CT_NAME} "sed -i \"/^);/ i\  ${str}\" ${file}"
-
-
-_echot "------------------  ${domain} conf"
-file=${_APA_PATH_DOM}/${path_nxc}/config/config.php
-_eval lxc file push -q ${fc_nc_conf} ${_CT_NAME}${file}
-_lxc_var_replace ${_CT_NAME} ${file} apache nextcloud
-
-
-app:disable weather_status cloud_federation_api password_policy
-sudo -u apache ${php_cli} ${occ} app:install calendar
-sudo -u apache ${php_cli} ${occ} app:install deck
-sudo -u apache ${php_cli} ${occ} app:install contacts
-
-
+file_tmp=/tmp/config.php
+_eval lxc file push -q ${fc_nxc_conf} ${_CT_NAME}${file_tmp}
+_lxc_exec ${_CT_NAME} "sed -i '/^);$/d' ${file}"
+_lxc_exec ${_CT_NAME} "cat ${file_tmp} >> ${file}"
+_lxc_var_replace ${_CT_NAME} ${file} nextcloud
 
 _echot "------------------  conf htaccess"
 _lxc_exec ${_CT_NAME} "sudo -u apache ${php_cli} ${occ} maintenance:update:htaccess"
 
+_echot "------------------  app disable"
+_lxc_exec ${_CT_NAME} "sudo -u apache ${php_cli} ${occ} app:disable weather_status"
+_lxc_exec ${_CT_NAME} "sudo -u apache ${php_cli} ${occ} app:disable password_policy"
 
-########################  CONF
-
-
-#############  RESTART
-
-_echot "------------------  ${php_service} restart"
-_lxc_exec ${_CT_NAME} "rc-service ${php_service} restart"
-
-_echot "------------------  apache2 restart"
-_lxc_exec ${_CT_NAME} "rc-service apache2 restart"
-
-########################  MARIADB
-
-for ct_maria in ${_NXC_CT_DBS}; do
-
-	_echoT "\n==========  for ${ct_maria}"
-
-	_echot "------------------  ${ct_maria} db create"
-	cmd="CREATE DATABASE IF NOT EXISTS ${_NXC_APP_DB_NAME};"
-	_eval "mysql -h${ct_maria} -uroothost -p${_MDB_PWD_HOST} -e \"${cmd}\""
-
-	for ct_php in ${cts_php}  ${S_SERVICE[proxy]}; do
-
-		_echot "------------------  ${ct_php} ${_NXC_APP_DB_USER} grant"
-		cmd="GRANT USAGE ON *.* TO '${_NXC_APP_DB_USER}'@'${ct_php}.lxd' IDENTIFIED BY '${_NXC_APP_DB_PWD}';"
-		_eval "mysql -h${ct_maria} -uroothost -p${_MDB_PWD_HOST} -e \"${cmd}\""
-		cmd="GRANT ALL PRIVILEGES ON ${_NXC_APP_DB_NAME}.* TO '${_NXC_APP_DB_USER}'@'${ct_php}.lxd';"
-		_eval "mysql -h${ct_maria} -uroothost -p${_MDB_PWD_HOST} -e \"${cmd}\""
-		strpass+="${_NXC_APP_DB_USER} @ ${ct_php}.lxd - ${_NXC_APP_DB_PWD}\n"
-
-		_echot "------------------  ${ct_php} rootadmin grant"
-		cmd="GRANT ALL PRIVILEGES ON *.* TO rootadmin@'${ct_php}.lxd' IDENTIFIED BY '${_MDB_PWD_ADMIN}' WITH GRANT OPTION;"
-		_eval "mysql -h${ct_maria} -uroothost -p${_MDB_PWD_HOST} -e \"${cmd}\""
-		strpass+="rootadmin @ ${ct_php}.lxd - ${_MDB_PWD_ADMIN}\n"
-	done
-
+_echot "------------------  app disable"
+for app in calendar deck contacts notes; do
+	_lxc_exec ${_CT_NAME} "sudo -u apache ${php_cli} ${occ} app:install ${app}"
 done
-
-
-
-_exite debug
-
-
-;env[HOSTNAME] = $HOSTNAME
-;env[PATH] = /usr/local/bin:/usr/bin:/bin
-;env[TMP] = /tmp
-;env[TMPDIR] = /tmp
-;env[TEMP] = /tmp
-
-
-<Directory /var/share/www/ambau-fr.loc/cloud>
-Options -Indexes +MultiViews +FollowSymLinks
-AllowOverride All
-Require all granted
- </Directory>
-
-<LocationMatch .+\.php.*$>
-SetHandler proxy:unix:/run/php-fpm8/php-fpm.sock|fcgi://localhost
-</LocationMatch>
-
-
-
-
 
 ########################  RSYSLOG
 
@@ -420,10 +389,9 @@ _lxc_exec ${_CT_NAME} "rc-service crond restart"
 
 ########################  COPY
 
-for i in `seq 2 ${_NXC_CT_NUM}`; do
+for i in $(seq 2 ${_NXC_CT_NUM}); do
 	ct_name=${_NXC_CT_NAME}-${i}
 	_echot "---------- build ${ct_name}"
-
 	if lxc list -f csv -c n | grep -q ^${ct_name}$; then
 		lxc list -f csv -c n status=Running| grep -q ^${ct_name}$ && _eval lxc stop ${ct_name}
 		_echo "---------- move ${ct_name} to ${ct_name}-${_SDATE}"
@@ -447,8 +415,8 @@ _lxc_exec ${S_SERVICE[proxy]} "rc-service haproxy reload"
 
 ########################  SHOW
 
-_echot "------------------  show privileges ${_NXC_CT_DB}"
-_eval "mysql -h${_NXC_CT_DB} -uroothost -p${_MDB_PWD_HOST} -e \"SELECT user,host FROM mysql.user WHERE user like '${_NXC_APP_DB_USER}';\""
+_echot "------------------  show privileges"
+_eval "mysql -h${_NXC_CT_DBS%% *} -uroothost -p${_MDB_PWD_HOST} -e \"SELECT user,host FROM mysql.user WHERE user like '${_NXC_APP_DB_USER}';\""
 
 _echot "------------------  show passwords"
 _echoA "Keep this passwords:"
@@ -457,11 +425,13 @@ _echoa "${strpass%\\n}"
 _echot "------------------  email"
 _echoA "Add alias or account for nextcloud@${_HPX_DOM_FQDN}"
 
+_echot "------------------  test"
+_echoa "Go to https://${_HPX_DOM_FQDN}"
+
 ########################  PUBLISH
 
-for ct_name in ${ct_php} ${_NXC_CT_DB}; do
+for ct_name in ${cts_cli} ${_NXC_CT_DBS}; do
 	_echot "------------------  publish ${ct_name}"
-
 	lxc image list -f csv -c l | grep -q ^${ct_name}$ && _eval lxc image alias rename ${ct_name} ${ct_name}-${_SDATE}
 	_eval lxc publish --force ${ct_name} --alias ${ct_name}
 done
