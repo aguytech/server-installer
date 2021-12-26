@@ -333,6 +333,11 @@ _lxc_exec ${_CT_NAME} "rc-service haproxy restart"
 
 ########################  RSYSLOG
 
+_echot "------------------  conf ${S_RSYSLOG_PTC}"
+file=/etc/rsyslog.conf
+str="\n# ${S_RSYSLOG_PTC}\nmodule(load=\"im${S_RSYSLOG_PTC}\")\ninput(\n\ttype=\"im${S_RSYSLOG_PTC}\"\n\tport=\"${S_RSYSLOG_PORT}\"\n)"
+_lxc_exec ${_CT_NAME} "grep -q '^\s*type=.im${S_RSYSLOG_PTC}' ${file} || echo -e '${str}' >> ${file}"
+
 _echot "------------------  ${S_SERVICE[log]} host path"
 path=${S_VM_PATH_LOG}/haproxy
 _lxc_exec ${S_SERVICE[log]} "[ -d '${path}' ] || mkdir -p ${path}"
