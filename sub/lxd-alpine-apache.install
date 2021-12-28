@@ -259,7 +259,7 @@ _lxc_var_replace ${_CT_NAME} /etc/apache2 apache apache2
 
 _echot "------------------  service start"
 _lxc_exec ${_CT_NAME} "chown -R 0:0 /etc/apache2"
-_lxc_exec ${_CT_NAME} "chown apache:apache -R ${_APA_PATH_WWW} ${_APA_PATH_DOM}/*"
+_lxc_exec ${_CT_NAME} "chown apache:apache -R ${_APA_PATH_WWW} ${_APA_PATH_DOM}"
 _lxc_exec ${_CT_NAME} "rc-service apache2 restart"
 
 if lxc image list -f csv -c l | grep -q ^${S_SERVICE[proxy]}$; then
