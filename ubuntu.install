@@ -5,8 +5,9 @@
 <<MANUALLY
 # HOME
 server=node1; host=ns313372; ssh_port=2002; type=ks16
-# server=node2; host=ns364584; ssh_port=2002; type=ks8
+# server=node2; host=ns346303; ssh_port=2002; type=ks16
 # server=node3; host=ns388803; ssh_port=2002; type=ks8
+# server=node4; host=ns364584; ssh_port=2002; type=ks8
 for i in  ${server} ${host}; do sed -i "/${i}/d" ~/.ssh/known_hosts; done
 
 cmds="sudo apt install rsync
