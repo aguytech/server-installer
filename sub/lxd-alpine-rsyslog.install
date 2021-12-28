@@ -12,14 +12,14 @@ lxc image list -f csv -c l | grep -q ^${_CT_INIT_NAME}$ || _exite "Unable to fin
 
 file_rsyslog_host_auth=${S_PATH_INSTALL_CONF}/rsyslog/host-auth.conf
 file_rsyslog_host_iptables=${S_PATH_INSTALL_CONF}/rsyslog/host-iptables.conf
-file_rsyslog_host_fail2ban=${S_PATH_INSTALL_CONF}/rsyslog/host-fail2ban.conf
 file_rsyslog_host_lxd=${S_PATH_INSTALL_CONF}/rsyslog/host-lxd.conf
+file_rsyslog_host_fail2ban=${S_PATH_INSTALL_CONF}/rsyslog/host-fail2ban.conf
 file_rsyslog_host_mail=${S_PATH_INSTALL_CONF}/rsyslog/host-mail.conf
 
 file_logrotate_host_rsyslog=${S_PATH_INSTALL_CONF}/logrotate/host-rsyslog
 file_logrotate_host_iptables=${S_PATH_INSTALL_CONF}/logrotate/host-iptables
-file_logrotate_host_fail2ban=${S_PATH_INSTALL_CONF}/logrotate/host-fail2ban
 file_logrotate_host_lxd=${S_PATH_INSTALL_CONF}/logrotate/host-lxd
+file_logrotate_host_fail2ban=${S_PATH_INSTALL_CONF}/logrotate/host-fail2ban
 file_logrotate_host_mail=${S_PATH_INSTALL_CONF}/logrotate/host-mail
 
 _echot "------------------ required files"
@@ -89,53 +89,44 @@ file=/etc/rsyslog.conf
 str="\n# ${S_RSYSLOG_PTC}\nmodule(load=\"im${S_RSYSLOG_PTC}\")\ninput(\n\ttype=\"im${S_RSYSLOG_PTC}\"\n\tport=\"${S_RSYSLOG_PORT}\"\n)"
 _lxc_exec ${_CT_NAME} "grep -q '^\s*type=.im${S_RSYSLOG_PTC}' ${file} || echo -e '${str}' >> ${file}"
 
-_echot "------------------  conf host-auth"
+########################  RSYSLOG PARTS
+
+_echot "------------------  conf auth host"
 file=/etc/rsyslog.d/${file_rsyslog_host_auth##*/}
 _eval lxc file push -q ${file_rsyslog_host_auth} ${_CT_NAME}${file}
 
-_echot "------------------  conf host-mail"
+_echot "------------------  conf mail host"
 file=/etc/rsyslog.d/${file_rsyslog_host_mail##*/}
 _eval lxc file push -q ${file_rsyslog_host_mail} ${_CT_NAME}${file}
 
-########################  RSYSLOG IPTABLES
-
-_echot "------------------  iptables host conf"
+_echot "------------------  conf iptables host"
 path=${S_VM_PATH_LOG}/iptables
 _lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
-
 file=/etc/rsyslog.d/${file_rsyslog_host_iptables##*/}
 _eval lxc file push -q ${file_rsyslog_host_iptables} ${_CT_NAME}${file}
 
-########################  RSYSLOG FAIL2BAN
-
-_echot "------------------  fail2ban host conf"
-path=${S_VM_PATH_LOG}/fail2ban
-_lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
-
-file=/etc/rsyslog.d/${file_rsyslog_host_lxd##*/}
-_eval lxc file push -q ${file_rsyslog_host_lxd} ${_CT_NAME}${file}
-
-########################  RSYSLOG LXD
-
-_echot "------------------  lxd host conf"
-
+_echot "------------------  conf lxd host"
 path=${S_VM_PATH_LOG}/lxd
 _lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
-
 file=/etc/rsyslog.d/${file_rsyslog_host_lxd##*/}
 _eval lxc file push -q ${file_rsyslog_host_lxd} ${_CT_NAME}${file}
 
+_echot "------------------  conf fail2ban host"
+path=${S_VM_PATH_LOG}/fail2ban
+_lxc_exec ${_CT_NAME} "[ -d ${path} ] || mkdir -p ${path}"
+file=/etc/rsyslog.d/${file_rsyslog_host_fail2ban##*/}
+_eval lxc file push -q ${file_rsyslog_host_fail2ban} ${_CT_NAME}${file}
 
 ########################  RSYSLOG RESTART
 
-_echot "------------------  ${_CT_NAME} conf"
+_echot "------------------  ${_CT_NAME} var replace"
 _lxc_var_replace ${_CT_NAME} /etc/rsyslog.d rsyslog
 
-_echot "------------------  ${_CT_NAME} reload"
+_echot "------------------  ${_CT_NAME} restart"
 _lxc_exec ${_CT_NAME} "chown -R 0:0 /etc/rsyslog.d"
 _lxc_exec ${_CT_NAME} "rc-service rsyslog restart"
 
-_echot "------------------  ${HOSTNAME} reload"
+_echot "------------------  ${HOSTNAME} restart"
 _service restart rsyslog
 
 ########################  LOGROTATE HOST
@@ -152,10 +143,15 @@ _echot "------------------  logrotate lxd host"
 file=/etc/logrotate.d/${file_logrotate_host_lxd##*/}
 _eval lxc file push -q ${file_logrotate_host_lxd} ${_CT_NAME}${file}
 
+_echot "------------------  logrotate fail2ban host"
+file=/etc/logrotate.d/${file_logrotate_host_fail2ban##*/}
+_eval lxc file push -q ${file_logrotate_host_fail2ban} ${_CT_NAME}${file}
+
 _echot "------------------  logrotate mail host"
 file=/etc/logrotate.d/${file_logrotate_host_mail##*/}
 _eval lxc file push -q ${file_logrotate_host_mail} ${_CT_NAME}${file}
 
+_echot "------------------  logrotate var replace"
 _lxc_var_replace ${_CT_NAME} /etc/logrotate.d logrotate
 _lxc_exec ${_CT_NAME} "chmod g-w,o= /etc/logrotate.d/*"
 
