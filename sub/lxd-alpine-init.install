@@ -115,6 +115,7 @@ _lxc_exec ${_CT_NAME} "chown -R 0:0 ${S_PATH_CONF}; chmod 700 -R ${S_PATH_CONF}"
 
 _echot "------------------  apk update"
 _lxc_exec ${_CT_NAME} "apk update && apk upgrade"
+#_lxc_exec ${_CT_NAME} "apk add busybox-extras"
 
 _echot "------------------  timezone Paris"
 _lxc_exec ${_CT_NAME} "apk add tzdata"
