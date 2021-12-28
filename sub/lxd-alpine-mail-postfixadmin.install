@@ -76,6 +76,7 @@ _echo "none: Don’t use encryption
 _confset _MEL_PFA_POLICY "${_MEL_PFA_POLICY}"
 
 pfa_path=${file_app%.tar.gz}
+_APA_DOM_FQDN=${_MEL_DOM_FQDN}
 _APA_PATH_DOM=${S_VM_PATH_SHARE}/www
 _APA_SUB=pfa
 _CT_ADMIN=${_MEL_CT_ADMIN}
@@ -140,7 +141,7 @@ _lxc_exec ${_CT_ADMIN} "rc-service apache2 restart"
 ########################  MANUAL
 
 _echot "------------------  manually app password"
-_echoA "Go to address: https://${_APA_SUB}.${S_DOM_FQDN}/setup.php"
+_echoA "Go to address: https://${_APA_SUB}.${_APA_DOM_FQDN}/setup.php"
 _echo "Use this password to configure postfixadmin: ${_MEL_DB_PFA_PWD}"
 _echo "after this, paste to this terminal the text given by postfixadmin to configure it:"
 str=
@@ -149,7 +150,7 @@ file=${_APA_PATH_DOM}/${_APA_SUB}/config.local.php
 lxc exec ${_CT_ADMIN} -- sed -i "/^.CONF..setup_password/ c ${str}" ${file}
 
 _echot "------------------  manually admin password"
-_echoA "Refresh page: ${_APA_SUB}.${S_DOM_FQDN}/setup.php"
+_echoA "Refresh page: ${_APA_SUB}.${_APA_DOM_FQDN}/setup.php"
 _echo "and enter setup password: ${_MEL_DB_PFA_PWD} to continue"
 _echo "After creation of tables succeed you have to setup an account for administration"
 _askno "and valid after this"
@@ -171,8 +172,8 @@ _echo "${strpass}"
 
 _echot "------------------  domain & email account"
 _echoA "Now use Logging you in this address:"
-_echo " ${_APA_SUB}.${S_DOM_FQDN}/"
-_echoa "And create at least the domain: ${S_DOM_FQDN} & the email: ${S_EMAIL_TECH}"
+_echo " ${_APA_SUB}.${_APA_DOM_FQDN}/"
+_echoa "And create at least the domain: ${_APA_DOM_FQDN} & the email: ${S_EMAIL_TECH}"
 
 ########################  COPY
 

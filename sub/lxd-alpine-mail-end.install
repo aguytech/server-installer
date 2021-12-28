@@ -22,6 +22,8 @@ _require ${fc_f2b_jail_mail} ${fc_f2b_filter_pf}
 
 _echot "------------------ iptables ports"
 _evalr "sed -i '/^#_PORTS_MAIL/ c\_PORTS_MAIL=\"${_MEL_PORTS}\"' ${_IPT_FILE_CONF}"
+_echot "------------------ iptables reload"
+_service restart iptables-firewall
 
 if type fail2ban-client >/dev/null 2>&1; then
 	_echot "------------------  fail2ban jail"
@@ -39,8 +41,8 @@ if type fail2ban-client >/dev/null 2>&1; then
 	_echot "------------------  fail2ban rights"
 	_evalr "chmod 644 /etc/fail2ban/jail.d/*"
 
-	_echot "------------------  fail2ban reload"
-	_service reload fail2ban.service
+	_echot "------------------  fail2ban restart"
+	_service restart fail2ban.service
 fi
 
 ########################  PUBLISH

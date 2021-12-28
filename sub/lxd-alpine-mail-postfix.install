@@ -119,11 +119,11 @@ queries=$(_lxc_exec ${_CT_NAME} "sed -n 's|^[^#].* \(mysql:.*\)$|\1|p' /etc/post
 queries+=" $(_lxc_exec ${_CT_NAME} "sed -n 's|^[^#].*proxy:\(mysql:.*\)$|\1|p' /etc/postfix/main.cf")"
 queries+=" $(_lxc_exec ${_CT_NAME} "sed -n 's|^[^#].* \(mysql:.*\)$|\n\1|p' /etc/postfix/master.cf")"
 queries+=" $(_lxc_exec ${_CT_NAME} "sed -n 's|^[^#].*proxy:\(mysql:.*\)$|\n\1|p' /etc/postfix/master.cf")"
-_echot "------------------  test postmap ${S_DOM_FQDN}"
+_echot "------------------  test postmap ${_MEL_DOM_FQDN}"
 _echoA "Verify results of postamp commands:"
 for query in ${queries}; do
 	_echo "- ${query}"
-	_lxc_exec ${_CT_NAME} postmap -q ${S_DOM_FQDN} ${query}
+	_lxc_exec ${_CT_NAME} postmap -q ${_MEL_DOM_FQDN} ${query}
 done
 _echot "------------------  test postmap ${S_EMAIL_TECH}"
 for query in ${queries}; do
@@ -143,20 +143,20 @@ _lxc_exec ${_CT_NAME} "ls -t1 ${_MEL_PATH_LOCAL}/${_MEL_DOM_FQDN}/tech/new/*|hea
 
 _echot "------------------  test telnet 25"
 _echoa Use telnet to send a mail
-_echo telnet mx.${S_DOM_FQDN}:465 25
+_echo telnet mx.${_MEL_DOM_FQDN}:465 25
 _echo telnet ${S_SERVICE[mail]} 25
 _echoa "ehlo root|mail from:root|rcpt to:${S_EMAIL_TECH}|data|message|.|quit"
 [ -z "${_MEL_INSTALL_AUTO}" ] && _askno "valid to continue"
 
 _echot "------------------  test ssl 587"
 _echoa "Use openssl to test SSL certificate | quit"
-_echo openssl s_client -starttls smtp -connect mx.${S_DOM_FQDN}:587
+_echo openssl s_client -starttls smtp -connect mx.${_MEL_DOM_FQDN}:587
 _echo openssl s_client -starttls smtp -connect ${S_SERVICE[mail]}:587
 [ -z "${_MEL_INSTALL_AUTO}" ] && _askno "valid to continue"
 
 _echot "------------------  test openssl 465"
 _echoa "Use openssl to test STARTTLS certificate | quit"
-_echo openssl s_client -connect mx.${S_DOM_FQDN}:465
+_echo openssl s_client -connect mx.${_MEL_DOM_FQDN}:465
 _echo openssl s_client -connect ${S_SERVICE[mail]}:465
 [ -z "${_MEL_INSTALL_AUTO}" ] && _askno "valid to continue"
 

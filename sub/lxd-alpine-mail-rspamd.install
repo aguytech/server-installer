@@ -141,7 +141,7 @@ _echoa "${_MEL_RSP_PWD}"
 _echot "------------------  rspamd controller"
 _echoA "To verify rspamd controller acces, goto:"
 _echo "http://${_IPTHIS}:${S_RSPAMD_PORT[controller]}/"
-_echo "http://${S_DOM_FQDN}:${S_RSPAMD_PORT[controller]}/"
+_echo "http://${_APA_DOM_FQDN}:${S_RSPAMD_PORT[controller]}/"
 _echoa "Access with password: ${_MEL_RSP_PWD}"
 
 ########################  END

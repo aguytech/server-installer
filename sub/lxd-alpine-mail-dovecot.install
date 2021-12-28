@@ -173,7 +173,7 @@ _lxc_exec ${_CT_NAME} "ls -t1 ${_MEL_PATH_VMAIL}/mailboxes/${_MEL_DOM_FQDN}/tech
 [ -z "${_MEL_INSTALL_AUTO}" ] && _askno "valid to continue"
 
 _echot "------------------  test telnet 143"
-_echo telnet mx.${S_DOM_FQDN}:465 143
+_echo telnet mx.${_MEL_DOM_FQDN} 143
 _echo telnet ${S_SERVICE[mail]} 143
 _echoa "a login $user $pwd|b select INBOX | z logout"
 _echoa "ehlo root | mail from:root | rcpt to:${S_EMAIL_TECH} | data | message | . | quit"
@@ -181,15 +181,15 @@ _echoa "ehlo root | mail from:root | rcpt to:${S_EMAIL_TECH} | data | message | 
 
 _echot "------------------  test starttls 993"
 _echoA "Use openssl to test STARTTLS certificate"
-_echoa "quit"
-_echo openssl s_client -connect mx.${S_DOM_FQDN}:993
+_echoa "a login $user $pwd|b select INBOX | z logout"
+_echo openssl s_client -connect mx.${_MEL_DOM_FQDN}:993
 _echo openssl s_client -connect ${S_SERVICE[mail]}:993
 [ -z "${_MEL_INSTALL_AUTO}" ] && _askno "valid to continue"
 
 _echot "------------------  test openssl 143"
 _echoA "Use openssl to test SSL certificate"
 _echo "quit"
-_echo openssl s_client -starttls imap -connect mx.${S_DOM_FQDN}:143
+_echo openssl s_client -starttls imap -connect mx.${_MEL_DOM_FQDN}:143
 _echo openssl s_client -starttls imap -connect ${S_SERVICE[mail]}:993
 [ -z "${_MEL_INSTALL_AUTO}" ] && _askno "valid to continue"
 

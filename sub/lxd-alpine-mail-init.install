@@ -190,15 +190,15 @@ _lxc_exec ${_CT_NAME} "rc-service crond restart"
 ########################  MANUAL CONF
 
 _echot "------------------  DNS conf"
-_echo "IN MX 1   ${S_DOM_FQDN}.
+_echo "IN MX 1   ${_MEL_DOM_FQDN}.
 IN TXT 'v=spf1 a mx ~all'
-imap				IN CNAME  ${S_DOM_FQDN}.
-mail				IN CNAME  ${S_DOM_FQDN}.
-smtp				IN CNAME  ${S_DOM_FQDN}.
+imap				IN CNAME  ${_MEL_DOM_FQDN}.
+mail				IN CNAME  ${_MEL_DOM_FQDN}.
+smtp				IN CNAME  ${_MEL_DOM_FQDN}.
 
-${S_DOM_FQDN}  3600 IN TXT v=spf1 a:mx.${S_DOM_FQDN} ?all"
+${_MEL_DOM_FQDN}  3600 IN TXT v=spf1 a:mx.${_MEL_DOM_FQDN} ?all"
 _echoa "For each domain in: ${S_DOM_ALL_FQDN}"
-_echo "${S_DOM_ALL_FQDN%% *}. 3600 IN TXT v=spf1 include:${S_DOM_FQDN} ?all"
+_echo "${S_DOM_ALL_FQDN%% *}. 3600 IN TXT v=spf1 include:${_MEL_DOM_FQDN} ?all"
 
 _echoa "For each domain in: ${S_DOM_ALL_FQDN}"
 _echo "_dmarc.${S_DOM_ALL_FQDN}. 'v=DMARC1; p=none; sp=none; aspf=r;'"
@@ -206,7 +206,7 @@ _echoa "Verify the configuration of your DNS server about MAIL"
 
 _echot "------------------  reverse DNS conf"
 _echoa "Verify that the reverse DNS of your machine: ${_IPTHIS} is set to:"
-_echo "mail.${S_DOM_FQDN}"
+_echo "mail.${_MEL_DOM_FQDN}"
 [ -z "${_MEL_INSTALL_AUTO}" ] && _askno "Valid to continue"
 
 
