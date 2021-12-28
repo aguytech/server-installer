@@ -27,7 +27,9 @@ _require ${fc_mdb_server} ${fc_mdb_rsyslog_client} ${fc_mdb_rsyslog_host} ${fc_m
 
 _echot "------------------  data name"
 
-[ -z ${_MDB_CT_NAME+x} ] && { anstmp=mdb-${S_DOM_FQDN//./-}; _askno "Base name of the mariadb container to build (${anstmp})"; _MDB_CT_NAME="${_ANSWER:-${anstmp}}"; }
+[ -z ${_MDB_DOM_FQDN+x} ] && { anstmp=${S_DOM_FQDN}; _askno "FQDN domain to use (${anstmp})"; _MDB_DOM_FQDN="${_ANSWER:-${anstmp}}"; }
+
+[ -z ${_MDB_CT_NAME+x} ] && { anstmp=mdb-${_MDB_DOM_FQDN//./-}; _askno "Base name of the mariadb container to build (${anstmp})"; _MDB_CT_NAME="${_ANSWER:-${anstmp}}"; }
 
 [ -z ${_MDB_CT_PROFILE+x} ] && { anstmp=${_MDB_CT_NAME}; _askno "Base name of the mariadb profile (${anstmp})"; _MDB_CT_PROFILE="${_ANSWER:-${anstmp}}"; }
 
@@ -64,27 +66,77 @@ _MDB_PATH_CONF=/etc/my.cnf.d && _confset _MDB_PATH_CONF "${_MDB_PATH_CONF}"
 
 ########################  STORAGE MARIADB
 
-name=mariadb
 path_base=${S_HOST_PATH}/mariadb
+path_save_base=${S_HOST_PATH_SAVE}/mariadb
+path_save_dom=${path_save_base}/${_MDB_DOM_FQDN}
 
 if [ "${_DEV_DRIVER}" = zfs ]; then
 
-	if ! zfs list ${_ZFS_ROOT}${S_HOST_PATH}|grep -q ^mariadb; then
-		_echot "------------------  zfs ${name}"
+	# mariadb lib
+	if ! zfs list ${_ZFS_ROOT}${path_base} >/dev/null 2>&1; then
+		_echot "------------------  zfs ${_ZFS_ROOT}${path_base}"
 		path_zfs=${_ZFS_ROOT}${path_base}
 		path=${path_base}
 		opts="-o mountpoint=${path} -o compression=lz4 -o  acltype=posixacl -o recordsize=8K -o primarycache=metadata"
-		_evalr zfs list ${path_zfs} >/dev/null 2>&1 || _evalr zfs create ${opts} ${path_zfs}
+		_evalr zfs create ${opts} ${path_zfs}
+	fi
+
+	# mariadb save
+	if ! zfs list ${_ZFS_ROOT}${path_save_base} >/dev/null 2>&1; then
+		_echot "------------------  zfs ${_ZFS_ROOT}${path_save_base}"
+		path_zfs=${_ZFS_ROOT}${path_save_base}
+		path=${path_save_base}
+		opts="-o mountpoint=${path} -o compression=lz4 -o  acltype=posixacl"
+		_evalr zfs create ${opts} ${path_zfs}
+	fi
+
+	# mariadb save domain
+	if ! zfs list ${_ZFS_ROOT}${path_save_dom} >/dev/null 2>&1; then
+		_echot "------------------  zfs ${_ZFS_ROOT}${path_save_dom}"
+		path_zfs=${_ZFS_ROOT}${path_save_dom}
+		path=${path_save_dom}
+		opts="-o mountpoint=${path} -o compression=lz4 -o  acltype=posixacl"
+		_evalr zfs create ${opts} ${path_zfs}
 	fi
 
 elif [ "${_DEV_DRIVER}" = btrfs ]; then
 
-	if ! ls -1 ${S_HOST_PATH}|grep -q ^mariadb; then
-		_echot "------------------  btrfs ${name}"
+	# mariadb lib
+	if ! ls ${path_base} >/dev/null 2>&1; then
+		_echot "------------------  btrfs ${path_base}"
 		path=${path_base}
-		_evalr ls -1 ${path} >/dev/null 2>&1 || _evalr btrfs subvolume create ${path}
+		_evalr btrfs subvolume create ${path}
 	fi
 
+	# mariadb save
+	if ! ls ${_ZFS_ROOT}${path_save_base} >/dev/null 2>&1; then
+		_echot "------------------  zfs ${_ZFS_ROOT}${path_save_base}"
+		path=${path_save_base}
+		_evalr btrfs subvolume create ${path}
+	fi
+
+	# mariadb save domain
+	if ! ls ${_ZFS_ROOT}${path_save_dom} >/dev/null 2>&1; then
+		_echot "------------------  zfs ${_ZFS_ROOT}${path_save_dom}"
+		path=${path_save_dom}
+		_evalr btrfs subvolume create ${path}
+	fi
+
+fi
+_evalr chown -R ${_LXD_UID}:${_LXD_UID} ${path_base} ${path_save_base} ${path_save_dom}
+
+########################  PROFILE
+
+profile=save-mdb-${_MDB_DOM_FQDN}
+if ! lxc profile list -f csv|grep -q "^${profile},"; then
+	_echot "------------------  profile ${profile}"
+	lxc profile list -f csv|grep -q "^${profile}," && _eval lxc profile rename ${profile} ${profile}.${_SDATE}
+	_eval lxc profile create ${profile}
+	path=${path_save_dom}
+	path_ct=${S_VM_PATH_SAVE}/mariadb
+	_eval lxc profile device add ${profile} save-mdb disk source=${path} path=${path_ct}
+else
+	_echot "------------------  existing profile ${profile}"
 fi
 
 ########################  LOOP
@@ -138,10 +190,8 @@ for i in $(seq 1 ${_PHP_CT_NUM}); do
 
 	profile=${_MDB_CT_PROFILE}-${i}
 	_echot "------------------  profile ${profile}"
-
 	lxc profile list -f csv|grep -q "^${profile}," && _eval lxc profile rename ${profile} ${profile}.${_SDATE}
 	_eval lxc profile create ${profile}
-
 	path=${path_host}
 	path_ct=${_MDB_VM_PATH}
 	[ -d ${path} ] || _evalr mkdir -p ${path}
@@ -155,7 +205,7 @@ for i in $(seq 1 ${_PHP_CT_NUM}); do
 		_echot "------------------ rename ${_CT_NAME} -> ${_CT_NAME}-${_SDATE}"
 		_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
 	fi
-	_eval lxc init ${_MDB_INIT} ${_CT_NAME} -p default -p global -p ${profile}
+	_eval lxc init ${_MDB_INIT} ${_CT_NAME} -p default -p global -p save-mdb-${_MDB_DOM_FQDN} -p ${profile}
 
 	_echot "------------------  ${_CT_NAME} start"
 	_eval lxc start ${_CT_NAME}
@@ -163,7 +213,7 @@ for i in $(seq 1 ${_PHP_CT_NUM}); do
 	########################  METADATA
 
 	_echot "------------------  metadata"
-	_lxc_meta_set ${_CT_NAME} profiles default global ${profile}
+	_lxc_meta_set ${_CT_NAME} profiles default global save-mdb-${_MDB_DOM_FQDN} ${profile}
 	_lxc_meta_add ${_CT_NAME} apps mariadb
 
 	########################  INSTALL
@@ -288,7 +338,9 @@ done
 
 ########################  ENDLOOP
 
-
+_echot "------------------  rights ${path_save_dom}"
+_lxc_exec ${_CT_NAME} chown mysql ${path_save_dom}
+_lxc_exec ${_CT_NAME} chmod g+w ${path_save_dom}
 
 ########################  RSYSLOG
 
