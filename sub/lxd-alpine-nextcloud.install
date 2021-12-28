@@ -305,7 +305,7 @@ _lxc_exec ${_CT_NAME} "rc-service ${php_service} restart"
 
 _echot "------------------  apache2 restart"
 _lxc_exec ${_CT_NAME} "chown -R 0:0 /etc/apache2"
-_lxc_exec ${_CT_NAME} "chown apache:apache -R ${_APA_PATH_DOM} ${_NXC_APP_DATA_DIR}"
+_lxc_exec ${_CT_NAME} "chown -R apache:apache ${_APA_PATH_DOM} ${_NXC_APP_DATA_DIR}"
 _lxc_exec ${_CT_NAME} "rc-service apache2 restart"
 
 ########################  INSTALL
@@ -320,7 +320,9 @@ _echot "------------------  conf"
 file=${_APA_PATH_DOM}/${path_nxc}/config/config.php
 file_tmp=/tmp/config.php
 _eval lxc file push -q ${fc_nxc_conf} ${_CT_NAME}${file_tmp}
-_lxc_exec ${_CT_NAME} "sed -i '/^);$/d' ${file}"
+_lxc_exec ${_CT_NAME} "sed -i '/^\s*.trusted_domains/,/^\s*),/ d' ${file}"
+_lxc_exec ${_CT_NAME} "sed -i '/^\s*.overwrite.cli.url/ d' ${file}"
+_lxc_exec ${_CT_NAME} "sed -i '/^);$/ d' ${file}"
 _lxc_exec ${_CT_NAME} "cat ${file_tmp} >> ${file}"
 _lxc_var_replace ${_CT_NAME} ${file} nextcloud
 
@@ -334,7 +336,7 @@ for app in weather_status password_policy; do
 done
 
 _echot "------------------  app install"
-for app in calendar contacts deck groupfolders notes tasks; do
+for app in calendar contacts deck groupfolders notes rainloop tasks; do
 	_echo ${app}
 	_lxc_exec ${_CT_NAME} "sudo -u apache ${php_cli} ${occ} app:install ${app}"
 done
