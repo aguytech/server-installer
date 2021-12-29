@@ -163,11 +163,10 @@ _lxc_exec ${_CT_NAME} "chown -R 0:0 ${path}"
 
 _echot "------------------  cron"
 file="/etc/crontabs/root"
-_lxc_exec ${_CT_NAME} "sed -i '/^\*\/15/ s|^|#|' ${file}"
-_lxc_exec ${_CT_NAME} rc-service -S crond start
-
-file=/etc/crontabs/mail
+_lxc_exec ${_CT_NAME} "sed -i '/^MAILTO/d' ${file}"
 _lxc_exec ${_CT_NAME} "echo 'MAILTO=${S_EMAIL_TECH}' > ${file}"
+#_lxc_exec ${_CT_NAME} "sed -i '/^\*\/15/ s|^|#|' ${file}"
+_lxc_exec ${_CT_NAME} rc-service -S crond start
 
 _echot "------------------  cron restart"
 _lxc_exec ${_CT_NAME} "rc-service crond restart"

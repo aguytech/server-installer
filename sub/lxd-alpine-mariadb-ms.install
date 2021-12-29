@@ -11,14 +11,18 @@ _echot "------------------ required vm"
 cts_all_mdb=$(lxc list -f csv -c n| grep '^mdb-'|xargs)
 [ "${cts_all_mdb}" ] || _exite "unable to find mariadb container"
 
+profiles_save=$(lxc profile list -f csv|grep "^save-mdb-.*,"|cut -d, -f1)
+[ "${profiles_save}" ] || _exite "Unable to find a save profile (profile name starts with save-mdb-)"
+
 fc_mdb_ms_master="${S_PATH_INSTALL_CONF}/mariadb/mariadb-master.cnf"
 fc_mdb_ms_slave="${S_PATH_INSTALL_CONF}/mariadb/mariadb-slave.cnf"
+fc_mdb_dump=${S_PATH_INSTALL_CONF}/mariadb/mariadb-dump-slave.sh
 
 fc_mdb_ms_ha_front=${S_PATH_INSTALL_CONF}/haproxy/conf-available/41-fronts-mariadb
 fc_mdb_ms_ha_back=${S_PATH_INSTALL_CONF}/haproxy/conf-available/61-backs-mariadb
 
 _echot "------------------ required files"
-_require ${fc_mdb_ms_master} ${fc_mdb_ms_slave}
+_require ${fc_mdb_ms_master} ${fc_mdb_ms_slave} ${fc_mdb_dump}
 _require ${fc_mdb_ms_ha_front} ${fc_mdb_ms_ha_back}
 
 #_askyn "To install a master/slave mariadb cluster, you need to have 2 available instances of mariadb?" && [ ${_ANSWER} = n ] && _exit 0
@@ -30,6 +34,8 @@ _echot "------------------  data ct"
 [ -z ${_MDB_MS_CT_NAME+x} ] && { anstmp=mdb-${S_DOM_FQDN//./-}; _askno "Base name of the mariadb container to build (${anstmp})"; _MDB_MS_CT_NAME="${_ANSWER:-${anstmp}}"; }
 
 [ -z ${_MDB_MS_CT_NUM+x} ] && { anstmp=2 && _askno "Number of containers to build (${anstmp})"; _MDB_MS_CT_NUM="${_ANSWER:-$anstmp}"; }
+
+[ -z ${_MDB_MS_PROFILE_SAVE+x} ] && { _menu "Select a save profile" ${profiles_save}; _MDB_MS_PROFILE_SAVE="${_ANSWER}"; }
 
 [ -z "${_MDB_MS_CT_MASTER}" ] && { cts_all_mdb=" ${cts_all_mdb} "
 	_menu "Select one available mariadb container for MASTER " ${cts_all_mdb}
@@ -60,6 +66,8 @@ _echot "------------------  data"
 
 [ -z ${_MDB_MS_PWD_REPLIC+x} ] && { anstmp=`_pwd`; _askno "Password for replication access (${anstmp})"; _MDB_MS_PWD_REPLIC="${_ANSWER:-${anstmp}}"; }
 
+[ -z ${_MDB_MS_PWD_DUMP+x} ] && { anstmp=`_pwd`; _askno "Password for dump access (${anstmp})"; _MDB_MS_PWD_DUMP="${_ANSWER:-${anstmp}}"; }
+
 [ -z ${_MDB_MS_PROXY+x} ] && { anstmp=${S_DOM_FQDN}; _askno "Prefix for proxy name (${anstmp})"; _MDB_MS_PROXY="${_ANSWER:-$anstmp}"; }
 _confset _MDB_MS_PROXY "${_MDB_MS_PROXY}"
 
@@ -71,7 +79,7 @@ _confset _MDB_MS_PROXY "${_MDB_MS_PROXY}"
 
 [ -z ${_MDB_MS_SLAVE_ID+x} ] && { anstmp=100; _askno "the server id for slave (${anstmp})"; _MDB_MS_SLAVE_ID="${_ANSWER:-$anstmp}"; }
 
-[ -z ${_MDB_MS_DB_IGNORE+x} ] && { anstmp="information_schema mysql performance_schema"; _askno "database names to IGNORE for replication (${anstmp})"; _MDB_MS_DB_IGNORE="${_ANSWER:-$anstmp}"; }
+[ -z ${_MDB_MS_DB_IGNORE+x} ] && { anstmp="information_schema mysql performance_schema sys"; _askno "database names to IGNORE for replication (${anstmp})"; _MDB_MS_DB_IGNORE="${_ANSWER:-$anstmp}"; }
 
 [ -z ${_MDB_MS_DB_DO+x} ] && { anstmp=; _askno "database names to USE for replication (set ignored db to null) (${anstmp})"; 	_MDB_MS_DB_DO="${_ANSWER:-$anstmp}"; }
 
@@ -119,8 +127,8 @@ _lxc_exec ${_CT_NAME} "rc-service mariadb restart"
 
 _echot "------------------  ${_CT_NAME} replic"
 for ct_slave in ${_MDB_MS_CT_SLAVES}; do
-	cmd="CREATE OR REPLACE USER 'replic'@'${ct_slave}.lxd' IDENTIFIED BY '${_MDB_MS_PWD_REPLIC}';
-	GRANT REPLICATION SLAVE ON *.* TO 'replic'@'${ct_slave}.lxd';"
+	cmd="CREATE OR REPLACE USER 'replic'@'${ct_slave}.lxd' IDENTIFIED BY '${_MDB_MS_PWD_REPLIC}';"
+	cmds+="GRANT REPLICATION SLAVE ON *.* TO 'replic'@'${ct_slave}.lxd';"
 	strpass+="replic @ ${ct_slave}.lxd - ${_MDB_MS_PWD_REPLIC}\n"
 done
 _eval "mysql -h${_CT_NAME} -uroothost -p${_MDB_MS_PWD_HOST} -e \"${cmd}\""
@@ -145,9 +153,15 @@ _eval "mysql -h${_CT_NAME} -uroothost -p${_MDB_MS_PWD_HOST} -e \"UNLOCK TABLES;\
 for _CT_NAME in ${_MDB_MS_CT_SLAVES}; do
 	_echot "\n++++++++++++++++++  ${_CT_NAME}"
 
+	#  PROFILE
+	if ! lxc list ${_CT_NAME} --format=json | jq -r '.[].profiles[]' | grep -q "^${_MDB_MS_PROFILE_SAVE}$"; then
+		_echot "------------------  profile ${_MDB_MS_PROFILE_SAVE}"
+		_eval lxc profile add ${_CT_NAME} ${_MDB_MS_PROFILE_SAVE}
+	fi
+
 	#  METADATA
 	_echot "------------------  metadata"
-	_lxc_meta_add ${_CT_NAME} apps mariadb-slave
+	_lxc_meta_add ${_CT_NAME} apps ${_MDB_MS_PROFILE_SAVE}
 
 	if lxc list -f csv -c n status=Stopped | grep -q ^${_CT_NAME}$; then
 		_echot "------------------  ${_CT_NAME} start"
@@ -156,6 +170,12 @@ for _CT_NAME in ${_MDB_MS_CT_SLAVES}; do
 
 	_echot "------------------  ${_CT_NAME} restore"
 	[ -z "${_MDB_MS_INSTALL_AUTO}" ] && _askno "Restore backuped data from master to slave & continue"
+
+	_echot "------------------  ${_CT_NAME} grant dump"
+	cmd="DROP USER IF EXISTS 'dump'@'localhost';"
+	cmd+="GRANT SELECT, RELOAD, SUPER, LOCK TABLES, SHOW VIEW, TRIGGER ON *.* TO 'dump'@'localhost' IDENTIFIED BY '${_MDB_MS_PWD_DUMP};"
+	strpass+="dump @ localhost - ${_MDB_MS_PWD_DUMP}\n"
+	_eval "mysql -h${_CT_NAME} -uroothost -p${_MDB_MS_PWD_HOST} -e \"${cmd}\""
 
 	_echot "------------------  ${_CT_NAME} conf"
 	file=${_MDB_PATH_CONF}/${fc_mdb_ms_slave##*/}
@@ -168,11 +188,17 @@ for _CT_NAME in ${_MDB_MS_CT_SLAVES}; do
 		str="$(echo "binlog-do-db=${_MDB_MS_DB_DO// / binlog-do-db=}"|tr ' ' '\n')"
 		_lxc_exec ${_CT_NAME} "sed -i '/^binlog-do-db/ d' ${file}"
 		_lxc_exec ${_CT_NAME} "sed -i '/^#binlog-do-db/ a${str}' ${file}"
+		str="$(echo "replicate-do-db=${_MDB_MS_DB_DO// / replicate-do-db=}"|tr ' ' '\n')"
+		_lxc_exec ${_CT_NAME} "sed -i '/^replicate-do-db/ d' ${file}"
+		_lxc_exec ${_CT_NAME} "sed -i '/^#replicate-do-db/ a${str}' ${file}"
 	elif [ "${_MDB_MS_DB_IGNORE}" ]; then
 		_echot "------------------  ${_CT_NAME} db-ignore"
 		str="$(echo "binlog-ignore-db=${_MDB_MS_DB_IGNORE// /\\ binlog-ignore-db=}"|tr ' ' '\n')"
 		_lxc_exec ${_CT_NAME} "sed -i '/^binlog-ignore-db/ d' ${file}"
 		_lxc_exec ${_CT_NAME} "sed -i '/^#binlog-ignore-db/ a${str}' ${file}"
+		str="$(echo "replicate-ignore-db=${_MDB_MS_DB_IGNORE// /\\ replicate-ignore-db=}"|tr ' ' '\n')"
+		_lxc_exec ${_CT_NAME} "sed -i '/^replicate-ignore-db/ d' ${file}"
+		_lxc_exec ${_CT_NAME} "sed -i '/^#replicate-ignore-db/ a${str}' ${file}"
 	fi
 
 	_echot "------------------  ${_CT_NAME} mariadb restart"
@@ -197,6 +223,18 @@ for _CT_NAME in ${_MDB_MS_CT_SLAVES}; do
 
 	_echot "------------------  increment id"
 	_MDB_MS_SLAVE_ID=$((${_MDB_MS_SLAVE_ID} + 1))
+
+	_echot "------------------  script dump"
+	file=/usr/local/bin/${fc_mdb_dump##*/}
+	_eval lxc file push --uid 0 --gid 0 -q ${fc_mdb_dump} ${_CT_NAME}${file}
+	_lxc_var_replace ${_CT_NAME} ${file} script
+	_lxc_exec ${_CT_NAME} "chmod 500 ${file}"
+
+	_echot "------------------  script cron"
+	file=/etc/crontabs/root
+	_lxc_exec ${_CT_NAME} "[ -f ${file} ] && cp -a ${file} ${file}.${_SDATE}"
+	_lxc_exec ${_CT_NAME} "sed -i '\|/usr/local/bin/${fc_mdb_dump##*/}|d' ${file}"
+	_lxc_exec ${_CT_NAME} "echo -e '0\t1\t*\t*\t*\t/usr/local/bin/${fc_mdb_dump##*/} ${_MDB_MS_PWD_DUMP} /save/mariadb' >> ${file}"
 
 done
 
@@ -242,6 +280,9 @@ _eval "mysql -h${S_SERVICE[proxy]} -uroothost -p${_MDB_MS_PWD_HOST} -e \"SELECT 
 _echot "------------------  show passwords"
 _echoA "Keep this passwords:"
 _echo "${strpass%\\n}"
+
+_echot "------------------  show passwords"
+_echow "Do not forget to setup synchronization from backup server to database backup"
 
 ########################  PUBLISH
 

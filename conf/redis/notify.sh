@@ -13,6 +13,8 @@ log=syslog
 syslog_name=notify/redis
 # file to log
 file_log=S_PATH_LOG/redis/notify.log
+# debugging log (everything not empty)
+debug=
 # time in seconds to wait before get role
 time_before=0
 # time in seconds between repeat
@@ -23,10 +25,8 @@ time_switch=8
 time_check=4
 # number of repeat to switch master to slave
 repeat=10
-# debugging log (everything not empty)
-debug=
 
-########################  functions
+########################  FUNCTIONS
 
 _log() { echo ${log_date}${id} $* | ${logcmd}; }
 #_log_d() { echo ${log_date} ${id} debug $* >> ${file_log}; }
@@ -82,10 +82,10 @@ _sleep() {
 	sleep $1
 }
 
-########################  variables
+########################  DATA
 
 if [ "$log" = syslog ]; then
-	logcmd="logger -p local7.info -t notify/redis"
+	logcmd="logger -p local7.info -t ${syslog_name}"
 	log_date=
 else
  	logcmd="tee -a ${file_log}"
@@ -97,7 +97,7 @@ mymaster=$(grep '^#mymaster ' "${file_sentinel}"| cut -d' ' -f2)
 mymaster_ip=$(_get_ip "${mymaster}")
 _lod_d "mymaster=${mymaster} mymaster_ip=${mymaster_ip}"
 
-########################  main
+########################  MAIN
 
 _log "[notify] $*"
 set -- $*

@@ -13,7 +13,7 @@ imgs_init=$(lxc image list -f csv -c l | grep ^alpine.*init$)
 _echot "------------------ required vm"
 lxc list -f csv -c n| grep -q ^${S_SERVICE[log]}$ || _exite "Unable to find container: '${S_SERVICE[log]}'"
 
-fc_mdb_server="${S_PATH_INSTALL_CONF}/mariadb/mariadb-server.cnf"
+fc_mdb_server=${S_PATH_INSTALL_CONF}/mariadb/mariadb-server.cnf
 
 fc_mdb_rsyslog_client=${S_PATH_INSTALL_CONF}/rsyslog/client-mariadb.conf
 fc_mdb_rsyslog_host=${S_PATH_INSTALL_CONF}/rsyslog/host-mariadb.conf
@@ -21,7 +21,8 @@ fc_mdb_logrotate_client=${S_PATH_INSTALL_CONF}/logrotate/host-mariadb
 fc_mdb_logrotate_host=${S_PATH_INSTALL_CONF}/logrotate/host-mariadb
 
 _echot "------------------ required files"
-_require ${fc_mdb_server} ${fc_mdb_rsyslog_client} ${fc_mdb_rsyslog_host} ${fc_mdb_logrotate_client} ${fc_mdb_logrotate_host}
+_require ${fc_mdb_server}
+_require ${fc_mdb_rsyslog_client} ${fc_mdb_rsyslog_host} ${fc_mdb_logrotate_client} ${fc_mdb_logrotate_host}
 
 ########################  DATA
 
@@ -205,7 +206,7 @@ for i in $(seq 1 ${_PHP_CT_NUM}); do
 		_echot "------------------ rename ${_CT_NAME} -> ${_CT_NAME}-${_SDATE}"
 		_eval lxc rename ${_CT_NAME} ${_CT_NAME}-${_SDATE}
 	fi
-	_eval lxc init ${_MDB_INIT} ${_CT_NAME} -p default -p global -p save-mdb-${_MDB_DOM_FQDN} -p ${profile}
+	_eval lxc init ${_MDB_INIT} ${_CT_NAME} -p default -p global -p ${profile}
 
 	_echot "------------------  ${_CT_NAME} start"
 	_eval lxc start ${_CT_NAME}
@@ -213,7 +214,7 @@ for i in $(seq 1 ${_PHP_CT_NUM}); do
 	########################  METADATA
 
 	_echot "------------------  metadata"
-	_lxc_meta_set ${_CT_NAME} profiles default global save-mdb-${_MDB_DOM_FQDN} ${profile}
+	_lxc_meta_set ${_CT_NAME} profiles default global ${profile}
 	_lxc_meta_add ${_CT_NAME} apps mariadb
 
 	########################  INSTALL
@@ -338,9 +339,9 @@ done
 
 ########################  ENDLOOP
 
-_echot "------------------  rights ${path_save_dom}"
-_lxc_exec ${_CT_NAME} chown mysql ${path_save_dom}
-_lxc_exec ${_CT_NAME} chmod g+w ${path_save_dom}
+_echot "------------------  rights ${S_VM_PATH_SAVE}/mariadb"
+_lxc_exec ${_CT_NAME} chown mysql ${S_VM_PATH_SAVE}/mariadb
+_lxc_exec ${_CT_NAME} chmod g+w ${S_VM_PATH_SAVE}/mariadb
 
 ########################  RSYSLOG
 
@@ -394,10 +395,10 @@ done
 
 ########################  IPTABLES
 
-_echot "------------------  iptables"
-sed -i '/^_NAT_SGBD=/ s|=.*$|=true|' ${_IPT_FILE_CONF}
-_service restart ${_IPT_SERVICE}
-_eval sleep 4
+#_echot "------------------  iptables"
+#sed -i '/^_NAT_SGBD=/ s|=.*$|=true|' ${_IPT_FILE_CONF}
+#_service restart ${_IPT_SERVICE}
+#_eval sleep 4
 
 ########################  END
 
