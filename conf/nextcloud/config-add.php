@@ -5,9 +5,13 @@
   'htaccess.RewriteBase' => '/',
   'overwrite.cli.url' => 'https://cloud._APA_DOM_FQDN',
   'overwriteprotocol' => 'https',
-  'forwarded_for_headers' => ['HTTP_X_FORWARDED_FOR'],
-  // localization
-  'default_phone_region' => 'FR',
+  'forwarded_for_headers' =>
+  array (
+    0 => 'HTTP_X_FORWARDED_FOR',
+  ),
+  // various
+  'default_phone_region' => 'FR', // localization
+  'localstorage.allowsymlinks' => true, // symlinks
   // cache
   'memcache.local' => '\OC\Memcache\Redis',
   'memcache.distributed' => '\OC\Memcache\Redis',

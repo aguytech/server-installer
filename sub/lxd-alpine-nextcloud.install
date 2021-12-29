@@ -330,13 +330,13 @@ _echot "------------------  conf htaccess"
 _lxc_exec ${_CT_NAME} "sudo -u apache ${php_cli} ${occ} maintenance:update:htaccess"
 
 _echot "------------------  app disable"
-for app in weather_status password_policy; do
+for app in password_policy weather_status; do
 	_echo ${app}
 	_lxc_exec ${_CT_NAME} "sudo -u apache ${php_cli} ${occ} app:disable ${app}"
 done
 
 _echot "------------------  app install"
-for app in calendar contacts deck groupfolders notes rainloop tasks; do
+for app in breezedark calendar contacts deck groupfolders keeweb notes rainloop talk tasks; do
 	_echo ${app}
 	_lxc_exec ${_CT_NAME} "sudo -u apache ${php_cli} ${occ} app:install ${app}"
 done
