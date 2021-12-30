@@ -344,6 +344,18 @@ done
 _echot "------------------  reset admin pwd"
 _lxc_exec ${_CT_NAME} "OC_PASS='3667.Gaza' su -s /bin/sh apache -c 'php8 ${occ} user:resetpassword --password-from-env admin'"
 
+########################  CRON
+
+_echot "------------------  script cron"
+file=/etc/crontabs/apache
+_lxc_exec ${_CT_NAME} "[ -f ${file} ] && cp -a ${file} ${file}.${_SDATE}"
+_lxc_exec ${_CT_NAME} "echo -e '# min\thour\tday\tmonth\tweekday\tcommand' >> ${file}"
+_lxc_exec ${_CT_NAME} "echo -e '*/1\t*\t*\t*\t*\t${php_cli} ${_APA_PATH_DOM}/cloud/cron.php' >> ${file}"
+_lxc_exec ${_CT_NAME} "chown 0:0 ${file}; chmod 600 ${file}"
+
+_echot "------------------  crond restart"
+_lxc_exec_e ${_CT_NAME} "rc-service crond restart"
+
 ########################  RSYSLOG
 
 _echot "------------------  ${S_SERVICE[log]} host path"

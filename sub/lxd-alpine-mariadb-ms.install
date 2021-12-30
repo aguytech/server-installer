@@ -236,6 +236,9 @@ for _CT_NAME in ${_MDB_MS_CT_SLAVES}; do
 	_lxc_exec ${_CT_NAME} "sed -i '\|/usr/local/bin/${fc_mdb_dump##*/}|d' ${file}"
 	_lxc_exec ${_CT_NAME} "echo -e '0\t1\t*\t*\t*\t/usr/local/bin/${fc_mdb_dump##*/} ${_MDB_MS_PWD_DUMP} /save/mariadb' >> ${file}"
 
+	_echot "------------------  crond restart"
+	_lxc_exec_e ${_CT_NAME} "rc-service crond restart"
+
 done
 
 ########################  HAPROXY
