@@ -346,15 +346,19 @@ _lxc_exec ${_CT_NAME} "OC_PASS='3667.Gaza' su -s /bin/sh apache -c 'php8 ${occ} 
 
 ########################  CRON
 
-_echot "------------------  script cron"
+_echot "------------------  cron script"
 file=/etc/crontabs/apache
 _lxc_exec ${_CT_NAME} "[ -f ${file} ] && cp -a ${file} ${file}.${_SDATE}"
 _lxc_exec ${_CT_NAME} "echo -e '# min\thour\tday\tmonth\tweekday\tcommand' >> ${file}"
-_lxc_exec ${_CT_NAME} "echo -e '*/1\t*\t*\t*\t*\t${php_cli} ${_APA_PATH_DOM}/cloud/cron.php' >> ${file}"
+_lxc_exec ${_CT_NAME} "echo -e '*/5\t*\t*\t*\t*\t${php_cli} ${_APA_PATH_DOM}/cloud/cron.php' >> ${file}"
+_lxc_exec ${_CT_NAME} "echo -e '*/5\t*\t*\t*\t*\t${php_cli} ${_APA_PATH_DOM}/cloud/occ dav:send-event-reminders' >> ${file}"
 _lxc_exec ${_CT_NAME} "chown 0:0 ${file}; chmod 600 ${file}"
 
-_echot "------------------  crond restart"
+_echot "------------------  cron restart"
 _lxc_exec_e ${_CT_NAME} "rc-service crond restart"
+
+_echot "------------------  occ reminder"
+_lxc_exec ${_CT_NAME} "sudo -u apache ${php_cli} ${occ} config:app:set dav sendEventRemindersMode --value occ"
 
 ########################  RSYSLOG
 
