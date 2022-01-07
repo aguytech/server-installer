@@ -110,17 +110,17 @@ _lxc_exec ${_CT_NAME} "[ -f ${file} ] && cp -a ${file} ${file}.${_SDATE}"
 _eval lxc file push --uid 0 --gid 0 -q ${fc_mdb_ms_master} ${_CT_NAME}${file}
 _lxc_var_replace ${_CT_NAME} ${file} mariadb
 
-if [ "${_MDB_MS_DB_DO}" ]; then
-	_echot "------------------  ${_CT_NAME} db-do"
-	str="$(echo "binlog-do-db=${_MDB_MS_DB_DO// / binlog-do-db=}"|tr ' ' '\n')"
-	_lxc_exec ${_CT_NAME} "sed -i '/^binlog-do-db/ d' ${file}"
-	_lxc_exec ${_CT_NAME} "sed -i '/^#binlog-do-db/ a${str}' ${file}"
-elif [ "${_MDB_MS_DB_IGNORE}" ]; then
-	_echot "------------------  ${_CT_NAME} db-ignore"
-	str="$(echo "binlog-ignore-db=${_MDB_MS_DB_IGNORE// /\\ binlog-ignore-db=}"|tr ' ' '\n')"
-	_lxc_exec ${_CT_NAME} "sed -i '/^binlog-ignore-db/ d' ${file}"
-	_lxc_exec ${_CT_NAME} "sed -i '/^#binlog-ignore-db/ a${str}' ${file}"
-fi
+# if [ "${_MDB_MS_DB_DO}" ]; then
+# 	_echot "------------------  ${_CT_NAME} db-do"
+# 	str="$(echo "binlog-do-db=${_MDB_MS_DB_DO// / binlog-do-db=}"|tr ' ' '\n')"
+# 	_lxc_exec ${_CT_NAME} "sed -i '/^binlog-do-db/ d' ${file}"
+# 	_lxc_exec ${_CT_NAME} "sed -i '/^#binlog-do-db/ a${str}' ${file}"
+# elif [ "${_MDB_MS_DB_IGNORE}" ]; then
+# 	_echot "------------------  ${_CT_NAME} db-ignore"
+# 	str="$(echo "binlog-ignore-db=${_MDB_MS_DB_IGNORE// /\\ binlog-ignore-db=}"|tr ' ' '\n')"
+# 	_lxc_exec ${_CT_NAME} "sed -i '/^binlog-ignore-db/ d' ${file}"
+# 	_lxc_exec ${_CT_NAME} "sed -i '/^#binlog-ignore-db/ a${str}' ${file}"
+# fi
 
 _echot "------------------  ${_CT_NAME} restart"
 _lxc_exec ${_CT_NAME} "rc-service mariadb restart"
