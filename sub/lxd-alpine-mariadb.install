@@ -337,12 +337,6 @@ for i in $(seq 1 ${_PHP_CT_NUM}); do
 
 done
 
-########################  ENDLOOP
-
-_echot "------------------  rights ${S_VM_PATH_SAVE}/mariadb"
-_lxc_exec ${_CT_NAME} chown mysql ${S_VM_PATH_SAVE}/mariadb
-_lxc_exec ${_CT_NAME} chmod g+w ${S_VM_PATH_SAVE}/mariadb
-
 ########################  RSYSLOG
 
 _echot "------------------  ${S_SERVICE[log]} host path"
