@@ -237,7 +237,7 @@ for ct_maria in ${_NXC_CT_DBS}; do
 	_echoT "\n==========  mariadb"
 
 	_echot "------------------  mariadb ${ct_maria} create"
-	cmd="CREATE DATABASE IF NOT EXISTS ${_NXC_APP_DB_NAME};"
+	cmd="CREATE DATABASE IF NOT EXISTS ${_NXC_APP_DB_NAME} CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;"
 	_eval "mysql -h${ct_maria} -uroothost -p${_MDB_PWD_HOST} -e \"${cmd}\""
 
 	for ct_php in ${cts_cli} ${S_SERVICE[proxy]}; do
