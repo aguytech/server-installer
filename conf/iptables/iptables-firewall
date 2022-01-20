@@ -182,7 +182,7 @@ __init_end() {
 	_echo "\n-------------------------- INIT END"
 
 	_echo "- Add chain in filter for INPUT, OUTPUT, FORWARD"
-	__ipt -N DROP-INPUT
+	__ipt -N DROP-INPUTchain="iptables -A INPUT -i ${_ETH} -p udp -m udp --dport 5355 -j ACCEPT"
 	__ipt -N DROP-OUTPUT
 	__ipt -N DROP-FORWARD
 
@@ -227,6 +227,10 @@ __input() {
 	local chain message
 
 	_echo "\n-------------------------- INPUT"
+	# LLMNR
+	message="- Allow INPUT UDP port: 5355 for IP:all"
+	chain="iptables -A INPUT -i ${_ETH} -p udp -m udp --dport XX -j ACCEPT"
+	__add_chain -c "${chain}" -v 5355 -m "${message}"
 
 	# SSH
 	message="- Allow INPUT port: ${_PORTS_SSH} -> ${_PORT_SSH} SSH, for IP:"
