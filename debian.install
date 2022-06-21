@@ -15,7 +15,7 @@ sudo sed -i 's|^#\?\(Port\) .*$|\1 ${ssh_port}|' /etc/ssh/sshd_config
 echo '-------------- restart ssh' && sudo systemctl restart ssh.service"
 ssh debian@${server} -p22 "${cmds}"
 
-rsync -e "ssh -p${ssh_port}" /home/shared/dev/bs/ root@${server}:/usr/local/bs/ --exclude=/.git* --delete -av && rsync -e "ssh -p${ssh_port}" /home/shared/dev/install/ root@${server}:/usr/local/install/ --exclude=/.git* --delete -av
+rsync -e "ssh -p${ssh_port}" /home/shared/repo/bs/ root@${server}:/usr/local/bs/ --exclude=/.git* --delete -av && rsync -e "ssh -p${ssh_port}" /home/shared/repo/install/ root@${server}:/usr/local/install/ --exclude=/.git* --delete -av
 
 # HOST
 ssh root@${server} -p${ssh_port}

@@ -19,11 +19,11 @@ echo '-------------- restart ssh' && sudo systemctl restart ssh.service
 [ -d '/etc/server' ] || sudo mkdir /etc/server"
 ssh ubuntu@${server} -p22 "${cmds}"
 
-rsync -e "ssh -p${ssh_port}" /home/shared/dev/install/conf/ini/server-ovh-${type}.conf root@${server}:/etc/server/server.conf -rltv
-rsync -e "ssh -p${ssh_port}" /home/shared/dev/install/conf/ini/install-ovh-${type}.ini root@${server}:/etc/server/install.ini -rltv
-rsync -e "ssh -p${ssh_port}" /home/shared/dev/install/conf/ini/lxd-alpine-ovh.ini root@${server}:/etc/server/lxd.ini -rltv
+rsync -e "ssh -p${ssh_port}" /home/shared/repo/install/conf/ini/server-ovh-${type}.conf root@${server}:/etc/server/server.conf -rltv
+rsync -e "ssh -p${ssh_port}" /home/shared/repo/install/conf/ini/install-ovh-${type}.ini root@${server}:/etc/server/install.ini -rltv
+rsync -e "ssh -p${ssh_port}" /home/shared/repo/install/conf/ini/lxd-alpine-ovh.ini root@${server}:/etc/server/lxd.ini -rltv
 
-rsync -e "ssh -p${ssh_port}" /home/shared/dev/bs/ root@${server}:/usr/local/bs/ --exclude=.git* --delete -rltv && rsync -e "ssh -p${ssh_port}" /home/shared/dev/install/ root@${server}:/usr/local/install/ --exclude=.git* --delete -rltv
+rsync -e "ssh -p${ssh_port}" /home/shared/repo/bs/ root@${server}:/usr/local/bs/ --exclude=.git* --delete -rltv && rsync -e "ssh -p${ssh_port}" /home/shared/repo/install/ root@${server}:/usr/local/install/ --exclude=.git* --delete -rltv
 ssh root@${server} -p${ssh_port}
 
 # HOST
